@@ -10,7 +10,10 @@ import Artists from './sections/Artists';
 import Lore from './sections/Lore';
 import Loop from './sections/Loop';
 import Footer from './sections/Footer';
-import { Marquee, Starfield } from './components/ui';
+import { Marquee, Starfield, ToastHost } from './components/ui';
+import Ambience from './components/Ambience';
+import ScrollProgress from './components/ScrollProgress';
+import { CustomCursor } from './components/Cursor';
 
 export default function App() {
   return (
@@ -18,8 +21,11 @@ export default function App() {
       <a className="skip-link" href="#multiverse" style={skipStyle}>
         Skip to the Multiverse
       </a>
+      <ScrollProgress />
+      <CustomCursor />
       <div className="grain" aria-hidden="true" />
       <Starfield className="starfield" />
+      <Ambience />
 
       <Nav />
       <main>
@@ -44,6 +50,7 @@ export default function App() {
         <Loop />
       </main>
       <Footer />
+      <ToastHost />
     </>
   );
 }

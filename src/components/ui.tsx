@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useCountdown } from '../lib/hooks';
 import type { Rarity } from '../lib/data';
 import { RARITY } from '../lib/data';
@@ -40,6 +40,7 @@ export function SectionHead({
   center,
   kickerGold,
   id,
+  num,
 }: {
   kicker: string;
   title: React.ReactNode;
@@ -47,9 +48,11 @@ export function SectionHead({
   center?: boolean;
   kickerGold?: boolean;
   id?: string;
+  num?: string;
 }) {
   return (
     <div className={`sechead ${center ? 'sechead--center' : ''}`} id={id}>
+      {num && <span className="sechead__num" aria-hidden="true">{num}</span>}
       <span className={`kicker ${kickerGold ? 'gold' : ''}`}>{kicker}</span>
       <h2 className="display">
         <Reveal>{title}</Reveal>
@@ -312,4 +315,50 @@ export function Starfield({
   }, [density, drift]);
 
   return <canvas ref={ref} className={className} aria-hidden="true" />;
+}
+
+/* ------------------------------ Toast feedback ------------------------------ */
+
+type ToastPayload = { msg: string };
+
+export function toast(msg: string) {
+  try {
+    window.dispatchEvent(new CustomEvent<ToastPayload>('ocu:toast', { detail: { msg } }));
+  } catch {
+    /* noop */
+  }
+}
+
+export function ToastHost() {
+  const [items, setItems] = useState<Array<{ id: number; msg: string }>>([]);
+
+  useEffect(() => {
+    const on = (e: Event) => {
+      const { msg } = (e as CustomEvent<ToastPayload>).detail;
+      const id = Date.now() + Math.random();
+      setItems((p) => [...p, { id, msg }]);
+      window.setTimeout(() => setItems((p) => p.filter((i) => i.id !== id)), 2600);
+    };
+    window.addEventListener('ocu:toast', on);
+    return () => window.removeEventListener('ocu:toast', on);
+  }, []);
+
+  return (
+    <div className="toasts" aria-live="polite">
+      <AnimatePresence>
+        {items.map((it) => (
+          <motion.div
+            key={it.id}
+            className="toast"
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.94 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {it.msg}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
 }

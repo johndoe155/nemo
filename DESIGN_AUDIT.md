@@ -1,0 +1,248 @@
+# DESIGN & UI/UX AUDIT — THE OC UNIVERSE
+### Elevation roadmap from "polished demo" → Awwwards Site-of-the-Day caliber ($30k-grade digital experience)
+
+**Auditor perspective:** Awwwards-level creative UI/UX lead. This is not a
+"good job, add a hover state" review. It's an uncompromising teardown of what
+the build does *right*, what reads as *good-but-generic*, and the exact moves —
+tokens, layout refactors, motion architecture, and sensory craft — that turn a
+competent dark-glass dashboard into an immersive, award-baiting experience.
+
+---
+
+## 0 · VERDICT & LANDSCAPE
+
+**What this is today:** a genuinely well-engineered Web3 pitch prototype. The
+design-token system (`src/styles/global.css`), the pinned horizontal roster,
+the word-reveal library, the `prefers-reduced-motion` pass, and the 
+single-source-of-truth data layer are *above* the average build. TypeScript is
+strict-clean. It reads as a **premium pitch deck that happens to be a website**.
+
+**The gap to SOTD** is not engineering — it's **artistic risk and sensory
+density**. The current page is *uniform*: every section uses the same
+`SectionHead` kicker pattern (`01 · …`), the same `Reveal` fade-up, the same
+card radius, the same mono-caption voice, the same centered/symmetric layout.
+Awwwards winners break that rhythm, introduce asymmetry and scale collision,
+add a bespoke cursor and scroll physics, and make every scroll a directed
+choreography rather than a vertical stack of equal panels.
+
+**Framing the target:** the concept is *"one canon, infinite versions."* The
+design language should **never show two sections that feel like siblings**. 
+Each universe is a different artist — so each section should feel like it was
+drawn by a different hand inside one coherent multiverse. That is the single
+creative north star of this whole roadmap.
+
+**The three hard constraints that anchor everything:**
+1. Keep the strict token system — it's your theming superpower.
+2. Keep `prefers-reduced-motion` — extend it, never break it.
+3. Keep it a frontend demo — every "integration" stays behind the mock layer.
+
+---
+
+## 1 · AESTHETIC & SPATIAL ELEVATION
+
+### 1.1 Typography: build a *voice hierarchy*, not a size ladder
+
+You have three excellent fonts but you're using them on one dimension
+(display = headlines, body = paragraphs, mono = labels). Awwwards sites use
+**scale + weight + case + optical play** as a grid-breaking weapon.
+
+**Actions (token-level, `global.css:root`):**
+
+- **Add a true editorial display tier** above `--fs-h1`. Currently the hero is
+  `clamp(2.7rem … 7.25rem)`. Push section-level "ghost" and "index" numerals
+  to `clamp(6rem … 18rem)`. Give the Multiverse roster a **giant vertical
+  index numeral** (e.g. `U-001`) set in Unbounded 800 at 20rem, sitting behind
+  each card like a tattooed watermark — immediately reads as bespoke.
+- **Kill the repetition of the `kicker` pattern.** Every section currently
+  opens `"01 · THE ANCHOR FEATURE"` in the same cyan mono. Redesign the section
+  number as a **massive offset numeral** (gold for gold sections, cyan for
+  others) that bleeds off the grid edge, with the kicker text running
+  vertically or clipped. Each section keeps its *number*, loses its *template*.
+- **Introduce italic + font-feature variety.** Space Grotesk and Unbounded
+  support variable weights — animate a few words at `font-variation-settings`
+  on scroll (e.g. the word "INFINITE" thickens from 500→900 as it enters view).
+  This is a subtle, unmistakably-premium micro-moment.
+- **Type scale collision:** don't make every `h2` the same `--fs-h2`. Alternate
+  `clamp(3rem…7rem)` display moments with quiet mono-led sub-sections. The page
+  should *breathe* between loud and soft — right now it's all one volume.
+- **Letterspacing as motion:** `Unbounded` at 800 with `-0.015em` tightens on
+  hover of nav links; mono labels track out. Use `letter-spacing` transitions
+  as a sensory cue (see §3).
+
+**Spacing rhythm:**
+- Your `--section` padding is `clamp(5.5rem … 10.5rem)` **everywhere**. Vary it:
+  hero → `100svh`, Multiverse → `420vh` (already), but give Store/Artists
+  tighter `clamp(4rem…7rem)` and Lore/Loop dramatically more air. Spatial
+  asymmetry *is* the luxury signal.
+- Replace the repeated `margin-block` pattern on cards with a **baseline
+  rhythm** — use `8px`-based spacing but allow one "disruption" per section.
+
+### 1.2 Color: add *atmospheric depth*, keep the token discipline
+
+The void black + nebula gradients + gold-for-rarity is a strong identity. The
+weakness is **flatness**: the background is three static radial washes. Give
+the canvas *living* depth.
+
+**Actions:**
+- **Parallax the nebula washes** per-section. Instead of one `background-attachment: fixed`, move 3–4 huge colored radial blobs (`--iris`, `--cyan`, `--magenta`) as fixed-position divs that translate slowly with scroll at different speeds and scales. Cheaper and smoother than a WebGL nebula, and instantly more cinematic. (Do this in `App.tsx` next to `<Starfield/>`.)
+- **Chromatic aberration on key display text.** Add a duplicated `::before`/`::after` of the hero title offset by 1–2px in `--magenta` and `--cyan` at low opacity, or a `text-shadow: -1px 0 rgba(255,61,154,.25), 1px 0 rgba(63,232,255,.25)`. Remove on hover. This is *the* multiverse/glitch signature and costs ~5 lines of CSS.
+- **Bloom + vignette.** Add a radial `box-shadow` glow keyed to each card's `--card-accent` (already started) and a global fixed `vignette` overlay (`radial-gradient(120% 100% at 50% 40%, transparent 60%, rgba(0,0,0,.5))`) so the page reads as a lit scene, not a flat canvas.
+- **Restrain `--gold`.** You use gold for rarity, buttons, countdown, hints, marquees, and stamp "next." Gold loses meaning if it's everywhere. Reserve solid gold for **Legendary rarity + the single primary conversion moment per viewport**; shift the hero badge, marquee stars, and hints back toward cyan/mono. (Keep `--grad-gold` for the token, just deploy it sparingly.)
+
+### 1.3 Bespoke layout refactors (the grid-breaking moves)
+
+These are the highest-leverage structural changes. Each breaks a currently-uniform pattern:
+
+1. **Hero — make it asymmetric and *composed*, not centered-left.**
+   - Offset the title block to the **left third**, and run a **large vertical "NEMO" / ghost numeral** down the right gutter, bleeding off-canvas.
+   - Rotate the orbit ring system to be *eclipsing* the character — one ring tilted in 3D (`rotateX`/`rotateY`), partially off-screen, so it feels dimensional.
+   - Put the countdown badge into a **corner bracket frame** and let the hero's right side carry a thin "UNIVERSE REGISTRY" telemetry column (live supply / holders / next drop) that scrolls out — a sci-fi HUD moment that costs a flex row.
+2. **Multiverse — index numerals + per-card asymmetry.** Alternate card widths/top-offset in the rail (zig-zag on the y-axis) so the roster reads as a *drift* not a shelf. Add the giant watermark index numeral. This is the anchor section — it deserves the most bespoke treatment.
+3. **Persona — break the "copy left / card right" symmetric split.** Make the chat window the **hero of the section**: a large terminal-style panel that bleeds toward the edge with a rotated/staggered stack of "prior messages" behind it, and the copy overlaid/smaller. Turn the chat into a *scene*, not a widget.
+4. **Store / Artists — kill the `auto-fit` equal grid.** These two sections use the exact same `minmax()` grid as Perks. Give Store a **2-up editorial magazine layout** with one hero product (large, off-grid) + stacked smaller cards. Give Artists a **staggered masonry / credit-list** with the avatar bleeding off the card edge.
+5. **Loop — from static diagram to interactive instrument** (see §2.4). The orbit is the conceptual climax — make it *move*.
+6. **Footer — add a final full-bleed CTA.** Before the links, a giant "ENTER THE MULTIVERSE" display block with a live countdown and magnetic button. End the page on a crescendo, not a column layout.
+
+**Surface craft (uniformity killers):**
+- Vary card radius per section (`--r-card` 18px is everywhere). Let Multiverse cards be `22px`, Store `8px` (sharp editorial), chat `16px`. Radius becomes a *voice*.
+- Your borders are all `1px solid var(--line)`. Add **corner-accent** variants (already have `.brackets`) and **asymmetric borders** (e.g. a 2px gradient edge on just one side) to key cards.
+
+---
+
+## 2 · MOTION & INTERACTION ARCHITECTURE
+
+### 2.1 Stack strategy (keep framer-motion, add the right tools)
+
+| Need | Tool | Why |
+|---|---|---|
+| Smooth scroll (buttery, Lenis-like) | **Lenis** (~3kb) | Native scroll with configurable lerp; the #1 "premium feel" upgrade. Plug into your existing `useScroll` via the lenis event (framer-motion works out of the box with Lenis). |
+| Scroll-driven timelines / pinning | **GSAP ScrollTrigger** (or stay on framer-motion `useScroll`) | Your pinned roster already works. Add ScrollTrigger for **section curtain reveals** and **multi-trigger timelines** (clip-path, color shifts) that are painful in framer-motion. |
+| Custom cursor + magnetic | **Custom hook + framer-motion springs** (no dep needed) | A bespoke cursor is table-stakes for SOTD. |
+| Slot/pull machine | **WebGL (Three.js or OGL)** or a **CSS 3D carousel** | Replace the 12fps image remount with a smooth cinematic reveal (§2.5). |
+| Nebula / hero depth | **Canvas 2D** (extend `Starfield`) | No need for a heavy WebGL engine for the background. |
+
+**Guardrail:** keep `prefers-reduced-motion` collapsing all of the above (wrap Lenis init and cursor init in the media query check).
+
+### 2.2 Custom cursor & pointer dynamics
+
+Awwwards-defining. Build a **spring-following cursor** (framer-motion `useMotionValue` + `useSpring`):
+
+- A small **crosshair/dot** (cyan) that tracks at 0.35s spring — the "machine that manages the multiverse" voice.
+- A **blending trailing glow** (magenta/iris) that lags more and uses `mix-blend-mode: screen`, so it *lights up* the glass surfaces beneath.
+- **State-aware:** grows + inverts to "VIEW / OPEN / PULL" on interactive targets (`a, button, .ucard, .chip`); shows `drag` on the roster; morphs to a crosshair "×" over the dialog close.
+- **Magnetic buttons:** primary CTAs translate toward the cursor within a 80px radius (spring back on leave). Apply to the hero CTA, dialog CTAs, and nav wallet button.
+- Hide entirely on touch / `pointer: coarse`, and under `prefers-reduced-motion`.
+
+### 2.3 Scroll choreography (direct the scroll, don't just react to it)
+
+Right now sections *react* to scroll (parallax, reveals). Award pages **script a journey**:
+
+1. **Section curtain reveals.** Replace plain fade-up with a **clip-path wipe** that peels from the section edge (e.g. `clip-path: inset(0 0 100% 0) → inset(0)`) driven by `useScroll` on the section. Feels like the page is *being rendered* as you travel.
+2. **Multi-trigger hero exit.** On scroll out of the hero, choreograph a **sequence**: title splits/glitches → orbit rings collapse toward center → the whole hero *dissolves into the marquee*. One timeline, 1.2s, expo.
+3. **Roster per-card polish.** The pinned horizontal drift is strong; add **per-card parallax** (cards at a slightly different `y` and `scale` based on their position in the rail), plus a **directional velocity** feel by lerping `x` on a spring instead of a raw transform.
+4. **Add a global scroll-progress HUD.** A thin gradient rail at the very top (not just hero-bottom) with a mono `%` readout — consistent orientation across a 420vh pinned section.
+5. **Scroll-velocity text.** Rotate/scale the giant ghost numerals based on scroll velocity (spike on fast scroll) — the "hyperdrive" feel that ties the multiverse theme together.
+
+### 2.4 Loop — make the instrument interactive
+
+The orbital diagram is the conceptual payoff; animate it:
+- **Nodes orbit** the core on a continuous slow revolution (CSS `animation: spin`) but **pause and face-forward** on hover/click.
+- On scroll into view, **draw the orbit path** (`stroke-dashoffset` timeline via ScrollTrigger) so the ring *renders itself*.
+- Add a **connecting-particle** that physically travels Discover → Belong → Buy → Collect → back to the core, looping — a literal visualization of "one loop, nothing wasted." A `<canvas>` particle emitter on the orbit path.
+- On mobile, keep the stacked fallback but add the particle line as a vertical connector.
+
+### 2.5 The Pull machine — from slot gimmick to cinematic reveal
+
+The 12fps image remount is your heaviest interaction and your weakest moment. Replace with a **3-stage reveal**:
+- **Stage 1 "scan":** a CSS 3D carousel or a WebGL card that rapidly cycles variants with a motion-blur streak (a blurred strip that sweeps).
+- **Stage 2 "lock":** the card snaps to center with a **perspective flip** and a rarity-colored **light burst** (`box-shadow` pop + expanding radial ring).
+- **Stage 3 "reveal":** the image de-blurs in, mint number counts up (`useCountUp`), and a **confetti of rarity-colored particles** if `legendary`/`secret`.
+- Add **screen-space haptics:** subtle shake on common, a satisfying *thud* scale on legendary. Rarity should *feel* different — that's the whole gacha dopamine loop.
+
+---
+
+## 3 · UX CRAFTSMANSHIP & SENSORY POLISH
+
+### 3.1 Friction points (structural fixes, highest priority)
+
+1. **No scrollspy / active-section state in the nav.** On a ~9000px one-pager the user loses orientation fast. Add an `IntersectionObserver`-driven active link that lights the current section and updates a **side progress mini-rail** (dots + labels on the left edge on desktop). Also wire the nav number `01…06` to invert on active.
+2. **The roster is scroll-only.** On desktop there's no way to step through universes without dragging 420vh of scroll, and no keyboard navigation. Add: **arrow buttons** (translate the rail 1 card), **a draggable rail** (pointer pan), **per-card focus ring** + Enter/Space already exist, and **a minimap** (the rail's index numerals as clickable markers). Also pause the pinned-scroll takeover while the user drags.
+3. **Dialog lacks focus management.** `UniverseDialog` has Esc/backdrop close but no **focus trap**, **return-focus to the triggering card**, or **`aria-hidden` on background**. Add a focus trap + `useRef` restore. This is an a11y *and* a premium-feel fix (the background should lock and dim, not scroll under).
+4. **After the drop, countdown shows `00D 00H`.** The countdown should **state-switch to "LIVE NOW — U-007 IS THE MULTIVERSE"** and flip the DropTeaserCard to a live "CLAIM" state when `useCountdown.done`. Stale "next drop" framing is the most jarring detail on the page.
+5. **"ADD TO CART" and "CONNECT WALLET" do nothing visible** (mock). Add **state feedback**: a one-time sheen + checkmark + a subtle "DEMO · wired to Shopify" toast. Dead CTAs are the #1 demo-death tell. Even mocked, they must *respond*.
+6. **Nav on mobile**: the mobile menu links don't show which section is active, and the burger doesn't close on route/outside. Minor, but polish it.
+7. **No image placeholders/skeleton.** Images pop in. Add a `background` placeholder in the accent color + a low-opacity shimmer, and crossfade on `onLoad`.
+
+### 3.2 Sensory cues & micro-interactions (the "luxury details")
+
+- **Typing indicator for the persona** — upgrade the 3 bouncing dots to NEMO's **star-face** pulsing + a subtle mono "NEMO IS THINKING…" that feels in-canon. Add a **slight random delay variance** so replies don't feel robotic (already ~550ms; make it 400–900ms jitter).
+- **Rarity color travels the page.** When you open a universe dialog, the page **edge-glow** (a fixed 2px gradient border frame) tints to that universe's accent for the duration — a spatial, ambient connection between the card and the modal.
+- **Connect-wallet ceremony.** On connect: badge **stamps in** with a ring pulse + the "VERIFIED HOLDER" line draws its underline; show which trait tier unlocked with a one-line mono readout. Make the reward *visible*, not just a boolean.
+- **Magnetic + sound-lite feedback.** Consider optional WebAudio ticks (attract + confirm) behind a "SOUND" toggle — extremely rare on the web, extremely memorable when tasteful. Respect reduced-motion.
+- **Scroll-hint "cross universes"** — replace the generic `▼` with a **progress arc** that fills as you descend the hero, doubling as the primary scroll affordance.
+- **Number tickers** for `mv__stats` (universes, minted) — animate from 0 → value on reveal with `useInView` + `useCountUp`. Numeric life is a huge perceived-quality boost.
+- **Hover legibility** — make `ucard` show the **artist credit** sliding up from the bottom scrim on hover (currently buried in the body), so the "credited forever" promise is felt, not just read.
+
+---
+
+## 4 · PRIORITIZED EXECUTION ROADMAP
+
+Ordered by **impact ÷ effort**. Do P0 in a single sprint; P1 in the next; P2 as the "wow" pass.
+
+### P0 — Immediate high-impact UI fixes (half-day each, pure polish)
+
+| # | Task | Where | Effort |
+|---|---|---|---|
+| P0.1 | **Countdown live-state switch** (→ "LIVE NOW") + DropTeaserCard flip | `Pulls.tsx`, `Hero.tsx`, `Multiverse.tsx` | 1–2h |
+| P0.2 | **Scrollspy + active nav state** + side mini-rail | `Nav.tsx` + `components.css` | 3–4h |
+| P0.3 | **Mock CTA feedback** (toast + stamp-in on connect / add-to-cart) | `ui.tsx` (`WalletButton`), `Store.tsx` | 3h |
+| P0.4 | **Dialog focus trap + return-focus + scroll lock polish** | `UniverseDialog.tsx` | 2–3h |
+| P0.5 | **Roster keyboard + arrow navigation + minimap** | `Multiverse.tsx`, `components.css` | 4–6h |
+| P0.6 | **Number tickers** on `mv__stats` / `lorestat` | add `useCountUp` to `hooks.tsx` | 3h |
+| P0.7 | **Image placeholders + crossfade** on cards | `UniverseCard.tsx`, `Store.tsx` | 2h |
+| P0.8 | **Restrain gold / diversify radius + spacing rhythm** | `global.css`, `components.css` | 4h |
+
+> *P0 delivers the biggest perceived-quality jump because it fixes the "dead"
+> and "stale" moments — the parts that break immersion.*
+
+### P1 — Motion & spatial architecture (the "creative pass", ~1 week)
+
+| # | Task | Where | Notes |
+|---|---|---|---|
+| P1.1 | **Install Lenis** smooth scroll, wire into `useScroll` | `main.tsx` / `App.tsx` | Guard with reduced-motion; keep `ease-expo`. |
+| P1.2 | **Custom cursor + magnetic buttons** | new `hooks.tsx` `useCursor`, `ui.tsx` `Cursor` | Springs, blend-mode glow, state-aware. |
+| P1.3 | **Giant index numerals + asymmetric roster zig-zag** | `Multiverse.tsx`, `components.css` | Watermark `U-0XX` at 15–20rem. |
+| P1.4 | **Section curtain clip-path reveals** | `Reveal` or new `Curtain` in `ui.tsx` | GSAP ScrollTrigger or framer `useScroll`. |
+| P1.5 | **Hero exit choreography** (glitch → rings collapse → dissolve) | `Hero.tsx` | One timeline. |
+| P1.6 | **Parallax nebula layers + vignette + chroma-aberration title** | `App.tsx`, `global.css`, `Hero.tsx` | The atmospheric-depth pass. |
+| P1.7 | **Persona layout refactor** (chat as hero scene, overlay copy) | `Persona.tsx`, `components.css` | Break the symmetric split. |
+| P1.8 | **Nav hero-C cursor + link letter-spacing motion** | `Nav.tsx`, `global.css` | Micro-interaction polish. |
+
+### P2 — Advanced creative engineering (the "award-bait" pass, 1–2 weeks)
+
+| # | Task | Where | Notes |
+|---|---|---|---|
+| P2.1 | **Interactive Loop instrument** — orbital particles, self-drawing path, node follow | `Loop.tsx` + `<canvas>` | The conceptual climax. |
+| P2.2 | **Cinematic 3-stage Pull reveal** (scan → lock → burst + count-up + rarity particles) | `Pulls.tsx` | Replace 12fps remount; WebGL or CSS 3D. |
+| P2.3 | **Per-card roster velocity/parallax + spring lerp** | `Multiverse.tsx` | Physics feel. |
+| P2.4 | **Scroll-velocity ghost numerals** (hyperdrive on fast scroll) | `ui.tsx` / section watermarks | Tie theme to motion. |
+| P2.5 | **Optional WebAudio tasteful feedback** (attract/confirm ticks) behind a SOUND toggle | new `lib/sound.ts` | Extremely memorable if restrained. |
+| P2.6 | **Footer crescendo CTA** — full-bleed "ENTER THE MULTIVERSE" + live countdown + magnetic | `Footer.tsx` | End on a high. |
+| P2.7 | **Store magazine + Artists staggered-masonry refactor** | `Store.tsx`, `Artists.tsx`, `components.css` | Kill the shared `auto-fit` grid. |
+| P2.8 | **Per-universe visual identity** — each universe card gets a mini-palette treatment (border, glow, scrim tint) so sections feel multi-authored | `UniverseCard.tsx`, `data.ts` | The "infinite versions" thesis in UI form. |
+
+---
+
+## 5 · REJECTION-PROOFING NOTES (what an Awwwards jury will test)
+
+- **Performance budget.** Your pull spinner re-mounts images at 12fps — replace it (P2.2). Lazy-load below-the-fold cards (already done), keep `Starfield` viewport-sized, and confirm the added canvas layers (nebula, particles) stay GPU-composited (`will-change: transform`, `translate3d`). Target < 1s LCP, < 90 Lighthouse.
+- **Reduced motion must be flawless** — every P1/P2 addition needs a `prefers-reduced-motion: reduce` collapse (Lenis → native scroll, cursor hidden, particles frozen, countdown static).
+- **A11y:** the dialog focus trap (P0.4) and keyboard roster nav (P0.5) are the gaps. Add `aria-current` on active nav, `role="timer"` (already), and an `aria-live` on the pull reveal.
+- **Don't let the "DEMO" honesty read as unfinished.** Consolidate the scattered mono disclaimers into one **single global "DEMO MODE" pill** (fixed, dismissible) so the immersion layer is intact where it matters, and the honest caveats live once, at the bottom.
+- **Content density:** the page is long. The minimap + scrollspy + clear pacing make length feel like *scope*, not scrolling tax.
+
+---
+
+*Delivered for the `nemo` pitch. Every recommendation maps to a real file in this
+repo; the token system and component architecture mean most of this is a
+`components.css` + a handful of `sections/*.tsx` edits, not a rewrite.*

@@ -1,24 +1,49 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import type { Universe } from '../lib/data';
 import { RARITY } from '../lib/data';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
 export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: () => void }) {
   const rarity = RARITY[u.rarity];
   const accent = rarity.color;
   const soldPct = u.supply ? Math.round((u.minted / u.supply) * 100) : 0;
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const restoreRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
+    restoreRef.current = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    if (panel) {
+      panel.setAttribute('tabindex', '-1');
+      panel.focus();
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
+      if (e.key === 'Tab' && panel) {
+        const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
     return () => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
+      restoreRef.current?.focus?.();
     };
   }, [onClose]);
 
@@ -35,6 +60,7 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
       aria-label={`${u.code} — ${u.name}`}
     >
       <motion.div
+        ref={panelRef}
         className="dialog"
         style={{ '--card-accent': accent }}
         initial={{ opacity: 0, y: 44, scale: 0.96 }}

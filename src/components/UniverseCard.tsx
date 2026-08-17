@@ -37,6 +37,7 @@ export default function UniverseCard({
         }
       }}
     >
+      <div className="ucard__index" aria-hidden="true">{u.code}</div>
       <div className="ucard__media">
         {u.image ? (
           <>

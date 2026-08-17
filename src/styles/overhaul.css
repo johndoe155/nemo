@@ -1,0 +1,605 @@
+/* ============================================================================
+   OVERHAUL LAYER — Awwwards-grade elevation (audit execution).
+   Loaded after components.css. Augments the token system; nothing here breaks
+   the existing component rules, it extends the design language:
+     - editorial type scale + ghost numerals
+     - living atmospheric depth (parallax nebula + vignette)
+     - chromatic aberration on display ink
+     - bespoke cursor + magnetic system
+     - scroll-progress HUD
+     - nav scrollspy / active states
+     - countdown LIVE state-switch
+     - roster controls (arrows + minimap) + index numerals
+     - magazine store, masonry artists, choreographed hero/persona/loop
+     - toast feedback system
+   Every animation collapses under prefers-reduced-motion (bottom).
+   ========================================================================== */
+
+:root {
+  /* Editorial display tiers */
+  --fs-display-xl: clamp(4rem, 1.6rem + 10vw, 11rem);
+  --fs-ghost: clamp(6rem, 2.5rem + 18vw, 20rem);
+  --fs-secnum: clamp(3.5rem, 1.5rem + 8vw, 9rem);
+  --fs-cta: clamp(2rem, 1rem + 5vw, 5rem);
+
+  /* Spatial rhythm variance */
+  --section-tall: clamp(8rem, 12vw, 15rem);
+  --section-tight: clamp(3.5rem, 6vw, 6.5rem);
+
+  /* Fresh surfaces */
+  --glass-strong: rgba(255, 255, 255, 0.055);
+}
+
+/* ============================ LAYOUT RHYTHM ============================ */
+
+.section--tall { padding-block: var(--section-tall); }
+.section--tight { padding-block: var(--section-tight); }
+
+/* ============================ TYPE: GHOST / NUMERALS ============================ */
+
+.ghost-num {
+  position: absolute;
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 0.8;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.1);
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 0;
+}
+
+.ghost-num--huge { font-size: var(--fs-ghost); }
+.ghost-num--section { font-size: var(--fs-secnum); }
+
+.sechead { position: relative; }
+.sechead__num {
+  position: absolute;
+  top: -2.6rem;
+  right: -0.4rem;
+  z-index: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-secnum);
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.09);
+  user-select: none;
+  pointer-events: none;
+}
+.sechead--center .sechead__num { right: auto; left: 50%; transform: translateX(-50%); }
+
+/* ============================ ATMOSPHERIC DEPTH ============================ */
+
+.ambience {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  overflow: hidden;
+}
+.neb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  will-change: transform;
+}
+.neb--1 {
+  width: 70vw; height: 70vw; left: -18vw; top: -18vw;
+  background: radial-gradient(circle, rgba(138, 77, 255, 0.34), transparent 62%);
+}
+.neb--2 {
+  width: 60vw; height: 60vw; right: -16vw; top: 24vh;
+  background: radial-gradient(circle, rgba(63, 232, 255, 0.2), transparent 62%);
+}
+.neb--3 {
+  width: 66vw; height: 66vw; left: 22vw; bottom: -26vw;
+  background: radial-gradient(circle, rgba(255, 61, 154, 0.2), transparent 62%);
+}
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 50% 40%, transparent 58%, rgba(0, 0, 0, 0.52) 100%);
+}
+
+/* Global fixed glow for glass depth (replaces flat bg-attachment feel) */
+
+/* ============================ CHROMATIC ABERRATION ============================ */
+
+.chroma {
+  position: relative;
+  display: inline-block;
+}
+.chroma::before,
+.chroma::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0.5;
+}
+.chroma::before {
+  background-image: var(--grad-primary);
+  transform: translate(-2px, 0);
+  z-index: -1;
+  mix-blend-mode: screen;
+}
+.chroma::after {
+  background-image: var(--grad-primary);
+  transform: translate(2px, 0);
+  z-index: -1;
+  mix-blend-mode: screen;
+}
+.chroma:hover::before { transform: translate(-4px, 0); }
+.chroma:hover::after { transform: translate(4px, 0); }
+
+/* ============================ CUSTOM CURSOR ============================ */
+
+@media (pointer: fine) {
+  body.custom-cursor a,
+  body.custom-cursor button,
+  body.custom-cursor [role='button'],
+  body.custom-cursor .ucard,
+  body.custom-cursor .chip,
+  body.custom-cursor .stamp {
+    cursor: none;
+  }
+}
+
+.cursor-dot,
+.cursor-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  pointer-events: none;
+  border-radius: 50%;
+  translate: -50% -50%;
+  will-change: transform;
+}
+.cursor-dot {
+  width: 8px; height: 8px;
+  background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan);
+  transition: width 0.25s var(--ease-expo), height 0.25s var(--ease-expo),
+    background 0.25s var(--ease-expo);
+}
+.cursor-glow {
+  width: 46px; height: 46px;
+  background: radial-gradient(circle, rgba(138, 77, 255, 0.4), rgba(63, 232, 255, 0.08) 65%);
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  transition: width 0.35s var(--ease-expo), height 0.35s var(--ease-expo),
+    opacity 0.35s var(--ease-expo);
+}
+.cursor-glow[data-hover='true'] {
+  width: 110px; height: 110px;
+  opacity: 0.9;
+}
+.cursor-dot[data-hover='true'] {
+  width: 12px; height: 12px;
+  background: var(--gold);
+  box-shadow: 0 0 16px var(--gold);
+}
+.cursor-label {
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 1001;
+  translate: -50% -50%;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--void);
+  background: var(--cyan);
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ============================ SCROLL PROGRESS HUD ============================ */
+
+.scrollprog {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  z-index: 200;
+  background: rgba(255, 255, 255, 0.06);
+}
+.scrollprog__bar {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+}
+.scrollprog__bar i {
+  display: block;
+  height: 100%;
+  background: var(--grad-primary);
+  box-shadow: 0 0 16px rgba(63, 232, 255, 0.8);
+}
+
+/* ============================ NAV — ACTIVE SCROLLSPY ============================ */
+
+.nav__link { position: relative; }
+.nav__link.active {
+  color: var(--ink);
+  background: rgba(63, 232, 255, 0.08);
+}
+.nav__link.active .num { color: var(--cyan); }
+.nav__link::after {
+  content: '';
+  position: absolute;
+  left: 0.85rem; right: 0.85rem; bottom: 0.28rem;
+  height: 1px;
+  background: linear-gradient(90deg, var(--cyan), var(--magenta));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s var(--ease-expo);
+}
+.nav__link.active::after,
+.nav__link:hover::after { transform: scaleX(1); }
+
+/* ============================ COUNTDOWN LIVE SWITCH ============================ */
+
+.countdown.is-live .countdown__cell b { color: var(--gold); }
+.countdown.is-live .countdown__cell { border-color: rgba(255, 200, 87, 0.5); }
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid rgba(255, 200, 87, 0.4);
+  background: rgba(255, 200, 87, 0.08);
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  box-shadow: 0 0 30px -10px rgba(255, 200, 87, 0.5);
+}
+
+/* ============================ ROSTER CONTROLS ============================ */
+
+.roster__controls {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 2rem;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.roster__arrow {
+  width: 46px; height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: rgba(5, 5, 10, 0.6);
+  backdrop-filter: blur(8px);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  transition: all 0.3s var(--ease-expo);
+}
+.roster__arrow:hover:not(:disabled) {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(63, 232, 255, 0.08);
+}
+.roster__arrow:disabled { opacity: 0.3; cursor: default; }
+
+.roster__minimap {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 5.2rem;
+  z-index: 6;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+.roster__minimap button {
+  width: 14px;
+  height: 26px;
+  border-radius: 3px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.3s var(--ease-expo);
+  display: grid;
+  place-items: end center;
+}
+.roster__minimap button span {
+  font-family: var(--font-mono);
+  font-size: 0.46rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  transform: rotate(-90deg);
+  white-space: nowrap;
+}
+.roster__minimap button.active {
+  border-color: var(--cyan);
+  background: rgba(63, 232, 255, 0.12);
+  height: 34px;
+}
+.roster__minimap button.active span { color: var(--cyan); }
+
+/* Giant index numeral watermark on each card */
+.ucard { position: relative; }
+.ucard__index {
+  position: absolute;
+  top: -0.9rem;
+  left: 0.6rem;
+  z-index: 4;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 3.4rem;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.22);
+  text-shadow: 0 6px 30px color-mix(in srgb, var(--card-accent, #8a4dff) 45%, transparent);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* Zig-zag rhythm on the rail */
+.roster__rail .ucard:nth-child(odd) { transform: translateY(-14px); }
+.roster__rail .ucard:nth-child(even) { transform: translateY(14px); }
+
+/* ============================ STORE — MAGAZINE ============================ */
+
+.store__mag {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1.4rem;
+  margin-top: 2.6rem;
+}
+@media (max-width: 980px) {
+  .store__mag { grid-template-columns: 1fr; }
+}
+.store__hero {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 520px;
+  display: flex;
+  align-items: flex-end;
+  padding: 2rem;
+}
+.store__hero img {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.store__hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 30%, rgba(5, 5, 10, 0.92) 92%);
+}
+.store__hero .store__body {
+  position: relative;
+  z-index: 2;
+}
+.store__hero .product__media {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.store__hero .product__name { font-size: clamp(1.4rem, 1rem + 1.4vw, 2.2rem); max-width: 22rem; }
+.store__stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.4rem;
+}
+.store__stack .product { min-height: 0; }
+
+/* ============================ ARTISTS — MASONRY ============================ */
+
+.artists__grid--masonry {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-auto-rows: 8px;
+  gap: 1.2rem;
+  margin-top: 2.6rem;
+}
+.artists__grid--masonry .artistcard { grid-row: span 30; align-self: start; }
+.artists__grid--masonry .artistcard:nth-child(3n + 2) { grid-row: span 38; }
+.artists__grid--masonry .artistcard:nth-child(3n) { grid-row: span 26; }
+
+/* ============================ PERSONA — SCENE ============================ */
+
+.persona__grid { align-items: start; }
+.persona__copy { z-index: 1; }
+.persona__chatwrap {
+  position: relative;
+  z-index: 1;
+}
+.chat { position: relative; }
+.chat__echo {
+  position: absolute;
+  inset: 14px -10px -12px 10px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(138, 77, 255, 0.14), rgba(63, 232, 255, 0.06));
+  border: 1px solid var(--line);
+  z-index: -1;
+  transform: rotate(-1.6deg);
+  pointer-events: none;
+}
+.chat__echo--2 {
+  inset: 26px 6px -22px -14px;
+  transform: rotate(1.4deg);
+  background: linear-gradient(160deg, rgba(255, 61, 154, 0.1), rgba(138, 77, 255, 0.05));
+}
+
+/* ============================ PULL — CINEMATIC REVEAL ============================ */
+
+.pull-result .burst {
+  position: absolute;
+  inset: -20%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--rr, #fff) 40%, transparent), transparent 70%);
+  animation: burstPop 0.9s var(--ease-expo) both;
+}
+@keyframes burstPop {
+  0% { transform: scale(0.2); opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.pull-result .mintno { font-variant-numeric: tabular-nums; }
+.pull-result.shake-common { animation: shakeSm 0.4s var(--ease-expo); }
+@keyframes shakeSm {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  60% { transform: translateX(3px); }
+  85% { transform: translateX(-1px); }
+}
+
+/* ============================ LOOP — INSTRUMENT ============================ */
+
+.loop__orbit { overflow: visible; }
+.loop__ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.loop__ring-svg circle {
+  fill: none;
+  stroke-width: 1;
+  stroke: rgba(63, 232, 255, 0.4);
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.loop__ring-svg circle.gold { stroke: rgba(255, 200, 87, 0.4); }
+.loop__particle {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 14px var(--cyan);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* ============================ FOOTER — CRESCENDO ============================ */
+
+.footer__cta {
+  position: relative;
+  text-align: center;
+  padding: clamp(3rem, 7vw, 6rem) 0 clamp(2rem, 4vw, 4rem);
+  border-block: 1px solid var(--line);
+  overflow: hidden;
+}
+.footer__cta .display-xl {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 0.98;
+  font-size: var(--fs-cta);
+  letter-spacing: -0.02em;
+  margin-bottom: 1.6rem;
+}
+.footer__cta .ghost-num { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+/* ============================ TOASTS ============================ */
+
+.toasts {
+  position: fixed;
+  bottom: 1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: center;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: rgba(8, 8, 18, 0.9);
+  border: 1px solid rgba(63, 232, 255, 0.5);
+  border-radius: 999px;
+  padding: 0.7rem 1.2rem;
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.8), 0 0 30px -10px rgba(63, 232, 255, 0.5);
+}
+.toast::before {
+  content: '✦';
+  color: var(--cyan);
+}
+
+/* ============================ HERO CHOREOGRAPHY ============================ */
+
+.hero__telemetry {
+  position: absolute;
+  right: var(--gutter);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-left: 1px solid var(--line-strong);
+  padding-left: 1rem;
+}
+.hero__telemetry b { color: var(--cyan); font-weight: 700; }
+@media (max-width: 900px) {
+  .hero__telemetry { display: none; }
+}
+
+/* Hero vertical watermark */
+.hero__watermark {
+  position: absolute;
+  right: -1rem;
+  bottom: -2rem;
+  z-index: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(6rem, 24vw, 20rem);
+  line-height: 0.8;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.07);
+  user-select: none;
+  pointer-events: none;
+  writing-mode: vertical-rl;
+  letter-spacing: 0.08em;
+}
+
+/* ============================ REDUCED MOTION ============================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-dot, .cursor-glow, .cursor-label { display: none; }
+  body.custom-cursor a, body.custom-cursor button,
+  body.custom-cursor [role='button'] { cursor: auto; }
+  .neb, .vignette { animation: none; }
+  .loop__particle { animation: none; }
+  .pull-result .burst { animation: none; opacity: 0; }
+  .roster__rail .ucard:nth-child(odd),
+  .roster__rail .ucard:nth-child(even) { transform: none; }
+  .store__mag, .artists__grid--masonry { display: block; }
+  .store__mag > * { margin-bottom: 1.4rem; }
+  .artists__grid--masonry .artistcard { margin-bottom: 1.2rem; }
+}

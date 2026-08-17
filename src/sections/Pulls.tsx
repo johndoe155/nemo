@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Reveal, SectionHead, useMockWallet } from '../components/ui';
 import type { Rarity, Universe } from '../lib/data';
+import { useCountUp } from '../lib/hooks';
 import {
   RARITY,
   SET_BONUS_AT,
@@ -11,6 +12,15 @@ import {
   rollRarity,
   universeForPull,
 } from '../lib/data';
+
+function MintNo({ value, total }: { value: number; total: number }) {
+  const { ref, val } = useCountUp(value, { duration: 900 });
+  return (
+    <span className="code" ref={ref as React.Ref<HTMLSpanElement>}>
+      MINT #{String(val).padStart(3, '0')} / {total}
+    </span>
+  );
+}
 
 interface StoredPull {
   uid: string;
@@ -104,6 +114,7 @@ export default function Pulls() {
       <div className="shell">
         <SectionHead
           center
+          num="04"
           kicker="04 · PILLAR 3 — PROOF-OF-PURCHASE COLLECTIBLES"
           title={
             <>
@@ -222,21 +233,21 @@ export default function Pulls() {
                   {phase === 'done' && result && (
                     <motion.div
                       key="done"
-                      className="pull-result"
+                      className={`pull-result ${result.r === 'common' ? 'shake-common' : ''}`}
                       initial={{ opacity: 0, scale: 0.85, filter: 'blur(10px)' }}
                       animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
                       transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
                       style={{ '--rr': RARITY[result.r].color }}
                     >
+                      <span className="burst" aria-hidden="true" />
                       <img src={result.u.image} alt={`${result.u.name} pull`} />
                       <span className="badge" style={{ '--c': RARITY[result.r].color }}>
                         {RARITY[result.r].label}
                         {result.r === 'secret' ? ' · ANOMALY' : ''}
                       </span>
                       <span className="name">{result.u.name}</span>
-                      <span className="code">
-                        {result.u.code} · MINT #{result.mintNo} / {result.u.supply}
-                      </span>
+                      <span className="code">{result.u.code} ·{' '}</span>
+                      <MintNo value={parseInt(result.mintNo, 10) || 0} total={result.u.supply} />
                       <div className="pullboard__resultmeta">
                         <button className="btn btn-primary" onClick={doPull}>
                           PULL AGAIN

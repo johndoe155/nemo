@@ -142,5 +142,95 @@ export function useParallax(range: [number, number], output: [number, number]) {
   return useTransform(scrollY, range, output, { clamp: true });
 }
 
+/* ---------------------------------------------------------------------------
+   useCountUp — animate a number from 0 → target once the element enters view.
+   Returns { ref, val, started }. Respects reduced motion (jumps straight to
+   target). Attach `ref` to the wrapping element.
+--------------------------------------------------------------------------- */
+
+export function useCountUp(
+  target: number,
+  opts?: { duration?: number; delay?: number },
+) {
+  const ref = useRef<HTMLElement | null>(null);
+  const [started, setStarted] = useState(false);
+  const [val, setVal] = useState(0);
+  const reduce = useRef(false);
+
+  useEffect(() => {
+    reduce.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setStarted(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setStarted(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.5 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!started) return;
+    if (reduce.current) {
+      setVal(target);
+      return;
+    }
+    const dur = opts?.duration ?? 1200;
+    const t0 = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setVal(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [started, target, opts?.duration]);
+
+  return { ref, val, started };
+}
+
+/* ---------------------------------------------------------------------------
+   useScrollspy — returns the id of the section currently in the center band
+   of the viewport. `ids` should be stable (module-level).
+--------------------------------------------------------------------------- */
+
+export function useScrollspy(ids: string[]): string {
+  const [active, setActive] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setActive(e.target.id);
+            return;
+          }
+        }
+      },
+      { rootMargin: '-38% 0px -56% 0px' },
+    );
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids.join('|')]);
+
+  return active;
+}
+
 /* Re-export what consumers may want directly */
 export { motion, useScroll, useTransform, useSpring, useMotionValueEvent };

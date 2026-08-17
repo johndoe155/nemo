@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { WalletButton, useMockWallet } from '../components/ui';
+import { useScrollspy } from '../lib/hooks';
 
 const LINKS = [
   { n: '01', label: 'MULTIVERSE', href: '#multiverse' },
@@ -11,10 +12,13 @@ const LINKS = [
   { n: '06', label: 'ARTISTS', href: '#artists' },
 ];
 
+const SECTION_IDS = LINKS.map((l) => l.href.slice(1));
+
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const wallet = useMockWallet();
+  const active = useScrollspy(SECTION_IDS);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -55,7 +59,12 @@ export default function Nav() {
 
           <div className="nav__links">
             {LINKS.map((l) => (
-              <a className="nav__link" href={l.href} key={l.href}>
+              <a
+                className={`nav__link ${active === l.href.slice(1) ? 'active' : ''}`}
+                href={l.href}
+                key={l.href}
+                aria-current={active === l.href.slice(1) ? 'true' : undefined}
+              >
                 <span className="num">{l.n}</span>
                 {l.label}
               </a>

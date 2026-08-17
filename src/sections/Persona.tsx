@@ -47,6 +47,7 @@ export default function Persona() {
       <div className="shell persona__grid">
         <div className="persona__copy">
           <SectionHead
+            num="02"
             kicker="02 · PILLAR 4 — THE AI PERSONA"
             title={
               <>
@@ -82,7 +83,10 @@ export default function Persona() {
           </Reveal>
         </div>
 
+        <div className="persona__chatwrap">
         <Reveal delay={0.12} y={36}>
+          <div className="chat__echo" aria-hidden="true" />
+          <div className="chat__echo chat__echo--2" aria-hidden="true" />
           <div className="card chat brackets">
             <div className="chat__bar">
               <span className="msg__ava">N</span>
@@ -170,6 +174,7 @@ export default function Persona() {
             <p className="chat__disclaimer">PERSONA RESPONSES ARE GENERATIVE · CANON-ONLY GUARDRAILS ON</p>
           </div>
         </Reveal>
+        </div>
       </div>
     </section>
   );

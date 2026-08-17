@@ -1,19 +1,23 @@
 import { useRef } from 'react';
 import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
 import { Reveal } from '../components/ui';
-import { art, UNIVERSE_DROP_ISO } from '../lib/data';
+import { Magnetic } from '../components/Cursor';
+import { art, UNIVERSES, UNIVERSE_DROP_ISO } from '../lib/data';
 import { useCountdown } from '../lib/hooks';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 const TITLE_LINES = [
   <>
-    ONE <span className="txt-grad">CANON.</span>
+    ONE <span className="txt-grad chroma" data-text="CANON.">CANON.</span>
   </>,
   <>
-    INFINITE <span className="txt-grad">VERSIONS.</span>
+    INFINITE <span className="txt-grad chroma" data-text="VERSIONS.">VERSIONS.</span>
   </>,
 ];
+
+const totalSupply = UNIVERSES.reduce((s, u) => s + u.supply, 0);
+const totalMinted = UNIVERSES.reduce((s, u) => s + u.minted, 0);
 
 export default function Hero() {
   const ref = useRef<HTMLElement | null>(null);
@@ -38,17 +42,46 @@ export default function Hero() {
       </motion.div>
       <div className="hero__wash" />
       <div className="hero__scanlines" />
+      <div className="hero__watermark" aria-hidden="true">NEMO</div>
 
       {/* Orbiting ring system behind the copy */}
       <motion.div className="hero__orbit orbit spin" style={{ width: 620, height: 620, right: '-8%', top: '-12%', y: orbitY }} />
       <motion.div className="hero__orbit orbit spin-rev" style={{ width: 420, height: 420, right: '6%', top: '4%', y: orbitY }} />
 
+      {/* Registry telemetry HUD — asymmetric sci-fi column */}
+      <motion.div
+        className="hero__telemetry"
+        style={{ y: orbitY, opacity: contentOpacity }}
+        aria-hidden="true"
+      >
+        <span>UNIVERSE REGISTRY</span>
+        <span>
+          REGISTERED <b>{UNIVERSES.length}</b>
+        </span>
+        <span>
+          SUPPLY <b>{totalSupply}</b>
+        </span>
+        <span>
+          MINTED <b>{totalMinted}</b>
+        </span>
+        <span>
+          NEXT <b>{t.done ? 'LIVE' : `D-${t.d}`}</b>
+        </span>
+      </motion.div>
+
       <motion.div className="shell hero__content" style={{ y: contentY, opacity: contentOpacity }}>
         <Reveal delay={0.05}>
-          <span className="hero__badge">
-            <span className="pulse-dot" />
-            EST. 2026 · THE MULTIVERSE IS LIVE · U-007 DROPS IN {t.d}D {t.h}H
-          </span>
+          {t.done ? (
+            <span className="live-pill">
+              <span className="pulse-dot" />
+              THE MULTIVERSE IS LIVE · U-007 IS IN THE REGISTRY
+            </span>
+          ) : (
+            <span className="hero__badge">
+              <span className="pulse-dot" />
+              EST. 2026 · THE MULTIVERSE IS LIVE · U-007 DROPS IN {t.d}D {t.h}H
+            </span>
+          )}
         </Reveal>
 
         <h1 className="display hero__title" aria-label="One canon. Infinite versions.">
@@ -83,10 +116,12 @@ export default function Hero() {
 
         <Reveal delay={0.74}>
           <div className="hero__ctas">
-            <a href="#multiverse" className="btn btn-primary">
-              <span className="btn-spark" />
-              ENTER THE MULTIVERSE
-            </a>
+            <Magnetic>
+              <a href="#multiverse" className="btn btn-primary" data-cursor="ENTER">
+                <span className="btn-spark" />
+                ENTER THE MULTIVERSE
+              </a>
+            </Magnetic>
             <a href="#perks" className="btn btn-ghost">
               HOLDER PERKS ▸
             </a>

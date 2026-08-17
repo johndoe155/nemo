@@ -6,6 +6,7 @@ export default function Artists() {
     <section className="section artists" id="artists">
       <div className="shell">
         <SectionHead
+          num="06"
           kicker="06 · PERMANENT PUBLIC CREDITS"
           kickerGold
           title={
@@ -22,7 +23,7 @@ export default function Artists() {
           }
         />
 
-        <div className="artists__grid">
+        <div className="artists__grid artists__grid--masonry">
           {ARTISTS.map((a, i) => {
             const credited = UNIVERSES.filter((u) => u.artist.name === a.name);
             return (

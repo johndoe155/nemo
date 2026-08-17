@@ -1,5 +1,22 @@
 import { Reveal, SectionHead } from '../components/ui';
 import { LORE_STATS, LORE_TIMELINE } from '../lib/data';
+import { useCountUp } from '../lib/hooks';
+
+function LoreStat({ value, suffix, label, note, delay }: (typeof LORE_STATS)[number] & { delay: number }) {
+  const { ref, val } = useCountUp(value, { duration: 1400 });
+  return (
+    <Reveal delay={delay} y={22}>
+      <div className="lorestat">
+        <b ref={ref as React.Ref<HTMLElement>}>
+          {val}
+          {suffix}
+        </b>
+        <span>{label}</span>
+        <em>{note}</em>
+      </div>
+    </Reveal>
+  );
+}
 
 export default function Lore() {
   return (
@@ -41,16 +58,7 @@ export default function Lore() {
 
           <div className="lore__stats">
             {LORE_STATS.map((s, i) => (
-              <Reveal key={s.label} delay={0.08 + i * 0.05} y={22}>
-                <div className="lorestat">
-                  <b>
-                    {s.value}
-                    {s.suffix}
-                  </b>
-                  <span>{s.label}</span>
-                  <em>{s.note}</em>
-                </div>
-              </Reveal>
+              <LoreStat key={s.label} {...s} delay={0.08 + i * 0.05} />
             ))}
           </div>
         </div>
