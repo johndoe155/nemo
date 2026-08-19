@@ -1,6 +1,7 @@
 import { Marquee } from '../components/ui';
 import { Magnetic } from '../components/Cursor';
 import { ARTISTS, UNIVERSES } from '../lib/data';
+import { LOGO_SRC } from '../lib/assets';
 
 export default function Footer() {
   return (
@@ -44,7 +45,7 @@ export default function Footer() {
         <div className="footer__top">
           <div>
             <div className="footer__brand">
-              OC<span className="txt-grad">UNIVERSE</span>
+              <img src={LOGO_SRC} alt="Logo" width={48} height={48} />
             </div>
             <p>
               A connected Web3 ecosystem anchored by the Nemoverse — for the character, the

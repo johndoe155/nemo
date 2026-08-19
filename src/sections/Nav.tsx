@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { WalletButton, useMockWallet } from '../components/ui';
 import { useScrollspy } from '../lib/hooks';
+import { LOGO_SRC } from '../lib/assets';
 
 const LINKS = [
   { n: '01', label: 'NEMOVERSE', href: '#nemoverse' },
@@ -39,19 +40,7 @@ export default function Nav() {
       <nav className={`nav ${scrolled ? 'nav--scrolled' : ''}`} aria-label="Primary">
         <div className="shell nav__inner">
           <a className="nav__brand" href="#top" aria-label="The Nemoverse home">
-            <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
-              <defs>
-                <linearGradient id="nbg" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stopColor="#8A4DFF" />
-                  <stop offset="0.5" stopColor="#3FE8FF" />
-                  <stop offset="1" stopColor="#FF3D9A" />
-                </linearGradient>
-              </defs>
-              <rect width="64" height="64" rx="14" fill="rgba(255,255,255,0.04)" />
-              <circle cx="32" cy="32" r="21" fill="none" stroke="url(#nbg)" strokeWidth="3" />
-              <circle cx="32" cy="32" r="9" fill="url(#nbg)" />
-              <circle cx="53" cy="32" r="4" fill="#FFC857" />
-            </svg>
+            <img className="nav__logo" src={LOGO_SRC} alt="Logo" width={26} height={26} />
             <span>
               NEMO<b>VERSE</b>
             </span>
