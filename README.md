@@ -20,7 +20,12 @@ npm run preview    # serve the production build
 ## What's on the page (top → bottom)
 
 1. **Hero** — full-viewport key art, split-line title reveal, orbiting rings,
-   parallax, live countdown badge, scroll progress rail.
+   parallax, live countdown badge, scroll progress rail. The CTAs are "portal
+   buttons": a liquid WebGL fragment shader (cursor-reactive swirl + ripples,
+   click shockwave) behind the primary CTA, refractive glassmorphism for the
+   secondary CTA, GSAP magnetic spring pull within a 60px threshold, kinetic
+   per-character label rollovers, and mix-blend-mode typography
+   (`src/components/PortalButton.tsx`, `src/styles/portal.css`).
 2. **The Nemoverse** — the anchor feature. A pinned horizontal roster of
    numbered universes (U-001…U-009) driven by vertical scroll; filters by
    rarity, sorts by date/rarity; each card opens a cinematic dialog with lore,

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useSpring, useTransform, useMotionValue } from 'framer-motion';
 import { Reveal } from '../components/ui';
-import { Magnetic } from '../components/Cursor';
+import { LiquidButton, GlassButton, PortalMagnetic } from '../components/PortalButton';
 import { art, UNIVERSES, UNIVERSE_DROP_ISO } from '../lib/data';
 import { useCountdown } from '../lib/hooks';
 
@@ -239,15 +239,12 @@ export default function Hero() {
 
         <Reveal delay={0.74}>
           <div className="hero__ctas">
-            <Magnetic>
-              <a href="#nemoverse" className="btn btn-primary" data-cursor="ENTER">
-                <span className="btn-spark" />
-                ENTER THE NEMOVERSE
-              </a>
-            </Magnetic>
-            <a href="#perks" className="btn btn-ghost">
-              HOLDER PERKS ▸
-            </a>
+            <PortalMagnetic>
+              <LiquidButton href="#nemoverse" />
+            </PortalMagnetic>
+            <PortalMagnetic>
+              <GlassButton href="#perks" />
+            </PortalMagnetic>
           </div>
         </Reveal>
 
