@@ -1090,3 +1090,12 @@
   .hero__sub-sep { animation: none; background-position: 0% 50%; }
   .pulse-dot { animation: none; }
 }
+
+.hero__marquee .pulse-dot {
+  background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan);
+}
+
+.hero__marquee .pulse-dot::after {
+  border-color: color-mix(in srgb, var(--cyan) 65%, transparent);
+}

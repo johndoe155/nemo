@@ -1,0 +1,1092 @@
+/* ============================================================================
+   OVERHAUL LAYER — Awwwards-grade elevation (audit execution).
+   Loaded after components.css. Augments the token system; nothing here breaks
+   the existing component rules, it extends the design language:
+     - editorial type scale + ghost numerals
+     - living atmospheric depth (parallax nebula + vignette)
+     - chromatic aberration on display ink
+     - bespoke cursor + magnetic system
+     - scroll-progress HUD
+     - nav scrollspy / active states
+     - countdown LIVE state-switch
+     - roster controls (arrows + minimap) + index numerals
+     - magazine store, masonry artists, choreographed hero/persona/loop
+     - cinematic hero title (ONE CANON. / INFINITE / VERSIONS.) — extended face,
+       hollow stroke, animated gradient + neon glow, pulsing dots, hover glitch
+     - looping glass status marquee + geometric ASCII subtitle separator
+     - toast feedback system
+   Every animation collapses under prefers-reduced-motion (bottom).
+   ========================================================================== */
+
+:root {
+  /* Editorial display tiers */
+  --fs-display-xl: clamp(4rem, 1.6rem + 10vw, 11rem);
+  --fs-ghost: clamp(6rem, 2.5rem + 18vw, 20rem);
+  --fs-secnum: clamp(3.5rem, 1.5rem + 8vw, 9rem);
+  --fs-cta: clamp(2rem, 1rem + 5vw, 5rem);
+
+  /* Spatial rhythm variance */
+  --section-tall: clamp(8rem, 12vw, 15rem);
+  --section-tight: clamp(3.5rem, 6vw, 6.5rem);
+
+  /* Fresh surfaces */
+  --glass-strong: rgba(255, 255, 255, 0.055);
+
+  /* Extended geometric display face for the wide hero words (CANON / VERSIONS).
+     Register one of these families (or a true "Expanded/Extended" cut of your
+     display face) in the font pipeline; falls back to --font-display otherwise. */
+  --font-display-ext: "Michroma", "Orbitron", "Audiowide", "Zen Dots", var(--font-display);
+}
+
+/* ============================ LAYOUT RHYTHM ============================ */
+
+.section--tall { padding-block: var(--section-tall); }
+.section--tight { padding-block: var(--section-tight); }
+
+/* ============================ TYPE: GHOST / NUMERALS ============================ */
+
+.ghost-num {
+  position: absolute;
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 0.8;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.1);
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 0;
+}
+
+.ghost-num--huge { font-size: var(--fs-ghost); }
+.ghost-num--section { font-size: var(--fs-secnum); }
+
+.sechead { position: relative; }
+.sechead__num {
+  position: absolute;
+  top: -3rem;
+  right: -1rem;
+  z-index: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-secnum);
+  line-height: 0.9;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(245, 243, 255, 0.18);
+  text-shadow: 0 8px 36px rgba(138, 77, 255, 0.15);
+  user-select: none;
+  pointer-events: none;
+  rotate: calc(var(--scroll-vel, 0) * 1.4deg);
+  will-change: rotate;
+}
+.sechead--center .sechead__num { right: auto; left: 50%; transform: translateX(-50%); }
+.sechead__num.gold-num {
+  -webkit-text-stroke: 1.5px rgba(255, 200, 87, 0.35);
+  text-shadow: 0 8px 36px rgba(255, 200, 87, 0.25);
+}
+
+/* ============================ ATMOSPHERIC DEPTH ============================ */
+
+.ambience {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  pointer-events: none;
+  overflow: hidden;
+}
+.neb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  will-change: transform;
+}
+.neb--1 {
+  width: 70vw; height: 70vw; left: -18vw; top: -18vw;
+  background: radial-gradient(circle, rgba(138, 77, 255, 0.34), transparent 62%);
+}
+.neb--2 {
+  width: 60vw; height: 60vw; right: -16vw; top: 24vh;
+  background: radial-gradient(circle, rgba(63, 232, 255, 0.2), transparent 62%);
+}
+.neb--3 {
+  width: 66vw; height: 66vw; left: 22vw; bottom: -26vw;
+  background: radial-gradient(circle, rgba(255, 61, 154, 0.2), transparent 62%);
+}
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 50% 40%, transparent 58%, rgba(0, 0, 0, 0.52) 100%);
+}
+
+/* Global fixed glow for glass depth (replaces flat bg-attachment feel) */
+
+/* ============================ CHROMATIC ABERRATION ============================ */
+
+.chroma {
+  position: relative;
+  display: inline-block;
+}
+.chroma::before,
+.chroma::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0.5;
+}
+.chroma::before {
+  background-image: var(--grad-primary);
+  transform: translate(-2px, 0);
+  z-index: -1;
+  mix-blend-mode: screen;
+}
+.chroma::after {
+  background-image: var(--grad-primary);
+  transform: translate(2px, 0);
+  z-index: -1;
+  mix-blend-mode: screen;
+}
+.chroma:hover::before { transform: translate(-4px, 0); }
+.chroma:hover::after { transform: translate(4px, 0); }
+
+/* ============================ CUSTOM CURSOR ============================ */
+
+@media (pointer: fine) {
+  body.custom-cursor a,
+  body.custom-cursor button,
+  body.custom-cursor [role='button'],
+  body.custom-cursor .ucard,
+  body.custom-cursor .chip,
+  body.custom-cursor .stamp {
+    cursor: none;
+  }
+}
+
+.cursor-dot,
+.cursor-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  pointer-events: none;
+  border-radius: 50%;
+  translate: -50% -50%;
+  will-change: transform;
+}
+.cursor-dot {
+  width: 8px; height: 8px;
+  background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan);
+  transition: width 0.25s var(--ease-expo), height 0.25s var(--ease-expo),
+    background 0.25s var(--ease-expo);
+}
+.cursor-glow {
+  width: 46px; height: 46px;
+  background: radial-gradient(circle, rgba(138, 77, 255, 0.4), rgba(63, 232, 255, 0.08) 65%);
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  transition: width 0.35s var(--ease-expo), height 0.35s var(--ease-expo),
+    opacity 0.35s var(--ease-expo);
+}
+.cursor-glow[data-hover='true'] {
+  width: 110px; height: 110px;
+  opacity: 0.9;
+}
+.cursor-dot[data-hover='true'] {
+  width: 12px; height: 12px;
+  background: var(--gold);
+  box-shadow: 0 0 16px var(--gold);
+}
+.cursor-label {
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 1001;
+  translate: -50% -50%;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--void);
+  background: var(--cyan);
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ============================ SCROLL PROGRESS HUD ============================ */
+
+.scrollprog {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  z-index: 200;
+  background: rgba(255, 255, 255, 0.06);
+}
+.scrollprog__bar {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+}
+.scrollprog__bar i {
+  display: block;
+  height: 100%;
+  background: var(--grad-primary);
+  box-shadow: 0 0 16px rgba(63, 232, 255, 0.8);
+}
+
+/* ============================ NAV — ACTIVE SCROLLSPY ============================ */
+
+.nav__link { position: relative; }
+.nav__link.active {
+  color: var(--ink);
+  background: rgba(63, 232, 255, 0.08);
+}
+.nav__link.active .num { color: var(--cyan); }
+.nav__link::after {
+  content: '';
+  position: absolute;
+  left: 0.85rem; right: 0.85rem; bottom: 0.28rem;
+  height: 1px;
+  background: linear-gradient(90deg, var(--cyan), var(--magenta));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s var(--ease-expo);
+}
+.nav__link.active::after,
+.nav__link:hover::after { transform: scaleX(1); }
+
+/* ============================ COUNTDOWN LIVE SWITCH ============================ */
+
+.countdown.is-live .countdown__cell b { color: var(--gold); }
+.countdown.is-live .countdown__cell { border-color: rgba(255, 200, 87, 0.5); }
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  background: rgba(15, 15, 25, 0.6);
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  box-shadow: 0 0 30px -10px rgba(255, 200, 87, 0.5);
+}
+
+/* ============================ ROSTER CONTROLS ============================ */
+
+.roster__controls {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 2rem;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.roster__arrow {
+  width: 46px; height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: rgba(5, 5, 10, 0.6);
+  backdrop-filter: blur(8px);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  transition: all 0.3s var(--ease-expo);
+}
+.roster__arrow:hover:not(:disabled) {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(63, 232, 255, 0.08);
+}
+.roster__arrow:disabled { opacity: 0.3; cursor: default; }
+
+.roster__minimap {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 5.2rem;
+  z-index: 6;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+.roster__minimap button {
+  width: 14px;
+  height: 26px;
+  border-radius: 3px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.3s var(--ease-expo);
+  display: grid;
+  place-items: end center;
+}
+.roster__minimap button span {
+  font-family: var(--font-mono);
+  font-size: 0.46rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  transform: rotate(-90deg);
+  white-space: nowrap;
+}
+.roster__minimap button.active {
+  border-color: var(--cyan);
+  background: rgba(63, 232, 255, 0.12);
+  height: 34px;
+}
+.roster__minimap button.active span { color: var(--cyan); }
+
+/* Giant index numeral watermark on each card */
+.ucard { position: relative; }
+.ucard__index {
+  position: absolute;
+  top: -1.8rem;
+  left: -0.2rem;
+  z-index: 4;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(6rem, 14vw, 16rem);
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(245, 243, 255, 0.14);
+  text-shadow: 0 8px 40px color-mix(in srgb, var(--card-accent, #8a4dff) 35%, transparent);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  rotate: calc(var(--scroll-vel, 0) * 1.4deg);
+  will-change: rotate;
+}
+
+/* Zig-zag rhythm on the rail */
+.roster__rail .ucard:nth-child(odd) { transform: translateY(-14px); }
+.roster__rail .ucard:nth-child(even) { transform: translateY(14px); }
+
+/* ============================ STORE — MAGAZINE ============================ */
+
+.store__mag {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1.4rem;
+  margin-top: 2.6rem;
+}
+@media (max-width: 980px) {
+  .store__mag { grid-template-columns: 1fr; }
+}
+.store__hero {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 520px;
+  display: flex;
+  align-items: flex-end;
+  padding: 2rem;
+}
+.store__hero img {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.store__hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 30%, rgba(5, 5, 10, 0.92) 92%);
+}
+.store__hero .store__body {
+  position: relative;
+  z-index: 2;
+}
+.store__hero .product__media {
+  position: absolute;
+  inset: 0;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.store__hero .product__name { font-size: clamp(1.4rem, 1rem + 1.4vw, 2.2rem); max-width: 22rem; }
+.store__stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.4rem;
+}
+.store__stack .product { min-height: 0; }
+
+/* ============================ ARTISTS — MASONRY ============================ */
+
+.artists__grid--masonry {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-auto-rows: 8px;
+  gap: 1.2rem;
+  margin-top: 2.6rem;
+}
+.artists__grid--masonry .artists__grid-item { grid-row: span 30; align-self: start; }
+.artists__grid--masonry .artists__grid-item:nth-child(3n + 2) { grid-row: span 38; }
+.artists__grid--masonry .artists__grid-item:nth-child(3n) { grid-row: span 26; }
+
+/* Below ~660px the auto-fill grid collapses to a single column anyway, so the
+   fixed-track span sizes above (tuned for staggering multiple columns) have
+   nothing to stagger against — they just reserve a fixed block per card that
+   doesn't match each card's actual (wrapped) content height. Drop the masonry
+   sizing and let cards stack in normal flow, each sized to its own content. */
+@media (max-width: 640px) {
+  .artists__grid--masonry {
+    display: block;
+  }
+  .artists__grid--masonry .artists__grid-item {
+    margin-bottom: 1.2rem;
+  }
+  .artists__grid--masonry .artists__grid-item:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* ============================ PERSONA — SCENE ============================ */
+
+.persona__grid { align-items: start; }
+.persona__copy { z-index: 1; }
+.persona__chatwrap {
+  position: relative;
+  z-index: 1;
+}
+.chat { position: relative; }
+.chat__echo {
+  position: absolute;
+  inset: 14px -10px -12px 10px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(138, 77, 255, 0.14), rgba(63, 232, 255, 0.06));
+  border: 1px solid var(--line);
+  z-index: -1;
+  transform: rotate(-1.6deg);
+  pointer-events: none;
+}
+.chat__echo--2 {
+  inset: 26px 6px -22px -14px;
+  transform: rotate(1.4deg);
+  background: linear-gradient(160deg, rgba(255, 61, 154, 0.1), rgba(138, 77, 255, 0.05));
+}
+
+/* ============================ PULL — CINEMATIC REVEAL ============================ */
+
+.pull-result .burst {
+  position: absolute;
+  inset: -20%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--rr, #fff) 40%, transparent), transparent 70%);
+  animation: burstPop 0.9s var(--ease-expo) both;
+}
+@keyframes burstPop {
+  0% { transform: scale(0.2); opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.pull-result .mintno { font-variant-numeric: tabular-nums; }
+.pull-result.shake-common { animation: shakeSm 0.4s var(--ease-expo); }
+@keyframes shakeSm {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  60% { transform: translateX(3px); }
+  85% { transform: translateX(-1px); }
+}
+
+/* ============================ LOOP — INSTRUMENT ============================ */
+
+.loop__orbit { overflow: visible; }
+.loop__ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.loop__ring-svg circle {
+  fill: none;
+  stroke-width: 1;
+  stroke: rgba(63, 232, 255, 0.4);
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.loop__ring-svg circle.gold { stroke: rgba(255, 200, 87, 0.4); }
+.loop__particle {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 14px var(--cyan);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* ============================ FOOTER — CRESCENDO ============================ */
+
+.footer__cta {
+  position: relative;
+  text-align: center;
+  padding: clamp(3rem, 7vw, 6rem) 0 clamp(2rem, 4vw, 4rem);
+  border-block: 1px solid var(--line);
+  overflow: hidden;
+}
+.footer__cta .display-xl {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 0.98;
+  font-size: var(--fs-cta);
+  letter-spacing: -0.02em;
+  margin-bottom: 1.6rem;
+}
+.footer__cta .ghost-num { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+/* ============================ TOASTS ============================ */
+
+.toasts {
+  position: fixed;
+  bottom: 1.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  align-items: center;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: rgba(8, 8, 18, 0.9);
+  border: 1px solid rgba(63, 232, 255, 0.5);
+  border-radius: 999px;
+  padding: 0.7rem 1.2rem;
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.8), 0 0 30px -10px rgba(63, 232, 255, 0.5);
+}
+.toast::before {
+  content: '✦';
+  color: var(--cyan);
+}
+
+/* ============================ HERO CHOREOGRAPHY ============================ */
+
+.hero__telemetry {
+  position: absolute;
+  right: var(--gutter);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-left: 1px solid var(--line-strong);
+  padding-left: 1rem;
+}
+.hero__telemetry b { color: var(--cyan); font-weight: 700; }
+@media (max-width: 900px) {
+  .hero__telemetry { display: none; }
+}
+
+/* Hero vertical watermark */
+.hero__watermark {
+  position: absolute;
+  right: -1rem;
+  bottom: -2rem;
+  z-index: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(6rem, 24vw, 20rem);
+  line-height: 0.8;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.07);
+  user-select: none;
+  pointer-events: none;
+  writing-mode: vertical-rl;
+  letter-spacing: 0.08em;
+}
+
+.hero__watermark[data-hover='true'] {
+  opacity: 0.9;
+  transform: scale(1.05);
+  transition: opacity 0.3s var(--ease-expo), transform 0.3s var(--ease-expo);
+}
+
+/* ============================ HERO TITLE — CINEMATIC CENTERPIECE ============================
+   "ONE CANON. / INFINITE / VERSIONS." — three stacked display lines:
+     · Line 1: solid ONE + extended-geometric gradient CANON + pulsing accent dot
+     · Line 2: hollow, white-outlined INFINITE
+     · Line 3: extended-geometric gradient VERSIONS + pulsing dot + hover glitch
+   Scroll-bound entrance stagger (left / fade-scale / right) is driven from
+   Hero.tsx via framer-motion `whileInView`; everything here is the visual
+   language: spacing, strokes, animated gradient, layered neon glow, dots,
+   chromatic-aberration glitch. */
+
+.hero__title {
+  line-height: 1.04;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  overflow: visible; /* let the neon glow breathe (old char-mask overflow:hidden is gone) */
+  margin-bottom: 0;
+}
+
+.hero__line {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  white-space: nowrap; /* never a mid-word wrap / word concatenation */
+  position: relative;
+  will-change: transform, opacity;
+}
+.hero__line--1 { margin-bottom: 0.06em; }
+.hero__line--2 { margin-bottom: 0.14em; }
+
+/* Line 2 — hollow INFINITE sits a touch smaller with wide tracking so the
+   three lines read as one balanced block. */
+.hero__line--2 {
+  font-size: 0.78em;
+  letter-spacing: 0.16em;
+  padding-left: 0.16em; /* optical centering for the tracked caps */
+  transform-origin: left center;
+}
+
+/* Solid block "ONE" */
+.hero__one {
+  display: inline-block;
+  color: #fff;
+  font-weight: 800;
+}
+
+/* Super-wide extended display face for CANON / VERSIONS */
+.hero__wide {
+  display: inline-block;
+  font-family: var(--font-display-ext);
+  font-weight: 800;
+  font-stretch: 115%;
+  letter-spacing: 0.05em;
+}
+
+/* Animated gradient ink + multi-layered ambient neon glow (CANON / VERSIONS) */
+.hero__grad {
+  background-image: var(--grad-primary);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0px 0px 10px rgba(63, 232, 255, 0.35))
+          drop-shadow(0px 0px 20px rgba(168, 85, 247, 0.5))
+          drop-shadow(0px 6px 32px rgba(255, 61, 154, 0.25));
+  animation: heroGradientFlow 9s ease-in-out infinite;
+}
+@keyframes heroGradientFlow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Hollow outlined line — INFINITE */
+.hero__hollow {
+  display: inline-block;
+  color: transparent;
+  -webkit-text-stroke: 1.5px #ffffff;
+  filter: drop-shadow(0px 0px 14px rgba(255, 255, 255, 0.22));
+}
+
+/* Pulsing celestial accent dots (the periods after CANON. / VERSIONS.) */
+.hero__dot {
+  display: inline-block;
+  position: relative;
+  top: -0.12em;
+  width: 0.085em;
+  height: 0.085em;
+  margin-left: 0.05em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #ffffff 0%, #3de8ff 38%, #8a5cff 72%, #ff3d9a 100%);
+  box-shadow: 0 0 8px rgba(63, 232, 255, 0.95),
+              0 0 20px rgba(138, 92, 255, 0.85),
+              0 0 36px rgba(255, 61, 154, 0.55);
+  animation: heroDotPulse 2.6s ease-in-out infinite;
+}
+.hero__dot--2 { animation-delay: -1.3s; } /* breathe out of phase with the first dot */
+@keyframes heroDotPulse {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%      { transform: scale(1.35); opacity: 1; }
+}
+
+/* Line 3 — hover chromatic-aberration glitch on VERSIONS (split-reality theme).
+   Red / blue ghost copies of the word are clipped to the glyphs and split
+   apart, with a stepped jitter while hovering. */
+.hero__vers { position: relative; }
+.hero__vers::before,
+.hero__vers::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  opacity: 0.18;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  transition: opacity 0.35s var(--ease-expo);
+}
+.hero__vers::before { background: linear-gradient(90deg, var(--magenta), #ff2d55); transform: translate(-1.5px, 0); }
+.hero__vers::after  { background: linear-gradient(90deg, var(--cyan), #00d0ff); transform: translate(1.5px, 0); }
+.hero__vers:hover { transform: translateX(1px) skewX(-0.6deg); }
+.hero__vers:hover::before {
+  opacity: 0.85;
+  animation: heroGlitchR 0.55s steps(2, end) infinite;
+}
+.hero__vers:hover::after {
+  opacity: 0.85;
+  animation: heroGlitchB 0.55s steps(2, end) infinite;
+}
+@keyframes heroGlitchR {
+  0%, 100% { transform: translate(-2px, 0); }
+  33%      { transform: translate(-4px, 1px); }
+  66%      { transform: translate(-1px, -1px); }
+}
+@keyframes heroGlitchB {
+  0%, 100% { transform: translate(2px, 0); }
+  33%      { transform: translate(4px, -1px); }
+  66%      { transform: translate(1px, 1px); }
+}
+
+/* Guard against horizontal overflow on narrow screens: scale the whole title
+   with the viewport so the nowrap lines never spill past the shell gutter. */
+@media (max-width: 640px) {
+  .hero__title { font-size: clamp(2.4rem, 11vw, 4rem); }
+}
+
+.hero__lede {
+  max-width: 42rem;
+  line-height: 1.7;
+  font-size: clamp(1.05rem, 0.95rem + 0.45vw, 1.35rem);
+  color: var(--ink-dim);
+}
+.hero__lede em {
+  background: linear-gradient(90deg, rgba(138, 77, 255, 0.25), rgba(63, 232, 255, 0.18));
+  padding: 0.08em 0.35em;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* ============================ HERO STATUS MARQUEE PILL ============================
+   Infinite hardware-accelerated ticker. Two identical copies sit side-by-side
+   on the track; translating -50% loops seamlessly. Pulse-dot stays pinned. */
+
+.hero__badge,
+.hero__marquee {
+  --marquee-mask: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  max-width: min(36rem, 100%);
+  width: min(36rem, 100%);
+  padding: 0.55rem 1rem 0.55rem 0.85rem;
+  border-radius: 999px;
+  overflow: hidden;
+  font-family: var(--font-mono), "IBM Plex Mono", "Share Tech Mono", ui-monospace, monospace;
+  font-size: var(--fs-mono, 0.68rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink, #f5f3ff);
+  background: rgba(15, 15, 25, 0.6);
+  border: 1px solid rgba(234, 179, 8, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 0 24px -12px rgba(234, 179, 8, 0.28);
+  transition: border-color 0.45s var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+              box-shadow 0.45s var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  touch-action: manipulation;
+}
+
+/* Ambient cyan → purple → gold glow (hover / focus / press) */
+.hero__badge::after,
+.hero__marquee::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  background: linear-gradient(
+    120deg,
+    rgba(34, 211, 238, 0.95),
+    rgba(168, 85, 247, 0.9),
+    rgba(234, 179, 8, 0.95),
+    rgba(34, 211, 238, 0.95)
+  );
+  background-size: 220% 220%;
+  opacity: 0;
+  filter: blur(8px);
+  transition: opacity 0.45s ease;
+}
+.hero__badge:hover,
+.hero__badge:focus-visible,
+.hero__marquee:hover,
+.hero__marquee:focus-visible,
+.hero__marquee.is-paused {
+  border-color: rgba(34, 211, 238, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(168, 85, 247, 0.35),
+    0 0 18px rgba(34, 211, 238, 0.28),
+    0 0 36px rgba(234, 179, 8, 0.2);
+  outline: none;
+}
+.hero__badge:hover::after,
+.hero__badge:focus-visible::after,
+.hero__marquee:hover::after,
+.hero__marquee:focus-visible::after,
+.hero__marquee.is-paused::after {
+  opacity: 0.8;
+  animation: heroBadgeGlow 2.8s linear infinite;
+}
+@keyframes heroBadgeGlow {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.hero__marquee.live-pill {
+  color: var(--gold);
+  border-color: rgba(234, 179, 8, 0.35);
+}
+
+.hero__marquee-viewport {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  mask-image: var(--marquee-mask);
+  -webkit-mask-image: var(--marquee-mask);
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+
+.hero__marquee-track {
+  display: inline-flex;
+  width: max-content;
+  will-change: transform;
+  animation: heroMarquee 18s linear infinite;
+}
+
+.hero__marquee-copy {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding-right: 0; /* gap is baked into the ticker string ("   ·   ") */
+}
+
+@keyframes heroMarquee {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+.hero__marquee:hover .hero__marquee-track,
+.hero__marquee:focus-within .hero__marquee-track,
+.hero__marquee:active .hero__marquee-track,
+.hero__marquee.is-paused .hero__marquee-track {
+  animation-play-state: paused;
+}
+
+/* ============================ HERO SUBTITLE BLOCK ============================
+   Unified horizontal glass row under the display title. Brand tag is high-
+   contrast; descriptor is muted. Diamond replaced by a morphing ASCII run. */
+
+.hero__subblock {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.1rem;
+  width: fit-content;
+  max-width: 100%;
+  margin-block: 20px;
+  padding: 0.7rem 1.15rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: var(--font-mono), "IBM Plex Mono", "Share Tech Mono", ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.hero__sub-brand {
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.18);
+  white-space: nowrap;
+}
+
+.hero__sub-desc {
+  color: var(--ink, #f5f3ff);
+  opacity: 0.7;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  white-space: nowrap;
+}
+
+.hero__sub-sep {
+  display: inline-block;
+  min-width: 14ch;
+  width: 14ch;
+  overflow: hidden;
+  font-family: var(--font-mono), "IBM Plex Mono", "Share Tech Mono", ui-monospace, monospace;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  text-align: center;
+  white-space: nowrap;
+  background: linear-gradient(90deg, #22d3ee, #a855f7, #eab308, #22d3ee);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.35));
+  animation: heroSepShimmer 4.2s linear infinite;
+  user-select: none;
+  pointer-events: none;
+}
+
+@keyframes heroSepShimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@media (max-width: 640px) {
+  .hero__subblock {
+    gap: 0.45rem 0.7rem;
+    padding: 0.6rem 0.85rem;
+    letter-spacing: 0.14em;
+  }
+  .hero__sub-brand,
+  .hero__sub-desc { letter-spacing: 0.14em; }
+  .hero__sub-sep { min-width: 12ch; width: 12ch; }
+}
+
+/* Pulsing dot animation */
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 12px var(--gold);
+  display: inline-block;
+  flex-shrink: 0;
+  animation: pulseDot 1.4s var(--ease-expo) infinite;
+}
+@keyframes pulseDot {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.6); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+/* Gradient text border effects */
+.txt-grad {
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  position: relative;
+}
+.txt-grad::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease-expo);
+}
+.txt-grad:hover::after {
+  opacity: 0.7;
+}
+
+/* Border glow for active elements */
+.btn-primary:focus-visible,
+.btn-ghost:focus-visible,
+.hero__badge:focus-visible {
+  outline: 1px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+/* Enhanced scroll progress indicator */
+.hero__progress {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  z-index: 3;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.hero__progress i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--grad-primary);
+  box-shadow: 0 0 16px rgba(63, 232, 255, 0.8);
+  transform-origin: left;
+  transition: width 1s var(--ease-expo);
+}
+
+/* (Duplicated typography refinement block removed — consolidated into the
+   "HERO TITLE — CINEMATIC CENTERPIECE" section above.) */
+
+/* ============================ REDUCED MOTION ============================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-dot, .cursor-glow, .cursor-label { display: none; }
+  body.custom-cursor a, body.custom-cursor button,
+  body.custom-cursor [role='button'] { cursor: auto; }
+  .neb, .vignette { animation: none; }
+  .loop__particle { animation: none; }
+  .pull-result .burst { animation: none; opacity: 0; }
+  .roster__rail .ucard:nth-child(odd),
+  .roster__rail .ucard:nth-child(even) { transform: none; }
+  .store__mag, .artists__grid--masonry { display: block; }
+  .store__mag > * { margin-bottom: 1.4rem; }
+  .artists__grid--masonry .artistcard { margin-bottom: 1.2rem; }
+
+  /* Hero title — kill looping motion; keep static styling (static glitch split is fine) */
+  .hero__grad { animation: none; background-size: 100% 100%; }
+  .hero__dot { animation: none; }
+  .hero__vers::before, .hero__vers::after { animation: none; }
+
+  /* Status marquee + geometric separator — freeze in place */
+  .hero__marquee-track {
+    animation: none;
+    transform: none;
+  }
+  .hero__marquee-copy + .hero__marquee-copy { display: none; }
+  .hero__badge::after,
+  .hero__marquee::after { animation: none; opacity: 0; }
+  .hero__sub-sep { animation: none; background-position: 0% 50%; }
+  .pulse-dot { animation: none; }
+}
