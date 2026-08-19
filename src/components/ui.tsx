@@ -52,7 +52,7 @@ export function SectionHead({
 }) {
   return (
     <div className={`sechead ${center ? 'sechead--center' : ''}`} id={id}>
-      {num && <span className="sechead__num" aria-hidden="true">{num}</span>}
+      {num && <span className={`sechead__num ${kickerGold ? 'gold-num' : ''}`} aria-hidden="true">{num}</span>}
       <span className={`kicker ${kickerGold ? 'gold' : ''}`}>{kicker}</span>
       <h2 className="display">
         <Reveal>{title}</Reveal>

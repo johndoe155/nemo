@@ -477,8 +477,8 @@ section[id] {
   white-space: nowrap;
 }
 .marquee__item .star {
-  color: var(--gold);
-  text-shadow: 0 0 10px rgba(255, 200, 87, 0.8);
+  color: var(--cyan);
+  text-shadow: 0 0 10px rgba(63, 232, 255, 0.8);
 }
 @keyframes marquee {
   to {

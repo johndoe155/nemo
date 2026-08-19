@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Universe } from '../lib/data';
 import { RARITY } from '../lib/data';
 
@@ -15,6 +16,7 @@ export default function UniverseCard({
   const rarity = RARITY[u.rarity];
   const accent = rarity.color;
   const soldPct = u.supply ? Math.round((u.minted / u.supply) * 100) : 0;
+  const [loaded, setLoaded] = useState(false);
 
   return (
     <article
@@ -38,7 +40,20 @@ export default function UniverseCard({
       }}
     >
       <div className="ucard__index" aria-hidden="true">{u.code}</div>
-      <div className="ucard__media">
+      <div className="ucard__media" style={{ position: 'relative' }}>
+        {/* Shimmer skeleton placeholder — accent-colored ambient wash */}
+        <div
+          className="ucard-skeleton"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 0,
+            background: `radial-gradient(80% 70% at 50% 40%, ${accent}18, transparent 72%)`,
+            opacity: loaded ? 0 : 1,
+            transition: 'opacity 0.6s ease',
+          }}
+          aria-hidden="true"
+        />
         {u.image ? (
           <>
             <div className="scrim-top" />
@@ -46,6 +61,13 @@ export default function UniverseCard({
               src={u.image}
               alt={`${u.name} — ${u.artist.name}`}
               loading={index !== undefined && index > 2 ? 'lazy' : 'eager'}
+              onLoad={() => setLoaded(true)}
+              style={{
+                opacity: loaded ? 1 : 0.2,
+                transition: 'opacity 0.8s ease',
+                position: 'relative',
+                zIndex: 1,
+              }}
             />
             <div className="scrim" />
           </>

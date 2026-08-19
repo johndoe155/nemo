@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Reveal, SectionHead, toast, useMockWallet } from '../components/ui';
 import type { Product } from '../lib/data';
 import { PRODUCTS } from '../lib/data';
@@ -14,6 +15,7 @@ function ProductCard({
   delay?: number;
 }) {
   const gated = p.gated && !wallet.connected;
+  const [loaded, setLoaded] = useState(false);
   const onAdd = () => {
     if (gated) {
       toast('CONNECT WALLET TO UNLOCK HOLDER SKU');
@@ -24,7 +26,19 @@ function ProductCard({
   return (
     <Reveal delay={delay} y={34} className={hero ? '' : ''}>
       <div className={`card product sheen ${hero ? 'store__hero' : ''}`}>
-        <div className="product__media">
+        <div className="product__media" style={{ position: 'relative' }}>
+          {/* Image shimmer skeleton */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+              background: 'radial-gradient(80% 70% at 50% 40%, rgba(63,232,255,0.1), transparent 72%)',
+              opacity: loaded ? 0 : 1,
+              transition: 'opacity 0.6s ease',
+            }}
+            aria-hidden="true"
+          />
           <span className="badge tag" style={{ '--c': 'var(--cyan)' }}>
             {p.kind.split('·')[0].trim()}
           </span>
@@ -33,7 +47,18 @@ function ProductCard({
               HOLDER SKU
             </span>
           )}
-          <img src={p.image} alt={p.name} loading={hero ? 'eager' : 'lazy'} />
+          <img
+            src={p.image}
+            alt={p.name}
+            loading={hero ? 'eager' : 'lazy'}
+            onLoad={() => setLoaded(true)}
+            style={{
+              opacity: loaded ? 1 : 0.25,
+              transition: 'opacity 0.8s ease',
+              position: 'relative',
+              zIndex: 1,
+            }}
+          />
         </div>
         {hero && <div className="scrim" />}
         <div className="store__body">

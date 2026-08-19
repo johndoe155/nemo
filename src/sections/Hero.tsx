@@ -139,7 +139,7 @@ export default function Hero() {
       </motion.div>
       <div className="hero__wash" />
       <div className="hero__scanlines" />
-      <div className="hero__watermark" aria-hidden="true">NEMO</div>
+      <div className="hero__watermark ghost-num ghost-num--huge" aria-hidden="true">NEMO</div>
 
       <motion.div className="hero__orbit orbit spin" style={{ width: 620, height: 620, right: '-8%', top: '-12%', y: orbitY }} />
       <motion.div className="hero__orbit orbit spin-rev" style={{ width: 420, height: 420, right: '6%', top: '4%', y: orbitY }} />

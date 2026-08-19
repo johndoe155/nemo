@@ -5,7 +5,7 @@ import UniverseDialog from '../components/UniverseDialog';
 import { Countdown, Reveal } from '../components/ui';
 import type { Rarity, Universe } from '../lib/data';
 import { RARITY, UNIVERSE_DROP_ISO, UNIVERSES, visibleUniverses } from '../lib/data';
-import { useCountdown } from '../lib/hooks';
+import { useCountdown, useCountUp } from '../lib/hooks';
 
 type SortMode = 'newest' | 'oldest' | 'rarity';
 
@@ -22,6 +22,10 @@ export default function Multiverse() {
 
   const rosterRef = useRef<HTMLDivElement | null>(null);
   const railRef = useRef<HTMLDivElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+
   const [isMobile, setIsMobile] = useState(false);
   const [maxX, setMaxX] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -55,6 +59,38 @@ export default function Multiverse() {
   useMotionValueEvent(scrollYProgress, 'change', (v) =>
     setProgress(Math.min(1, Math.max(0, (v - 0.06) / 0.88))),
   );
+
+  // Drag support for roster rail (P0.5)
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail || isMobile) return;
+
+    const onDown = (e: MouseEvent) => {
+      setIsDragging(true);
+      setDragStartX(e.clientX);
+      setDragOffset(0);
+      rail.style.cursor = 'grabbing';
+    };
+    const onMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const diff = e.clientX - dragStartX;
+      setDragOffset(diff);
+    };
+    const onUp = () => {
+      setIsDragging(false);
+      setDragOffset(0);
+      if (rail) rail.style.cursor = '';
+    };
+
+    rail.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      rail.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isDragging, isMobile]);
 
   const list = visibleUniverses.filter((u) => filter === 'all' || u.rarity === filter).sort(SORTS[sort]);
   const cardCount = list.length + 1; // + DropTeaserCard
@@ -106,12 +142,10 @@ export default function Multiverse() {
           </div>
           <div className="mv__stats">
             <div className="mv__stat">
-              <b>{visibleUniverses.length}</b>
-              <span>UNIVERSES</span>
+              <StatTicker value={visibleUniverses.length} label="UNIVERSES" />
             </div>
             <div className="mv__stat">
-              <b>{totalMinted}</b>
-              <span>PIECES MINTED</span>
+              <StatTicker value={totalMinted} label="PIECES MINTED" />
             </div>
             <div className="mv__stat">
               <b>1/2WKS</b>
@@ -154,7 +188,7 @@ export default function Multiverse() {
             <div className="roster__ghost ghost-text" aria-hidden="true">
               MULTIVERSE
             </div>
-            <motion.div className="roster__rail" ref={railRef} style={{ x, opacity: railOpacity }}>
+            <motion.div className="roster__rail" ref={railRef} style={{ x: isDragging ? dragOffset : x, opacity: railOpacity }}>
               {list.map((u, i) => (
                 <UniverseCard key={u.id} u={u} index={i} onClick={setSelected} />
               ))}
@@ -218,6 +252,18 @@ export default function Multiverse() {
         {selected && <UniverseDialog u={selected} onClose={() => setSelected(null)} />}
       </AnimatePresence>
     </section>
+  );
+}
+
+function StatTicker({ value, label }: { value: number; label: string }) {
+  const { ref, val, started } = useCountUp(value, { duration: 1200 });
+  return (
+    <>
+      <b ref={ref as React.Ref<HTMLElement>} style={{ lineHeight: 1, fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(1.4rem, 1rem + 1.8vw, 2.3rem)' }}>
+        {started ? val : value}
+      </b>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.62rem', letterSpacing: '0.26em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>{label}</span>
+    </>
   );
 }
 
