@@ -1,7 +1,7 @@
-# THE OC UNIVERSE — Hub Frontend
+# THE NEMOVERSE — Hub Frontend
 
 **One canon. Infinite versions.** A production-ready React demo of the pitch
-"*The OC Universe — A Connected Web3 Ecosystem, Anchored by The Multiverse*"
+"*The OC Universe — A Connected Web3 Ecosystem, Anchored by The Nemoverse*"
 (Prepared for: nemo · Prepared by: Skippy Rizzo · July 2026).
 
 Built as a Vite + React 18 + TypeScript (strict) SPA with framer-motion-driven
@@ -21,7 +21,7 @@ npm run preview    # serve the production build
 
 1. **Hero** — full-viewport key art, split-line title reveal, orbiting rings,
    parallax, live countdown badge, scroll progress rail.
-2. **The Multiverse** — the anchor feature. A pinned horizontal roster of
+2. **The Nemoverse** — the anchor feature. A pinned horizontal roster of
    numbered universes (U-001…U-009) driven by vertical scroll; filters by
    rarity, sorts by date/rarity; each card opens a cinematic dialog with lore,
    specs, artist credit, variant info, revenue split, and claim CTAs. The rail
@@ -35,11 +35,11 @@ npm run preview    # serve the production build
    odds, holder bonus, pity on the 8th stamp, Golden Gate set bonus at 6
    distinct universes, persistent stamp card, secret-universe chase.
 6. **Store** — demo Shopify catalog with holder-gated SKUs and holder pricing.
-7. **Artists** — permanent public credits, tied to Multiverse canon.
+7. **Artists** — permanent public credits, tied to Nemoverse canon.
 8. **Lore** — core identity, the 60/40 self-funding model, stat cards, and the
    canon timeline.
 9. **The Loop** — the pitch's "How It All Connects" as an orbital diagram
-   around the Multiverse core.
+   around the Nemoverse core.
 
 ## Architecture
 

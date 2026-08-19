@@ -1,4 +1,4 @@
-﻿DESIGN & UI/UX AUDIT — THE OC UNIVERSE
+﻿DESIGN & UI/UX AUDIT — THE NEMOVERSE
 Elevation roadmap from "polished demo" → Awwwards Site-of-the-Day caliber ($30k-grade digital experience)
 Auditor perspective: Awwwards-level creative UI/UX lead. This is not a "good job, add a hover state" review. It's an uncompromising teardown of what the build does right, what reads as good-but-generic, and the exact moves — tokens, layout refactors, motion architecture, and sensory craft — that turn a competent dark-glass dashboard into an immersive, award-baiting experience.
 
@@ -6,7 +6,7 @@ Auditor perspective: Awwwards-level creative UI/UX lead. This is not a "good job
 0 · VERDICT & LANDSCAPE
 What this is today: a genuinely well-engineered Web3 pitch prototype. The design-token system (src/styles/global.css), the pinned horizontal roster, the word-reveal library, the prefers-reduced-motion pass, and the single-source-of-truth data layer are above the average build. TypeScript is strict-clean. It reads as a premium pitch deck that happens to be a website.
 The gap to SOTD is not engineering — it's artistic risk and sensory density. The current page is uniform: every section uses the same SectionHead kicker pattern (01 · …), the same Reveal fade-up, the same card radius, the same mono-caption voice, the same centered/symmetric layout. Awwwards winners break that rhythm, introduce asymmetry and scale collision, add a bespoke cursor and scroll physics, and make every scroll a directed choreography rather than a vertical stack of equal panels.
-Framing the target: the concept is "one canon, infinite versions." The design language should never show two sections that feel like siblings. Each universe is a different artist — so each section should feel like it was drawn by a different hand inside one coherent multiverse. That is the single creative north star of this whole roadmap.
+Framing the target: the concept is "one canon, infinite versions." The design language should never show two sections that feel like siblings. Each universe is a different artist — so each section should feel like it was drawn by a different hand inside one coherent nemoverse. That is the single creative north star of this whole roadmap.
 The three hard constraints that anchor everything:
 1. Keep the strict token system — it's your theming superpower.
 2. Keep prefers-reduced-motion — extend it, never break it.
@@ -19,7 +19,7 @@ The three hard constraints that anchor everything:
 1.1 Typography: build a voice hierarchy, not a size ladder
 You have three excellent fonts but you're using them on one dimension (display = headlines, body = paragraphs, mono = labels). Awwwards sites use scale + weight + case + optical play as a grid-breaking weapon.
 Actions (token-level, `global.css:root`):
-* Add a true editorial display tier above --fs-h1. Currently the hero is clamp(2.7rem … 7.25rem). Push section-level "ghost" and "index" numerals to clamp(6rem … 18rem). Give the Multiverse roster a giant vertical index numeral (e.g. U-001) set in Unbounded 800 at 20rem, sitting behind each card like a tattooed watermark — immediately reads as bespoke.
+* Add a true editorial display tier above --fs-h1. Currently the hero is clamp(2.7rem … 7.25rem). Push section-level "ghost" and "index" numerals to clamp(6rem … 18rem). Give the Nemoverse roster a giant vertical index numeral (e.g. U-001) set in Unbounded 800 at 20rem, sitting behind each card like a tattooed watermark — immediately reads as bespoke.
 * Kill the repetition of the `kicker` pattern. Every section currently opens "01 · THE ANCHOR FEATURE" in the same cyan mono. Redesign the section number as a massive offset numeral (gold for gold sections, cyan for others) that bleeds off the grid edge, with the kicker text running vertically or clipped. Each section keeps its number, loses its template.
 * Introduce italic + font-feature variety. Space Grotesk and Unbounded support variable weights — animate a few words at font-variation-settings on scroll (e.g. the word "INFINITE" thickens from 500→900 as it enters view). This is a subtle, unmistakably-premium micro-moment.
 * Type scale collision: don't make every h2 the same --fs-h2. Alternate clamp(3rem…7rem) display moments with quiet mono-led sub-sections. The page should breathe between loud and soft — right now it's all one volume.
@@ -27,7 +27,7 @@ Actions (token-level, `global.css:root`):
 
 
 Spacing rhythm:
-* Your --section padding is clamp(5.5rem … 10.5rem) everywhere. Vary it: hero → 100svh, Multiverse → 420vh (already), but give Store/Artists tighter clamp(4rem…7rem) and Lore/Loop dramatically more air. Spatial asymmetry is the luxury signal.
+* Your --section padding is clamp(5.5rem … 10.5rem) everywhere. Vary it: hero → 100svh, Nemoverse → 420vh (already), but give Store/Artists tighter clamp(4rem…7rem) and Lore/Loop dramatically more air. Spatial asymmetry is the luxury signal.
 * Replace the repeated margin-block pattern on cards with a baseline rhythm — use 8px-based spacing but allow one "disruption" per section.
 
 
@@ -35,7 +35,7 @@ Spacing rhythm:
 The void black + nebula gradients + gold-for-rarity is a strong identity. The weakness is flatness: the background is three static radial washes. Give the canvas living depth.
 Actions:
 * Parallax the nebula washes per-section. Instead of one background-attachment: fixed, move 3–4 huge colored radial blobs (--iris, --cyan, --magenta) as fixed-position divs that translate slowly with scroll at different speeds and scales. Cheaper and smoother than a WebGL nebula, and instantly more cinematic. (Do this in App.tsx next to <Starfield/>.)
-* Chromatic aberration on key display text. Add a duplicated ::before/::after of the hero title offset by 1–2px in --magenta and --cyan at low opacity, or a text-shadow: -1px 0 rgba(255,61,154,.25), 1px 0 rgba(63,232,255,.25). Remove on hover. This is the multiverse/glitch signature and costs ~5 lines of CSS.
+* Chromatic aberration on key display text. Add a duplicated ::before/::after of the hero title offset by 1–2px in --magenta and --cyan at low opacity, or a text-shadow: -1px 0 rgba(255,61,154,.25), 1px 0 rgba(63,232,255,.25). Remove on hover. This is the nemoverse/glitch signature and costs ~5 lines of CSS.
 * Bloom + vignette. Add a radial box-shadow glow keyed to each card's --card-accent (already started) and a global fixed vignette overlay (radial-gradient(120% 100% at 50% 40%, transparent 60%, rgba(0,0,0,.5))) so the page reads as a lit scene, not a flat canvas.
 * Restrain `--gold`. You use gold for rarity, buttons, countdown, hints, marquees, and stamp "next." Gold loses meaning if it's everywhere. Reserve solid gold for Legendary rarity + the single primary conversion moment per viewport; shift the hero badge, marquee stars, and hints back toward cyan/mono. (Keep --grad-gold for the token, just deploy it sparingly.)
 
@@ -43,7 +43,7 @@ Actions:
 1.3 Bespoke layout refactors (the grid-breaking moves)
 These are the highest-leverage structural changes. Each breaks a currently-uniform pattern:
 4. *Hero — make it asymmetric and composed, not centered-left. - Offset the title block to the left third, and run a large vertical "NEMO" / ghost numeral down the right gutter, bleeding off-canvas. - Rotate the orbit ring system to be eclipsing the character — one ring tilted in 3D (`rotateX`/`rotateY`), partially off-screen, so it feels dimensional. - Put the countdown badge into a corner bracket frame* and let the hero's right side carry a thin "UNIVERSE REGISTRY" telemetry column (live supply / holders / next drop) that scrolls out — a sci-fi HUD moment that costs a flex row.
-5. Multiverse — index numerals + per-card asymmetry. Alternate card widths/top-offset in the rail (zig-zag on the y-axis) so the roster reads as a drift not a shelf. Add the giant watermark index numeral. This is the anchor section — it deserves the most bespoke treatment.
+5. Nemoverse — index numerals + per-card asymmetry. Alternate card widths/top-offset in the rail (zig-zag on the y-axis) so the roster reads as a drift not a shelf. Add the giant watermark index numeral. This is the anchor section — it deserves the most bespoke treatment.
 6. Persona — break the "copy left / card right" symmetric split. Make the chat window the hero of the section: a large terminal-style panel that bleeds toward the edge with a rotated/staggered stack of "prior messages" behind it, and the copy overlaid/smaller. Turn the chat into a scene, not a widget.
 7. Store / Artists — kill the `auto-fit` equal grid. These two sections use the exact same minmax() grid as Perks. Give Store a 2-up editorial magazine layout with one hero product (large, off-grid) + stacked smaller cards. Give Artists a staggered masonry / credit-list with the avatar bleeding off the card edge.
 8. Loop — from static diagram to interactive instrument (see §2.4). The orbit is the conceptual climax — make it move.
@@ -51,7 +51,7 @@ These are the highest-leverage structural changes. Each breaks a currently-unifo
 
 
 Surface craft (uniformity killers):
-* Vary card radius per section (--r-card 18px is everywhere). Let Multiverse cards be 22px, Store 8px (sharp editorial), chat 16px. Radius becomes a voice.
+* Vary card radius per section (--r-card 18px is everywhere). Let Nemoverse cards be 22px, Store 8px (sharp editorial), chat 16px. Radius becomes a voice.
 * Your borders are all 1px solid var(--line). Add corner-accent variants (already have .brackets) and asymmetric borders (e.g. a 2px gradient edge on just one side) to key cards.
 
 
@@ -82,7 +82,7 @@ Need
 Guardrail: keep prefers-reduced-motion collapsing all of the above (wrap Lenis init and cursor init in the media query check).
 2.2 Custom cursor & pointer dynamics
 Awwwards-defining. Build a spring-following cursor (framer-motion useMotionValue + useSpring):
-* A small crosshair/dot (cyan) that tracks at 0.35s spring — the "machine that manages the multiverse" voice.
+* A small crosshair/dot (cyan) that tracks at 0.35s spring — the "machine that manages the nemoverse" voice.
 * A blending trailing glow (magenta/iris) that lags more and uses mix-blend-mode: screen, so it lights up the glass surfaces beneath.
 * State-aware: grows + inverts to "VIEW / OPEN / PULL" on interactive targets (a, button, .ucard, .chip); shows drag on the roster; morphs to a crosshair "×" over the dialog close.
 * Magnetic buttons: primary CTAs translate toward the cursor within a 80px radius (spring back on leave). Apply to the hero CTA, dialog CTAs, and nav wallet button.
@@ -95,7 +95,7 @@ Right now sections react to scroll (parallax, reveals). Award pages script a jou
 11. Multi-trigger hero exit. On scroll out of the hero, choreograph a sequence: title splits/glitches → orbit rings collapse toward center → the whole hero dissolves into the marquee. One timeline, 1.2s, expo.
 12. Roster per-card polish. The pinned horizontal drift is strong; add per-card parallax (cards at a slightly different y and scale based on their position in the rail), plus a directional velocity feel by lerping x on a spring instead of a raw transform.
 13. Add a global scroll-progress HUD. A thin gradient rail at the very top (not just hero-bottom) with a mono % readout — consistent orientation across a 420vh pinned section.
-14. Scroll-velocity text. Rotate/scale the giant ghost numerals based on scroll velocity (spike on fast scroll) — the "hyperdrive" feel that ties the multiverse theme together.
+14. Scroll-velocity text. Rotate/scale the giant ghost numerals based on scroll velocity (spike on fast scroll) — the "hyperdrive" feel that ties the nemoverse theme together.
 
 
 2.4 Loop — make the instrument interactive
@@ -148,7 +148,7 @@ P0 — Immediate high-impact UI fixes (half-day each, pure polish)
 	Effort
 	P0.1
 	Countdown live-state switch (→ "LIVE NOW") + DropTeaserCard flip
-	Pulls.tsx, Hero.tsx, Multiverse.tsx
+	Pulls.tsx, Hero.tsx, Nemoverse.tsx
 	1–2h
 	P0.2
 	Scrollspy + active nav state + side mini-rail
@@ -164,7 +164,7 @@ P0 — Immediate high-impact UI fixes (half-day each, pure polish)
 	2–3h
 	P0.5
 	Roster keyboard + arrow navigation + minimap
-	Multiverse.tsx, components.css
+	Nemoverse.tsx, components.css
 	4–6h
 	P0.6
 	Number tickers on mv__stats / lorestat
@@ -197,7 +197,7 @@ P1 — Motion & spatial architecture (the "creative pass", ~1 week)
 	Springs, blend-mode glow, state-aware.
 	P1.3
 	Giant index numerals + asymmetric roster zig-zag
-	Multiverse.tsx, components.css
+	Nemoverse.tsx, components.css
 	Watermark U-0XX at 15–20rem.
 	P1.4
 	Section curtain clip-path reveals
@@ -236,7 +236,7 @@ P2 — Advanced creative engineering (the "award-bait" pass, 1–2 weeks)
 	Replace 12fps remount; WebGL or CSS 3D.
 	P2.3
 	Per-card roster velocity/parallax + spring lerp
-	Multiverse.tsx
+	Nemoverse.tsx
 	Physics feel.
 	P2.4
 	Scroll-velocity ghost numerals (hyperdrive on fast scroll)

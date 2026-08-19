@@ -741,7 +741,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  opacity: 0.28;
+  opacity: 0.18;
   pointer-events: none;
   mix-blend-mode: screen;
   will-change: transform, opacity;
@@ -750,8 +750,14 @@
 .hero__vers::before { background: linear-gradient(90deg, var(--magenta), #ff2d55); transform: translate(-1.5px, 0); }
 .hero__vers::after  { background: linear-gradient(90deg, var(--cyan), #00d0ff); transform: translate(1.5px, 0); }
 .hero__vers:hover { transform: translateX(1px) skewX(-0.6deg); }
-.hero__vers:hover::before,
-.hero__vers:hover::after { opacity: 0; animation: none; }
+.hero__vers:hover::before {
+  opacity: 0.85;
+  animation: heroGlitchR 0.55s steps(2, end) infinite;
+}
+.hero__vers:hover::after {
+  opacity: 0.85;
+  animation: heroGlitchB 0.55s steps(2, end) infinite;
+}
 @keyframes heroGlitchR {
   0%, 100% { transform: translate(-2px, 0); }
   33%      { transform: translate(-4px, 1px); }
