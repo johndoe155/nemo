@@ -51,7 +51,7 @@ export default function Lore() {
             <p>
               New universes release on a set cadence — <span className="hl">one every few weeks</span> —
               instead of whenever a commission happens to wrap. Fans anticipate drops. Holders enter
-              first. Every purchase pulls a piece back out. The Multiverse{' '}
+              first. Every purchase pulls a piece back out. The Nemoverse{' '}
               <span className="hl-gold">funds its own growth</span>.
             </p>
           </Reveal>

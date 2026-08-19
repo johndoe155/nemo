@@ -1,7 +1,7 @@
 # THE NEMOVERSE — Hub Frontend
 
 **One canon. Infinite versions.** A production-ready React demo of the pitch
-"*The OC Universe — A Connected Web3 Ecosystem, Anchored by The Nemoverse*"
+"*The Nemoverse — A Connected Web3 Ecosystem, Anchored by The Nemoverse*"
 (Prepared for: nemo · Prepared by: Skippy Rizzo · July 2026).
 
 Built as a Vite + React 18 + TypeScript (strict) SPA with framer-motion-driven

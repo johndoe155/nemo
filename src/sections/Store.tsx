@@ -97,7 +97,7 @@ export default function Store() {
           kicker="05 · DIRECT SHOPIFY INTEGRATION"
           title={
             <>
-              The <span className="txt-grad">storefront</span>, wired into the Multiverse
+              The <span className="txt-grad">storefront</span>, wired into the Nemoverse
             </>
           }
           sub={

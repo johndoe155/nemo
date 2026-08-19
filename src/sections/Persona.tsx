@@ -57,7 +57,7 @@ export default function Persona() {
             sub={
               <>
                 An AI-driven persona that speaks and interacts as the OC — active on X even when the
-                creator isn't posting. The Multiverse's drop schedule is its built-in content
+                creator isn't posting. The Nemoverse's drop schedule is its built-in content
                 calendar.
               </>
             }

@@ -20,7 +20,7 @@ export default function Perks() {
           sub={
             <>
               Connect your wallet at the store. Holding the OC NFT — or a specific trait tier —
-              unlocks real perks, with first access to new Multiverse universes as the headline
+              unlocks real perks, with first access to new Nemoverse universes as the headline
               reward.
             </>
           }

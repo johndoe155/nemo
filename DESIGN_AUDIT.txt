@@ -47,7 +47,7 @@ These are the highest-leverage structural changes. Each breaks a currently-unifo
 6. Persona — break the "copy left / card right" symmetric split. Make the chat window the hero of the section: a large terminal-style panel that bleeds toward the edge with a rotated/staggered stack of "prior messages" behind it, and the copy overlaid/smaller. Turn the chat into a scene, not a widget.
 7. Store / Artists — kill the `auto-fit` equal grid. These two sections use the exact same minmax() grid as Perks. Give Store a 2-up editorial magazine layout with one hero product (large, off-grid) + stacked smaller cards. Give Artists a staggered masonry / credit-list with the avatar bleeding off the card edge.
 8. Loop — from static diagram to interactive instrument (see §2.4). The orbit is the conceptual climax — make it move.
-9. Footer — add a final full-bleed CTA. Before the links, a giant "ENTER THE MULTIVERSE" display block with a live countdown and magnetic button. End the page on a crescendo, not a column layout.
+9. Footer — add a final full-bleed CTA. Before the links, a giant "ENTER THE NEMOVERSE" display block with a live countdown and magnetic button. End the page on a crescendo, not a column layout.
 
 
 Surface craft (uniformity killers):
@@ -121,7 +121,7 @@ The 12fps image remount is your heaviest interaction and your weakest moment. Re
 15. No scrollspy / active-section state in the nav. On a ~9000px one-pager the user loses orientation fast. Add an IntersectionObserver-driven active link that lights the current section and updates a side progress mini-rail (dots + labels on the left edge on desktop). Also wire the nav number 01…06 to invert on active.
 16. The roster is scroll-only. On desktop there's no way to step through universes without dragging 420vh of scroll, and no keyboard navigation. Add: arrow buttons (translate the rail 1 card), a draggable rail (pointer pan), per-card focus ring + Enter/Space already exist, and a minimap (the rail's index numerals as clickable markers). Also pause the pinned-scroll takeover while the user drags.
 17. Dialog lacks focus management. UniverseDialog has Esc/backdrop close but no focus trap, return-focus to the triggering card, or `aria-hidden` on background. Add a focus trap + useRef restore. This is an a11y and a premium-feel fix (the background should lock and dim, not scroll under).
-18. After the drop, countdown shows `00D 00H`. The countdown should state-switch to "LIVE NOW — U-007 IS THE MULTIVERSE" and flip the DropTeaserCard to a live "CLAIM" state when useCountdown.done. Stale "next drop" framing is the most jarring detail on the page.
+18. After the drop, countdown shows `00D 00H`. The countdown should state-switch to "LIVE NOW — U-007 IS THE NEMOVERSE" and flip the DropTeaserCard to a live "CLAIM" state when useCountdown.done. Stale "next drop" framing is the most jarring detail on the page.
 19. "ADD TO CART" and "CONNECT WALLET" do nothing visible (mock). Add state feedback: a one-time sheen + checkmark + a subtle "DEMO · wired to Shopify" toast. Dead CTAs are the #1 demo-death tell. Even mocked, they must respond.
 20. Nav on mobile: the mobile menu links don't show which section is active, and the burger doesn't close on route/outside. Minor, but polish it.
 21. No image placeholders/skeleton. Images pop in. Add a background placeholder in the accent color + a low-opacity shimmer, and crossfade on onLoad.
@@ -247,7 +247,7 @@ P2 — Advanced creative engineering (the "award-bait" pass, 1–2 weeks)
 	new lib/sound.ts
 	Extremely memorable if restrained.
 	P2.6
-	Footer crescendo CTA — full-bleed "ENTER THE MULTIVERSE" + live countdown + magnetic
+	Footer crescendo CTA — full-bleed "ENTER THE NEMOVERSE" + live countdown + magnetic
 	Footer.tsx
 	End on a high.
 	P2.7

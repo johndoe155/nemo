@@ -15,7 +15,7 @@ const SORTS: Record<SortMode, (a: Universe, b: Universe) => number> = {
   rarity: (a, b) => RARITY[b.rarity].tier - RARITY[a.rarity].tier,
 };
 
-export default function Multiverse() {
+export default function Nemoverse() {
   const [filter, setFilter] = useState<Rarity | 'all'>('all');
   const [sort, setSort] = useState<SortMode>('newest');
   const [selected, setSelected] = useState<Universe | null>(null);
@@ -123,14 +123,14 @@ export default function Multiverse() {
   ];
 
   return (
-    <section className="section mv" id="multiverse">
+    <section className="section mv" id="nemoverse">
       <div className="shell">
         <div className="mv__head">
           <div>
             <span className="kicker">01 · THE ANCHOR FEATURE</span>
             <h2 className="display" style={{ fontSize: 'var(--fs-h2)' }}>
               <Reveal>
-                The <span className="txt-grad">Multiverse</span>
+                The <span className="txt-grad">Nemoverse</span>
               </Reveal>
             </h2>
             <Reveal delay={0.1}>
@@ -186,7 +186,7 @@ export default function Multiverse() {
         <div className="roster" ref={rosterRef}>
           <div className="roster__sticky">
             <div className="roster__ghost ghost-text" aria-hidden="true">
-              MULTIVERSE
+              NEMOVERSE
             </div>
             <motion.div className="roster__rail" ref={railRef} style={{ x: isDragging ? dragOffset : x, opacity: railOpacity }}>
               {list.map((u, i) => (

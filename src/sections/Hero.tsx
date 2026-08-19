@@ -125,8 +125,8 @@ export default function Hero() {
   }
 
   const statusLine = t.done
-    ? 'THE MULTIVERSE IS LIVE · U-007 IS IN THE REGISTRY'
-    : `EST. 2026 · THE MULTIVERSE IS LIVE · U-007 DROPS IN ${t.d}D ${t.h}H`;
+    ? 'THE NEMOVERSE IS LIVE · U-007 IS IN THE REGISTRY'
+    : `EST. 2026 · THE NEMOVERSE IS LIVE · U-007 DROPS IN ${t.d}D ${t.h}H`;
   const ticker = `${statusLine}   ·   `;
 
   return (
@@ -222,7 +222,7 @@ export default function Hero() {
 
         <Reveal delay={0.5}>
           <p className="hero__subblock">
-            <span className="hero__sub-brand">THE OC UNIVERSE</span>
+            <span className="hero__sub-brand">THE NEMOVERSE</span>
             <GeomSep reduced={prefersReduced} />
             <span className="hero__sub-desc">A CONNECTED WEB3 ECOSYSTEM</span>
           </p>
@@ -232,7 +232,7 @@ export default function Hero() {
           <p className="hero__lede">
             One character. <em>Seven registered universes</em> — each commissioned from a different
             artist, numbered, canonized, and minted as a limited run. Holders enter new universes
-            first. Every purchase pulls a piece from the Multiverse. The persona keeps it alive
+            first. Every purchase pulls a piece from the Nemoverse. The persona keeps it alive
             between drops.
           </p>
         </Reveal>
@@ -240,9 +240,9 @@ export default function Hero() {
         <Reveal delay={0.74}>
           <div className="hero__ctas">
             <Magnetic>
-              <a href="#multiverse" className="btn btn-primary" data-cursor="ENTER">
+              <a href="#nemoverse" className="btn btn-primary" data-cursor="ENTER">
                 <span className="btn-spark" />
-                ENTER THE MULTIVERSE
+                ENTER THE NEMOVERSE
               </a>
             </Magnetic>
             <a href="#perks" className="btn btn-ghost">

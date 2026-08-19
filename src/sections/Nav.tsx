@@ -4,7 +4,7 @@ import { WalletButton, useMockWallet } from '../components/ui';
 import { useScrollspy } from '../lib/hooks';
 
 const LINKS = [
-  { n: '01', label: 'MULTIVERSE', href: '#multiverse' },
+  { n: '01', label: 'NEMOVERSE', href: '#nemoverse' },
   { n: '02', label: 'THE PERSONA', href: '#persona' },
   { n: '03', label: 'HOLDER PERKS', href: '#perks' },
   { n: '04', label: 'POP PULLS', href: '#pulls' },
@@ -38,7 +38,7 @@ export default function Nav() {
     <>
       <nav className={`nav ${scrolled ? 'nav--scrolled' : ''}`} aria-label="Primary">
         <div className="shell nav__inner">
-          <a className="nav__brand" href="#top" aria-label="The OC Universe home">
+          <a className="nav__brand" href="#top" aria-label="The Nemoverse home">
             <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
               <defs>
                 <linearGradient id="nbg" x1="0" y1="0" x2="1" y2="1">

@@ -118,13 +118,13 @@ export default function Pulls() {
           kicker="04 · PILLAR 3 — PROOF-OF-PURCHASE COLLECTIBLES"
           title={
             <>
-              Every purchase <span className="txt-grad">pulls a piece</span> of the Multiverse
+              Every purchase <span className="txt-grad">pulls a piece</span> of the Nemoverse
             </>
           }
           sub={
             <>
               Buy anything — merch or a universe edition — and a random pull from the current
-              Multiverse set mints to your wallet. No generic receipt art: a genuine, numbered
+              Nemoverse set mints to your wallet. No generic receipt art: a genuine, numbered
               piece of the collection.
             </>
           }
@@ -196,7 +196,7 @@ export default function Pulls() {
                       <p>THE ARCHIVE IS SHUFFLED</p>
                       <button className="btn btn-primary" onClick={doPull}>
                         <span className="btn-spark" />
-                        PULL FROM THE MULTIVERSE
+                        PULL FROM THE NEMOVERSE
                       </button>
                       <p className="mock">
                         DEMO MINT — REAL FLOW: SHOPIFY WEBHOOK → MINT ON <b>BASE</b> → WALLET OR EMAIL
@@ -346,7 +346,7 @@ export default function Pulls() {
               lineHeight: 2,
             }}
           >
-            ◆ SHOPIFY WEBHOOK TRIGGERS THE MINT AFTER CHECKOUT · DRAWING FROM THE LIVE MULTIVERSE CATALOG
+            ◆ SHOPIFY WEBHOOK TRIGGERS THE MINT AFTER CHECKOUT · DRAWING FROM THE LIVE NEMOVERSE CATALOG
             <br />◆ MINTED TO THE BUYER'S WALLET — OR CLAIMABLE VIA EMAIL · LOW-FEE CHAIN: POLYGON / BASE ·
             METADATA ON IPFS
           </p>

@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import Nav from './sections/Nav';
 import Hero from './sections/Hero';
-import Multiverse from './sections/Multiverse';
+import Nemoverse from './sections/Nemoverse';
 import Persona from './sections/Persona';
 import Perks from './sections/Perks';
 import Pulls from './sections/Pulls';
@@ -21,8 +21,8 @@ import { CustomCursor } from './components/Cursor';
 export default function App() {
   return (
     <>
-      <a className="skip-link" href="#multiverse" style={skipStyle}>
-        Skip to the Multiverse
+      <a className="skip-link" href="#nemoverse" style={skipStyle}>
+        Skip to the Nemoverse
       </a>
       <ScrollProgress />
       <CustomCursor />
@@ -46,7 +46,7 @@ export default function App() {
           ]}
           speed="38s"
         />
-        <Multiverse />
+        <Nemoverse />
         <Persona />
         <Perks />
         <Pulls />

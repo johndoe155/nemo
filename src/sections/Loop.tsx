@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Reveal } from '../components/ui';
 import { LOOP_PILLARS } from '../lib/data';
-/* The flywheel: four systems orbiting the Multiverse core. Absolute positioning
+/* The flywheel: four systems orbiting the Nemoverse core. Absolute positioning
    on desktop (orbit), stacked cards on mobile. The rings now self-draw on
    scroll and a particle physically travels the loop — "one loop, nothing
    wasted." */
@@ -35,7 +35,7 @@ export default function Loop() {
             <p style={{ color: 'var(--ink-dim)', maxWidth: '46rem', margin: '1rem auto 0', fontSize: 'var(--fs-lead)' }}>
               The Persona teases the next universe → fans arrive at the Hub → holders claim first →
               every purchase pulls a piece → fans post the pull → the Persona amplifies → the
-              Multiverse grows.
+              Nemoverse grows.
             </p>
           </Reveal>
         </div>
@@ -90,7 +90,7 @@ export default function Loop() {
           <div className="loop__core">
             <div>
               <b>THE</b>
-              <b>MULTIVERSE</b>
+              <b>NEMOVERSE</b>
               <span>the engine</span>
             </div>
           </div>

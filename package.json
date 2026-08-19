@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "The OC Universe — Hub frontend. One canon, infinite versions.",
+  "description": "The Nemoverse — Hub frontend. One canon, infinite versions.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

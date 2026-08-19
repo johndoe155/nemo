@@ -19,10 +19,10 @@ export default function Footer() {
       <div className="footer__cta">
         <span className="ghost-num" aria-hidden="true">U-007</span>
         <h2 className="display-xl">
-          ENTER THE <span className="txt-grad chroma" data-text="MULTIVERSE.">MULTIVERSE.</span>
+          ENTER THE <span className="txt-grad chroma" data-text="NEMOVERSE.">NEMOVERSE.</span>
         </h2>
         <Magnetic>
-          <a href="#multiverse" className="btn btn-primary" data-cursor="ENTER">
+          <a href="#nemoverse" className="btn btn-primary" data-cursor="ENTER">
             <span className="btn-spark" />
             EXPLORE THE UNIVERSES
           </a>
@@ -47,7 +47,7 @@ export default function Footer() {
               OC<span className="txt-grad">UNIVERSE</span>
             </div>
             <p>
-              A connected Web3 ecosystem anchored by the Multiverse — for the character, the
+              A connected Web3 ecosystem anchored by the Nemoverse — for the character, the
               collectors, and the store. Built for{' '}
               <b style={{ color: 'var(--cyan)' }}>nemo</b> · pitched by Skippy Rizzo · July 2026.
             </p>
@@ -58,7 +58,7 @@ export default function Footer() {
           </div>
           <div className="footer__col">
             <h4>UNIVERSE</h4>
-            <a href="#multiverse">The Multiverse</a>
+            <a href="#nemoverse">The Nemoverse</a>
             <a href="#lore">Core Identity</a>
             <a href="#artists">Artists</a>
             <a href="#persona">The Persona</a>
@@ -72,8 +72,8 @@ export default function Footer() {
           </div>
         </div>
         <div className="footer__bottom">
-          <span>© 2026 THE OC UNIVERSE · CONCEPT PITCH DEMO</span>
-          <span>MULTIVERSE PROTOCOL v0.1.0</span>
+          <span>© 2026 THE NEMOVERSE · CONCEPT PITCH DEMO</span>
+          <span>NEMOVERSE PROTOCOL v0.1.0</span>
           <span>MADE IN THE VOID</span>
         </div>
       </div>

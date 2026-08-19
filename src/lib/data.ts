@@ -1,5 +1,5 @@
 /* ============================================================================
-   THE OC UNIVERSE — CANONICAL DATA LAYER
+   THE NEMOVERSE — CANONICAL DATA LAYER
    Every section renders from this single source of truth. Universe content is
    placeholder canon (the real OC's identity is the client's to supply); the
    structural mechanics — numbered universes, lore blurbs, artist credits,
@@ -301,7 +301,7 @@ export const PRODUCTS: Product[] = [
     price: 85,
     image: art('u001.jpg'),
     gated: false,
-    note: 'Each order includes a Proof-of-Purchase pull from the Multiverse.',
+    note: 'Each order includes a Proof-of-Purchase pull from the Nemoverse.',
   },
   {
     sku: 'SKU-0272',
@@ -310,7 +310,7 @@ export const PRODUCTS: Product[] = [
     price: 45,
     image: art('u004.jpg'),
     gated: false,
-    note: 'Every purchase mints a random Multiverse pull.',
+    note: 'Every purchase mints a random Nemoverse pull.',
   },
   {
     sku: 'SKU-0399',
@@ -453,7 +453,7 @@ export const CHAT_RULES: ChatRule[] = [
   },
   {
     match: /(price|cost|mint|buy|eth|edition)/i,
-    reply: ['each universe mints as a limited run — 50 to 200 pieces. the artist gets their cut on every sale. that’s the only way a multiverse stays honest.'],
+    reply: ['each universe mints as a limited run — 50 to 200 pieces. the artist gets their cut on every sale. that’s the only way a nemoverse stays honest.'],
   },
   {
     match: /(wallet|nft|holder|perk|discount|claim)/i,
@@ -466,7 +466,7 @@ export const CHAT_RULES: ChatRule[] = [
 ];
 
 export const CHAT_FALLBACKS = [
-  'the multiverse has seven registered universes and two that don’t want to be known. ask me about #002, or about the drop on august 22.',
+  'the nemoverse has seven registered universes and two that don’t want to be known. ask me about #002, or about the drop on august 22.',
   'i only speak in canon. ask me about a universe — any universe.',
   'somewhere, a version of you is asking a version of me a better question.',
 ];
@@ -532,7 +532,7 @@ export const LORE_STATS = [
 
 export const LORE_TIMELINE = [
   { when: '2025 · Q4', title: 'THE FIRST COMMISSION', body: 'A single artist’s reinterpretation of the OC — the instinct that started everything. No system, no numbering, just one piece that felt different.' },
-  { when: '2026 · JAN', title: 'THE IDEA OF A MULTIVERSE', body: 'The scattered commissions become a canon: every artist gets a universe, every universe gets a number, every number gets a drop date.' },
+  { when: '2026 · JAN', title: 'THE IDEA OF A NEMOVERSE', body: 'The scattered commissions become a canon: every artist gets a universe, every universe gets a number, every number gets a drop date.' },
   { when: '2026 · FEB 14', title: 'U-001 — THE PRIME REALITY', body: 'The first numbered universe mints 200/200. The chase — and the revenue split with the artist — begins.' },
   { when: '2026 · MAY', title: 'U-005 GOES LEGENDARY', body: 'The Gilded Echo proves the chase mechanic: epic supply, instant secondary demand, and the first “pull bragging” posts on X.' },
   { when: '2026 · AUG 22', title: 'U-007 — THE LAST AURORA', body: 'First drop fully token-gated: holders claim 96 hours early, legendary traits get guaranteed variants. The loop is closed.' },
@@ -545,7 +545,7 @@ export const LOOP_PILLARS = [
     tag: 'THE AI PERSONA',
     color: '#ff3d9a',
     target: '#persona',
-    body: 'In-character teasers on X before every drop. The Multiverse’s release cadence becomes a built-in content calendar.',
+    body: 'In-character teasers on X before every drop. The Nemoverse’s release cadence becomes a built-in content calendar.',
   },
   {
     n: '02',
@@ -569,6 +569,6 @@ export const LOOP_PILLARS = [
     tag: 'PROOF-OF-PURCHASE',
     color: '#ffc857',
     target: '#pulls',
-    body: 'Every purchase pulls a piece from the Multiverse. Completing sets unlocks the Golden Gate bonus.',
+    body: 'Every purchase pulls a piece from the Nemoverse. Completing sets unlocks the Golden Gate bonus.',
   },
 ];

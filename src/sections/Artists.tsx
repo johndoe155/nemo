@@ -16,8 +16,8 @@ export default function Artists() {
           }
           sub={
             <>
-              The artists behind the Multiverse are credited publicly on the Hub and in each
-              piece's own metadata. The spotlight is tied directly to Multiverse credits — the
+              The artists behind the Nemoverse are credited publicly on the Hub and in each
+              piece's own metadata. The spotlight is tied directly to Nemoverse credits — the
               collection is only as strong as its canon.
             </>
           }
