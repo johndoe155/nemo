@@ -13,6 +13,9 @@ import Footer from './sections/Footer';
 import { Marquee, Starfield, ToastHost } from './components/ui';
 import Ambience from './components/Ambience';
 import ScrollProgress from './components/ScrollProgress';
+import SideRail from './components/SideRail';
+import SoundToggle from './components/SoundToggle';
+import VelocityFX from './components/VelocityFX';
 import { CustomCursor } from './components/Cursor';
 
 export default function App() {
@@ -23,6 +26,9 @@ export default function App() {
       </a>
       <ScrollProgress />
       <CustomCursor />
+      <SideRail />
+      <VelocityFX />
+      <SoundToggle />
       <div className="grain" aria-hidden="true" />
       <Starfield className="starfield" />
       <Ambience />
