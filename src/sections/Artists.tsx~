@@ -27,7 +27,7 @@ export default function Artists() {
           {ARTISTS.map((a, i) => {
             const credited = UNIVERSES.filter((u) => u.artist.name === a.name);
             return (
-              <Reveal key={a.name} className="artists__grid-item" delay={i * 0.06} y={30}>
+              <Reveal key={a.name} delay={i * 0.06} y={30}>
                 <div
                   className="card artistcard"
                   style={{ '--ac': a.hue[0], '--a1': a.hue[0], '--a2': a.hue[1] }}

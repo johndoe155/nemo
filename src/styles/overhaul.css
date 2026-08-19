@@ -11,6 +11,9 @@
      - countdown LIVE state-switch
      - roster controls (arrows + minimap) + index numerals
      - magazine store, masonry artists, choreographed hero/persona/loop
+     - cinematic hero title (ONE CANON. / INFINITE / VERSIONS.) — extended face,
+       hollow stroke, animated gradient + neon glow, pulsing dots, hover glitch
+     - looping glass status marquee + geometric ASCII subtitle separator
      - toast feedback system
    Every animation collapses under prefers-reduced-motion (bottom).
    ========================================================================== */
@@ -28,6 +31,11 @@
 
   /* Fresh surfaces */
   --glass-strong: rgba(255, 255, 255, 0.055);
+
+  /* Extended geometric display face for the wide hero words (CANON / VERSIONS).
+     Register one of these families (or a true "Expanded/Extended" cut of your
+     display face) in the font pipeline; falls back to --font-display otherwise. */
+  --font-display-ext: "Michroma", "Orbitron", "Audiowide", "Zen Dots", var(--font-display);
 }
 
 /* ============================ LAYOUT RHYTHM ============================ */
@@ -256,11 +264,11 @@
   gap: 0.6rem;
   font-family: var(--font-mono);
   font-size: var(--fs-mono);
-  letter-spacing: 0.28em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--gold);
-  border: 1px solid rgba(255, 200, 87, 0.4);
-  background: rgba(255, 200, 87, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  background: rgba(15, 15, 25, 0.6);
   padding: 0.5rem 1rem;
   border-radius: 999px;
   box-shadow: 0 0 30px -10px rgba(255, 200, 87, 0.5);
@@ -411,9 +419,26 @@
   gap: 1.2rem;
   margin-top: 2.6rem;
 }
-.artists__grid--masonry .artistcard { grid-row: span 30; align-self: start; }
-.artists__grid--masonry .artistcard:nth-child(3n + 2) { grid-row: span 38; }
-.artists__grid--masonry .artistcard:nth-child(3n) { grid-row: span 26; }
+.artists__grid--masonry .artists__grid-item { grid-row: span 30; align-self: start; }
+.artists__grid--masonry .artists__grid-item:nth-child(3n + 2) { grid-row: span 38; }
+.artists__grid--masonry .artists__grid-item:nth-child(3n) { grid-row: span 26; }
+
+/* Below ~660px the auto-fill grid collapses to a single column anyway, so the
+   fixed-track span sizes above (tuned for staggering multiple columns) have
+   nothing to stagger against — they just reserve a fixed block per card that
+   doesn't match each card's actual (wrapped) content height. Drop the masonry
+   sizing and let cards stack in normal flow, each sized to its own content. */
+@media (max-width: 640px) {
+  .artists__grid--masonry {
+    display: block;
+  }
+  .artists__grid--masonry .artists__grid-item {
+    margin-bottom: 1.2rem;
+  }
+  .artists__grid--masonry .artists__grid-item:last-child {
+    margin-bottom: 0;
+  }
+}
 
 /* ============================ PERSONA — SCENE ============================ */
 
@@ -588,6 +613,437 @@
   letter-spacing: 0.08em;
 }
 
+.hero__watermark[data-hover='true'] {
+  opacity: 0.9;
+  transform: scale(1.05);
+  transition: opacity 0.3s var(--ease-expo), transform 0.3s var(--ease-expo);
+}
+
+/* ============================ HERO TITLE — CINEMATIC CENTERPIECE ============================
+   "ONE CANON. / INFINITE / VERSIONS." — three stacked display lines:
+     · Line 1: solid ONE + extended-geometric gradient CANON + pulsing accent dot
+     · Line 2: hollow, white-outlined INFINITE
+     · Line 3: extended-geometric gradient VERSIONS + pulsing dot + hover glitch
+   Scroll-bound entrance stagger (left / fade-scale / right) is driven from
+   Hero.tsx via framer-motion `whileInView`; everything here is the visual
+   language: spacing, strokes, animated gradient, layered neon glow, dots,
+   chromatic-aberration glitch. */
+
+.hero__title {
+  line-height: 1.04;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  overflow: visible; /* let the neon glow breathe (old char-mask overflow:hidden is gone) */
+  margin-bottom: 0;
+}
+
+.hero__line {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  white-space: nowrap; /* never a mid-word wrap / word concatenation */
+  position: relative;
+  will-change: transform, opacity;
+}
+.hero__line--1 { margin-bottom: 0.06em; }
+.hero__line--2 { margin-bottom: 0.14em; }
+
+/* Line 2 — hollow INFINITE sits a touch smaller with wide tracking so the
+   three lines read as one balanced block. */
+.hero__line--2 {
+  font-size: 0.78em;
+  letter-spacing: 0.16em;
+  padding-left: 0.16em; /* optical centering for the tracked caps */
+  transform-origin: left center;
+}
+
+/* Solid block "ONE" */
+.hero__one {
+  display: inline-block;
+  color: #fff;
+  font-weight: 800;
+}
+
+/* Super-wide extended display face for CANON / VERSIONS */
+.hero__wide {
+  display: inline-block;
+  font-family: var(--font-display-ext);
+  font-weight: 800;
+  font-stretch: 115%;
+  letter-spacing: 0.05em;
+}
+
+/* Animated gradient ink + multi-layered ambient neon glow (CANON / VERSIONS) */
+.hero__grad {
+  background-image: var(--grad-primary);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0px 0px 10px rgba(63, 232, 255, 0.35))
+          drop-shadow(0px 0px 20px rgba(168, 85, 247, 0.5))
+          drop-shadow(0px 6px 32px rgba(255, 61, 154, 0.25));
+  animation: heroGradientFlow 9s ease-in-out infinite;
+}
+@keyframes heroGradientFlow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Hollow outlined line — INFINITE */
+.hero__hollow {
+  display: inline-block;
+  color: transparent;
+  -webkit-text-stroke: 1.5px #ffffff;
+  filter: drop-shadow(0px 0px 14px rgba(255, 255, 255, 0.22));
+}
+
+/* Pulsing celestial accent dots (the periods after CANON. / VERSIONS.) */
+.hero__dot {
+  display: inline-block;
+  position: relative;
+  top: -0.12em;
+  width: 0.085em;
+  height: 0.085em;
+  margin-left: 0.05em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #ffffff 0%, #3de8ff 38%, #8a5cff 72%, #ff3d9a 100%);
+  box-shadow: 0 0 8px rgba(63, 232, 255, 0.95),
+              0 0 20px rgba(138, 92, 255, 0.85),
+              0 0 36px rgba(255, 61, 154, 0.55);
+  animation: heroDotPulse 2.6s ease-in-out infinite;
+}
+.hero__dot--2 { animation-delay: -1.3s; } /* breathe out of phase with the first dot */
+@keyframes heroDotPulse {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%      { transform: scale(1.35); opacity: 1; }
+}
+
+/* Line 3 — hover chromatic-aberration glitch on VERSIONS (split-reality theme).
+   Red / blue ghost copies of the word are clipped to the glyphs and split
+   apart, with a stepped jitter while hovering. */
+.hero__vers { position: relative; }
+.hero__vers::before,
+.hero__vers::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  transition: opacity 0.25s var(--ease-expo);
+}
+.hero__vers::before { background: #ff2d55; transform: translate(-2px, 0); }
+.hero__vers::after  { background: #00d0ff; transform: translate(2px, 0); }
+.hero__vers:hover { transform: translateX(1px) skewX(-0.6deg); }
+.hero__vers:hover::before { opacity: 0.85; animation: heroGlitchR 0.55s steps(2, end) infinite; }
+.hero__vers:hover::after  { opacity: 0.85; animation: heroGlitchB 0.55s steps(2, end) infinite; }
+@keyframes heroGlitchR {
+  0%, 100% { transform: translate(-2px, 0); }
+  33%      { transform: translate(-4px, 1px); }
+  66%      { transform: translate(-1px, -1px); }
+}
+@keyframes heroGlitchB {
+  0%, 100% { transform: translate(2px, 0); }
+  33%      { transform: translate(4px, -1px); }
+  66%      { transform: translate(1px, 1px); }
+}
+
+/* Guard against horizontal overflow on narrow screens: scale the whole title
+   with the viewport so the nowrap lines never spill past the shell gutter. */
+@media (max-width: 640px) {
+  .hero__title { font-size: clamp(2.4rem, 11vw, 4rem); }
+}
+
+.hero__lede {
+  max-width: 42rem;
+  line-height: 1.7;
+  font-size: clamp(1.05rem, 0.95rem + 0.45vw, 1.35rem);
+  color: var(--ink-dim);
+}
+.hero__lede em {
+  background: linear-gradient(90deg, rgba(138, 77, 255, 0.25), rgba(63, 232, 255, 0.18));
+  padding: 0.08em 0.35em;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* ============================ HERO STATUS MARQUEE PILL ============================
+   Infinite hardware-accelerated ticker. Two identical copies sit side-by-side
+   on the track; translating -50% loops seamlessly. Pulse-dot stays pinned. */
+
+.hero__badge,
+.hero__marquee {
+  --marquee-mask: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  max-width: min(36rem, 100%);
+  width: min(36rem, 100%);
+  padding: 0.55rem 1rem 0.55rem 0.85rem;
+  border-radius: 999px;
+  overflow: hidden;
+  font-family: var(--font-mono), "IBM Plex Mono", "Share Tech Mono", ui-monospace, monospace;
+  font-size: var(--fs-mono, 0.68rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink, #f5f3ff);
+  background: rgba(15, 15, 25, 0.6);
+  border: 1px solid rgba(234, 179, 8, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 0 24px -12px rgba(234, 179, 8, 0.28);
+  transition: border-color 0.45s var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+              box-shadow 0.45s var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  touch-action: manipulation;
+}
+
+/* Ambient cyan → purple → gold glow (hover / focus / press) */
+.hero__badge::after,
+.hero__marquee::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  background: linear-gradient(
+    120deg,
+    rgba(34, 211, 238, 0.95),
+    rgba(168, 85, 247, 0.9),
+    rgba(234, 179, 8, 0.95),
+    rgba(34, 211, 238, 0.95)
+  );
+  background-size: 220% 220%;
+  opacity: 0;
+  filter: blur(8px);
+  transition: opacity 0.45s ease;
+}
+.hero__badge:hover,
+.hero__badge:focus-visible,
+.hero__marquee:hover,
+.hero__marquee:focus-visible,
+.hero__marquee.is-paused {
+  border-color: rgba(34, 211, 238, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(168, 85, 247, 0.35),
+    0 0 18px rgba(34, 211, 238, 0.28),
+    0 0 36px rgba(234, 179, 8, 0.2);
+  outline: none;
+}
+.hero__badge:hover::after,
+.hero__badge:focus-visible::after,
+.hero__marquee:hover::after,
+.hero__marquee:focus-visible::after,
+.hero__marquee.is-paused::after {
+  opacity: 0.8;
+  animation: heroBadgeGlow 2.8s linear infinite;
+}
+@keyframes heroBadgeGlow {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.hero__marquee.live-pill {
+  color: var(--gold);
+  border-color: rgba(234, 179, 8, 0.35);
+}
+
+.hero__marquee-viewport {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  mask-image: var(--marquee-mask);
+  -webkit-mask-image: var(--marquee-mask);
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+
+.hero__marquee-track {
+  display: inline-flex;
+  width: max-content;
+  will-change: transform;
+  animation: heroMarquee 18s linear infinite;
+}
+
+.hero__marquee-copy {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding-right: 0; /* gap is baked into the ticker string ("   ·   ") */
+}
+
+@keyframes heroMarquee {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+.hero__marquee:hover .hero__marquee-track,
+.hero__marquee:focus-within .hero__marquee-track,
+.hero__marquee:active .hero__marquee-track,
+.hero__marquee.is-paused .hero__marquee-track {
+  animation-play-state: paused;
+}
+
+/* ============================ HERO SUBTITLE BLOCK ============================
+   Unified horizontal glass row under the display title. Brand tag is high-
+   contrast; descriptor is muted. Diamond replaced by a morphing ASCII run. */
+
+.hero__subblock {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.1rem;
+  width: fit-content;
+  max-width: 100%;
+  margin-block: 20px;
+  padding: 0.7rem 1.15rem;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: var(--font-mono), "IBM Plex Mono", "Share Tech Mono", ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.hero__sub-brand {
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.18);
+  white-space: nowrap;
+}
+
+.hero__sub-desc {
+  color: var(--ink, #f5f3ff);
+  opacity: 0.7;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  white-space: nowrap;
+}
+
+.hero__sub-sep {
+  display: inline-block;
+  min-width: 14ch;
+  width: 14ch;
+  overflow: hidden;
+  font-family: var(--font-mono), "IBM Plex Mono", "Share Tech Mono", ui-monospace, monospace;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  text-align: center;
+  white-space: nowrap;
+  background: linear-gradient(90deg, #22d3ee, #a855f7, #eab308, #22d3ee);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.35));
+  animation: heroSepShimmer 4.2s linear infinite;
+  user-select: none;
+  pointer-events: none;
+}
+
+@keyframes heroSepShimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@media (max-width: 640px) {
+  .hero__subblock {
+    gap: 0.45rem 0.7rem;
+    padding: 0.6rem 0.85rem;
+    letter-spacing: 0.14em;
+  }
+  .hero__sub-brand,
+  .hero__sub-desc { letter-spacing: 0.14em; }
+  .hero__sub-sep { min-width: 12ch; width: 12ch; }
+}
+
+/* Pulsing dot animation */
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 12px var(--gold);
+  display: inline-block;
+  flex-shrink: 0;
+  animation: pulseDot 1.4s var(--ease-expo) infinite;
+}
+@keyframes pulseDot {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.6); opacity: 1; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+/* Gradient text border effects */
+.txt-grad {
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  position: relative;
+}
+.txt-grad::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease-expo);
+}
+.txt-grad:hover::after {
+  opacity: 0.7;
+}
+
+/* Border glow for active elements */
+.btn-primary:focus-visible,
+.btn-ghost:focus-visible,
+.hero__badge:focus-visible {
+  outline: 1px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+/* Enhanced scroll progress indicator */
+.hero__progress {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  z-index: 3;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.hero__progress i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--grad-primary);
+  box-shadow: 0 0 16px rgba(63, 232, 255, 0.8);
+  transform-origin: left;
+  transition: width 1s var(--ease-expo);
+}
+
+/* (Duplicated typography refinement block removed — consolidated into the
+   "HERO TITLE — CINEMATIC CENTERPIECE" section above.) */
+
 /* ============================ REDUCED MOTION ============================ */
 
 @media (prefers-reduced-motion: reduce) {
@@ -602,4 +1058,20 @@
   .store__mag, .artists__grid--masonry { display: block; }
   .store__mag > * { margin-bottom: 1.4rem; }
   .artists__grid--masonry .artistcard { margin-bottom: 1.2rem; }
+
+  /* Hero title — kill looping motion; keep static styling (static glitch split is fine) */
+  .hero__grad { animation: none; background-size: 100% 100%; }
+  .hero__dot { animation: none; }
+  .hero__vers::before, .hero__vers::after { animation: none; }
+
+  /* Status marquee + geometric separator — freeze in place */
+  .hero__marquee-track {
+    animation: none;
+    transform: none;
+  }
+  .hero__marquee-copy + .hero__marquee-copy { display: none; }
+  .hero__badge::after,
+  .hero__marquee::after { animation: none; opacity: 0; }
+  .hero__sub-sep { animation: none; background-position: 0% 50%; }
+  .pulse-dot { animation: none; }
 }
