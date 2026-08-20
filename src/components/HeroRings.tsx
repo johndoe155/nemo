@@ -11,10 +11,11 @@ import {
 } from 'framer-motion';
 
 /* ============================================================================
-   HERO RINGS — "physical anomalies suspended in the Nemoverse"
+   HERO RINGS — "a physical anomaly suspended in the Nemoverse"
    ----------------------------------------------------------------------------
-   Replaces the two flat `.hero__orbit.orbit.spin` divs (1px rgba border + one
-   rigid ::after dot on a linear @keyframes spin).
+   Replaces the flat `.hero__orbit.orbit.spin` divs (1px rgba border + one rigid
+   ::after dot on a linear @keyframes spin). The large 620px outer ring has
+   since been retired; RINGS stays an array so more shells can be re-added.
 
    MATERIAL / DIMENSIONALITY
      · a conic-gradient annulus (iris → cyan → white-hot → magenta) is masked
@@ -94,32 +95,9 @@ type RingSpec = {
   sparks: SparkSpec[];
 };
 
+/* Single suspended anomaly. The larger 620px outer ring (and its two sparks)
+   was removed — one ring reads cleaner against the hero copy. */
 const RINGS: RingSpec[] = [
-  {
-    id: 'outer',
-    size: 620,
-    right: '-8%',
-    top: '-12%',
-    dir: 1,
-    speed: 16.4,
-    weight: 2.6,
-    tilt: 13,
-    drift: 26,
-    boost: 1,
-    conic: `conic-gradient(from 0deg,
-      rgba(138, 77, 255, 0) 0deg,
-      rgba(138, 77, 255, 0.5) 32deg,
-      rgba(63, 232, 255, 0.92) 94deg,
-      rgba(245, 243, 255, 0.9) 128deg,
-      rgba(255, 61, 154, 0.6) 190deg,
-      rgba(138, 77, 255, 0.2) 248deg,
-      rgba(63, 232, 255, 0.52) 312deg,
-      rgba(138, 77, 255, 0) 360deg)`,
-    sparks: [
-      { phase: 0, size: 9, color: '#3fe8ff', tailStep: 3.4, s1: 0.31, s2: 1.77, s3: 4.12 },
-      { phase: 141, size: 5.5, color: '#ff3d9a', tailStep: 2.4, s1: 2.4, s2: 5.1, s3: 0.92 },
-    ],
-  },
   {
     id: 'inner',
     size: 420,
@@ -493,7 +471,7 @@ function Ring({
 }
 
 /* ---------------------------------------------------------------------------
-   HeroRings — shared scroll-velocity source for both rings
+   HeroRings — shared scroll-velocity source for the ring(s)
 --------------------------------------------------------------------------- */
 
 export default function HeroRings({

@@ -142,7 +142,7 @@ export default function Hero() {
       <div className="hero__scanlines" />
       <div className="hero__watermark ghost-num ghost-num--huge" aria-hidden="true">NEMO</div>
 
-      {/* Suspended orbital anomalies: conic-gradient material over a structural
+      {/* Suspended orbital anomaly: conic-gradient material over a structural
           SVG stroke, spring-tilted by the cursor, spun by integrated angular
           velocity that reacts to scroll, trailed by blended comet particles. */}
       <HeroRings mx={mx} my={my} y={orbitY} reduced={prefersReduced} />
