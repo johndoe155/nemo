@@ -2,17 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useMotionValueEvent, useScroll, useTransform } from 'framer-motion';
 import UniverseCard from '../components/UniverseCard';
 import UniverseDialog from '../components/UniverseDialog';
-import { Countdown, Reveal } from '../components/ui';
+import { Countdown, Reveal, SortDropdown, type SortMode } from '../components/ui';
 import type { Rarity, Universe } from '../lib/data';
 import { RARITY, UNIVERSE_DROP_ISO, UNIVERSES, visibleUniverses } from '../lib/data';
 import { useCountdown, useCountUp } from '../lib/hooks';
-
-type SortMode = 'newest' | 'oldest' | 'rarity';
 
 const SORTS: Record<SortMode, (a: Universe, b: Universe) => number> = {
   newest: (a, b) => new Date(b.released).getTime() - new Date(a.released).getTime(),
   oldest: (a, b) => new Date(a.released).getTime() - new Date(b.released).getTime(),
   rarity: (a, b) => RARITY[b.rarity].tier - RARITY[a.rarity].tier,
+  price: (a, b) => b.price - a.price,
 };
 
 export default function Nemoverse() {
@@ -168,16 +167,7 @@ export default function Nemoverse() {
             </button>
           ))}
           <span style={{ marginLeft: 'auto' }}>
-            <select
-              className="select"
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortMode)}
-              aria-label="Sort universes"
-            >
-              <option value="newest">NEWEST FIRST</option>
-              <option value="oldest">OLDEST FIRST</option>
-              <option value="rarity">BY RARITY</option>
-            </select>
+            <SortDropdown value={sort} onChange={setSort} />
           </span>
         </div>
       </div>

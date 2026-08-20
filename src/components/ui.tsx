@@ -317,6 +317,139 @@ export function Starfield({
   return <canvas ref={ref} className={className} aria-hidden="true" />;
 }
 
+/* ------------------------------ Sort dropdown ------------------------------ */
+
+export type SortMode = 'newest' | 'oldest' | 'rarity' | 'price';
+
+export const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: 'newest', label: 'NEWEST FIRST' },
+  { value: 'oldest', label: 'OLDEST FIRST' },
+  { value: 'rarity', label: 'BY RARITY' },
+  { value: 'price', label: 'BY PRICE' },
+];
+
+export function SortDropdown({
+  value,
+  onChange,
+  label = 'Sort universes',
+}: {
+  value: SortMode;
+  onChange: (next: SortMode) => void;
+  label?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(() =>
+    Math.max(0, SORT_OPTIONS.findIndex((o) => o.value === value)),
+  );
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const selected = SORT_OPTIONS.find((o) => o.value === value) ?? SORT_OPTIONS[0];
+
+  useEffect(() => {
+    setActive(Math.max(0, SORT_OPTIONS.findIndex((o) => o.value === value)));
+  }, [value, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setOpen(false);
+        rootRef.current?.querySelector<HTMLButtonElement>('.sort-dd__trigger')?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const el = listRef.current?.querySelectorAll<HTMLElement>('[role="option"]')[active];
+    el?.focus();
+  }, [open, active]);
+
+  const choose = (mode: SortMode) => {
+    onChange(mode);
+    setOpen(false);
+    rootRef.current?.querySelector<HTMLButtonElement>('.sort-dd__trigger')?.focus();
+  };
+
+  const onTriggerKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setOpen(true);
+    }
+  };
+
+  const onListKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActive((i) => (i + 1) % SORT_OPTIONS.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActive((i) => (i - 1 + SORT_OPTIONS.length) % SORT_OPTIONS.length);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setActive(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      setActive(SORT_OPTIONS.length - 1);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      choose(SORT_OPTIONS[active].value);
+    }
+  };
+
+  return (
+    <div className={`sort-dd ${open ? 'is-open' : ''}`} ref={rootRef}>
+      <button
+        type="button"
+        className="sort-dd__trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={onTriggerKey}
+      >
+        <span>{selected.label}</span>
+        <svg className="sort-dd__chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true">
+          <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6" fill="none" />
+        </svg>
+      </button>
+      <ul
+        ref={listRef}
+        className="sort-dd__menu"
+        role="listbox"
+        aria-label={label}
+        aria-hidden={!open}
+        hidden={!open}
+        onKeyDown={onListKey}
+      >
+        {SORT_OPTIONS.map((opt, i) => (
+          <li
+            key={opt.value}
+            role="option"
+            tabIndex={open && i === active ? 0 : -1}
+            aria-selected={opt.value === value}
+            className={`sort-dd__opt ${opt.value === value ? 'is-selected' : ''} ${i === active ? 'is-active' : ''}`}
+            onClick={() => choose(opt.value)}
+            onMouseEnter={() => setActive(i)}
+          >
+            {opt.label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /* ------------------------------ Toast feedback ------------------------------ */
 
 type ToastPayload = { msg: string };
