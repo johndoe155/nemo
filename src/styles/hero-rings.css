@@ -1,0 +1,220 @@
+/* ============================================================================
+   HERO RINGS — material layer for components/HeroRings.tsx
+   ----------------------------------------------------------------------------
+   The rings used to be `border: 1px solid rgba(138,77,255,.22)` on a linear
+   @keyframes spin. They are now built from four stacked layers:
+
+     .hring__glass   backdrop-filter annulus  → the cosmos refracts through it
+     .hring__conic   conic-gradient annulus   → varied, directional lighting
+     .hring__struct  SVG stroke + ticks       → the structural skeleton
+     .hring__field   independent spark nodes  → blended comet particles
+
+   The conic material sits inside .hring__veil, whose mask is an asymmetric
+   opacity map: opaque toward the portal, dead void at the bottom. Rotation,
+   tilt and drift come from motion values, never from CSS animation.
+============================================================================ */
+
+.hring {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  perspective: 1200px;
+  will-change: transform;
+
+  /* overridden per ring from the component */
+  --hring-weight: 2.4px;
+  --hring-glass: calc(var(--hring-weight) * 3.6);
+
+  /* annulus mask for the conic material */
+  --hring-band: radial-gradient(
+    closest-side,
+    transparent calc(100% - var(--hring-weight) - 0.75px),
+    #000 calc(100% - var(--hring-weight)),
+    #000 calc(100% - 0.75px),
+    transparent 100%
+  );
+
+  /* wider annulus for the refraction shell */
+  --hring-shell: radial-gradient(
+    closest-side,
+    transparent calc(100% - var(--hring-glass)),
+    #000 calc(100% - var(--hring-glass) + 1px),
+    #000 calc(100% - 1px),
+    transparent 100%
+  );
+
+  /* Asymmetric opacity map, sampled around the circumference rather than
+     across the box: the ring is annihilated at its lowest point (6 o'clock,
+     180deg in conic space) and burns brightest on the arc facing the central
+     portal (9 o'clock, 270deg). The veil never rotates, so the material spins
+     *through* this lighting instead of carrying it around. */
+  --hring-fade: conic-gradient(
+    rgba(0, 0, 0, 0.62) 0deg,
+    rgba(0, 0, 0, 0.5) 76deg,
+    rgba(0, 0, 0, 0.14) 146deg,
+    rgba(0, 0, 0, 0.02) 184deg,
+    rgba(0, 0, 0, 0.34) 230deg,
+    rgba(0, 0, 0, 1) 274deg,
+    rgba(0, 0, 0, 0.86) 314deg,
+    rgba(0, 0, 0, 0.62) 360deg
+  );
+}
+
+.hring__stage {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* ---------- asymmetric opacity map ---------- */
+.hring__veil {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  -webkit-mask-image: var(--hring-fade);
+  mask-image: var(--hring-fade);
+}
+
+/* ---------- ethereal glass refraction behind the stroke ----------
+   Deliberately a sibling of .hring__veil, not a child: a masked ancestor
+   becomes a backdrop root and backdrop-filter would have nothing to sample.
+   So this layer intersects the shell annulus with the same fade itself. */
+.hring__glass {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(245, 243, 255, 0.022);
+  -webkit-backdrop-filter: blur(7px) saturate(1.45) brightness(1.06);
+  backdrop-filter: blur(7px) saturate(1.45) brightness(1.06);
+  -webkit-mask-image: var(--hring-shell), var(--hring-fade);
+  -webkit-mask-composite: source-in;
+  mask-image: var(--hring-shell), var(--hring-fade);
+  mask-composite: intersect;
+}
+
+/* Without mask compositing the two layers would union into a filled disc —
+   fall back to the plain annulus (no directional fade on the glass). */
+@supports not ((mask-composite: intersect) or (-webkit-mask-composite: source-in)) {
+  .hring__glass {
+    -webkit-mask-image: var(--hring-shell);
+    mask-image: var(--hring-shell);
+  }
+}
+
+/* ---------- conic material ---------- */
+.hring__conic {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  filter: saturate(1.2);
+  will-change: transform;
+  -webkit-mask-image: var(--hring-band);
+  mask-image: var(--hring-band);
+}
+
+/* a wider, blurrier copy of the same gradient = atmospheric bloom */
+.hring__conic::after {
+  content: '';
+  position: absolute;
+  inset: calc(var(--hring-weight) * -2.5);
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.42;
+  filter: blur(9px);
+  -webkit-mask-image: radial-gradient(
+    closest-side,
+    transparent calc(100% - var(--hring-weight) * 4.5),
+    #000 calc(100% - var(--hring-weight) * 2.8),
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    closest-side,
+    transparent calc(100% - var(--hring-weight) * 4.5),
+    #000 calc(100% - var(--hring-weight) * 2.8),
+    transparent 100%
+  );
+}
+
+/* ---------- structural stroke ---------- */
+.hring__struct {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  will-change: transform;
+  filter: drop-shadow(0 0 12px rgba(63, 232, 255, 0.22));
+}
+
+/* ---------- particle field ---------- */
+.hring__field {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+
+.hring__spark,
+.hring__trail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  will-change: transform, opacity;
+}
+
+/* comet tail — screen keeps the segments additive against the nebula */
+.hring__trail {
+  mix-blend-mode: screen;
+  filter: blur(1.1px);
+}
+
+.hring__spark-core,
+.hring__spark-halo {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hring__spark-core {
+  inset: 0;
+  mix-blend-mode: screen;
+}
+
+/* color-dodge blows the halo out where the backdrop already carries light —
+   the spark flares crossing the nebula and settles over the void */
+.hring__spark-halo {
+  inset: -320%;
+  mix-blend-mode: color-dodge;
+  will-change: transform, opacity;
+}
+
+/* ---------- perf / accessibility ---------- */
+
+@media (max-width: 760px) {
+  .hring__glass {
+    -webkit-backdrop-filter: blur(4px) saturate(1.2);
+    backdrop-filter: blur(4px) saturate(1.2);
+  }
+  .hring__conic::after {
+    filter: blur(6px);
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hring__glass {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .hring__conic::after {
+    display: none;
+  }
+  .hring__spark-halo {
+    opacity: 0.25 !important;
+  }
+}

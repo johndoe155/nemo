@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useSpring, useTransform, useMotionValue } from 'framer-motion';
 import { Reveal } from '../components/ui';
 import { LiquidButton, GlassButton, PortalMagnetic } from '../components/PortalButton';
+import HeroRings from '../components/HeroRings';
 import { art, UNIVERSES, UNIVERSE_DROP_ISO } from '../lib/data';
 import { useCountdown } from '../lib/hooks';
 
@@ -141,8 +142,10 @@ export default function Hero() {
       <div className="hero__scanlines" />
       <div className="hero__watermark ghost-num ghost-num--huge" aria-hidden="true">NEMO</div>
 
-      <motion.div className="hero__orbit orbit spin" style={{ width: 620, height: 620, right: '-8%', top: '-12%', y: orbitY }} />
-      <motion.div className="hero__orbit orbit spin-rev" style={{ width: 420, height: 420, right: '6%', top: '4%', y: orbitY }} />
+      {/* Suspended orbital anomalies: conic-gradient material over a structural
+          SVG stroke, spring-tilted by the cursor, spun by integrated angular
+          velocity that reacts to scroll, trailed by blended comet particles. */}
+      <HeroRings mx={mx} my={my} y={orbitY} reduced={prefersReduced} />
 
       <motion.div
         className="hero__telemetry"

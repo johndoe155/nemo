@@ -320,26 +320,10 @@
   50% { transform: translateY(6px); opacity: 0.4; }
 }
 
-/* Orbiting rings behind hero copy */
-.hero__orbit {
-  position: absolute;
-  z-index: -1;
-  border-radius: 50%;
-  border: 1px solid rgba(138, 77, 255, 0.22);
-  pointer-events: none;
-}
-.hero__orbit::after {
-  content: '';
-  position: absolute;
-  top: -4px;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  margin-left: -4px;
-  border-radius: 50%;
-  background: var(--iris);
-  box-shadow: 0 0 16px var(--iris);
-}
+/* Orbiting rings behind hero copy — superseded by styles/hero-rings.css
+   (.hring), which builds the rings from a conic-gradient material, a
+   structural SVG stroke, glass refraction and motion-value physics instead of
+   a flat 1px border + ::after dot. */
 
 /* Hero scroll progress rail */
 .hero__progress {
