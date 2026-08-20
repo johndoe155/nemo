@@ -104,7 +104,7 @@ const RINGS: RingSpec[] = [
     right: '6%',
     top: '4%',
     dir: -1,
-    speed: 8,
+    speed: 10,
     weight: 1.9,
     tilt: 19,
     drift: 40,
@@ -230,10 +230,10 @@ function Spark({
     const headR = radius * (1 + noise.r);
     const th = place(head, headDeg, headR);
     const flare = flareAt(th);
-    head.o.set(0.28 + 0.18 * flare);
-    head.s.set(0.7 + 0.32 * flare);
-    halo.set(0.04 + 0.32 * flare);
-    haloScale.set(0.7 + 0.55 * flare);
+    head.o.set(0.58 + 0.3 * flare);
+    head.s.set(0.8 + 0.55 * flare);
+    halo.set(0.08 + 0.62 * flare);
+    haloScale.set(0.85 + 1.05 * flare);
 
     /* ---- comet tail: samples of where the head *was* ---- */
     for (let i = 0; i < tailLength; i++) {
@@ -247,8 +247,8 @@ function Spark({
       const segR = radius * (1 + segNoise.r * (1 + k * 1.8));
       const segTh = place(seg, deg, segR);
       const fade = Math.pow(1 - k, 1.7);
-      seg.o.set(fade * (0.08 + 0.22 * flareAt(segTh)));
-      seg.s.set(0.22 + fade * 0.5);
+      seg.o.set(fade * (0.16 + 0.48 * flareAt(segTh)));
+      seg.s.set(0.26 + fade * 0.72);
     }
   });
 

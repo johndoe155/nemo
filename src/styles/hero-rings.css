@@ -156,8 +156,8 @@
   width: 0;
   height: 0;
   transform-style: preserve-3d;
-  opacity: 0.42;
-  filter: contrast(0.68) brightness(0.62) saturate(0.78);
+  opacity: 0.82;
+  filter: contrast(0.92) brightness(0.9) saturate(0.95);
 }
 
 .hring__spark,
