@@ -290,9 +290,12 @@
 .hero__lede em {
   color: var(--ink);
   font-style: normal;
-  background: linear-gradient(90deg, rgba(138, 77, 255, 0.25), rgba(63, 232, 255, 0.18));
-  padding: 0.08em 0.35em;
-  border-radius: 6px;
+  font-weight: 600;
+  background: none;
+  background-color: transparent;
+  padding: 0;
+  border: none;
+  border-radius: 0;
 }
 .hero__ctas {
   display: flex;

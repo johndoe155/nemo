@@ -8,6 +8,18 @@ import { useCountdown } from '../lib/hooks';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+function GlitchLetters({ word }: { word: string }) {
+  return (
+    <>
+      {word.split('').map((ch, i) => (
+        <span className="hero__char" data-char={ch} key={`${ch}-${i}`}>
+          {ch}
+        </span>
+      ))}
+    </>
+  );
+}
+
 /* Scroll-bound entrance for the three hero title lines (ONE CANON. / INFINITE /
    VERSIONS.): Line 1 slides in from the left, Line 2 fades/scales in, Line 3
    enters from the right. Fires once as the hero scrolls into view — since it's
@@ -193,14 +205,16 @@ export default function Hero() {
         </Reveal>
 
         <h1 className="display hero__title" aria-label="One canon. Infinite versions.">
-          {/* Line 1 — solid ONE + extended gradient CANON + pulsing dot */}
+          {/* Line 1 — solid ONE + extended gradient CANON + flat white period */}
           <motion.span
             className="hero__line hero__line--1"
             {...titleEntrance(-90, 1, 0.15)}
           >
             <span className="hero__one">ONE</span>{' '}
-            <span className="hero__wide hero__grad">CANON</span>
-            <span className="hero__dot" aria-hidden="true" />
+            <span className="hero__glow">
+              <span className="hero__wide hero__grad">CANON</span>
+            </span>
+            <span className="hero__period">.</span>
           </motion.span>
 
           {/* Line 2 — hollow, white-outlined INFINITE */}
@@ -211,15 +225,17 @@ export default function Hero() {
             <span className="hero__hollow">INFINITE</span>
           </motion.span>
 
-          {/* Line 3 — extended gradient VERSIONS + pulsing dot + hover glitch */}
+          {/* Line 3 — extended gradient VERSIONS, per-letter hover glitch, flat period */}
           <motion.span
             className="hero__line hero__line--3"
             {...titleEntrance(90, 1, 0.62)}
           >
-            <span className="hero__wide hero__grad hero__vers" data-text="VERSIONS">
-              VERSIONS
+            <span className="hero__glow">
+              <span className="hero__wide hero__grad hero__vers">
+                <GlitchLetters word="VERSIONS" />
+              </span>
             </span>
-            <span className="hero__dot hero__dot--2" aria-hidden="true" />
+            <span className="hero__period">.</span>
           </motion.span>
         </h1>
 
