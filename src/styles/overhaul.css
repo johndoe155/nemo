@@ -749,21 +749,25 @@
   box-shadow: none;
 }
 
-/* Line 3 — typographic glitch on each VERSIONS glyph (split-reality theme).
-   Letters stay `display: inline` so the parent `.hero__grad` clip still paints
-   a single full-word gradient through the spans. Ghost copies are real text
-   (no backgrounds) sliced with clip-path so the distortion follows the font. */
+/* Line 3 — one full-word gradient (same .hero__grad sweep as CANON) with a
+   per-letter typographic glitch. Child spans stay `display: inline` so they
+   form a single text mask; the parent's clipped background paints through. */
 .hero__vers {
   position: relative;
   display: inline-block;
-  background-color: transparent;
 }
 .hero__char {
   position: relative;
-  display: inline-block;
+  display: inline;
+  color: inherit;
+  -webkit-text-fill-color: inherit;
+  background: none;
+  background-image: none;
+  background-color: transparent;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  animation: none;
   box-shadow: none;
-  /* Gradient fill comes from .hero__grad on each glyph so the word stays
-     visible; never a filled box behind the letter. */
 }
 .hero__char::before,
 .hero__char::after {
@@ -798,8 +802,6 @@
     -2px 0 rgba(255, 61, 154, 0.9),
      2px 0 rgba(63, 232, 255, 0.9);
 }
-.hero__vers:hover .hero__char:nth-child(odd)  { transform: translate(0.5px, -0.35px); }
-.hero__vers:hover .hero__char:nth-child(even) { transform: translate(-0.5px, 0.35px); }
 .hero__vers:hover .hero__char::before {
   opacity: 0.95;
   animation: heroGlitchR 0.45s steps(2, end) infinite;

@@ -12,7 +12,7 @@ function GlitchLetters({ word }: { word: string }) {
   return (
     <>
       {word.split('').map((ch, i) => (
-        <span className="hero__char hero__grad" data-text={ch} key={`${ch}-${i}`}>
+        <span className="hero__char" data-text={ch} key={`${ch}-${i}`}>
           {ch}
         </span>
       ))}
@@ -231,7 +231,7 @@ export default function Hero() {
             {...titleEntrance(90, 1, 0.62)}
           >
             <span className="hero__glow">
-              <span className="hero__wide hero__vers">
+              <span className="hero__wide hero__grad hero__vers">
                 <GlitchLetters word="VERSIONS" />
               </span>
             </span>
