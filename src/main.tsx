@@ -9,6 +9,8 @@ import ReactDOM from 'react-dom/client';
 // --font-pp-* raw family tokens on :root; the canonical semantic tokens
 // (--font-display/heading/body/body-text/accent) are mapped in global.css.
 import '@fontsource-variable/space-grotesk';
+import '@fontsource-variable/fraunces';
+import '@fontsource-variable/fraunces/wght-italic.css';
 import './assets/fonts/pp-fonts.css';
 import './styles/global.css';
 import './styles/components.css';
@@ -21,6 +23,9 @@ import './styles/nemo-chat.css';
 // assignments (Plain sub-headings/nav, Montreal Text dense reading, active
 // pills, tabular counters) take precedence over the base component rules.
 import './styles/typography.css';
+// 04 · PILLAR 3 — cyber-luxury split-canvas rebuild (loads after typography
+// so its scoped art direction wins where tokens overlap).
+import './styles/pulls.css';
 import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

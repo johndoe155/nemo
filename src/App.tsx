@@ -1,10 +1,13 @@
 import type { CSSProperties } from 'react';
+import { lazy, Suspense } from 'react';
 import Nav from './sections/Nav';
 import Hero from './sections/Hero';
 import Nemoverse from './sections/Nemoverse';
 import Persona from './sections/Persona';
 import Perks from './sections/Perks';
-import Pulls from './sections/Pulls';
+// 04 · PILLAR 3 carries the WebGL layer (three.js) — lazy-loaded so the
+// initial bundle stays light.
+const Pulls = lazy(() => import('./sections/pulls/Pulls'));
 import Store from './sections/Store';
 import Artists from './sections/Artists';
 import Lore from './sections/Lore';
@@ -49,7 +52,9 @@ export default function App() {
         <Nemoverse />
         <Persona />
         <Perks />
-        <Pulls />
+        <Suspense fallback={<div style={{ minHeight: '80vh' }} aria-hidden="true" />}>
+          <Pulls />
+        </Suspense>
         <Store />
         <Artists />
         <Lore />

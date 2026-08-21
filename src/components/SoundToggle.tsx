@@ -56,6 +56,9 @@ export default function SoundToggle() {
       /* noop */
     }
     if (next) confirmTick();
+    // Notify ambient audio-visual layers (e.g. the 04 · PILLAR 3 frequency
+    // line) that the ambient sound state changed.
+    window.dispatchEvent(new CustomEvent('ocu:sound', { detail: { enabled: next } }));
   };
 
   return (

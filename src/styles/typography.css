@@ -46,11 +46,9 @@
 
 /* Animated display numerals — tabular figures keep their advance width. */
 .mv__stat b,
-.pullboard__stat b,
 .lorestat b,
 .countdown__cell b,
-.product__price,
-.pull-result .name {
+.product__price {
   font-variant-numeric: tabular-nums;
 }
 

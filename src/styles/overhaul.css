@@ -161,7 +161,8 @@
   body.custom-cursor [role='button'],
   body.custom-cursor .ucard,
   body.custom-cursor .chip,
-  body.custom-cursor .stamp {
+  body.custom-cursor .npx__node,
+  body.custom-cursor .npx__slot {
     cursor: none;
   }
 }
@@ -463,29 +464,6 @@
 }
 @media (max-width: 980px) {
   .persona__chatwrap { padding-block: 0; }
-}
-
-/* ============================ PULL — CINEMATIC REVEAL ============================ */
-
-.pull-result .burst {
-  position: absolute;
-  inset: -20%;
-  border-radius: 50%;
-  pointer-events: none;
-  background: radial-gradient(circle, color-mix(in srgb, var(--rr, #fff) 40%, transparent), transparent 70%);
-  animation: burstPop 0.9s var(--ease-expo) both;
-}
-@keyframes burstPop {
-  0% { transform: scale(0.2); opacity: 0.9; }
-  100% { transform: scale(1.6); opacity: 0; }
-}
-.pull-result .mintno { font-variant-numeric: tabular-nums; }
-.pull-result.shake-common { animation: shakeSm 0.4s var(--ease-expo); }
-@keyframes shakeSm {
-  0%,100% { transform: translateX(0); }
-  25% { transform: translateX(-3px); }
-  60% { transform: translateX(3px); }
-  85% { transform: translateX(-1px); }
 }
 
 /* ============================ LOOP — INSTRUMENT ============================ */
@@ -1120,7 +1098,6 @@
   body.custom-cursor [role='button'] { cursor: auto; }
   .neb, .vignette { animation: none; }
   .loop__particle { animation: none; }
-  .pull-result .burst { animation: none; opacity: 0; }
   .roster__rail .ucard:nth-child(odd),
   .roster__rail .ucard:nth-child(even) { transform: none; }
   .store__mag, .artists__grid--masonry { display: block; }
