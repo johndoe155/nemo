@@ -1,0 +1,16 @@
+# Build output
+dist/
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
+
+# Vite cache
+node_modules/.vite/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~

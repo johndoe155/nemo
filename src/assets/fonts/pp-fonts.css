@@ -1,0 +1,211 @@
+/**
+ * PP Neue Machina & PP Neue Montreal — self-hosted @font-face definitions
+ * Foundry: Pangram Pangram (pangrampangram.com)
+ *
+ * Four font families are registered (Inktrap + Plain cuts of Machina,
+ * display + Text cuts of Montreal). Each is also exposed as a CSS custom
+ * property on :root so it can be referenced as e.g. font-family: var(--font-pp-machina-plain).
+ *
+ * Import once from your app entry, after the other fontsource imports:
+ *   import './assets/fonts/pp-fonts.css';
+ */
+
+/* ===================== PP Neue Machina Inktrap ===================== */
+
+@font-face {
+  font-family: 'PP Neue Machina Inktrap';
+  src: url('./pp-neue-machina/pp-neue-machina-inktrap-light-normal.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Machina Inktrap';
+  src: url('./pp-neue-machina/pp-neue-machina-inktrap-light-italic.woff2') format('woff2');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Machina Inktrap';
+  src: url('./pp-neue-machina/pp-neue-machina-inktrap-regular-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Machina Inktrap';
+  src: url('./pp-neue-machina/pp-neue-machina-inktrap-regular-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Machina Inktrap';
+  src: url('./pp-neue-machina/pp-neue-machina-inktrap-ultrabold-normal.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Machina Inktrap';
+  src: url('./pp-neue-machina/pp-neue-machina-inktrap-ultrabold-italic.woff2') format('woff2');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ====================== PP Neue Machina Plain ====================== */
+
+@font-face {
+  font-family: 'PP Neue Machina Plain';
+  src: url('./pp-neue-machina/pp-neue-machina-plain-light-normal.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Machina Plain';
+  src: url('./pp-neue-machina/pp-neue-machina-plain-light-italic.woff2') format('woff2');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Machina Plain';
+  src: url('./pp-neue-machina/pp-neue-machina-plain-regular-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Machina Plain';
+  src: url('./pp-neue-machina/pp-neue-machina-plain-regular-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Machina Plain';
+  src: url('./pp-neue-machina/pp-neue-machina-plain-ultrabold-normal.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Machina Plain';
+  src: url('./pp-neue-machina/pp-neue-machina-plain-ultrabold-italic.woff2') format('woff2');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ======================= PP Neue Montreal ========================== */
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('./pp-neue-montreal/pp-neue-montreal-hairline-normal.woff2') format('woff2');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('./pp-neue-montreal/pp-neue-montreal-hairline-italic.woff2') format('woff2');
+  font-weight: 100;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('./pp-neue-montreal/pp-neue-montreal-light-normal.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('./pp-neue-montreal/pp-neue-montreal-light-italic.woff2') format('woff2');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('./pp-neue-montreal/pp-neue-montreal-regular-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('./pp-neue-montreal/pp-neue-montreal-regular-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('./pp-neue-montreal/pp-neue-montreal-semibold-normal.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('./pp-neue-montreal/pp-neue-montreal-semibold-italic.woff2') format('woff2');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('./pp-neue-montreal/pp-neue-montreal-extrabold-normal.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('./pp-neue-montreal/pp-neue-montreal-extrabold-italic.woff2') format('woff2');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ==================== PP Neue Montreal Text ======================== */
+/* Optical-size cut tuned for smaller body copy; Book weight is
+   normalized to 400 since it is the only weight in this sub-family. */
+
+@font-face {
+  font-family: 'PP Neue Montreal Text';
+  src: url('./pp-neue-montreal/pp-neue-montreal-text-book-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PP Neue Montreal Text';
+  src: url('./pp-neue-montreal/pp-neue-montreal-text-book-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ====================== Design tokens ============================== */
+/* Expose every family as a CSS custom property so future usage is just
+   `font-family: var(--font-pp-*)` with appropriate fallbacks. We do NOT
+   override the existing --font-display / --font-body tokens here — that
+   would be a global visual change. Use the new variables explicitly
+   wherever you want PP fonts to appear. */
+
+:root {
+  --font-pp-machina-inktrap: 'PP Neue Machina Inktrap', 'Unbounded Variable', 'Unbounded',
+    ui-sans-serif, sans-serif;
+  --font-pp-machina-plain: 'PP Neue Machina Plain', 'Unbounded Variable', 'Unbounded',
+    ui-sans-serif, sans-serif;
+  --font-pp-montreal: 'PP Neue Montreal', 'Space Grotesk Variable', 'Space Grotesk',
+    ui-sans-serif, sans-serif;
+  --font-pp-montreal-text: 'PP Neue Montreal Text', 'Inter Variable', 'Inter',
+    'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+}
