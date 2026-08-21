@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import '@fontsource-variable/unbounded';
 import '@fontsource-variable/space-grotesk';
+import '@fontsource-variable/inter';
 import '@fontsource/space-mono/400.css';
 import '@fontsource/space-mono/700.css';
 import './styles/global.css';
@@ -10,6 +11,7 @@ import './styles/overhaul.css';
 import './styles/audit-gaps.css';
 import './styles/portal.css';
 import './styles/hero-rings.css';
+import './styles/nemo-chat.css';
 import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

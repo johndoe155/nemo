@@ -1,0 +1,808 @@
+/* ============================================================================
+   NEMO — THE WANDERER BETWEEN · CANON PERSONA CHAT
+   Next-gen glass, typographic orchestration, physics-based micro-interactions.
+
+   Layer model (bottom → top)
+   0  .nchat__mesh        animated mesh gradient (breathes, tracks pointer/gyro)
+   1  .nchat__glass       backdrop-filter: blur(24px) saturate(150%)
+   2  .nchat__edge        1px inner gradient hairline @135° (light, top-left)
+   3  .nchat__specular    pointer-tracked specular highlight (screen blend)
+   4  content grid        header · transcript · suggestions · composer · meta
+   ========================================================================== */
+
+.nchat {
+  --pad: clamp(22px, 2.4vw, 42px);
+  --glass-radius: 26px;
+  --mx: 0.5;
+  --my: 0.42;
+
+  position: relative;
+  z-index: 1;
+  container-type: inline-size;
+  /* NB: deliberately no `isolation: isolate` here — an isolated stacking
+     context would become a backdrop root and stop the glass from sampling
+     (and blurring) the starfield/nebula living behind the section. */
+}
+
+/* ------------------------------- LAYER 0 · MESH ------------------------- */
+
+.nchat__mesh {
+  position: absolute;
+  inset: -9% -4% -11%;
+  z-index: 0;
+  border-radius: 46px;
+  pointer-events: none;
+  opacity: 0.5;
+  filter: blur(38px) saturate(140%);
+  background:
+    radial-gradient(
+      36% 44% at calc(14% + var(--mx) * 26%) calc(18% + var(--my) * 22%),
+      rgba(138, 77, 255, 0.62),
+      transparent 66%
+    ),
+    radial-gradient(
+      34% 40% at calc(86% - var(--mx) * 24%) calc(26% + var(--my) * 30%),
+      rgba(63, 232, 255, 0.42),
+      transparent 68%
+    ),
+    radial-gradient(
+      42% 46% at calc(70% - var(--mx) * 20%) calc(88% - var(--my) * 26%),
+      rgba(255, 61, 154, 0.34),
+      transparent 70%
+    ),
+    radial-gradient(60% 60% at 50% 50%, rgba(24, 12, 48, 0.72), transparent 74%);
+  animation: nchatBreathe 19s ease-in-out infinite;
+}
+
+.nchat__mesh--far {
+  inset: -16% -7% -18%;
+  filter: blur(72px) saturate(125%);
+  opacity: 0.26;
+  animation-duration: 27s;
+  animation-direction: reverse;
+}
+
+@keyframes nchatBreathe {
+  0%,
+  100% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  33% {
+    transform: scale(1.06) translate3d(1.6%, -1.4%, 0);
+  }
+  66% {
+    transform: scale(1.02) translate3d(-1.8%, 1.2%, 0);
+  }
+}
+
+/* ------------------------------ LAYER 1 · GLASS ------------------------- */
+
+.nchat__glass {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  /* Explicit single column capped at the container width — without this the
+     implicit auto column sizes to the max-content of the suggestion rail and
+     the whole panel blows past its grid cell. */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  gap: clamp(16px, 1.7vw, 26px);
+  /* The panel hugs the conversation and grows to a ceiling — no dead void
+     under a two-line greeting, no runaway column once it fills. */
+  height: auto;
+  padding: var(--pad);
+  border-radius: var(--glass-radius);
+  transform-origin: 50% 60%;
+  background:
+    linear-gradient(
+      158deg,
+      rgba(255, 255, 255, 0.062) 0%,
+      rgba(255, 255, 255, 0.014) 46%,
+      rgba(138, 77, 255, 0.055) 100%
+    ),
+    /* Deep scrim: the mesh should bleed chroma through the glass, never
+       flood it — the panel stays a dark, lit object. */
+    linear-gradient(180deg, rgba(7, 5, 17, 0.5), rgba(7, 5, 17, 0.62));
+  box-shadow:
+    0 48px 120px -48px rgba(6, 0, 24, 0.95),
+    0 18px 60px -34px rgba(138, 77, 255, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  will-change: transform, backdrop-filter;
+}
+
+/* -------------------------- LAYER 2 · GRADIENT EDGE --------------------- */
+/* 1px inside border: bright at the top-left corner, dissolving as the light
+   falls away, picking up iris/cyan on the far edge. */
+.nchat__edge {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.62) 0%,
+    rgba(255, 255, 255, 0.16) 22%,
+    rgba(255, 255, 255, 0.02) 46%,
+    rgba(138, 77, 255, 0.3) 78%,
+    rgba(63, 232, 255, 0.38) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+/* ------------------------ LAYER 3 · SPECULAR HIGHLIGHT ------------------ */
+
+.nchat__specular {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.85;
+  background:
+    radial-gradient(
+      44% 36% at calc(var(--mx) * 100%) calc(var(--my) * 100%),
+      rgba(255, 255, 255, 0.1),
+      transparent 62%
+    ),
+    radial-gradient(
+      120% 60% at calc(var(--mx) * 100%) -18%,
+      rgba(214, 232, 255, 0.07),
+      transparent 60%
+    );
+}
+
+/* --------------------------------- HEADER ------------------------------- */
+
+.nchat__head {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.nchat__sigil {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.96);
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)) padding-box,
+    linear-gradient(140deg, rgba(255, 255, 255, 0.5), rgba(138, 77, 255, 0.5) 55%, rgba(63, 232, 255, 0.55))
+      border-box;
+  border: 1px solid transparent;
+  box-shadow: 0 0 26px -8px rgba(138, 77, 255, 0.9);
+}
+
+.nchat__ident {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.nchat__ident b {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #fff;
+}
+.nchat__ident em {
+  font-family: var(--font-ui);
+  font-style: normal;
+  font-size: 0.78rem;
+  letter-spacing: 0.01em;
+  color: rgba(245, 243, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nchat__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  color: rgba(245, 243, 255, 0.6);
+  white-space: nowrap;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+.nchat__live {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7dffb0;
+  box-shadow: 0 0 10px #7dffb0;
+  animation: nchatPulse 2.4s ease-in-out infinite;
+}
+@keyframes nchatPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+/* ------------------------------- TRANSCRIPT ----------------------------- */
+/* Separation from the header/composer is achieved with negative space and a
+   soft mask — no rules, no hard geometry. */
+
+.nchat__log {
+  position: relative;
+  z-index: 3;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(15px, 1.5vw, 22px);
+  justify-content: flex-end;
+  min-height: clamp(170px, 22vh, 220px);
+  max-height: min(380px, 44vh);
+  padding: 8px 6px 10px 2px;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 22px,
+    #000 calc(100% - 14px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 22px,
+    #000 calc(100% - 14px),
+    transparent 100%
+  );
+}
+.nchat__log::-webkit-scrollbar {
+  width: 4px;
+}
+.nchat__log::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 99px;
+}
+.nchat__log::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* --------------------------------- MESSAGE ------------------------------ */
+
+.nmsg {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  max-width: 84%;
+}
+/* Keeps a short transcript anchored to the composer instead of floating in a
+   void at the top of the panel. */
+.nchat__log > :first-child {
+  margin-top: auto;
+}
+.nmsg--user {
+  margin-left: auto;
+  grid-template-columns: minmax(0, 1fr) 32px;
+}
+.nmsg--user .nmsg__ava {
+  order: 2;
+}
+
+.nmsg__ava {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 20px -8px rgba(138, 77, 255, 0.9);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.nmsg--user .nmsg__ava {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 200, 87, 0.28),
+    0 0 20px -8px rgba(255, 200, 87, 0.7);
+  color: rgba(255, 226, 168, 0.95);
+}
+
+.nmsg__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.nmsg--user .nmsg__stack {
+  align-items: flex-end;
+}
+
+/* Metadata stays technical — mono, quiet, tracked. */
+.nmsg__meta {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(245, 243, 255, 0.5);
+}
+.nmsg__meta i {
+  font-style: normal;
+  color: rgba(63, 232, 255, 0.6);
+  margin: 0 2px;
+}
+
+/* Conversation is set in the geometric sans at full-contrast white while the
+   surface itself drops back — the text pops, the glass recedes. */
+.nmsg__bubble {
+  font-family: var(--font-ui);
+  font-size: clamp(0.94rem, 0.9rem + 0.15vw, 1.02rem);
+  line-height: 1.62;
+  letter-spacing: -0.002em;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.032);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  border-radius: 16px 16px 16px 5px;
+  padding: 14px 18px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  text-wrap: pretty;
+}
+.nmsg--user .nmsg__bubble {
+  border-radius: 16px 16px 5px 16px;
+  background: linear-gradient(150deg, rgba(138, 77, 255, 0.16), rgba(138, 77, 255, 0.07));
+  box-shadow: inset 0 0 0 1px rgba(160, 110, 255, 0.24);
+}
+
+.nmsg__line,
+.nmsg__sys {
+  display: block;
+}
+.nmsg__sys {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: rgba(245, 243, 255, 0.62);
+}
+
+/* Generative reveal: noise runs ahead of the resolve point, the tail holds
+   layout at zero opacity so nothing reflows. */
+.nmsg__noise {
+  color: rgba(63, 232, 255, 0.85);
+  text-shadow: 0 0 12px rgba(63, 232, 255, 0.55);
+}
+.nmsg__pending {
+  opacity: 0;
+}
+
+/* Mask sweep as the bubble mounts. */
+.nmsg__bubble.is-revealing {
+  -webkit-mask-image: linear-gradient(
+    100deg,
+    #000 38%,
+    rgba(0, 0, 0, 0.35) 58%,
+    transparent 76%
+  );
+  mask-image: linear-gradient(100deg, #000 38%, rgba(0, 0, 0, 0.35) 58%, transparent 76%);
+  -webkit-mask-size: 280% 100%;
+  mask-size: 280% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: nchatMaskSweep 0.95s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes nchatMaskSweep {
+  from {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+  }
+  to {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+  }
+}
+
+/* Typing indicator */
+.nmsg__bubble--typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 15px 18px;
+}
+.nchat__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  animation: nchatType 1.25s ease-in-out infinite;
+}
+.nchat__dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.nchat__dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+@keyframes nchatType {
+  0%,
+  62%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.32;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+/* ----------------------------- SUGGESTION RAIL -------------------------- */
+
+.nchat__railwrap {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nchat__raillabel {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.24em;
+  color: rgba(245, 243, 255, 0.34);
+}
+
+/* The rail bleeds to the panel edges and dissolves under a gradient mask —
+   an intuitive cue that there is more to swipe, with no scrollbar. */
+.nchat__rail {
+  --fade-l: 0px;
+  --fade-r: 72px;
+
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  padding: 4px var(--pad) 6px;
+  margin: -4px calc(var(--pad) * -1) -6px;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    #000 var(--fade-l),
+    #000 calc(100% - var(--fade-r)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    #000 var(--fade-l),
+    #000 calc(100% - var(--fade-r)),
+    transparent 100%
+  );
+}
+.nchat__rail::-webkit-scrollbar {
+  display: none;
+}
+
+.npill {
+  flex: none;
+  position: relative;
+  border-radius: 999px;
+  padding: 10px 17px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 400;
+  /* Mono is already wide — extreme tracking is what made these unreadable. */
+  letter-spacing: 0.015em;
+  text-transform: none;
+  white-space: nowrap;
+  color: rgba(245, 243, 255, 0.82);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  transition:
+    color 0.35s var(--ease-expo),
+    background 0.35s var(--ease-expo),
+    box-shadow 0.45s var(--ease-expo);
+  will-change: transform;
+}
+.npill__label {
+  display: block;
+  will-change: transform;
+}
+.npill::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: calc(var(--pull, 0) * 0.9);
+  box-shadow:
+    0 0 26px -6px rgba(138, 77, 255, 0.75),
+    0 0 44px -14px rgba(63, 232, 255, 0.5);
+  transition: opacity 0.3s linear;
+}
+.npill:hover,
+.npill:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.085);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+.npill:focus-visible {
+  outline: 1px solid rgba(63, 232, 255, 0.7);
+  outline-offset: 3px;
+}
+.npill:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* -------------------------------- COMPOSER ------------------------------ */
+/* No divider rule: the composer separates itself by sitting on a denser,
+   more blurred plate of the same material. */
+
+.nchat__composer {
+  position: relative;
+  z-index: 3;
+}
+.nchat__field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 18px 44px -30px rgba(0, 0, 0, 0.9);
+  transition: box-shadow 0.5s var(--ease-expo), background 0.5s var(--ease-expo);
+}
+.nchat__field:focus-within {
+  background: rgba(255, 255, 255, 0.075);
+  box-shadow:
+    inset 0 0 0 1px rgba(160, 220, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 46px -20px rgba(63, 232, 255, 0.5);
+}
+.nchat__prompt {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  line-height: 1;
+  color: rgba(63, 232, 255, 0.7);
+}
+.nchat__input {
+  min-width: 0;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 10px 0;
+  color: #fff;
+  caret-color: var(--cyan);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  letter-spacing: 0.002em;
+  text-overflow: ellipsis;
+}
+.nchat__input::placeholder {
+  color: rgba(245, 243, 255, 0.44);
+}
+.nchat__input:focus {
+  outline: none;
+}
+
+/* Frosted pill — the glow bleeds outward on approach instead of the button
+   filling with a loud gradient. */
+.nchat__send {
+  position: relative;
+  flex: none;
+  border-radius: 999px;
+  padding: 13px 24px;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px) saturate(170%);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  transition:
+    background 0.4s var(--ease-expo),
+    box-shadow 0.5s var(--ease-expo),
+    color 0.3s var(--ease-expo),
+    opacity 0.3s linear;
+  will-change: transform;
+}
+.nchat__sendlabel {
+  display: block;
+  will-change: transform;
+}
+.nchat__send::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: var(--pull, 0);
+  box-shadow:
+    0 0 34px -4px rgba(138, 77, 255, 0.85),
+    0 0 62px -12px rgba(63, 232, 255, 0.6),
+    0 0 90px -22px rgba(255, 61, 154, 0.4);
+  transition: opacity 0.3s linear;
+}
+.nchat__send:hover,
+.nchat__send:focus-visible {
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 0 38px -8px rgba(138, 77, 255, 0.6);
+}
+.nchat__send:focus-visible {
+  outline: 1px solid rgba(63, 232, 255, 0.75);
+  outline-offset: 3px;
+}
+.nchat__send:active {
+  background: rgba(255, 255, 255, 0.18);
+}
+.nchat__send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.nchat__send:disabled::after {
+  opacity: 0;
+}
+
+/* ---------------------------------- META -------------------------------- */
+
+.nchat__foot {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.nchat__note,
+.nchat__count {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  /* Legible, not decorative: contrast lifted well above the old 0.38 ghost. */
+  letter-spacing: 0.14em;
+  color: rgba(245, 243, 255, 0.62);
+}
+.nchat__note i {
+  font-style: normal;
+  color: rgba(63, 232, 255, 0.7);
+  margin: 0 4px;
+}
+.nchat__count {
+  color: rgba(245, 243, 255, 0.42);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Screen-reader-only (full text of a still-resolving reply). */
+.nchat-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -------------------------------- RESPONSIVE ---------------------------- */
+
+@container (max-width: 520px) {
+  .nchat__glass {
+    height: min(600px, 76vh);
+  }
+  .nmsg {
+    max-width: 96%;
+  }
+  .nchat__ident em {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Keep the bloom inside the viewport on phones. */
+  .nchat__mesh {
+    inset: -6% 0 -8%;
+  }
+  .nchat__mesh--far {
+    inset: -10% 0 -12%;
+  }
+  .nchat__foot {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .nchat__send {
+    padding: 12px 18px;
+    letter-spacing: 0.18em;
+  }
+  .nchat__status {
+    font-size: 0.52rem;
+    padding: 6px 10px;
+  }
+}
+
+/* Cursor system: these are bespoke controls, keep the custom cursor. */
+@media (pointer: fine) {
+  body.custom-cursor .npill,
+  body.custom-cursor .nchat__send,
+  body.custom-cursor .nchat__input {
+    cursor: none;
+  }
+}
+
+/* --------------------------- REDUCED MOTION ----------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .nchat__mesh,
+  .nchat__live,
+  .nchat__dot {
+    animation: none !important;
+  }
+  .nmsg__bubble.is-revealing {
+    -webkit-mask-image: none;
+    mask-image: none;
+    animation: none !important;
+  }
+  .nchat__log {
+    scroll-behavior: auto;
+  }
+}
+
+/* Progressive enhancement: without backdrop-filter, fall back to an opaque
+   tinted plate so contrast never collapses. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .nchat__glass {
+    background: linear-gradient(158deg, rgba(28, 20, 52, 0.94), rgba(12, 8, 26, 0.96));
+  }
+  .nchat__field {
+    background: rgba(255, 255, 255, 0.09);
+  }
+}

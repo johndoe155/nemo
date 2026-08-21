@@ -39,6 +39,10 @@
   --font-display: 'Unbounded Variable', 'Unbounded', ui-sans-serif, sans-serif;
   --font-body: 'Space Grotesk Variable', 'Space Grotesk', ui-sans-serif, sans-serif;
   --font-mono: 'Space Mono', ui-monospace, 'SFMono-Regular', monospace;
+  /* Conversational UI voice — geometric sans for anything a human reads as
+     prose (chat bubbles, composer input). Mono stays for metadata only. */
+  --font-ui: 'Inter Variable', 'Inter', 'Space Grotesk Variable', ui-sans-serif, system-ui,
+    sans-serif;
 
   --fs-h1: clamp(2.7rem, 1rem + 6.6vw, 7.25rem);
   --fs-h2: clamp(1.9rem, 1rem + 3.6vw, 4.1rem);
