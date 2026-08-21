@@ -266,42 +266,21 @@ function TelemetryPod({ serial }: { serial: string }) {
 
         <span className="npx__pod-grid" />
 
-        {/* dim wireframe sphere over a dark mechanical core */}
-        <svg className="npx__pod-sphere" viewBox="0 0 120 160" preserveAspectRatio="none">
-          <g fill="none" stroke="rgba(147, 168, 196, 0.3)" strokeWidth="0.8" vectorEffect="non-scaling-stroke">
-            <circle cx="60" cy="76" r="30" />
-            <ellipse cx="60" cy="76" rx="19" ry="30" />
-            <ellipse cx="60" cy="76" rx="8" ry="30" />
-            <ellipse cx="60" cy="76" rx="30" ry="11" />
-            <ellipse cx="60" cy="76" rx="28" ry="22" />
-            <ellipse cx="60" cy="76" rx="18" ry="28" />
-          </g>
-          <circle
-            cx="60"
-            cy="76"
-            r="4.5"
-            fill="rgba(9, 12, 18, 0.9)"
-            stroke="rgba(147, 168, 196, 0.45)"
-            strokeWidth="0.8"
-            strokeDasharray="2 2"
-            vectorEffect="non-scaling-stroke"
-          />
-        </svg>
-
-        {/* scrambled silhouette */}
+        {/* scrambled silhouette — the only centre graphic, perfectly centred
+            in the pod (viewBox 120×160 → centre y=80; figure spans 56..104) */}
         <svg className="npx__pod-silhouette" viewBox="0 0 120 160" preserveAspectRatio="none">
           <defs>
             <clipPath id={`podscramble-${id}`}>
-              <rect x="0" y="0" width="120" height="58" />
-              <rect x="-4" y="58" width="120" height="16" />
-              <rect x="4" y="74" width="120" height="16" />
-              <rect x="-3" y="90" width="120" height="16" />
-              <rect x="3" y="106" width="120" height="54" />
+              <rect x="0" y="0" width="120" height="56" />
+              <rect x="-4" y="56" width="120" height="16" />
+              <rect x="4" y="72" width="120" height="16" />
+              <rect x="-3" y="88" width="120" height="16" />
+              <rect x="3" y="104" width="120" height="56" />
             </clipPath>
           </defs>
-          <g clipPath={`url(#podscramble-${id})`} fill="rgba(190, 210, 230, 0.08)">
-            <circle cx="60" cy="62" r="8" />
-            <path d="M46 98 C46 82 52 74 60 74 C68 74 74 82 74 98 Z" />
+          <g clipPath={`url(#podscramble-${id})`} fill="rgba(190, 210, 230, 0.09)">
+            <circle cx="60" cy="64" r="8" />
+            <path d="M46 104 C46 88 52 78 60 78 C68 78 74 88 74 104 Z" />
           </g>
         </svg>
 

@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Rarity } from '../../lib/data';
 import { RARITY_ACCENT } from './usePullEngine';
+import { webglSupported } from './webgl';
 
 /* ------------------------------ GL plumbing ------------------------------ */
 
@@ -35,7 +36,10 @@ interface GaugeGL {
 }
 
 function createGaugeGL(canvas: HTMLCanvasElement, fill: number, hex: string): GaugeGL {
-  const gl = canvas.getContext('webgl', { antialias: false, alpha: false });
+  // alpha:true — the drawing buffer stays transparent until the liquid is
+  // drawn, so a mid-expansion 0-sized frame can never paint as a solid
+  // black slab over the node.
+  const gl = canvas.getContext('webgl', { antialias: false, alpha: true });
   if (!gl) throw new Error('webgl unavailable');
   const prog = gl.createProgram()!;
   gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, GAUGE_VERT));
@@ -74,7 +78,20 @@ function createGaugeGL(canvas: HTMLCanvasElement, fill: number, hex: string): Ga
   const tick = (t: number) => {
     if (lost || !live) return;
     cur += (target - cur) * 0.12;
+    // The gauge container animates 0 → 132px on hover; the canvas mounts at
+    // the start of that transition, so keep the drawing buffer glued to the
+    // live CSS size every frame. Without this, the first (zero-sized) frame
+    // is the last one ever drawn — the classic "solid black pill" failure.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
+    const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
     gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
     gl.uniform2f(uniforms.uRes, canvas.width, canvas.height);
     gl.uniform1f(uniforms.uTime, t / 1000);
     gl.uniform1f(uniforms.uFill, cur);
@@ -167,9 +184,12 @@ export function ProbabilityNode({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !hot) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(canvas.clientWidth * dpr);
-    canvas.height = Math.round(canvas.clientHeight * dpr);
+    // Pre-probe: if the platform has no WebGL at all, fall straight to the
+    // pure-CSS liquid bar instead of mounting a doomed context.
+    if (!webglSupported()) {
+      setGlOk(false);
+      return;
+    }
     try {
       engineRef.current = createGaugeGL(canvas, pct / 100, accent.color);
       setGlOk(true);

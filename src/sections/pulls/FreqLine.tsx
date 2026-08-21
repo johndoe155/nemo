@@ -142,6 +142,11 @@ function fillBar(
   ctx.shadowColor = hot ? 'rgba(63, 232, 255, 0.7)' : 'rgba(63, 210, 255, 0.45)';
   ctx.shadowBlur = 7;
   ctx.beginPath();
-  ctx.roundRect(x, mid - halfHeight, w, halfHeight * 2, w / 2);
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, mid - halfHeight, w, halfHeight * 2, w / 2);
+  } else {
+    // older engines — plain rect, visually identical at this scale
+    ctx.rect(x, mid - halfHeight, w, halfHeight * 2);
+  }
   ctx.fill();
 }

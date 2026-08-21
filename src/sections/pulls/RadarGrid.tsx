@@ -171,7 +171,7 @@ export default function RadarGrid({ spin }: RadarGridProps) {
       for (const line of lines) {
         const midY = (line[0][1] + line[line.length - 1][1]) / 2;
         if (Math.abs(midY - y) > cone * 2) continue;
-        c.globalAlpha = 0.1 * coneEnv(y, midY, cone);
+        c.globalAlpha = 0.075 * coneEnv(y, midY, cone);
         c.strokeStyle = '#ff4a63';
         c.lineWidth = 1;
         drawPath(c, line, -1.4, 0);
@@ -182,18 +182,19 @@ export default function RadarGrid({ spin }: RadarGridProps) {
       }
       c.restore();
 
-      /* feathered scanline core */
+      /* feathered scanline core — gently dampened so the beam reads as an
+         ambient HUD glow rather than a hard light bar */
       const core = c.createLinearGradient(0, y - 46, 0, y + 46);
       core.addColorStop(0, 'rgba(150, 200, 255, 0)');
-      core.addColorStop(0.42, 'rgba(150, 200, 255, 0.1)');
-      core.addColorStop(0.5, 'rgba(225, 240, 255, 0.55)');
-      core.addColorStop(0.58, 'rgba(150, 200, 255, 0.1)');
+      core.addColorStop(0.42, 'rgba(150, 200, 255, 0.075)');
+      core.addColorStop(0.5, 'rgba(225, 240, 255, 0.4)');
+      core.addColorStop(0.58, 'rgba(150, 200, 255, 0.075)');
       core.addColorStop(1, 'rgba(150, 200, 255, 0)');
       c.save();
       c.globalCompositeOperation = 'lighter';
       c.fillStyle = core;
       c.fillRect(0, y - 46, W, 92);
-      c.fillStyle = 'rgba(240, 248, 255, 0.85)';
+      c.fillStyle = 'rgba(240, 248, 255, 0.6)';
       c.fillRect(0, y - 0.7, W, 1.4);
       c.restore();
 

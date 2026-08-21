@@ -15,7 +15,7 @@
                velocity and gravity vectors.
    ========================================================================== */
 
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { SectionHead } from '../../components/ui';
 import { RARITY, SET_BONUS_AT, STAMP_SLOTS } from '../../lib/data';
@@ -34,11 +34,15 @@ export default function Pulls() {
   const railRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
 
+  // Stable identity across renders: a fresh array here would tear down and
+  // rebuild the whole WebGL particle field on every state change.
+  const obstacles = useMemo(() => [railRef, stageRef], []);
+
   const pityLeft = Math.max(0, STAMP_SLOTS - 1 - engine.stamps);
 
   return (
     <section className="section pulls npx" id="pulls" ref={sectionRef}>
-      <ParticleField obstacles={[railRef, stageRef]} sectionRef={sectionRef} />
+      <ParticleField obstacles={obstacles} sectionRef={sectionRef} />
 
       <div className="shell npx__shell">
         <SectionHead

@@ -46,7 +46,19 @@ function loadPulls(): StoredPull[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as StoredPull[];
-    return Array.isArray(parsed) ? parsed.filter((p) => p && p.uid) : [];
+    if (!Array.isArray(parsed)) return [];
+    // Sanitise persisted state: every entry must reference a real universe
+    // with a known rarity tier, otherwise stale/corrupt data can produce
+    // broken renders after a reload.
+    return parsed.filter(
+      (p) =>
+        p &&
+        typeof p.uid === 'string' &&
+        p.uid.length > 0 &&
+        typeof p.rarity === 'string' &&
+        p.rarity in RARITY &&
+        UNIVERSES.some((u) => String(u.id) === p.uid),
+    );
   } catch {
     return [];
   }
