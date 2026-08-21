@@ -1,16 +1,20 @@
 /* ============================================================================
    RevealPlate — the holographic reveal stage of the 3D canvas.
 
-   idle    → sealed archive slate, ghost watermark, idle scan sweep.
+   A top-to-bottom linear radar sweep (RadarGrid) crosses a barrel-tilted
+   grid behind the content. No rotating beams.
+
+   idle    → sealed archive slate with the sweep.
    spinning→ fast-cycling universe portraits with glitch tearing + scanlines.
    done    → the pulled piece materialises: chromatic-aberration entrance,
-             rarity rim light, light leaks, mint roll-up, next actions.
+             rarity rim light, mint roll-up, next actions.
    ========================================================================== */
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { RARITY } from '../../lib/data';
 import { RARITY_ACCENT, spinPool, type PullPhase, type PullResult } from './usePullEngine';
 import { StatRoll } from './StatRoll';
+import RadarGrid from './RadarGrid';
 
 interface RevealPlateProps {
   phase: PullPhase;
@@ -23,13 +27,13 @@ interface RevealPlateProps {
 export default function RevealPlate({ phase, spinIdx, result, onPull, onDone }: RevealPlateProps) {
   return (
     <div className={`npx__reveal is-${phase}`}>
+      <RadarGrid spin={phase === 'spinning'} />
       <span className="npx__reveal-corners" aria-hidden="true">
         <i />
         <i />
         <i />
         <i />
       </span>
-      <span className="npx__reveal-scan" aria-hidden="true" />
 
       <AnimatePresence mode="wait">
         {phase === 'idle' && (
@@ -41,9 +45,7 @@ export default function RevealPlate({ phase, spinIdx, result, onPull, onDone }: 
             exit={{ opacity: 0, filter: 'blur(6px)' }}
             transition={{ duration: 0.4 }}
           >
-            <span className="npx__reveal-seal" aria-hidden="true">
-              ✦
-            </span>
+            <span className="npx__reveal-seal" aria-hidden="true" />
             <p>ARCHIVE SEALED</p>
             <em>THE NEXT PIECE IS ALREADY NUMBERED. PULL TO BREAK THE SEAL.</em>
           </motion.div>
@@ -87,7 +89,6 @@ export default function RevealPlate({ phase, spinIdx, result, onPull, onDone }: 
             style={{ '--rr': RARITY_ACCENT[result.r].color } as React.CSSProperties}
           >
             <span className="npx__reveal-burst" aria-hidden="true" />
-            <span className="npx__reveal-leak" aria-hidden="true" />
             <div className="npx__reveal-portrait">
               <img src={result.u.image} alt={`${result.u.name} pull`} />
               <span className="npx__reveal-rim" aria-hidden="true" />
@@ -102,7 +103,7 @@ export default function RevealPlate({ phase, spinIdx, result, onPull, onDone }: 
             </span>
             <div className="npx__reveal-actions">
               <button type="button" className="npx__cta-mini" onClick={onPull}>
-                <span aria-hidden="true">✦</span> PULL AGAIN
+                PULL AGAIN
               </button>
               <button type="button" className="npx__ghostbtn" onClick={onDone}>
                 DONE

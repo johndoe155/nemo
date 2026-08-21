@@ -52,13 +52,13 @@ function loadPulls(): StoredPull[] {
   }
 }
 
-/** The luxury-palette accent used by the Pulls canvas for each rarity. */
+/** Rarity accents synced to the primary site theme (no custom bold hues). */
 export const RARITY_ACCENT: Record<Rarity, { color: string; glow: string }> = {
-  common: { color: '#E0E4EC', glow: 'rgba(224, 228, 236, 0.5)' },
-  rare: { color: '#6E25FD', glow: 'rgba(110, 37, 253, 0.55)' },
-  epic: { color: '#B98CFF', glow: 'rgba(185, 140, 255, 0.6)' },
-  legendary: { color: '#FFD700', glow: 'rgba(255, 215, 0, 0.6)' },
-  secret: { color: '#FF3D9A', glow: 'rgba(255, 61, 154, 0.55)' },
+  common: { color: '#c8cfe0', glow: 'rgba(200, 207, 224, 0.4)' },
+  rare: { color: '#3fe8ff', glow: 'rgba(63, 232, 255, 0.45)' },
+  epic: { color: '#8a4dff', glow: 'rgba(138, 77, 255, 0.45)' },
+  legendary: { color: '#ffc857', glow: 'rgba(255, 200, 87, 0.4)' },
+  secret: { color: '#ff3d9a', glow: 'rgba(255, 61, 154, 0.45)' },
 };
 
 export function usePullEngine() {

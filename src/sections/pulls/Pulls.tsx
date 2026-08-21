@@ -38,7 +38,6 @@ export default function Pulls() {
 
   return (
     <section className="section pulls npx" id="pulls" ref={sectionRef}>
-      <div className="npx__bg" aria-hidden="true" />
       <ParticleField obstacles={[railRef, stageRef]} sectionRef={sectionRef} />
 
       <div className="shell npx__shell">
@@ -75,13 +74,10 @@ export default function Pulls() {
 
               <div className="npx__plate-head">
                 <div>
-                  <span className="npx__plate-title">
-                    PULL SIMULATOR
-                    <em className="npx__serif">simulator · pillar 03</em>
-                  </span>
+                  <span className="npx__plate-title">PULL SIMULATOR</span>
                 </div>
-                <span className={`npx__badge ${engine.bonusReached ? 'is-gold' : ''}`}>
-                  {engine.bonusReached ? '✦ GOLDEN GATE OPEN' : `${engine.stamps}/${SET_BONUS_AT} TOWARD SET BONUS`}
+                <span className={`npx__badge ${engine.bonusReached ? 'is-live' : ''}`}>
+                  {engine.bonusReached ? 'GOLDEN GATE OPEN' : `${engine.stamps}/${SET_BONUS_AT} TOWARD SET BONUS`}
                 </span>
               </div>
 
@@ -109,7 +105,7 @@ export default function Pulls() {
                   </span>
                 </div>
                 <div className={`npx__stat npx__stat--pity ${engine.pityActive ? 'is-armed' : ''}`}>
-                  <StatRoll value={pityLeft} className="npx__stat-num" color="#FFD700" />
+                  <StatRoll value={pityLeft} className="npx__stat-num" color="#3fe8ff" />
                   <span>
                     PITY · 8TH STAMP{engine.pityActive ? ' — ARMED' : ` IN ${pityLeft}`}
                   </span>
@@ -182,9 +178,9 @@ export default function Pulls() {
                 onReset={engine.reset}
               />
               <div className="npx__float-chips" aria-hidden="true">
-                <span className="npx__float-chip is-a">◆ LIVE ODDS · BOUND TO THE ARCHIVE</span>
-                <span className="npx__float-chip is-b">◆ LOW-FEE CHAIN · POLYGON / BASE</span>
-                <span className="npx__float-chip is-c">◆ METADATA ON IPFS</span>
+                <span className="npx__float-chip is-a">LIVE ODDS · BOUND TO THE ARCHIVE</span>
+                <span className="npx__float-chip is-b">LOW-FEE CHAIN · POLYGON / BASE</span>
+                <span className="npx__float-chip is-c">METADATA ON IPFS</span>
               </div>
             </div>
             <StageFlash n={engine.flash} />
@@ -192,10 +188,10 @@ export default function Pulls() {
         </div>
 
         <p className="npx__foot">
-          ◆ SHOPIFY WEBHOOK TRIGGERS THE MINT AFTER CHECKOUT · DRAWING FROM THE LIVE NEMOVERSE
+          SHOPIFY WEBHOOK TRIGGERS THE MINT AFTER CHECKOUT · DRAWING FROM THE LIVE NEMOVERSE
           CATALOG
           <br />
-          ◆ MINTED TO THE BUYER'S WALLET — OR CLAIMABLE VIA EMAIL · LOW-FEE CHAIN: POLYGON / BASE ·
+          MINTED TO THE BUYER'S WALLET — OR CLAIMABLE VIA EMAIL · LOW-FEE CHAIN: POLYGON / BASE ·
           METADATA ON IPFS
         </p>
       </div>

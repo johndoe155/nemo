@@ -3,16 +3,19 @@
 
    · 2×4 grid of tactile 3D slots. Each card tilts in a perspective(800px)
      space, rotateX/rotateY tracked from the mouse relative to the card.
-   · Empty slots: semi-translucent dithered glass with an etched metallic
-     ring and a ghosted universe watermark.
-   · NEXT slot: gold-leaf holographic mesh — liquid sheen sweep, pulsing
+   · Inactive cards read as encrypted telemetry pods in a powered-down cold
+     slate: sharp 45° chamfered housing with a soft white top-edge specular
+     (15%), technical corner reticles, a dim wireframe sphere over a
+     low-opacity dark grid with static noise and a scrambled silhouette,
+     and a crisp serial-number pill badge.
+   · NEXT slot: holographic mesh + liquid sheen in the site accent, pulsing
      wireframe border.
    · Unlock: an explosive 3D flip (react-spring config tension 320 /
      friction 18 — same spring ODE, driven through framer-motion) with a
-     spark burst and a rotating light leak.
+     spark burst. No rotating beams.
    ========================================================================== */
 
-import { useRef } from 'react';
+import { useId, useRef } from 'react';
 import {
   motion,
   useMotionValue,
@@ -96,9 +99,6 @@ export default function StampCard({
       </div>
 
       <div className={`npx__bonus ${bonusReached ? 'is-unlocked' : ''}`}>
-        <span className="npx__bonus-ic" aria-hidden="true">
-          ✦
-        </span>
         <div>
           <b>GOLDEN GATE SET BONUS</b>
           <p>
@@ -159,7 +159,7 @@ function StampSlot({ index, filled, next, universe, isLatest }: SlotProps) {
     ? `${universe.code} — ${universe.name} stamped`
     : next
       ? 'Next pull lands here'
-      : 'Empty stamp slot';
+      : 'Encrypted archive pod';
 
   return (
     <div
@@ -201,25 +201,19 @@ function StampSlot({ index, filled, next, universe, isLatest }: SlotProps) {
               </>
             )}
           </div>
-          {/* etched / holographic face (visible while empty) */}
+          {/* encrypted pod / holographic face (visible while empty) */}
           <div className="npx__slot-face npx__slot-back">
             {next ? (
               <>
                 <span className="npx__slot-holo" aria-hidden="true" />
                 <span className="npx__slot-holowire" aria-hidden="true" />
                 <span className="npx__slot-nextlabel">
-                  <i aria-hidden="true">✦</i> NEXT PULL
+                  NEXT PULL
                   <em>LANDS HERE</em>
                 </span>
               </>
             ) : (
-              <>
-                <span className="npx__slot-ring" aria-hidden="true" />
-                <span className="npx__slot-ghostcode" aria-hidden="true">
-                  {`U-00${index + 1}`}
-                </span>
-                <span className="npx__slot-empty">○</span>
-              </>
+              <TelemetryPod serial={`U-00${index + 1}`} />
             )}
           </div>
         </motion.div>
@@ -232,7 +226,88 @@ function StampSlot({ index, filled, next, universe, isLatest }: SlotProps) {
           ))}
         </span>
       )}
-      {isLatest && <span className="npx__slot-leak" aria-hidden="true" />}
     </div>
+  );
+}
+
+/* ------------------------- encrypted telemetry pod ------------------------- */
+
+function TelemetryPod({ serial }: { serial: string }) {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+
+  return (
+    <>
+      <span className="npx__pod" aria-hidden="true">
+        <svg className="npx__pod-frame" viewBox="0 0 120 160" preserveAspectRatio="none">
+          {/* 45° chamfered housing outline */}
+          <path
+            d="M14 0 H106 L120 14 V146 L106 160 H14 L0 146 V14 Z"
+            fill="none"
+            stroke="rgba(147, 168, 196, 0.38)"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+          />
+          {/* soft white top-edge specular — 15% */}
+          <path
+            d="M14 0.5 H106 L119.5 14"
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.15)"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+          />
+          {/* technical corner reticles */}
+          <g fill="none" stroke="rgba(147, 168, 196, 0.55)" strokeWidth="1" vectorEffect="non-scaling-stroke">
+            <path d="M19 2 V9 H12" />
+            <path d="M101 2 V9 H108" />
+            <path d="M19 158 V151 H12" />
+            <path d="M101 158 V151 H108" />
+          </g>
+        </svg>
+
+        <span className="npx__pod-grid" />
+
+        {/* dim wireframe sphere over a dark mechanical core */}
+        <svg className="npx__pod-sphere" viewBox="0 0 120 160" preserveAspectRatio="none">
+          <g fill="none" stroke="rgba(147, 168, 196, 0.3)" strokeWidth="0.8" vectorEffect="non-scaling-stroke">
+            <circle cx="60" cy="76" r="30" />
+            <ellipse cx="60" cy="76" rx="19" ry="30" />
+            <ellipse cx="60" cy="76" rx="8" ry="30" />
+            <ellipse cx="60" cy="76" rx="30" ry="11" />
+            <ellipse cx="60" cy="76" rx="28" ry="22" />
+            <ellipse cx="60" cy="76" rx="18" ry="28" />
+          </g>
+          <circle
+            cx="60"
+            cy="76"
+            r="4.5"
+            fill="rgba(9, 12, 18, 0.9)"
+            stroke="rgba(147, 168, 196, 0.45)"
+            strokeWidth="0.8"
+            strokeDasharray="2 2"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+
+        {/* scrambled silhouette */}
+        <svg className="npx__pod-silhouette" viewBox="0 0 120 160" preserveAspectRatio="none">
+          <defs>
+            <clipPath id={`podscramble-${id}`}>
+              <rect x="0" y="0" width="120" height="58" />
+              <rect x="-4" y="58" width="120" height="16" />
+              <rect x="4" y="74" width="120" height="16" />
+              <rect x="-3" y="90" width="120" height="16" />
+              <rect x="3" y="106" width="120" height="54" />
+            </clipPath>
+          </defs>
+          <g clipPath={`url(#podscramble-${id})`} fill="rgba(190, 210, 230, 0.08)">
+            <circle cx="60" cy="62" r="8" />
+            <path d="M46 98 C46 82 52 74 60 74 C68 74 74 82 74 98 Z" />
+          </g>
+        </svg>
+
+        <span className="npx__pod-noise" />
+      </span>
+      <span className="npx__pod-serial">{serial}</span>
+    </>
   );
 }

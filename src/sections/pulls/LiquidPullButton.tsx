@@ -198,12 +198,7 @@ export default function LiquidPullButton({ onClick, disabled, spin, label, spinL
     >
       <canvas ref={canvasRef} className="npx__cta-gl" aria-hidden="true" />
       <span className="npx__cta-borderglow" aria-hidden="true" />
-      <span className="npx__cta-label">
-        <span className="npx__cta-star" aria-hidden="true">
-          ✦
-        </span>
-        {spin ? spinLabel ?? 'ARCHIVE SPLITTING…' : label}
-      </span>
+      <span className="npx__cta-label">{spin ? spinLabel ?? 'ARCHIVE SPLITTING…' : label}</span>
       <span className="npx__cta-shine" aria-hidden="true" />
     </button>
   );

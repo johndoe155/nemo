@@ -5,7 +5,7 @@
    strip. Its amplitude is bound to the ambient sound toggle: with interface
    sound ON the line runs hot and full-range (it is "hearing" the archive
    hum); muted, it idles as a faint slow-motion carrier wave. While a pull is
-   spinning, the line overdrives into gold. Drawn on a 2D canvas with glow
+   spinning, the line overdrives into bright cyan. Drawn on a 2D canvas with glow
    stacking; honours reduced motion with a frozen waveform.
    ========================================================================== */
 
@@ -85,13 +85,13 @@ export function FreqLine({ spin = false }: { spin?: boolean }) {
       const speed = spinRef.current ? 5.2 : hot ? 2.6 : 0.8;
       const barW = canvas.width / BARS;
       const mid = canvas.height / 2;
-      const gold = spinRef.current;
+      const spinHot = spinRef.current;
 
       for (let i = 0; i < BARS; i++) {
         if (reduce) {
           const amp = 0.5 + 0.5 * Math.sin(i * 0.7);
           const bh = Math.max(2, amp * 0.3 * canvas.height * (hot ? 1 : 0.5));
-          fillBar(ctx, i, barW, mid, bh, gold);
+          fillBar(ctx, i, barW, mid, bh, spinHot);
           continue;
         }
         // layered sines → organic spectrum, biased by a low-frequency envelope
@@ -105,7 +105,7 @@ export function FreqLine({ spin = false }: { spin?: boolean }) {
               Math.sin(i * 2.07 + sec * speed * 2.1) * 0.15,
           ) * env;
         const bh = Math.max(2, wave * drive * canvas.height * 0.92);
-        fillBar(ctx, i, barW, mid, bh, gold);
+        fillBar(ctx, i, barW, mid, bh, spinHot);
       }
     };
     raf = requestAnimationFrame(tick);
@@ -124,23 +124,23 @@ function fillBar(
   barW: number,
   mid: number,
   halfHeight: number,
-  gold: boolean,
+  hot: boolean,
 ) {
   const x = i * barW + barW * 0.22;
   const w = barW * 0.56;
   const grad = ctx.createLinearGradient(0, mid - halfHeight, 0, mid + halfHeight);
-  if (gold) {
-    grad.addColorStop(0, 'rgba(255, 215, 0, 0.05)');
-    grad.addColorStop(0.5, 'rgba(255, 215, 0, 0.95)');
-    grad.addColorStop(1, 'rgba(255, 215, 0, 0.05)');
+  if (hot) {
+    grad.addColorStop(0, 'rgba(63, 232, 255, 0.04)');
+    grad.addColorStop(0.5, 'rgba(140, 226, 255, 0.9)');
+    grad.addColorStop(1, 'rgba(63, 232, 255, 0.04)');
   } else {
-    grad.addColorStop(0, 'rgba(110, 37, 253, 0.04)');
-    grad.addColorStop(0.5, 'rgba(154, 107, 255, 0.9)');
-    grad.addColorStop(1, 'rgba(224, 228, 236, 0.05)');
+    grad.addColorStop(0, 'rgba(63, 232, 255, 0.03)');
+    grad.addColorStop(0.5, 'rgba(110, 205, 255, 0.75)');
+    grad.addColorStop(1, 'rgba(224, 228, 236, 0.04)');
   }
   ctx.fillStyle = grad;
-  ctx.shadowColor = gold ? 'rgba(255, 215, 0, 0.8)' : 'rgba(110, 37, 253, 0.65)';
-  ctx.shadowBlur = 8;
+  ctx.shadowColor = hot ? 'rgba(63, 232, 255, 0.7)' : 'rgba(63, 210, 255, 0.45)';
+  ctx.shadowBlur = 7;
   ctx.beginPath();
   ctx.roundRect(x, mid - halfHeight, w, halfHeight * 2, w / 2);
   ctx.fill();
