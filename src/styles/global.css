@@ -4,7 +4,7 @@
    "one canon character × infinite artist universes" → void-black canvas,
    nebula gradients (iris → cyan → magenta), gold reserved for rarity/luxury,
    glass surfaces with gradient borders, glow-based elevation (no flat shadows),
-   Unbounded display / Space Grotesk body / Space Mono "system voice".
+   PP Neue Machina display / PP Neue Montreal body / Space Grotesk accent.
    Motion: expo-out curves, scroll-bound parallax, marquees, sheen sweeps.
    ========================================================================== */
 
@@ -35,14 +35,31 @@
   --r-legendary: #ffc857;
   --r-secret: #ff3d9a;
 
-  /* ---- Type ---- */
-  --font-display: 'Unbounded Variable', 'Unbounded', ui-sans-serif, sans-serif;
-  --font-body: 'Space Grotesk Variable', 'Space Grotesk', ui-sans-serif, sans-serif;
-  --font-mono: 'Space Mono', ui-monospace, 'SFMono-Regular', monospace;
-  /* Conversational UI voice — geometric sans for anything a human reads as
-     prose (chat bubbles, composer input). Mono stays for metadata only. */
-  --font-ui: 'Inter Variable', 'Inter', 'Space Grotesk Variable', ui-sans-serif, system-ui,
-    sans-serif;
+  /* ---- Type ----
+     Art-directed PP Neue Machina / Montreal stack (self-hosted, see
+     assets/fonts/pp-fonts.css). Five semantic roles:
+       --font-display     Inktrap  → hero titles, major H1s, display numbers,
+                                     high-impact interactive titles, callouts
+       --font-heading     Plain    → sub-headings (H2/H3), nav links,
+                                     active badges/pills, UI state indicators
+       --font-body        Montreal → primary body, card copy, forms, modals, UI
+       --font-body-text   Montreal Text → dense reading, micro-copy, legal,
+                                     tooltips, small captions
+       --font-accent      Space Grotesk → tech accents, metadata, dates,
+                                     tracked labels, stat counters, code/data
+     Legacy variable names are retained as aliases so the existing 200+ token
+     references resolve to the new stack without a sweep:
+       --font-mono → --font-accent  (Space Mono is retired; Grotesk replaces it)
+       --font-ui   → --font-body    (Inter is retired; Montreal prose UI)        */
+  --font-display: 'PP Neue Machina Inktrap', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'PP Neue Machina Plain', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'PP Neue Montreal', ui-sans-serif, system-ui, sans-serif;
+  --font-body-text: 'PP Neue Montreal Text', 'PP Neue Montreal',
+    ui-sans-serif, system-ui, sans-serif;
+  --font-accent: 'Space Grotesk Variable', 'Space Grotesk',
+    ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-accent);
+  --font-ui: var(--font-body);
 
   --fs-h1: clamp(2.7rem, 1rem + 6.6vw, 7.25rem);
   --fs-h2: clamp(1.9rem, 1rem + 3.6vw, 4.1rem);
@@ -200,10 +217,12 @@ section[id] {
 }
 
 .num {
-  font-family: var(--font-mono);
+  font-family: var(--font-accent);
   font-size: var(--fs-mono);
+  font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Gradient + outline ink treatments */

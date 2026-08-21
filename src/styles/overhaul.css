@@ -32,10 +32,11 @@
   /* Fresh surfaces */
   --glass-strong: rgba(255, 255, 255, 0.055);
 
-  /* Extended geometric display face for the wide hero words (CANON / VERSIONS).
-     Register one of these families (or a true "Expanded/Extended" cut of your
-     display face) in the font pipeline; falls back to --font-display otherwise. */
-  --font-display-ext: "Michroma", "Orbitron", "Audiowide", "Zen Dots", var(--font-display);
+  /* The wide hero words (CANON / VERSIONS) are the page's highest-impact
+     titles — they resolve to the Inktrap display face (via --font-display)
+     with a synthetic ultra-wide stretch for the cinematic treatment. No
+     external/extended cut is fetched, so nothing extra enters the waterfall. */
+  --font-display-ext: var(--font-display);
 }
 
 /* ============================ LAYOUT RHYTHM ============================ */

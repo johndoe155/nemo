@@ -192,20 +192,17 @@
   font-display: swap;
 }
 
-/* ====================== Design tokens ============================== */
+/* ====================== Raw family tokens ========================== */
 /* Expose every family as a CSS custom property so future usage is just
-   `font-family: var(--font-pp-*)` with appropriate fallbacks. We do NOT
-   override the existing --font-display / --font-body tokens here — that
-   would be a global visual change. Use the new variables explicitly
-   wherever you want PP fonts to appear. */
+   `font-family: var(--font-pp-*)`. These are the RAW family stacks; the
+   canonical semantic roles (--font-display / -heading / -body / -body-text /
+   -accent) are mapped in styles/global.css and reference these tokens.
+   Fallbacks are generic system faces only — no legacy webfont names remain. */
 
 :root {
-  --font-pp-machina-inktrap: 'PP Neue Machina Inktrap', 'Unbounded Variable', 'Unbounded',
-    ui-sans-serif, sans-serif;
-  --font-pp-machina-plain: 'PP Neue Machina Plain', 'Unbounded Variable', 'Unbounded',
-    ui-sans-serif, sans-serif;
-  --font-pp-montreal: 'PP Neue Montreal', 'Space Grotesk Variable', 'Space Grotesk',
-    ui-sans-serif, sans-serif;
-  --font-pp-montreal-text: 'PP Neue Montreal Text', 'Inter Variable', 'Inter',
-    'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-pp-machina-inktrap: 'PP Neue Machina Inktrap', ui-sans-serif, system-ui, sans-serif;
+  --font-pp-machina-plain: 'PP Neue Machina Plain', ui-sans-serif, system-ui, sans-serif;
+  --font-pp-montreal: 'PP Neue Montreal', ui-sans-serif, system-ui, sans-serif;
+  --font-pp-montreal-text: 'PP Neue Montreal Text', 'PP Neue Montreal',
+    ui-sans-serif, system-ui, sans-serif;
 }

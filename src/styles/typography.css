@@ -1,0 +1,137 @@
+/* ============================================================================
+   TYPOGRAPHY — art-directed application layer
+   ----------------------------------------------------------------------------
+   This file is imported LAST (after global / components / overhaul / chat)
+   so the role assignments below win precedence at equal specificity.
+
+   Five-font hierarchy (families + @font-face live in assets/fonts/pp-fonts.css
+   and styles/global.css):
+
+     --font-display     · PP Neue Machina Inktrap
+                         hero titles · major section H1s · display numbers ·
+                         high-impact interactive titles · dramatic callouts
+
+     --font-heading     · PP Neue Machina Plain
+                         sub-headings (H2/H3) · primary nav links ·
+                         active badges/pills · prominent UI state indicators
+
+     --font-body        · PP Neue Montreal
+                         primary body · card copy · forms · modal content · UI
+
+     --font-body-text   · PP Neue Montreal Text
+                         dense reading · micro-copy · legal · tooltips · captions
+
+     --font-accent      · Space Grotesk   (also reached via the --font-mono alias)
+                         tech accents · metadata · dates · tracked labels ·
+                         stat counters · code/data
+
+   Anything not touched here already inherits the right role through the
+   tokens: --font-display / --font-body drive .display / body{}; --font-mono
+   (Space Mono, retired) is aliased to --font-accent so ~90 metadata sites
+   become Space Grotesk; --font-ui (Inter, retired) is aliased to --font-body.
+   ========================================================================== */
+
+/* ============================ INKTRAP — display ============================ */
+/* Hero / major H1 / display numbers / callouts already resolve to Inktrap via
+   --font-display (the .display utility, brand wordmarks, stat numerals,
+   countdown, ghost text, the .hero__wide / .hero__period words via
+   --font-display-ext). Reinforce the hero centerpiece + lock animated numerals
+   to tabular figures so nothing jitters during count-up / countdown. */
+
+.hero__title {
+  font-family: var(--font-display);
+  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  text-rendering: optimizeLegibility;
+}
+
+/* Animated display numerals — tabular figures keep their advance width. */
+.mv__stat b,
+.pullboard__stat b,
+.lorestat b,
+.countdown__cell b,
+.product__price,
+.pull-result .name {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================ PLAIN — sub-headings ======================== */
+/* H2/H3-level titles flip from the Inktrap display face to Machina Plain, so
+   the giant ghost numerals / Inktrap hero keep maximum impact while every
+   structural sub-heading reads as a clean, confident Plain cut. */
+
+.ucard__name,
+.product__name,
+.perk__trait,
+.tlitem b,
+.loop__node b {
+  font-family: var(--font-heading);
+  font-weight: 800; /* Ultrabold Plain — only 300/400/800 are loaded */
+  letter-spacing: 0;
+}
+
+/* Primary navigation links — Plain, refined regular weight with a decisive
+   weight-shift on the active scrollspy state (prominent UI indicator). */
+.nav__link {
+  font-family: var(--font-heading);
+  font-weight: 400;
+}
+.nav__link.active {
+  font-weight: 800;
+}
+
+/* Mobile menu links are nav links too — Plain, Ultrabold at display size. */
+.mmenu a {
+  font-family: var(--font-heading);
+}
+
+/* Active filter pills / badges — Plain Ultrabold reads as a locked UI state. */
+.chip[aria-pressed='true'],
+.chip.active,
+.badge {
+  font-family: var(--font-heading);
+  font-weight: 800;
+}
+
+/* ===================== MONTREAL TEXT — dense reading ====================== */
+/* Optical-size Book cut tuned for sustained, smaller reading: leads, modal
+   lore, timeline body, footer prose + the legal line. */
+
+.hero__lede,
+.dialog__lore,
+.tlitem p,
+.footer p {
+  font-family: var(--font-body-text);
+  /* Montreal Text shares metrics with Montreal (same family), so no
+     font-size-adjust is needed — size parity is automatic and CLS-free. */
+}
+
+/* Legal / copyright caption line — Montreal Text, kept compact + tracked. */
+.footer__bottom {
+  font-family: var(--font-body-text);
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Modal content container — Montreal (primary body voice). The dense lore
+   paragraph above already drops to Montreal Text for sustained reading. */
+.dialog__body {
+  font-family: var(--font-body);
+}
+
+/* ============================ ACCENT polish =============================== */
+/* Space Grotesk (via --font-accent / the --font-mono alias) already drives
+   kickers, labels, counters, telemetry, the sort dropdown, etc. A couple of
+   micro-tweaks for the new (proportional, slightly wider) face: tighten the
+   most extreme trackings and keep numeric columns aligned. */
+
+.kicker {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn,
+.chip,
+.sort-dd__trigger,
+.sort-dd__opt {
+  font-variant-numeric: tabular-nums;
+}
