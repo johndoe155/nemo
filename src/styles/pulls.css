@@ -48,22 +48,24 @@
   letter-spacing: 0.005em;
 }
 
-/* Michroma accent for the “pulls a piece” header text — uppercase, and
-   weighted up (synthetic bold on the single-weight face) to sit almost as
-   heavy as the surrounding display headline */
+/* “PULLS A PIECE” accent — strictly upright (normal posture, no italic),
+   matching the rigid blocky stance of the surrounding Inktrap display
+   headline. Weight is locked to 800 (synthetic-bold on the single-weight
+   Michroma face) while font-size, letter-spacing (0.005em via the section
+   display override) and line-height are inherited from the .display
+   headline — the same structural heaviness, width and line box as
+   “OF THE NEMOVERSE”. It sits on the shared baseline (inline, no vertical
+   offset, no italic-overhang padding), so the full sentence reads as one
+   unbroken line. The only differentiator is the cyan gradient fill. */
 .npx__serif {
   font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 700;
-  font-size: 0.66em;
-  letter-spacing: 0.03em;
+  font-style: normal;
+  font-weight: 800;
   text-transform: uppercase;
-  vertical-align: 0.04em;
   background: linear-gradient(100deg, #dfe6f2 0%, var(--cyan) 90%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  padding-right: 0.08em;
 }
 
 /* ------------------------------ split canvas ------------------------------ */
