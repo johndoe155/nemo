@@ -15,7 +15,7 @@
      spark burst. No rotating beams.
    ========================================================================== */
 
-import { useId, useRef } from 'react';
+import { useRef } from 'react';
 import {
   motion,
   useMotionValue,
@@ -233,8 +233,6 @@ function StampSlot({ index, filled, next, universe, isLatest }: SlotProps) {
 /* ------------------------- encrypted telemetry pod ------------------------- */
 
 function TelemetryPod({ serial }: { serial: string }) {
-  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
-
   return (
     <>
       <span className="npx__pod" aria-hidden="true">
@@ -266,22 +264,21 @@ function TelemetryPod({ serial }: { serial: string }) {
 
         <span className="npx__pod-grid" />
 
-        {/* scrambled silhouette — the only centre graphic, perfectly centred
-            in the pod (viewBox 120×160 → centre y=80; figure spans 56..104) */}
-        <svg className="npx__pod-silhouette" viewBox="0 0 120 160" preserveAspectRatio="none">
-          <defs>
-            <clipPath id={`podscramble-${id}`}>
-              <rect x="0" y="0" width="120" height="56" />
-              <rect x="-4" y="56" width="120" height="16" />
-              <rect x="4" y="72" width="120" height="16" />
-              <rect x="-3" y="88" width="120" height="16" />
-              <rect x="3" y="104" width="120" height="56" />
-            </clipPath>
-          </defs>
-          <g clipPath={`url(#podscramble-${id})`} fill="rgba(190, 210, 230, 0.09)">
-            <circle cx="60" cy="64" r="8" />
-            <path d="M46 104 C46 88 52 78 60 78 C68 78 74 88 74 104 Z" />
+        {/* clean wireframe globe — the centred graphic of inactive pods */}
+        <svg className="npx__pod-globe" viewBox="0 0 100 100" aria-hidden="true">
+          <g
+            fill="none"
+            stroke="rgba(147, 168, 196, 0.34)"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+          >
+            <circle cx="50" cy="50" r="30" />
+            <ellipse cx="50" cy="50" rx="30" ry="10" />
+            <ellipse cx="50" cy="50" rx="30" ry="21" />
+            <ellipse cx="50" cy="50" rx="10" ry="30" />
+            <ellipse cx="50" cy="50" rx="21" ry="30" />
           </g>
+          <circle cx="50" cy="50" r="2.5" fill="rgba(147, 168, 196, 0.5)" />
         </svg>
 
         <span className="npx__pod-noise" />

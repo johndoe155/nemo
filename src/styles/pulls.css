@@ -34,6 +34,7 @@
   --slate-line: rgba(147, 168, 196, 0.38);
   --slate-dim: rgba(147, 168, 196, 0.3);
   --pod-bg: #0d111a;
+  /* Michroma stays loaded for future accent use (see .npx__serif note) */
   --font-serif: 'Michroma', var(--font-heading), sans-serif;
 
   isolation: isolate;
@@ -48,17 +49,14 @@
   letter-spacing: 0.005em;
 }
 
-/* “PULLS A PIECE” accent — strictly upright (normal posture, no italic),
-   matching the rigid blocky stance of the surrounding Inktrap display
-   headline. Weight is locked to 800 (synthetic-bold on the single-weight
-   Michroma face) while font-size, letter-spacing (0.005em via the section
-   display override) and line-height are inherited from the .display
-   headline — the same structural heaviness, width and line box as
-   “OF THE NEMOVERSE”. It sits on the shared baseline (inline, no vertical
-   offset, no italic-overhang padding), so the full sentence reads as one
-   unbroken line. The only differentiator is the cyan gradient fill. */
+/* “PULLS A PIECE” accent — shares the exact font family of the header
+   (--font-display, PP Neue Machina Inktrap) so it flows seamlessly with
+   “OF THE NEMOVERSE”. Strictly upright, weight 800, with font-size,
+   letter-spacing and line-height inherited from the .display headline —
+   the only differentiator is the cyan gradient fill.
+   NOTE: Michroma remains loaded and ready to use via var(--font-serif). */
 .npx__serif {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-style: normal;
   font-weight: 800;
   text-transform: uppercase;
@@ -1064,11 +1062,15 @@
 }
 /* dim wireframe sphere */
 /* scrambled silhouette */
-.npx__pod-silhouette {
+/* clean wireframe globe — square container so the circles stay perfectly
+   round; 58% width (×0.75 = 43.5% height on the 3:4 card) and dead-centred
+   in the pod */
+.npx__pod-globe {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 21%;
+  top: 28.25%;
+  width: 58%;
+  height: 43.5%;
   display: block;
 }
 /* static noise with a slow flicker */
