@@ -1063,15 +1063,31 @@
 /* dim wireframe sphere */
 /* scrambled silhouette */
 /* clean wireframe globe — square container so the circles stay perfectly
-   round; 58% width (×0.75 = 43.5% height on the 3:4 card) and dead-centred
-   in the pod */
+   round; 58% width (×0.75 = 43.5% height on the 3:4 card). Pulled higher
+   than dead-centre so it sits vertically centred in the open grid area,
+   comfortably clear of the rounded serial pill at the bottom */
 .npx__pod-globe {
   position: absolute;
   left: 21%;
-  top: 28.25%;
+  top: 21%;
   width: 58%;
   height: 43.5%;
   display: block;
+}
+/* continuous seamless Y-axis spin of the wireframe globe. The inner group
+   rotates around the globe's own centre; transform-box: fill-box makes
+   transform-origin resolve against the SVG group's bounding box rather
+   than the SVG canvas, so the spin stays perfectly centred across
+   browsers. Linear timing keeps the loop seamless. */
+.npx__pod-globe-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: npxPodGlobeSpin 14s linear infinite;
+}
+@keyframes npxPodGlobeSpin {
+  to {
+    transform: rotateY(360deg);
+  }
 }
 /* static noise with a slow flicker */
 .npx__pod-noise {
@@ -1424,6 +1440,7 @@
   .npx__slot-holowire,
   .npx__slot-burst i,
   .npx__pod-noise,
+  .npx__pod-globe-spin,
   .npx__float-chip,
   .npx__node,
   .npx__progress-track i::after,
