@@ -24,6 +24,7 @@ import {
 } from 'framer-motion';
 import { RARITY, SET_BONUS_AT, STAMP_SLOTS, UNIVERSES } from '../../lib/data';
 import { RARITY_ACCENT, type StoredPull } from './usePullEngine';
+import WireframeGlobe from './WireframeGlobe';
 
 interface StampCardProps {
   stamps: number;
@@ -264,24 +265,8 @@ function TelemetryPod({ serial }: { serial: string }) {
 
         <span className="npx__pod-grid" />
 
-        {/* clean wireframe globe — the centred graphic of inactive pods */}
-        <svg className="npx__pod-globe" viewBox="0 0 100 100" aria-hidden="true">
-          <g className="npx__pod-globe-spin">
-            <g
-              fill="none"
-              stroke="rgba(147, 168, 196, 0.34)"
-              strokeWidth="1"
-              vectorEffect="non-scaling-stroke"
-            >
-              <circle cx="50" cy="50" r="30" />
-              <ellipse cx="50" cy="50" rx="30" ry="10" />
-              <ellipse cx="50" cy="50" rx="30" ry="21" />
-              <ellipse cx="50" cy="50" rx="10" ry="30" />
-              <ellipse cx="50" cy="50" rx="21" ry="30" />
-            </g>
-            <circle cx="50" cy="50" r="2.5" fill="rgba(147, 168, 196, 0.5)" />
-          </g>
-        </svg>
+        {/* 3D wireframe globe — the centred graphic of inactive pods */}
+        <WireframeGlobe />
 
         <span className="npx__pod-noise" />
       </span>
