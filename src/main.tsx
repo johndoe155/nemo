@@ -24,6 +24,9 @@ import './styles/typography.css';
 // 04 · PILLAR 3 — cyber-luxury split-canvas rebuild (loads after typography
 // so its scoped art direction wins where tokens overlap).
 import './styles/pulls.css';
+// 3D rotunda (CircularGallery) — scoped .cg-* layer, last so its plate
+// typography wins where tokens overlap.
+import './styles/circular-gallery.css';
 import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

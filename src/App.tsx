@@ -2,6 +2,7 @@ import { Component, type CSSProperties, type ReactNode } from 'react';
 import Nav from './sections/Nav';
 import Hero from './sections/Hero';
 import Nemoverse from './sections/Nemoverse';
+import Gallery from './sections/Gallery';
 import Persona from './sections/Persona';
 import Perks from './sections/Perks';
 // 04 · PILLAR 3 is statically imported like every other section. It was
@@ -100,6 +101,10 @@ export default function App() {
           speed="38s"
         />
         <Nemoverse />
+        {/* 3D rotunda — the same canon as the roster above, hung as a room you
+            can walk around. Placed here so the registry (specs) is read first
+            and the art (plates) lands immediately after. */}
+        <Gallery />
         <Persona />
         <Perks />
         <SectionBoundary>

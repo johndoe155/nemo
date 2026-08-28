@@ -241,6 +241,104 @@ export const UNIVERSES: Universe[] = [
 export const visibleUniverses = UNIVERSES.filter((u) => u.status !== 'secret');
 export const byId = (id: number) => UNIVERSES.find((u) => u.id === id);
 
+/* --------------------------- GALLERY PLATES ---------------------------- */
+/**
+ * Plates for the 3D rotunda (src/components/CircularGallery.tsx).
+ *
+ * Canon plates are derived from UNIVERSES — never retyped — so a rename, a new
+ * drop, or a rarity change in the registry flows straight into the ring. Only
+ * universes with artwork are hung (U-008 is still encrypted).
+ *
+ * The cylinder needs a settled minimum of plates to read as an infinite loop
+ * rather than a sparse polygon: at 12 plates the ring shows ~6–7 cards at once
+ * across the front arc with no visible seam. The registry ships 8 with art, so
+ * the canon key art and three canon variant colorways (all named in the
+ * `variant` strings above) are hung alongside them.
+ */
+
+export interface GalleryPlate {
+  /** Registry code shown on the plate, e.g. 'U-001'. */
+  code: string;
+  /** Plate title. */
+  title: string;
+  /** Style / world line under the title. */
+  subtitle: string;
+  /** Artist credit. */
+  credit: string;
+  /** Artwork url (BASE_URL-aware via `art()`). */
+  image: string;
+  /** object-position crop for the plate frame. */
+  focus: string;
+  /** Rarity colour, used for the code + plate rule. */
+  accent: string;
+  /** Accessible description. */
+  alt: string;
+}
+
+/** Canon key art — the wanderer, before any universe split off. */
+const KEY_ART_PLATE: GalleryPlate = {
+  code: 'U-000',
+  title: 'The Wanderer',
+  subtitle: 'Canon key art · Timeline Zero',
+  credit: 'The Nemoverse',
+  image: art('hero.jpg'),
+  focus: 'center 42%',
+  accent: '#3fe8ff',
+  alt: 'NEMO, the canon character, standing at the edge of a lit threshold',
+};
+
+/** One plate per registered universe that has artwork. */
+const CANON_PLATES: GalleryPlate[] = UNIVERSES.filter((u) => Boolean(u.image)).map((u) => ({
+  code: u.code,
+  title: u.name,
+  subtitle: u.style,
+  credit: u.artist.name,
+  image: u.image,
+  focus: 'center 32%',
+  accent: RARITY[u.rarity].color,
+  alt: `${u.code} — ${u.name}. ${u.style}.`,
+}));
+
+/** Canon variant colorways, re-cropped so they read as separate plates. */
+const VARIANT_PLATES: GalleryPlate[] = [
+  {
+    code: 'U-001 · V',
+    title: 'Candlewick',
+    subtitle: 'Alt-colorway variant · 3 minted',
+    credit: ARTISTS[0].name,
+    image: art('u001.jpg'),
+    focus: 'center 62%',
+    accent: RARITY.common.color,
+    alt: 'U-001 Candlewick variant',
+  },
+  {
+    code: 'U-005 · V',
+    title: 'Black Vellum',
+    subtitle: 'The rarest of the set · 2 minted',
+    credit: ARTISTS[4].name,
+    image: art('u005.jpg'),
+    focus: 'center 18%',
+    accent: RARITY.epic.color,
+    alt: 'U-005 Black Vellum variant',
+  },
+  {
+    code: 'U-007 · V',
+    title: 'Polar Midnight',
+    subtitle: 'Legendary-trait holders guaranteed · 2 minted',
+    credit: ARTISTS[6].name,
+    image: art('u007.jpg'),
+    focus: 'center 68%',
+    accent: '#7dffb0',
+    alt: 'U-007 Polar Midnight variant',
+  },
+];
+
+export const GALLERY_PLATES: GalleryPlate[] = [
+  KEY_ART_PLATE,
+  ...CANON_PLATES,
+  ...VARIANT_PLATES,
+];
+
 /* --------------------------- HOLDER PERK TIERS --------------------------- */
 
 export interface PerkTier {

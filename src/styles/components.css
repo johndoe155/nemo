@@ -118,6 +118,25 @@
   }
 }
 
+/* Seven primary links — the rotunda (02 · THE ROTUNDA) joined the nav, adding
+   ~153px to the row. Measured against Space Grotesk at 0.68rem/0.22em, the
+   row would have hit 948px and crowded the wallet CTA on laptops, so between
+   the burger breakpoint and the shell's max width the link metrics tighten.
+   Net effect: 778px, i.e. still narrower than the old six-link row (795px). */
+@media (min-width: 1081px) and (max-width: 1500px) {
+  .nav__links {
+    gap: 0.15rem;
+  }
+  .nav__link {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.64rem;
+    letter-spacing: 0.16em;
+  }
+  .nav__link .num {
+    margin-right: 0.3em;
+  }
+}
+
 /* Mobile menu overlay */
 .mmenu {
   position: fixed;
