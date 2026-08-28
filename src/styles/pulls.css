@@ -1062,30 +1062,33 @@
 }
 /* dim wireframe sphere */
 /* scrambled silhouette */
-/* clean wireframe globe — square container (58% wide × 43.5% tall on the
-   3:4 card resolves to a square) pulled higher than dead-centre so it sits
-   vertically centred in the open grid area, comfortably clear of the
-   rounded serial pill at the bottom. It is a size/query container so the
-   3D ring geometry is expressed in cqw and scales with the slot. */
-.npx__pod-globe {
+
+/* ---------------------------- wireframe globe ----------------------------
+   The globe container is locked to a PERFECT SQUARE so the cage renders as a
+   true sphere rather than a stretched ellipse: the slot is aspect-ratio 3/4,
+   so a box that is 42% of the card's width and 31.5% of its height (42 × 3/4)
+   is exactly 1:1 at every breakpoint.
+
+   It is also deliberately small — it sits compactly in the dead centre of the
+   pod's background grid with generous padding on every side, well clear of the
+   chamfered housing and the serial pill. `container-type: size` makes 1cqw =
+   1% of that square, which is what the ring geometry in WireframeGlobe.tsx is
+   authored against. */
+.npx__globe3d {
   position: absolute;
-  left: 21%;
-  top: 21%;
-  width: 58%;
-  height: 43.5%;
+  left: 29%;
+  top: 29.7%;
+  width: 42%;
+  height: 31.5%; /* 42% × 3/4 → a mathematically square container */
   display: block;
   container-type: size;
-  perspective: 900px;
+  perspective: 620px;
   pointer-events: none;
 }
 
 /* true 3D wireframe sphere — meridians stand upright, parallels lie flat
    in real 3D space; the spin node rotates around Y, revolving genuine
    geometry rather than a co-planar illustration */
-.npx__globe3d {
-  position: absolute;
-  inset: 0;
-}
 .npx__globe3d-spin {
   position: absolute;
   inset: 0;
@@ -1098,7 +1101,9 @@
   top: 50%;
   left: 50%;
   box-sizing: border-box;
-  border: 1px solid rgba(147, 168, 196, 0.34);
+  /* per-ring opacity (--go) shades the cage front-to-back so it reads as a
+     volume instead of a flat schematic */
+  border: 1px solid rgba(158, 180, 208, var(--go, 0.32));
   border-radius: 50%;
   /* back faces of the wireframe deliberately stay visible — the classic
      x-ray globe look; no backface-visibility:hidden here */
@@ -1119,16 +1124,24 @@
   margin: calc(var(--pr, 50cqw) * -1) 0 0 calc(var(--pr, 50cqw) * -1);
   transform: translateY(var(--py, 0cqw)) rotateX(90deg);
 }
-/* small core dot at the sphere's centre */
+/* Core node — a small, soft point suspended at the intersection of the
+   spherical axes. Deliberately tiny (4% of the sphere's diameter) and
+   feathered with a radial falloff so it reads as a mote hanging inside the
+   cage, not a flat 2D disc pasted over it. */
 .npx__g-core {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 2.5cqw;
-  height: 2.5cqw;
-  margin: -1.25cqw 0 0 -1.25cqw;
+  width: 4cqw;
+  height: 4cqw;
+  margin: -2cqw 0 0 -2cqw;
   border-radius: 50%;
-  background: rgba(147, 168, 196, 0.5);
+  background: radial-gradient(
+    circle,
+    rgba(226, 236, 250, 0.85) 0%,
+    rgba(158, 180, 208, 0.45) 45%,
+    rgba(158, 180, 208, 0) 100%
+  );
   transform: translateZ(0);
 }
 /* continuous seamless Y-axis revolution of the 3D cage. Linear timing

@@ -16,7 +16,6 @@ import './styles/components.css';
 import './styles/overhaul.css';
 import './styles/audit-gaps.css';
 import './styles/portal.css';
-import './styles/hero-rings.css';
 import './styles/nemo-chat.css';
 // Art-directed typographic application layer — loaded LAST so the role
 // assignments (Plain sub-headings/nav, Montreal Text dense reading, active
