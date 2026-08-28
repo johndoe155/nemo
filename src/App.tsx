@@ -25,6 +25,7 @@ import SideRail from './components/SideRail';
 import SoundToggle from './components/SoundToggle';
 import VelocityFX from './components/VelocityFX';
 import { CustomCursor } from './components/Cursor';
+import FilmGrain from './components/FilmGrain';
 
 /* ---------------------------------------------------------------------------
    SectionBoundary — guarantees a section can never blank itself out. If the
@@ -84,6 +85,7 @@ export default function App() {
       <VelocityFX />
       <SoundToggle />
       <div className="grain" aria-hidden="true" />
+      <FilmGrain />
       <Starfield className="starfield" />
       <Ambience />
 

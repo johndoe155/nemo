@@ -1,0 +1,864 @@
+/* ============================================================================
+   LOOP CINEMA — 08 · "One loop. Nothing wasted."
+   ----------------------------------------------------------------------------
+   Loaded LAST so its art direction wins over components.css / overhaul.css
+   where the old .loop__* rules overlap.
+
+   Palette discipline for this section:
+     · #050505           true cinematic void (no purple wash)
+     · cyan  #3fe8ff     active pathways, rest energy
+     · magenta #ff3d9a   interactive / hover states only
+     · silver            structure, type, everything non-interactive
+   ========================================================================== */
+
+.loop {
+  position: relative;
+  /* the pinned track supplies the vertical rhythm */
+  padding-block: clamp(3.5rem, 7vw, 7rem) clamp(3rem, 6vw, 6rem);
+  background: #050505;
+  isolation: isolate;
+}
+
+/* true void: flat #050505 with a single soft bloom behind the core and a
+   vignette that closes the frame down at the edges */
+.loop__void {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(46% 34% at 50% 46%, rgba(26, 34, 52, 0.55), transparent 72%),
+    radial-gradient(110% 85% at 50% 48%, transparent 42%, rgba(0, 0, 0, 0.85) 100%),
+    #050505;
+}
+
+/* ------------------------------- scroll track ------------------------------ */
+
+.loop__track {
+  position: relative;
+  height: 460vh;
+}
+
+.loop__sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.loop__frame {
+  position: static;
+  z-index: 3;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  align-items: start;
+  padding-block: calc(var(--nav-h) + clamp(0.5rem, 2vh, 1.4rem)) clamp(1.4rem, 4vh, 3rem);
+  pointer-events: none;
+}
+
+.loop__gap {
+  min-height: 0;
+}
+
+/* --------------------------------- headline -------------------------------- */
+
+.loop__head {
+  text-align: center;
+  grid-row: 1;
+  /* the frame is static (so z-index is inert on it) — lift the copy above the
+     absolutely positioned stage, or the canvas steals both the paint order
+     and the pointer events */
+  position: relative;
+  z-index: 5;
+}
+
+.loop__head .kicker {
+  justify-content: center;
+}
+
+.loop__head .kicker::before {
+  display: none;
+}
+
+.loop__title {
+  font-size: var(--fs-h2);
+  line-height: 0.94;
+  margin-top: 0.65rem;
+  display: grid;
+  justify-items: center;
+}
+
+.loop__title-line {
+  display: block;
+}
+
+.loop__title-fluid {
+  width: min(100%, 11.5ch);
+  height: 1.12em;
+  margin-inline: auto;
+  margin-top: 0.02em;
+}
+
+/* fluid type shell — .loop__frame silences pointer events for the copy bands,
+   but this one has to feel the cursor to warp */
+.fluidtype {
+  position: relative;
+  display: block;
+  pointer-events: auto;
+}
+
+.fluidtype__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.fluidtype__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.fluidtype__static {
+  display: inline-block;
+  background: var(--grad-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------------------------------- stage ---------------------------------- */
+
+.loop__stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  /* .loop__frame silences pointer events for the copy bands; the stage is a
+     child of it, so it has to opt back in — otherwise the canvas is not a hit
+     target and the pointer "leaves" the stage as soon as a node moves out
+     from under the cursor (which killed every hover state mid-transition). */
+  pointer-events: auto;
+}
+
+.loop__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@media (pointer: fine) {
+  .loop__sticky,
+  .loop__sticky .loop__hit {
+    cursor: none;
+  }
+}
+
+/* no pointer to follow — the stage cursor is meaningless on touch */
+@media (pointer: coarse), (pointer: none) {
+  .loop__cursor {
+    display: none;
+  }
+}
+
+/* WebGL-off fallback: the flat ring diagram is a stacked panel, not a pinned
+   cinema — nothing to animate, nothing to scroll through. */
+.loop__track[data-static='true'] {
+  height: auto;
+}
+
+.loop__track[data-static='true'] .loop__sticky {
+  position: static;
+  height: auto;
+  overflow: visible;
+}
+
+.loop__track[data-static='true'] .loop__frame {
+  height: auto;
+  grid-template-rows: auto auto auto;
+  row-gap: clamp(1rem, 3vw, 2.5rem);
+}
+
+.loop__track[data-static='true'] .loop__gap {
+  display: none;
+}
+
+/* the core still needs a body without the volumetric sphere */
+.loop__nodes[data-fallback='true'] .loop__corelabel::before {
+  inset: -46%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background:
+    radial-gradient(circle at 38% 30%, rgba(255, 255, 255, 0.12), transparent 58%),
+    linear-gradient(160deg, rgba(138, 77, 255, 0.3), rgba(63, 232, 255, 0.1) 60%, rgba(255, 61, 154, 0.24));
+  box-shadow: 0 0 90px -14px rgba(63, 232, 255, 0.45), 0 0 170px -50px rgba(138, 77, 255, 0.6);
+}
+
+/* WebGL-off fallback: a flat ring diagram, same composition */
+.loop__stage--flat {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: min(560px, 66svh);
+}
+
+.loop__ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(63, 232, 255, 0.16);
+  pointer-events: none;
+}
+
+.loop__ring--a {
+  width: min(720px, 92%);
+  aspect-ratio: 1;
+}
+
+.loop__ring--b {
+  width: min(440px, 58%);
+  aspect-ratio: 1;
+  border-color: rgba(255, 61, 154, 0.12);
+}
+
+/* ------------------------------ custom cursor ------------------------------ */
+
+.loop__cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 7;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-expo);
+  will-change: transform;
+}
+
+.loop__cursor-dot,
+.loop__cursor-ring,
+.loop__cursor-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.loop__cursor-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #eaf7ff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 12px rgba(63, 232, 255, 0.9);
+  transition: opacity 0.3s var(--ease-expo), transform 0.3s var(--ease-expo);
+}
+
+.loop__cursor-ring {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid rgba(63, 232, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: border-color 0.35s var(--ease-expo), background 0.35s var(--ease-expo);
+}
+
+.loop__cursor-label {
+  transform: translate(-50%, -170%);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--magenta);
+  white-space: nowrap;
+  text-shadow: 0 0 18px rgba(255, 61, 154, 0.5);
+}
+
+.loop__cursor[data-snap='true'] .loop__cursor-ring {
+  border-color: rgba(255, 61, 154, 0.75);
+  background: rgba(255, 61, 154, 0.08);
+  box-shadow: 0 0 30px -6px rgba(255, 61, 154, 0.5);
+}
+
+.loop__cursor[data-snap='true'] .loop__cursor-dot {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.2);
+}
+
+/* retire the site-wide cursor while the stage owns the pointer */
+body.loop-cursor .cursor-dot,
+body.loop-cursor .cursor-glow,
+body.loop-cursor .cursor-label {
+  opacity: 0 !important;
+}
+
+/* --------------------------------- overlays -------------------------------- */
+
+.loop__nodes {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* ---- core label (projected onto the volumetric core) ---- */
+
+.loop__corelabel {
+  position: absolute;
+  /* JS writes the projected screen position — start at the origin so the
+     transform is the only thing placing it */
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  width: 210px;
+  text-align: center;
+  pointer-events: none;
+  will-change: transform, filter;
+}
+
+.loop__corelabel::before {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(8, 12, 20, 0.5), transparent 68%);
+  pointer-events: none;
+}
+
+.loop__corelabel b {
+  position: relative;
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  color: rgba(245, 243, 255, 0.7);
+  line-height: 1.5;
+}
+
+.loop__corelabel b:last-of-type {
+  font-size: 1.02rem;
+  letter-spacing: 0.1em;
+  color: #ffffff;
+  text-shadow: 0 0 32px rgba(63, 232, 255, 0.45);
+}
+
+.loop__corelabel span {
+  position: relative;
+  display: block;
+  margin-top: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+/* ---- orbital nodes ---- */
+
+.loop__node {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  will-change: transform;
+}
+
+.loop__chip {
+  position: absolute;
+  left: 0;
+  top: 54px;
+  transform: translate(-50%, -50%) scale(var(--ns, 1));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.32rem 0.7rem;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(9, 10, 15, 0.55);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(245, 243, 255, 0.7);
+  white-space: nowrap;
+  transition: color 0.45s var(--ease-expo), border-color 0.45s var(--ease-expo),
+    background 0.45s var(--ease-expo);
+}
+
+.loop__chip-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan);
+  transition: background 0.45s var(--ease-expo), box-shadow 0.45s var(--ease-expo);
+}
+
+.loop__node[data-active='true'] .loop__chip {
+  color: #fff;
+  border-color: rgba(255, 61, 154, 0.45);
+  background: rgba(24, 8, 18, 0.6);
+}
+
+.loop__node[data-active='true'] .loop__chip-dot {
+  background: var(--magenta);
+  box-shadow: 0 0 12px var(--magenta);
+}
+
+.loop__hit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 118px;
+  height: 118px;
+  margin: -59px 0 0 -59px;
+  border-radius: 50%;
+  pointer-events: auto;
+  transform: scale(var(--ns, 1));
+  -webkit-tap-highlight-color: transparent;
+}
+
+.loop__hit:focus-visible {
+  outline: 1px solid var(--cyan);
+  outline-offset: 6px;
+}
+
+/* ---- glassmorphic tooltip card ---- */
+
+.loop__card {
+  position: absolute;
+  top: 0;
+  width: min(300px, 24vw);
+  padding: 1rem 1.15rem 1.05rem;
+  border-radius: 16px;
+  background: linear-gradient(158deg, rgba(16, 18, 27, 0.74), rgba(7, 8, 13, 0.62));
+  -webkit-backdrop-filter: blur(12px) saturate(125%);
+  backdrop-filter: blur(12px) saturate(125%);
+  box-shadow: 0 34px 80px -34px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-expo);
+}
+
+/* 1px sheer gradient border */
+.loop__card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    152deg,
+    rgba(255, 255, 255, 0.4),
+    rgba(255, 255, 255, 0.04) 38%,
+    rgba(63, 232, 255, 0.3) 72%,
+    rgba(255, 61, 154, 0.32)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.loop__node[data-side='right'] .loop__card {
+  left: 62px;
+  transform: translateY(calc(-50% + var(--cardshiftY, 0px)));
+}
+
+.loop__node[data-side='left'] .loop__card {
+  right: 62px;
+  transform: translateY(calc(-50% + var(--cardshiftY, 0px)));
+}
+
+.loop__card[data-active='true'] {
+  opacity: 1;
+}
+
+/* staggered, line-by-line mask reveal */
+.loop__card-line {
+  display: block;
+  overflow: hidden;
+}
+
+.loop__card-line > span {
+  display: block;
+  transform: translateY(115%);
+  opacity: 0;
+  transition: transform 0.85s var(--ease-expo), opacity 0.6s var(--ease-expo);
+}
+
+.loop__card[data-active='true'] .loop__card-line > span {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.loop__card-line:nth-child(1) > span {
+  transition-delay: 0.03s;
+}
+.loop__card-line:nth-child(2) > span {
+  transition-delay: 0.1s;
+}
+.loop__card-line:nth-child(3) > span {
+  transition-delay: 0.17s;
+}
+.loop__card-line:nth-child(4) > span {
+  transition-delay: 0.24s;
+}
+
+.loop__card-meta {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+
+.loop__card-name {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.28rem;
+  line-height: 1.15;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--ink);
+  padding-top: 0.35rem;
+}
+
+.loop__card-body {
+  font-family: var(--font-body-text);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--ink-dim);
+  padding-top: 0.55rem;
+}
+
+.loop__card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding-top: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.loop__card[data-active='true'] .loop__card-cta {
+  color: rgba(245, 243, 255, 0.85);
+}
+
+.loop__card-cta em {
+  font-style: normal;
+  color: var(--magenta);
+}
+
+/* no WebGL: park the label in the middle of the flat diagram */
+.loop__nodes[data-fallback='true'] .loop__corelabel {
+  left: 50%;
+  top: 50%;
+}
+
+/* fallback (no WebGL): reveal on hover / keyboard focus instead */
+.loop__nodes[data-fallback='true'] .loop__node:hover .loop__card,
+.loop__node:focus-within .loop__card {
+  opacity: 1;
+}
+
+.loop__nodes[data-fallback='true'] .loop__node:hover .loop__card-line > span,
+.loop__node:focus-within .loop__card-line > span {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* -------------------------------- narrative -------------------------------- */
+
+.loop__narrative {
+  position: relative;
+  z-index: 5;
+  grid-row: 4;
+  text-align: center;
+  pointer-events: none;
+}
+
+.loop__phrases {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.loop__narrative[data-pinned='true'] .loop__phrases {
+  position: relative;
+  height: clamp(4.6rem, 9vh, 7rem);
+}
+
+.loop__narrative[data-pinned='true'] .loop__phrase {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  will-change: opacity, transform, filter;
+}
+
+.loop__narrative[data-pinned='false'] .loop__phrase {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.8rem;
+  /* generous rhythm so the sequence still has to be scrolled through */
+  padding-block: clamp(0.7rem, 3.4vh, 1.7rem);
+  will-change: opacity, transform, filter;
+}
+
+.loop__phrase-n {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: var(--cyan);
+  opacity: 0.75;
+  flex: none;
+}
+
+.loop__phrase-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(0.98rem, 0.55rem + 1.5vw, 1.85rem);
+  line-height: 1.1;
+  letter-spacing: 0.005em;
+  color: var(--ink);
+}
+
+.loop__phrase[data-state='active'] .loop__phrase-text {
+  color: #fff;
+  text-shadow: 0 0 44px rgba(63, 232, 255, 0.35);
+}
+
+.loop__phrase[data-state='active'] .loop__phrase-n {
+  color: var(--magenta);
+  opacity: 1;
+}
+
+/* progress rail */
+.loop__rail {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: clamp(0.9rem, 2.2vh, 1.6rem);
+}
+
+.loop__rail-seg {
+  width: clamp(20px, 4.5vw, 52px);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.loop__rail-seg > i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), #ffffff);
+  transform: scaleX(0);
+  transform-origin: left center;
+  will-change: transform;
+}
+
+/* ------------------------------- closing note ------------------------------ */
+
+.loop .loop__note {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  margin-top: clamp(2rem, 5vw, 4rem);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.loop .loop__note b {
+  color: var(--cyan);
+  font-weight: 700;
+}
+
+/* -------------------------------- responsive ------------------------------- */
+
+@media (max-width: 899px) {
+  .loop__track {
+    height: auto;
+  }
+
+  .loop__sticky {
+    position: static;
+    height: auto;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* let the head / stage / narrative participate directly in the column */
+  .loop__frame {
+    display: contents;
+  }
+
+  .loop__head {
+    order: 1;
+    padding-inline: var(--gutter);
+  }
+
+  .loop__stage {
+    order: 2;
+    position: relative;
+    inset: auto;
+    height: 56svh;
+    min-height: 320px;
+  }
+
+  .loop__gap {
+    display: none;
+  }
+
+  .loop__narrative {
+    order: 4;
+    padding-inline: var(--gutter);
+  }
+
+  .loop__title-fluid {
+    width: min(100%, 12ch);
+  }
+
+  .loop__corelabel {
+    width: 150px;
+  }
+
+  .loop__corelabel b:last-of-type {
+    font-size: 0.82rem;
+  }
+
+  .loop__chip {
+    top: 46px;
+  }
+
+  .loop__hit {
+    width: 96px;
+    height: 96px;
+    margin: -48px 0 0 -48px;
+  }
+
+  /* the card hangs off the node — above it in the lower half of the stage,
+     below it in the upper half — nudged back inside the frame by --cardshift
+     (written per frame) so it can never widen the page */
+  .loop__node[data-side='right'] .loop__card,
+  .loop__node[data-side='left'] .loop__card {
+    left: 50%;
+    right: auto;
+    width: min(290px, 76vw);
+    transform: translateX(calc(-50% + var(--cardshift, 0px)));
+  }
+
+  .loop__node[data-vpos='below'] .loop__card {
+    top: 74px;
+    bottom: auto;
+  }
+
+  .loop__node[data-vpos='above'] .loop__card {
+    bottom: 74px;
+    top: auto;
+  }
+
+  .loop__rail {
+    margin-top: 1rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .loop__title-fluid {
+    width: 100%;
+    height: 1.2em;
+  }
+}
+
+/* ------------------------------ reduced motion ----------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .loop__track {
+    height: auto;
+  }
+
+  .loop__sticky {
+    position: static;
+    height: auto;
+    overflow: visible;
+  }
+
+  .loop__frame {
+    height: auto;
+    display: grid;
+    grid-template-rows: auto auto auto;
+    gap: 2rem;
+    padding-block: 0;
+  }
+
+  .loop__stage {
+    position: relative;
+    inset: auto;
+    height: 62svh;
+    min-height: 360px;
+  }
+
+  .loop__gap {
+    display: none;
+  }
+
+  .loop__narrative[data-pinned='true'] .loop__phrases,
+  .loop__narrative[data-pinned='false'] .loop__phrases {
+    height: auto;
+  }
+
+  .loop__narrative[data-pinned='true'] .loop__phrase,
+  .loop__narrative[data-pinned='false'] .loop__phrase {
+    position: static;
+    opacity: 0.85 !important;
+    filter: none !important;
+    transform: none !important;
+    padding-block: 0.3rem;
+  }
+
+  .loop__card-line > span {
+    transform: none;
+    opacity: 1;
+    transition: none;
+  }
+
+  .loop__cursor {
+    display: none;
+  }
+
+  .loop__chip,
+  .loop__card {
+    transition: none;
+  }
+}

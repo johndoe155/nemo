@@ -27,6 +27,9 @@ import './styles/pulls.css';
 // 3D rotunda (CircularGallery) — scoped .cg-* layer, last so its plate
 // typography wins where tokens overlap.
 import './styles/circular-gallery.css';
+// 08 · THE LOOP — pinned WebGL cinema (fluid headline, volumetric core,
+// Z-axis orbits, glassmorphic node cards). Loaded LAST.
+import './styles/loop-cinema.css';
 import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
