@@ -10,6 +10,7 @@
 /* ------------------------------ particle field ------------------------------ */
 
 export const FIELD_VERT = /* glsl */ `
+precision mediump float;
 attribute float aSeed;
 attribute float aSize;
 uniform float uTime;
