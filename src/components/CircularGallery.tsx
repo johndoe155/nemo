@@ -3,7 +3,6 @@ import {
   motion,
   useMotionTemplate,
   useMotionValue,
-  useSpring,
   useTransform,
   type MotionStyle,
   type MotionValue,
@@ -27,11 +26,80 @@ export type { GalleryPlate };
      scrolling page.
    · Wheel handling is opt-in by axis (`wheelRotate`) so the ring never traps
      page scroll: vertical wheel passes through by default.
-   · Auto-spin idles when the section is off-screen and when
-     `prefers-reduced-motion: reduce` is set.
    · Heading, subtitle, badge counts and hint copy are all props — no copy is
      hardcoded in the render path.
+
+   MOTION MODEL
+   One requestAnimationFrame tick owns the ring. Input never writes to the
+   rendered angle; it writes to a *target*, and the tick eases the *current*
+   angle toward it — so wheel, drag, flick and ambient spin all resolve inside
+   a single integrator instead of competing rAF loops:
+
+     target  += normalised wheel delta | drag delta | flick decay | ambient
+     current += (target - current) * damping          ← the weight you feel
+     rotation.set(current)                            ← what the cards read
+
+   Every easing factor is expressed per 60fps frame and re-based on real
+   elapsed time, so a 144Hz display and a 60Hz display spin at the same speed.
    ========================================================================== */
+
+/* ------------------------- Motion constants ------------------------- */
+
+/** Reference frame for every easing factor below. */
+const FRAME_MS = 1000 / 60;
+
+/** Wheel has no release event — ambient resumes this long after the last one. */
+const WHEEL_IDLE_MS = 150;
+
+/** Ceiling for a single wheel event, in normalised pixels. */
+const MAX_WHEEL_STEP = 150;
+/** Pixels in one line when `deltaMode === DOM_DELTA_LINE` (1). */
+const LINE_HEIGHT_PX = 16;
+
+/**
+ * Flick ceiling and decay: degrees per frame, and the per-frame multiplier.
+ * A gentle flick lands ~2 plates along; the ceiling caps a hard fling at
+ * ~5 plates (12°/frame ÷ 0.08 ≈ 150°) instead of spinning the whole ring.
+ */
+const MAX_FLICK_DEG = 12;
+const FLICK_FRICTION = 0.92;
+
+/**
+ * Ambient ramp — yields to input fast (τ ≈ 140ms, a stop within ~0.4s) and
+ * returns gently (τ ≈ 0.55s, full baseline in ~1.7s) so the ring never snaps
+ * back into motion the instant a drag ends.
+ */
+const AMBIENT_RAMP_UP = 0.03;
+const AMBIENT_RAMP_DOWN = 0.12;
+
+const DEFAULT_AMBIENT_SPEED = 0.038;
+const DEFAULT_DAMPING = 0.075;
+const WHEEL_SENSITIVITY = 0.22;
+const DRAG_SENSITIVITY = 0.32;
+
+const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
+/**
+ * Re-base a per-60fps-frame easing factor onto the real elapsed frame count,
+ * so lerps behave identically at 60, 120 or 144Hz.
+ */
+const ease = (factor: number, frames: number) => 1 - Math.pow(1 - factor, frames);
+
+/**
+ * Wheel deltas arrive in three units depending on browser and device:
+ * pixels (`deltaMode` 0), lines (1) or pages (2). Normalise everything to
+ * pixels so a mouse notch, a trackpad swipe and a page-mode scroll all move
+ * the ring by a comparable amount.
+ */
+function normalizeWheel(e: WheelEvent) {
+  const factor =
+    e.deltaMode === 1
+      ? LINE_HEIGHT_PX
+      : e.deltaMode === 2
+        ? window.innerHeight || 800
+        : 1;
+  return { x: e.deltaX * factor, y: e.deltaY * factor };
+}
 
 /* ------------------------------- Types ------------------------------- */
 
@@ -61,8 +129,18 @@ export interface CircularGalleryProps {
   /** Cylinder curvature. 0 = perfect circle, higher = tighter/bent. */
   bend?: number;
   borderRadius?: number;
-  /** Degrees added per frame while idle. 0 disables auto-spin. */
+  /**
+   * Baseline ambient rotation in degrees per 60fps frame, added to the target
+   * every tick while the ring is idle. 0 disables ambient motion.
+   */
+  ambientSpeed?: number;
+  /** @deprecated — renamed to `ambientSpeed`; still honoured if passed. */
   autoSpinSpeed?: number;
+  /**
+   * Inertial damping: the fraction of the target→current gap closed per 60fps
+   * frame. Lower = heavier and longer-gliding (0.05–0.08 is the sweet spot).
+   */
+  damping?: number;
   /**
    * Which wheel axis rotates the ring.
    *   'horizontal' (default) — trackpad/swipe-X rotates, vertical scroll is
@@ -179,8 +257,6 @@ function Card({
 
 /* ---------------------------- Main gallery ---------------------------- */
 
-const AUTO_SPIN_RESUME_DELAY = 1800;
-
 export default function CircularGallery({
   items,
   id = 'gallery',
@@ -191,30 +267,44 @@ export default function CircularGallery({
   badges = [],
   bend = 0.5,
   borderRadius = 14,
-  autoSpinSpeed = 0.038,
+  ambientSpeed,
+  autoSpinSpeed,
+  damping = DEFAULT_DAMPING,
   wheelRotate = 'horizontal',
   hint = 'Drag · swipe · ← → to rotate',
   showCredits = true,
   stageHeight,
 }: CircularGalleryProps) {
+  // `ambientSpeed` supersedes the original `autoSpinSpeed` name.
+  const baselineAmbient = ambientSpeed ?? autoSpinSpeed ?? DEFAULT_AMBIENT_SPEED;
+
   const stageRef = useRef<HTMLDivElement>(null);
 
+  /* ------------------------- Physics state ------------------------- */
+
+  // `rotation` is the rendered angle the cards read. `target` is where input
+  // wants it; `current` is where it actually is after damping.
   const rotation = useMotionValue(0);
-  const springRotation = useSpring(rotation, { damping: 34, stiffness: 110, mass: 0.9 });
+  const targetRotationRef = useRef(0);
+  const currentRotationRef = useRef(0);
+  // Starts at 0 so the ring eases into its ambient drift instead of snapping
+  // to full speed on mount.
+  const ambientSpeedRef = useRef(0);
+  // Residual pointer velocity after release, in degrees per frame.
+  const flickRef = useRef(0);
+
+  const isInteractingRef = useRef(false);
+  const interactionTimeoutRef = useRef<number | null>(null);
+  const reducedMotionRef = useRef(false);
+  const [inView, setInView] = useState(true);
 
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
-  const startRotationRef = useRef(0);
+  const startTargetRef = useRef(0);
   const lastXRef = useRef(0);
   const lastTimeRef = useRef(0);
+  /** Smoothed drag velocity in degrees per millisecond. */
   const velocityRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
-
-  const autoSpinRafRef = useRef<number | null>(null);
-  const isAutoSpinPausedRef = useRef(false);
-  const autoSpinResumeTimeoutRef = useRef<number | null>(null);
-  const inViewRef = useRef(true);
-  const reducedMotionRef = useRef(false);
 
   // Cards render at a fixed high resolution and the whole ring is scaled down
   // to fit, so rasterisation stays crisp at every breakpoint.
@@ -278,48 +368,34 @@ export default function CircularGallery({
     return finalRadius;
   }, [items.length, cardSize.w, bend]);
 
-  /* -------------------------- Momentum -------------------------- */
+  /* ---------------------- Interaction state ---------------------- */
 
-  const stopMomentum = () => {
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
+  const beginInteraction = () => {
+    isInteractingRef.current = true;
+    if (interactionTimeoutRef.current) {
+      clearTimeout(interactionTimeoutRef.current);
+      interactionTimeoutRef.current = null;
     }
   };
 
-  const pauseAutoSpin = (delay = AUTO_SPIN_RESUME_DELAY) => {
-    isAutoSpinPausedRef.current = true;
-    if (autoSpinResumeTimeoutRef.current) {
-      clearTimeout(autoSpinResumeTimeoutRef.current);
+  const endInteraction = () => {
+    if (interactionTimeoutRef.current) {
+      clearTimeout(interactionTimeoutRef.current);
+      interactionTimeoutRef.current = null;
     }
-    autoSpinResumeTimeoutRef.current = window.setTimeout(() => {
-      isAutoSpinPausedRef.current = false;
+    isInteractingRef.current = false;
+  };
+
+  /** Wheel/drag have no release event — end them on a short debounce. */
+  const endInteractionAfter = (delay: number) => {
+    if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+    interactionTimeoutRef.current = window.setTimeout(() => {
+      isInteractingRef.current = false;
+      interactionTimeoutRef.current = null;
     }, delay) as unknown as number;
   };
 
-  const startMomentum = () => {
-    stopMomentum();
-    let vel = velocityRef.current;
-    if (Math.abs(vel) < 0.005) {
-      pauseAutoSpin(AUTO_SPIN_RESUME_DELAY);
-      return;
-    }
-    const friction = 0.96;
-    const animate = () => {
-      vel *= friction;
-      if (Math.abs(vel) < 0.008) {
-        stopMomentum();
-        pauseAutoSpin(AUTO_SPIN_RESUME_DELAY);
-        return;
-      }
-      rotation.set(rotation.get() + vel * 16.666);
-      velocityRef.current = vel;
-      rafRef.current = requestAnimationFrame(animate);
-    };
-    rafRef.current = requestAnimationFrame(animate);
-  };
-
-  /* -------------------------- Auto-spin -------------------------- */
+  /* ------------------------- Environment ------------------------- */
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -331,13 +407,13 @@ export default function CircularGallery({
     return () => mq.removeEventListener('change', apply);
   }, []);
 
-  // Idle the rAF loop whenever the rotunda is scrolled out of view.
+  // Park the rAF loop entirely while the rotunda is scrolled out of view.
   useEffect(() => {
     const el = stageRef.current;
     if (!el || typeof IntersectionObserver === 'undefined') return;
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries[0]) inViewRef.current = entries[0].isIntersecting;
+        if (entries[0]) setInView(entries[0].isIntersecting);
       },
       { rootMargin: '15% 0px' },
     );
@@ -345,44 +421,72 @@ export default function CircularGallery({
     return () => io.disconnect();
   }, []);
 
+  /* --------------------------- Main loop --------------------------- */
+
   useEffect(() => {
-    if (autoSpinSpeed <= 0) return;
-    const animate = () => {
-      if (
-        !isDraggingRef.current &&
-        !isAutoSpinPausedRef.current &&
-        !reducedMotionRef.current &&
-        inViewRef.current
-      ) {
-        rotation.set(rotation.get() + autoSpinSpeed);
+    if (!inView) return;
+
+    let raf = 0;
+    let last = performance.now();
+
+    const tick = (now: number) => {
+      // Clamp the step so a backgrounded tab doesn't resume with one huge jump.
+      const dt = clamp(now - last, 0, 50);
+      last = now;
+      const frames = dt / FRAME_MS; // 1.0 at 60fps
+
+      /* 1 · Ambient spin — decays to a stop while input owns the ring, then
+            eases back to baseline instead of snapping. */
+      const ambientTarget =
+        isInteractingRef.current || reducedMotionRef.current ? 0 : baselineAmbient;
+      const ambientRate =
+        ambientTarget > ambientSpeedRef.current ? AMBIENT_RAMP_UP : AMBIENT_RAMP_DOWN;
+      ambientSpeedRef.current +=
+        (ambientTarget - ambientSpeedRef.current) * ease(ambientRate, frames);
+      if (Math.abs(ambientTarget - ambientSpeedRef.current) < 1e-4) {
+        ambientSpeedRef.current = ambientTarget;
       }
-      autoSpinRafRef.current = requestAnimationFrame(animate);
-    };
-    autoSpinRafRef.current = requestAnimationFrame(animate);
-    return () => {
-      if (autoSpinRafRef.current) cancelAnimationFrame(autoSpinRafRef.current);
-      autoSpinRafRef.current = null;
-      if (autoSpinResumeTimeoutRef.current) {
-        clearTimeout(autoSpinResumeTimeoutRef.current);
+      targetRotationRef.current += ambientSpeedRef.current * frames;
+
+      /* 2 · Flick — release velocity feeds the same target, then decays. */
+      if (Math.abs(flickRef.current) > 1e-3) {
+        targetRotationRef.current += flickRef.current * frames;
+        flickRef.current *= Math.pow(FLICK_FRICTION, frames);
+      } else {
+        flickRef.current = 0;
       }
+
+      /* 3 · Inertial damping — current chases target, never snaps to it. */
+      currentRotationRef.current +=
+        (targetRotationRef.current - currentRotationRef.current) * ease(damping, frames);
+      rotation.set(currentRotationRef.current);
+
+      raf = requestAnimationFrame(tick);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSpinSpeed, rotation]);
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [baselineAmbient, damping, inView, rotation]);
+
+  useEffect(
+    () => () => {
+      if (interactionTimeoutRef.current) clearTimeout(interactionTimeoutRef.current);
+    },
+    [],
+  );
 
   /* --------------------------- Pointer --------------------------- */
 
   const handlePointerDown = (e: React.PointerEvent) => {
     isDraggingRef.current = true;
-    isAutoSpinPausedRef.current = true;
-    if (autoSpinResumeTimeoutRef.current) {
-      clearTimeout(autoSpinResumeTimeoutRef.current);
-    }
+    beginInteraction();
+    // A new grab cancels whatever the ring was still doing.
+    flickRef.current = 0;
+    velocityRef.current = 0;
     startXRef.current = e.clientX;
-    startRotationRef.current = rotation.get();
+    startTargetRef.current = targetRotationRef.current;
     lastXRef.current = e.clientX;
     lastTimeRef.current = performance.now();
-    velocityRef.current = 0;
-    stopMomentum();
     try {
       (e.target as Element).setPointerCapture(e.pointerId);
     } catch {
@@ -393,13 +497,17 @@ export default function CircularGallery({
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDraggingRef.current) return;
-    const sensitivity = 0.32;
-    rotation.set(startRotationRef.current + (e.clientX - startXRef.current) * sensitivity);
+    beginInteraction();
+
+    targetRotationRef.current =
+      startTargetRef.current + (e.clientX - startXRef.current) * DRAG_SENSITIVITY;
 
     const now = performance.now();
     const dt = now - lastTimeRef.current;
     if (dt > 0) {
-      velocityRef.current = ((e.clientX - lastXRef.current) / dt) * sensitivity;
+      const instant = ((e.clientX - lastXRef.current) / dt) * DRAG_SENSITIVITY; // deg/ms
+      // Smoothed so a single jittery sample can't dominate the release flick.
+      velocityRef.current = velocityRef.current * 0.7 + instant * 0.3;
       lastXRef.current = e.clientX;
       lastTimeRef.current = now;
     }
@@ -414,7 +522,11 @@ export default function CircularGallery({
       /* already released */
     }
     if (stageRef.current) stageRef.current.style.cursor = 'grab';
-    startMomentum();
+
+    // Hand the release velocity to the flick term (deg/ms → deg per frame).
+    flickRef.current = clamp(velocityRef.current * FRAME_MS, -MAX_FLICK_DEG, MAX_FLICK_DEG);
+    velocityRef.current = 0;
+    endInteraction();
   };
 
   /* ---------------------------- Wheel ---------------------------- */
@@ -423,68 +535,36 @@ export default function CircularGallery({
     const el = stageRef.current;
     if (!el || wheelRotate === 'none') return;
 
-    let wheelRaf: number | null = null;
-    let wheelVelocity = 0;
-    let wheelIdleTimeout: number | null = null;
-
     const onWheel = (e: WheelEvent) => {
-      const dx = Math.abs(e.deltaX);
-      const dy = Math.abs(e.deltaY);
+      const { x, y } = normalizeWheel(e);
+      const horizontal = Math.abs(x) > Math.abs(y);
 
       // Vertical wheel belongs to the page — never trap the user's scroll.
-      if (wheelRotate === 'horizontal' && dx <= dy) return;
+      if (wheelRotate === 'horizontal' && !horizontal) return;
 
-      let delta = wheelRotate === 'horizontal' ? e.deltaX : dx > dy ? e.deltaX : e.deltaY;
-      if (e.deltaMode === 1) delta *= 16;
-      else if (e.deltaMode === 2) delta *= 80;
+      const raw = wheelRotate === 'horizontal' ? x : horizontal ? x : y;
+      // Clamp one event so page-mode wheels (deltaMode 2 → a whole viewport)
+      // can't fling the ring across the room in a single notch.
+      const delta = clamp(raw, -MAX_WHEEL_STEP, MAX_WHEEL_STEP) * WHEEL_SENSITIVITY;
 
       e.preventDefault();
-      isAutoSpinPausedRef.current = true;
-      stopMomentum();
-      if (wheelRaf) cancelAnimationFrame(wheelRaf);
-      if (wheelIdleTimeout) clearTimeout(wheelIdleTimeout);
-
-      delta *= 0.22;
-      wheelVelocity = delta * 0.09;
-      rotation.set(rotation.get() + delta);
-
-      const decay = () => {
-        wheelVelocity *= 0.92;
-        if (Math.abs(wheelVelocity) < 0.01) {
-          wheelRaf = null;
-          wheelIdleTimeout = window.setTimeout(() => {
-            isAutoSpinPausedRef.current = false;
-          }, AUTO_SPIN_RESUME_DELAY) as unknown as number;
-          return;
-        }
-        rotation.set(rotation.get() + wheelVelocity * 16.666);
-        wheelRaf = requestAnimationFrame(decay);
-      };
-
-      wheelIdleTimeout = window.setTimeout(() => {
-        wheelRaf = requestAnimationFrame(decay);
-      }, 80) as unknown as number;
+      beginInteraction();
+      endInteractionAfter(WHEEL_IDLE_MS);
+      flickRef.current = 0; // wheel input owns the target from here
+      targetRotationRef.current += delta;
     };
 
     el.addEventListener('wheel', onWheel, { passive: false });
-    return () => {
-      el.removeEventListener('wheel', onWheel);
-      if (wheelRaf) cancelAnimationFrame(wheelRaf);
-      if (wheelIdleTimeout) clearTimeout(wheelIdleTimeout);
-      stopMomentum();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rotation, wheelRotate]);
-
-  useEffect(() => stopMomentum, []);
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [wheelRotate]);
 
   /* -------------------------- Keyboard -------------------------- */
 
   const nudge = (dir: -1 | 1) => {
     const step = 360 / Math.max(items.length, 1);
-    stopMomentum();
-    pauseAutoSpin(AUTO_SPIN_RESUME_DELAY);
-    rotation.set(rotation.get() + dir * step);
+    beginInteraction();
+    targetRotationRef.current += dir * step;
+    endInteractionAfter(WHEEL_IDLE_MS);
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -552,7 +632,7 @@ export default function CircularGallery({
       >
         {/* Downscales the high-resolution ring to fit the stage. */}
         <div className="cg-scaler" style={{ transform: `scale(${galleryScale})` }}>
-          <motion.div className="cg-ring" style={{ rotateY: springRotation, z: -radius }}>
+          <motion.div className="cg-ring" style={{ rotateY: rotation, z: -radius }}>
             {items.map((item, i) => (
               <Card
                 key={`${item.code}-${i}-${item.title}`}
@@ -560,7 +640,7 @@ export default function CircularGallery({
                 index={i}
                 total={count}
                 radius={radius}
-                rotation={springRotation}
+                rotation={rotation}
                 borderRadius={borderRadius}
                 cardW={cardSize.w}
                 cardH={cardSize.h}
