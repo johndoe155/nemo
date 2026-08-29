@@ -60,8 +60,7 @@
 .ucard__name,
 .product__name,
 .perk__trait,
-.tlitem b,
-.loop__node b {
+.tlitem b {
   font-family: var(--font-heading);
   font-weight: 800; /* Ultrabold Plain — only 300/400/800 are loaded */
   letter-spacing: 0;

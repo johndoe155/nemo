@@ -281,19 +281,6 @@ section[id] {
   transform: translateX(130%) skewX(-8deg);
 }
 
-/* Auto sheen (loop) */
-.sheen-auto::after {
-  animation: sheenAuto 5.2s var(--ease-expo) infinite;
-}
-@keyframes sheenAuto {
-  0%, 62% {
-    transform: translateX(-130%) skewX(-8deg);
-  }
-  88%, 100% {
-    transform: translateX(130%) skewX(-8deg);
-  }
-}
-
 /* Corner brackets (precision/hi-tech accent) */
 .brackets::before,
 .brackets::after {

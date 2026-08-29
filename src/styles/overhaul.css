@@ -10,7 +10,7 @@
      - nav scrollspy / active states
      - countdown LIVE state-switch
      - roster controls (arrows + minimap) + index numerals
-     - magazine store, masonry artists, choreographed hero/persona/loop
+     - magazine store, masonry artists, choreographed hero/persona
      - cinematic hero title (ONE CANON. / INFINITE / VERSIONS.) — extended face,
        hollow stroke, animated gradient + neon glow, flat periods, per-letter glitch
      - looping glass status marquee + geometric ASCII subtitle separator
@@ -464,34 +464,6 @@
 }
 @media (max-width: 980px) {
   .persona__chatwrap { padding-block: 0; }
-}
-
-/* ============================ LOOP — INSTRUMENT ============================ */
-
-.loop__orbit { overflow: visible; }
-.loop__ring-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-.loop__ring-svg circle {
-  fill: none;
-  stroke-width: 1;
-  stroke: rgba(63, 232, 255, 0.4);
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-}
-.loop__ring-svg circle.gold { stroke: rgba(255, 200, 87, 0.4); }
-.loop__particle {
-  position: absolute;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--cyan);
-  box-shadow: 0 0 14px var(--cyan);
-  pointer-events: none;
-  z-index: 4;
 }
 
 /* ============================ FOOTER — CRESCENDO ============================ */
@@ -1095,7 +1067,6 @@
   body.custom-cursor a, body.custom-cursor button,
   body.custom-cursor [role='button'] { cursor: auto; }
   .neb, .vignette { animation: none; }
-  .loop__particle { animation: none; }
   .roster__rail .ucard:nth-child(odd),
   .roster__rail .ucard:nth-child(even) { transform: none; }
   .store__mag, .artists__grid--masonry { display: block; }

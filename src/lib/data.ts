@@ -635,38 +635,3 @@ export const LORE_TIMELINE = [
   { when: '2026 · MAY', title: 'U-005 GOES LEGENDARY', body: 'The Gilded Echo proves the chase mechanic: epic supply, instant secondary demand, and the first “pull bragging” posts on X.' },
   { when: '2026 · AUG 22', title: 'U-007 — THE LAST AURORA', body: 'First drop fully token-gated: holders claim 96 hours early, legendary traits get guaranteed variants. The loop is closed.' },
 ];
-
-export const LOOP_PILLARS = [
-  {
-    n: '01',
-    name: 'DISCOVER',
-    tag: 'THE AI PERSONA',
-    color: '#ff3d9a',
-    target: '#persona',
-    body: 'In-character teasers on X before every drop. The Nemoverse’s release cadence becomes a built-in content calendar.',
-  },
-  {
-    n: '02',
-    name: 'BELONG',
-    tag: 'THE HUB',
-    color: '#3fe8ff',
-    target: '#perks',
-    body: 'Wallet verification shows fans exactly which universes their NFT already unlocks — plus the holder badge.',
-  },
-  {
-    n: '03',
-    name: 'BUY',
-    tag: 'TOKEN-GATED STORE',
-    color: '#8a4dff',
-    target: '#store',
-    body: 'Holders claim new universes first — often discounted. Exclusive SKUs unlock by trait tier.',
-  },
-  {
-    n: '04',
-    name: 'COLLECT',
-    tag: 'PROOF-OF-PURCHASE',
-    color: '#ffc857',
-    target: '#pulls',
-    body: 'Every purchase pulls a piece from the Nemoverse. Completing sets unlocks the Golden Gate bonus.',
-  },
-];

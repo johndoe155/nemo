@@ -32,7 +32,7 @@ export function CustomCursor() {
       setVisible(true);
       const target = e.target as Element | null;
       const interactive = target?.closest(
-        'a, button, [role="button"], .ucard, .chip, .stamp, .loop__node',
+        'a, button, [role="button"], .ucard, .chip, .stamp',
       );
       setHovering(!!interactive);
       const labelled = target?.closest('[data-cursor]') as HTMLElement | null;

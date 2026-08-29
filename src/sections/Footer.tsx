@@ -69,7 +69,6 @@ export default function Footer() {
             <a href="#perks">Holder Perks</a>
             <a href="#pulls">POP Pulls</a>
             <a href="#store">Store</a>
-            <a href="#loop">The Loop</a>
           </div>
         </div>
         <div className="footer__bottom">

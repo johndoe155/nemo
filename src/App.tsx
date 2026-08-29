@@ -16,7 +16,6 @@ import Pulls from './sections/pulls/Pulls';
 import Store from './sections/Store';
 import Artists from './sections/Artists';
 import Lore from './sections/Lore';
-import Loop from './sections/Loop';
 import Footer from './sections/Footer';
 import { Marquee, Starfield, ToastHost } from './components/ui';
 import Ambience from './components/Ambience';
@@ -113,7 +112,6 @@ export default function App() {
         <Store />
         <Artists />
         <Lore />
-        <Loop />
       </main>
       <Footer />
       <ToastHost />
