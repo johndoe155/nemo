@@ -7,14 +7,22 @@ import { ARTISTS, UNIVERSES } from '../lib/data';
    06 · PERMANENT PUBLIC CREDITS — the credit rod
 
    The masonry of quote cards is replaced by a single spine: one vertical rod
-   running the section's Y-axis (masked so it fades in at the top and phases
-   out at the bottom), with dual-segment credit plates skewered onto it,
-   alternating left and right.
+   running the exact centre of the section's Y-axis at EVERY breakpoint
+   (masked so it fades in at the top and phases out at the bottom), with
+   dual-segment credit plates skewered onto it, alternating left and right.
 
    Each plate is two segments in contrasting palette fills:
      · a narrow vertical block (the details: avatar, canon credit codes, index)
        always facing the rod, filled with the artist's accent over --abyss
      · the wide block (the quote itself) on the standard glass panel
+
+   THE PIN
+     The plate's inner edge overhangs the centre line by exactly --hole-inset,
+     and a circular hole is CUT out of the plate there with a radial-gradient
+     mask — so the rod behind is genuinely visible through the card, not faked
+     with a drawn circle. The elevation shadow lives on an unmasked pin
+     wrapper (a mask would clip it), and the plate rotates about that hole, so
+     no tilt or bob can ever knock it off the rod.
 
    MOTION
      · Entrance — the plate slides in horizontally from its own side and comes
@@ -71,8 +79,8 @@ function CreditPlate({ a, i }: { a: (typeof ARTISTS)[number]; i: number }) {
       className={`credits__row credits__row--${side}`}
       style={{ '--ac': a.hue[0], '--a1': a.hue[0], '--a2': a.hue[1] } as React.CSSProperties}
     >
-      <span className="credits__arm" aria-hidden="true" />
-      <span className="credits__node" aria-hidden="true" />
+      {/* Collar on the rod, behind the plate — seen THROUGH the punched hole. */}
+      <span className="credits__collar" aria-hidden="true" />
       <motion.div
         className="credits__slot"
         initial={reduce ? { opacity: 0 } : { opacity: 0, x: side === 'left' ? -110 : 110 }}
@@ -81,7 +89,7 @@ function CreditPlate({ a, i }: { a: (typeof ARTISTS)[number]; i: number }) {
         transition={{ duration: 1, ease: EASE_EXPO, delay: (i % 2) * 0.08 }}
       >
         <motion.article
-          className="creditcard sheen"
+          className="creditpin"
           style={{
             '--card-accent': a.hue[0],
             rotate: reduce ? rest : rotate,
@@ -98,19 +106,26 @@ function CreditPlate({ a, i }: { a: (typeof ARTISTS)[number]; i: number }) {
           aria-label={`${a.name} — ${a.handle}. Canon credit: ${codes}`}
           data-cursor="NUDGE"
         >
-          <div className="creditcard__seg">
-            <span className="creditcard__ava" aria-hidden="true">{a.initials}</span>
-            <span className="creditcard__vert" title={`CANON CREDIT · ${codes}`}>
-              CANON · {codes}
-            </span>
-            <span className="creditcard__idx">{String(i + 1).padStart(2, '0')}</span>
-          </div>
-          <div className="creditcard__main">
-            <p className="creditcard__quote">{a.quote}</p>
-            <div className="creditcard__by">
-              <b>{a.name}</b>
-              <span>{a.handle}</span>
+          <div className="creditcard sheen">
+            <div className="creditcard__seg">
+              <span className="creditcard__ava" aria-hidden="true">{a.initials}</span>
+              <span className="creditcard__vert" title={`CANON CREDIT · ${codes}`}>
+                CANON · {codes}
+              </span>
+              <span className="creditcard__idx">{String(i + 1).padStart(2, '0')}</span>
             </div>
+            <div className="creditcard__main">
+              <p className="creditcard__quote">{a.quote}</p>
+              <div className="creditcard__by">
+                <b>{a.name}</b>
+                <span>{a.handle}</span>
+              </div>
+              {/* Compact rig: the canon codes move out of the vertical block
+                  and under the byline where there is room to read them. */}
+              <span className="creditcard__codes">CANON · {codes}</span>
+            </div>
+            {/* Bevelled rim of the punched hole (its centre is cut away). */}
+            <span className="creditcard__grommet" aria-hidden="true" />
           </div>
         </motion.article>
       </motion.div>

@@ -123,8 +123,31 @@ export default function HangingCard({
     nudge(Math.max(-2.6, Math.min(2.6, -dx * 0.4)));
   };
 
+  /* Scroll-past release: a card entering the frame gets a small gust so the
+     rack is visibly alive on touch devices, where there is no hover and the
+     carriage may be standing still. Fires on entry in either direction. */
+  const wrap = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (reduce) return;
+    const el = wrap.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const dir = index % 2 === 0 ? 1 : -1;
+          window.setTimeout(() => nudge(dir * 3.4), (index % 4) * 70);
+        });
+      },
+      { threshold: 0.4 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [index, nudge, reduce]);
+
   return (
     <motion.div
+      ref={wrap}
       className={`hang ${className}`.trim()}
       style={{
         ['--cord' as string]: `${drop}px`,

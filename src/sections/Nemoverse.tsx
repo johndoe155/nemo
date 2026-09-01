@@ -80,6 +80,20 @@ export default function Nemoverse() {
     if (isDragging) carriage.set(v);
   });
 
+  /* Mobile carriage — the touch rack's own scroll position. Native momentum
+     scrolling keeps firing scroll events as it decays, so useVelocity reads a
+     real flick curve and the cards keep swinging after the finger lifts. */
+  const mTrackRef = useRef<HTMLDivElement | null>(null);
+  const mCarriage = useMotionValue(0);
+  useEffect(() => {
+    const el = mTrackRef.current;
+    if (!el) return;
+    const onScroll = () => mCarriage.set(-el.scrollLeft);
+    onScroll();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [isMobile, mCarriage]);
+
   // Drag support for roster rail (P0.5) — compositor-only, with a 6px
   // threshold that separates "drag the rail" from "click a card".
   useEffect(() => {
@@ -315,14 +329,30 @@ export default function Nemoverse() {
           </div>
         </div>
       ) : (
-        <div className="shell" style={{ marginTop: '2.4rem' }}>
-          <div className="roster__rail--wrap" style={{ display: 'flex', gap: '1.2rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+        /* Mobile rig — the SAME suspension: a full-bleed rod across the top of
+           the section with the rack hanging off it, swipeable. The physics
+           carriage is the track's own scrollLeft, so a flick (and its native
+           momentum) throws the cards exactly like the desktop rail drag. */
+        <div className="mrail">
+          <div className="hangrod" aria-hidden="true">
+            <span className="hangrod__mount hangrod__mount--l" />
+            <span className="hangrod__bar" />
+            <span className="hangrod__mount hangrod__mount--r" />
+          </div>
+          <div className="mrail__track" ref={mTrackRef}>
             <AnimatePresence mode="popLayout" initial={false}>
               {list.map((u, i) => (
-                <UniverseCard key={u.id} u={u} index={i} onClick={setSelected} />
+                <HangingCard key={u.id} index={i} drive={mCarriage}>
+                  <UniverseCard u={u} index={i} onClick={setSelected} />
+                </HangingCard>
               ))}
-              <DropTeaserCard key="drop-teaser" />
+              <HangingCard key="drop-teaser" index={list.length} drive={mCarriage}>
+                <DropTeaserCard />
+              </HangingCard>
             </AnimatePresence>
+          </div>
+          <div className="mrail__hint">
+            SWIPE THE RACK <span className="arr">→</span>
           </div>
         </div>
       )}
@@ -361,7 +391,9 @@ function DropTeaserCard() {
     <motion.div
       className="ucard"
       layout
-      style={{ '--card-accent': 'var(--gold)', width: 'clamp(280px, 26vw, 380px)' }}
+      /* Width is owned by the rig (.roster__rail/.mrail .ucard) so the teaser
+         hangs at exactly the same scale as the roster it closes. */
+      style={{ '--card-accent': 'var(--gold)' }}
       transition={{ layout: { type: 'spring', stiffness: 240, damping: 26 } }}
     >
       <div className="ucard__media" style={{ background: 'radial-gradient(70% 60% at 50% 40%, rgba(255,200,87,0.12), transparent 70%)', display: 'grid', placeItems: 'center' }}>

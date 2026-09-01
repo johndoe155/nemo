@@ -139,7 +139,8 @@ function CanonTimeline() {
             className={`ctl__row ctl__row--${side}`}
             style={{ '--tc': NODE_HUES[i % NODE_HUES.length] } as React.CSSProperties}
           >
-            <span className="ctl__arm" aria-hidden="true" />
+            {/* Node collar on the rod, behind the card — the rod is seen
+                through the card's punched hole as it drills past. */}
             <span className="ctl__node" aria-hidden="true" />
             <motion.div
               className="ctl__slot"
@@ -148,10 +149,14 @@ function CanonTimeline() {
               viewport={{ once: true, margin: '-80px' }}
               transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
             >
-              <article className="ctlcard sheen">
-                <time>{t.when}</time>
-                <b>{t.title}</b>
-                <p>{t.body}</p>
+              <article className="ctlpin">
+                <div className="ctlcard sheen">
+                  <time>{t.when}</time>
+                  <b>{t.title}</b>
+                  <p>{t.body}</p>
+                  <span className="ctlcard__edge" aria-hidden="true" />
+                  <span className="ctlcard__grommet" aria-hidden="true" />
+                </div>
               </article>
             </motion.div>
           </div>
