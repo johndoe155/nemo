@@ -66,6 +66,21 @@ public/art/                # placeholder AI-generated canon art (replaceable)
 `global.css:root`. Rarity/accent colors propagate via `--c` / `--card-accent`
 style tokens.
 
+**Card system:** all cards share one material (`--elev-rest` resting
+elevation + opacity-crossfaded `::before` bloom + `--noise` obsidian grain),
+one radius scale (`--r-xs…--r-xl`, inner = outer − 6px), and one physics
+family (`useTilt` springs: tilt/lift/press/parallax — see the spring registry
+at the top of `styles/motion.css`). Two hard rules live there too: framer
+owns `transform` (stylesheet motion must use the independent
+`translate`/`rotate`/`scale` properties), and `gdrift`/box-shadow/filter
+transitions never run on card-scale surfaces.
+
+**Art pipeline:** `scripts/generate-art-variants.sh` (ImageMagick) emits AVIF
+renditions (540/840/full) + inline 24px WebP LQIPs from the JPGs in
+`public/art/` into `src/lib/art-variants.ts`; `CardImage` serves them via
+`<picture>` + `sizes` with a true blur-up. Replace the placeholder art, then
+re-run the script.
+
 **Content:** swap the placeholder canon (NEMO, universes, artists, tweets,
 products) in `src/lib/data.ts` — the UI renders whatever the data layer says.
 

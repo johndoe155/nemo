@@ -61,11 +61,11 @@
 
 /* -------- P0.7 · Image skeleton base: subtle accent wash while art loads ----
    Uses the img's own background so it is fully covered once the bitmap paints
-   (and reads as ambient card lighting for transparent art). */
+   (and reads as ambient card lighting for transparent art). Static by policy
+   — gdrift is banned on card-scale raster areas. */
 .ucard__media img {
   background: radial-gradient(80% 70% at 50% 40%, rgba(255, 255, 255, 0.05), transparent 72%);
   background-size: 220% 220%;
-  animation: gdrift 18s ease-in-out infinite;
 }
 
 /* -------- P2.4 · Scroll-velocity "hyperdrive" numerals ----

@@ -1,19 +1,27 @@
+import { motion } from 'framer-motion';
 import { Reveal, SectionHead } from '../components/ui';
+import { useTilt } from '../components/motion';
 import { LORE_STATS, LORE_TIMELINE } from '../lib/data';
 import { useCountUp } from '../lib/hooks';
 
 function LoreStat({ value, suffix, label, note, delay }: (typeof LORE_STATS)[number] & { delay: number }) {
   const { ref, val } = useCountUp(value, { duration: 1400 });
+  const tilt = useTilt<HTMLDivElement>({ maxDeg: 1.2, lift: 0 });
   return (
-    <Reveal delay={delay} y={22}>
-      <div className="lorestat">
+    <Reveal delay={delay} y={22} blur={false}>
+      <motion.div
+        ref={tilt.ref}
+        className="lorestat sheen"
+        style={tilt.style}
+        {...tilt.handlers}
+      >
         <b ref={ref as React.Ref<HTMLElement>}>
           {val}
           {suffix}
         </b>
         <span>{label}</span>
         <em>{note}</em>
-      </div>
+      </motion.div>
     </Reveal>
   );
 }

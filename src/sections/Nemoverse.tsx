@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion, useMotionValueEvent, useScroll, useTransform } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useScroll, useTransform } from 'framer-motion';
 import UniverseCard from '../components/UniverseCard';
 import UniverseDialog from '../components/UniverseDialog';
 import { Countdown, Reveal, SortDropdown, type SortMode } from '../components/ui';
@@ -23,8 +23,13 @@ export default function Nemoverse() {
   const rosterRef = useRef<HTMLDivElement | null>(null);
   const railRef = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStartX, setDragStartX] = useState(0);
-  const [dragOffset, setDragOffset] = useState(0);
+  /* Drag rides a motion value — the old per-mousemove setState re-rendered
+     the section + all 10 cards on every pointer event. State now flips only
+     twice per drag (start/end); pixels go straight to the compositor. */
+  const dragX = useMotionValue(0);
+  const dragBase = useRef(0);
+  const dragStartX = useRef(0);
+  const dragMoved = useRef(false);
 
   const [isMobile, setIsMobile] = useState(false);
   const [maxX, setMaxX] = useState(0);
@@ -60,37 +65,63 @@ export default function Nemoverse() {
     setProgress(Math.min(1, Math.max(0, (v - 0.06) / 0.88))),
   );
 
-  // Drag support for roster rail (P0.5)
+  // Drag support for roster rail (P0.5) — compositor-only, with a 6px
+  // threshold that separates "drag the rail" from "click a card".
   useEffect(() => {
     const rail = railRef.current;
     if (!rail || isMobile) return;
 
     const onDown = (e: MouseEvent) => {
+      dragBase.current = x.get();
+      dragStartX.current = e.clientX;
+      dragMoved.current = false;
+      dragX.set(dragBase.current);
       setIsDragging(true);
-      setDragStartX(e.clientX);
-      setDragOffset(0);
       rail.style.cursor = 'grabbing';
     };
     const onMove = (e: MouseEvent) => {
       if (!isDragging) return;
-      const diff = e.clientX - dragStartX;
-      setDragOffset(diff);
+      const diff = e.clientX - dragStartX.current;
+      if (Math.abs(diff) > 6) dragMoved.current = true;
+      dragX.set(dragBase.current + diff);
     };
     const onUp = () => {
+      if (!isDragging) return;
       setIsDragging(false);
-      setDragOffset(0);
-      if (rail) rail.style.cursor = '';
+      rail.style.cursor = '';
+      // Hand the dragged position back to the scroll-driven transform so the
+      // rail doesn't snap: solve scrollYProgress for the current dragX value.
+      if (maxX > 0) {
+        const rect = rosterRef.current?.getBoundingClientRect();
+        if (rect) {
+          const startY = rect.top + window.scrollY;
+          const span = rect.height - window.innerHeight;
+          const frac = Math.min(1, Math.max(0, -dragX.get() / maxX));
+          const p = 0.06 + frac * 0.88; // mirror of useTransform's [0.06, 0.94]
+          window.scrollTo({ top: startY + p * span, behavior: 'auto' });
+        }
+      }
+    };
+    // A drag that crossed the threshold must never open a card dialog.
+    const onClickCapture = (e: MouseEvent) => {
+      if (dragMoved.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        dragMoved.current = false;
+      }
     };
 
     rail.addEventListener('mousedown', onDown);
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    rail.addEventListener('click', onClickCapture, true);
     return () => {
       rail.removeEventListener('mousedown', onDown);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      rail.removeEventListener('click', onClickCapture, true);
     };
-  }, [isDragging, isMobile]);
+  }, [isDragging, isMobile, maxX, dragX, x]);
 
   const list = visibleUniverses.filter((u) => filter === 'all' || u.rarity === filter).sort(SORTS[sort]);
   const cardCount = list.length + 1; // + DropTeaserCard
@@ -180,11 +211,13 @@ export default function Nemoverse() {
             <div className="roster__ghost ghost-text" aria-hidden="true">
               NEMOVERSE
             </div>
-            <motion.div className="roster__rail" ref={railRef} style={{ x: isDragging ? dragOffset : x, opacity: railOpacity }}>
-              {list.map((u, i) => (
-                <UniverseCard key={u.id} u={u} index={i} onClick={setSelected} />
-              ))}
-              <DropTeaserCard />
+            <motion.div className="roster__rail" ref={railRef} style={{ x: isDragging ? dragX : x, opacity: railOpacity }}>
+              <AnimatePresence mode="popLayout" initial={false}>
+                {list.map((u, i) => (
+                  <UniverseCard key={u.id} u={u} index={i} onClick={setSelected} />
+                ))}
+                <DropTeaserCard key="drop-teaser" />
+              </AnimatePresence>
             </motion.div>
             <div className="roster__counter">
               <span>SCROLL TO TRAVERSE</span>
@@ -257,9 +290,12 @@ export default function Nemoverse() {
       ) : (
         <div className="shell" style={{ marginTop: '2.4rem' }}>
           <div className="roster__rail--wrap" style={{ display: 'flex', gap: '1.2rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            {list.map((u, i) => (
-              <UniverseCard key={u.id} u={u} index={i} onClick={setSelected} />
-            ))}
+            <AnimatePresence mode="popLayout" initial={false}>
+              {list.map((u, i) => (
+                <UniverseCard key={u.id} u={u} index={i} onClick={setSelected} />
+              ))}
+              <DropTeaserCard key="drop-teaser" />
+            </AnimatePresence>
           </div>
         </div>
       )}
@@ -285,10 +321,22 @@ function StatTicker({ value, label }: { value: number; label: string }) {
 
 /* ---- Teaser card pinned to the end of the rail: the next drop ---- */
 
+/* Date label derives from the drop ISO — the hardcoded "AUG 22" drifted
+   from the live countdown whenever the data moved. */
+const DROP_LABEL = new Date(UNIVERSE_DROP_ISO)
+  .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  .toUpperCase()
+  .replace(' ', ' ');
+
 function DropTeaserCard() {
   const t = useCountdown(UNIVERSE_DROP_ISO);
   return (
-    <div className="ucard" style={{ '--card-accent': 'var(--gold)', width: 'clamp(280px, 26vw, 380px)' }}>
+    <motion.div
+      className="ucard"
+      layout
+      style={{ '--card-accent': 'var(--gold)', width: 'clamp(280px, 26vw, 380px)' }}
+      transition={{ layout: { type: 'spring', stiffness: 240, damping: 26 } }}
+    >
       <div className="ucard__media" style={{ background: 'radial-gradient(70% 60% at 50% 40%, rgba(255,200,87,0.12), transparent 70%)', display: 'grid', placeItems: 'center' }}>
         <div className="ucard__lock" style={{ textAlign: 'center' }}>
           <div className="ring orbit spin" style={{ width: 80, height: 80, margin: '0 auto 1.1rem', borderColor: 'rgba(255,200,87,0.4)' }} />
@@ -298,7 +346,7 @@ function DropTeaserCard() {
       </div>
       <div className="ucard__body" style={{ textAlign: 'center' }}>
         <h3 className="ucard__name" style={{ fontSize: '0.95rem' }}>
-          {t.done ? 'U-007 IS LIVE' : 'NEXT DROP — AUG 22'}
+          {t.done ? 'U-007 IS LIVE' : `NEXT DROP — ${DROP_LABEL}`}
         </h3>
         <div style={{ margin: '0.8rem 0' }}>
           {t.done ? (
@@ -321,6 +369,6 @@ function DropTeaserCard() {
           swap={t.done ? 'ENTER THE DROP' : 'HOLDERS CROSS FIRST'}
         />
       </div>
-    </div>
+    </motion.div>
   );
 }

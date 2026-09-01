@@ -75,18 +75,22 @@ export function Reveal({
   y = 28,
   className = '',
   once = true,
+  blur = true,
 }: {
   children: React.ReactNode;
   delay?: number;
   y?: number;
   className?: string;
   once?: boolean;
+  /** Blur-in belongs on text lines. On card-size subtrees the per-frame
+   * filter raster outweighs the effect — pass `false` when wrapping cards. */
+  blur?: boolean;
 }) {
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y, filter: 'blur(6px)' }}
-      whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+      initial={{ opacity: 0, y, ...(blur ? { filter: 'blur(6px)' } : {}) }}
+      whileInView={{ opacity: 1, y: 0, ...(blur ? { filter: 'blur(0px)' } : {}) }}
       viewport={{ once, margin: '-60px' }}
       transition={{ duration: 0.9, delay, ease: [0.16, 1, 0.3, 1] }}
     >

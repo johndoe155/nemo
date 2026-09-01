@@ -1,7 +1,7 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Reveal, SectionHead, toast, useMockWallet } from '../components/ui';
 import { KineticButton, useTilt } from '../components/motion';
+import CardImage from '../components/CardImage';
 import type { Product } from '../lib/data';
 import { PRODUCTS } from '../lib/data';
 
@@ -17,7 +17,6 @@ function ProductCard({
   delay?: number;
 }) {
   const gated = p.gated && !wallet.connected;
-  const [loaded, setLoaded] = useState(false);
   const tilt = useTilt<HTMLDivElement>({ maxDeg: hero ? 1.6 : 2.2, lift: hero ? -5 : -7 });
   const onAdd = () => {
     if (gated) {
@@ -27,7 +26,7 @@ function ProductCard({
     toast(`${p.name} — ADDED TO CART · DEMO`);
   };
   return (
-    <Reveal delay={delay} y={34} className={hero ? '' : ''}>
+    <Reveal delay={delay} y={34} blur={false}>
       <motion.div
         ref={tilt.ref}
         className={`card product sheen ${hero ? 'store__hero' : ''}`}
@@ -35,14 +34,14 @@ function ProductCard({
         {...tilt.handlers}
       >
         <div className="product__media" style={{ position: 'relative' }}>
-          {/* Image shimmer skeleton */}
+          {/* Image shimmer skeleton — retired via DOM when the bitmap lands */}
           <div
+            className="product-skeleton"
             style={{
               position: 'absolute',
               inset: 0,
               zIndex: 0,
               background: 'radial-gradient(80% 70% at 50% 40%, rgba(63,232,255,0.1), transparent 72%)',
-              opacity: loaded ? 0 : 1,
               transition: 'opacity 0.6s ease',
             }}
             aria-hidden="true"
@@ -55,16 +54,15 @@ function ProductCard({
               HOLDER SKU
             </span>
           )}
-          <img
+          <CardImage
             src={p.image}
             alt={p.name}
-            loading={hero ? 'eager' : 'lazy'}
-            onLoad={() => setLoaded(true)}
-            style={{
-              opacity: loaded ? 1 : 0.25,
-              transition: 'opacity 0.8s ease',
-              position: 'relative',
-              zIndex: 1,
+            eager={hero}
+            sizes={hero ? '(min-width: 981px) min(56vw, 880px), 92vw' : '(min-width: 981px) min(31vw, 470px), 92vw'}
+            fetchpriority={hero ? 'high' : 'auto'}
+            onLoaded={(img) => {
+              const sk = img.closest('.product__media')?.querySelector<HTMLElement>('.product-skeleton');
+              if (sk) sk.style.opacity = '0';
             }}
           />
         </div>

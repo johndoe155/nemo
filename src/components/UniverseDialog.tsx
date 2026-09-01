@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { KineticLink } from './motion';
+import CardImage from './CardImage';
 import type { Universe } from '../lib/data';
 import { RARITY } from '../lib/data';
 
@@ -14,7 +15,19 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
   const accent = rarity.color;
   const soldPct = u.supply ? Math.round((u.minted / u.supply) * 100) : 0;
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const mediaRef = useRef<HTMLDivElement | null>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
+
+  /* Subtle media parallax tied to the panel's internal scroll: the art
+     drifts ±3% against the copy when the dialog content overflows. The
+     transform is percentage-of-self, so it costs nothing and settles at 0
+     when there is nothing to scroll. */
+  const { scrollYProgress } = useScroll({
+    container: panelRef,
+    target: mediaRef,
+    offset: ['start end', 'end start'],
+  });
+  const mediaY = useTransform(scrollYProgress, [0, 1], ['-3%', '3%']);
 
   useEffect(() => {
     restoreRef.current = document.activeElement as HTMLElement | null;
@@ -75,9 +88,16 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
         </button>
 
         <div className="dialog__grid">
-          <div className="dialog__media">
+          <div className="dialog__media" ref={mediaRef}>
             {u.image ? (
-              <img src={u.image} alt={`${u.name} — ${u.artist.name}`} />
+              <motion.div className="dialog__media-parallax" style={{ y: mediaY }}>
+                <CardImage
+                  src={u.image}
+                  alt={`${u.name} — ${u.artist.name}`}
+                  eager
+                  sizes="min(46vw, 470px)"
+                />
+              </motion.div>
             ) : (
               <div
                 style={{

@@ -499,9 +499,21 @@ html[data-scene='abyss'] {
   will-change: rotate;
 }
 
-/* Zig-zag rhythm on the rail */
-.roster__rail .ucard:nth-child(odd) { transform: translateY(-14px); }
-.roster__rail .ucard:nth-child(even) { transform: translateY(14px); }
+/* Zig-zag rhythm on the rail.
+   TRANSFORM AUTHORITY RULE: framer-motion (useTilt) owns `transform` on
+   .ucard and writes inline `transform: none` at rest — a stylesheet
+   `transform` here can NEVER win the cascade (it silently did nothing for
+   9 of 10 cards; only the plain-div teaser card ever offset). Rhythm and
+   scroll-velocity effects therefore use the INDEPENDENT `translate` /
+   `rotate` properties, which compose with framer's transform instead of
+   competing with it. */
+.roster__rail .ucard:nth-child(odd) { translate: 0 -14px; }
+.roster__rail .ucard:nth-child(even) { translate: 0 14px; }
+/* No slack at 320px: the clamp() floor (280px) exactly equals the viewport
+   minus gutters — let the card breathe to full width instead. */
+@media (max-width: 400px) {
+  .roster__rail--wrap .ucard { width: 100%; }
+}
 
 /* ============================ STORE — MAGAZINE ============================ */
 
@@ -1201,7 +1213,7 @@ html[data-scene='abyss'] {
   .neb, .vignette { animation: none; }
   .neb { transition: none; } /* scene palettes swap instantly, no crossfade */
   .roster__rail .ucard:nth-child(odd),
-  .roster__rail .ucard:nth-child(even) { transform: none; }
+  .roster__rail .ucard:nth-child(even) { translate: none; }
   .store__mag, .artists__grid--masonry { display: block; }
   .store__mag > * { margin-bottom: 1.4rem; }
   .artists__grid--masonry .artistcard { margin-bottom: 1.2rem; }

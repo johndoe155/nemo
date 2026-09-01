@@ -238,6 +238,11 @@
   inset: 0;
   z-index: -2;
 }
+.hero__bg picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .hero__bg img {
   width: 100%;
   height: 100%;
@@ -625,33 +630,80 @@
   position: relative;
   width: clamp(280px, 26vw, 380px);
   flex: none;
-  border-radius: 20px;
+  border-radius: var(--r-lg);
   background:
     linear-gradient(170deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015) 60%) padding-box,
-    linear-gradient(170deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.06) 40%, var(--card-accent, rgba(138, 77, 255, 0.5)))
+    linear-gradient(
+        170deg,
+        rgba(255, 255, 255, 0.3),
+        rgba(255, 255, 255, 0.06) 38%,
+        color-mix(in srgb, var(--card-accent, #8a4dff) 55%, transparent) 78%,
+        rgba(255, 255, 255, 0.12)
+      )
       border-box;
-  background-size: 100% 100%, 260% 260%;
-  animation: gdrift 18s ease-in-out infinite;
+  /* Static border chroma by policy — gdrift (background-position) animation
+     is banned on card-scale surfaces; see the .card rule in global.css. */
+  background-size: 100% 100%, 100% 100%;
   border: 1px solid transparent;
+  box-shadow: var(--elev-rest);
   padding: 12px;
   overflow: hidden;
-  /* The hover lift/tilt is owned by useTilt (framer springs) on the element;
-     the glow uses `filter: drop-shadow`, which is compositor-friendly —
-     unlike the old transitioned `box-shadow`, which repainted a 380px card
-     every frame of the hover. */
-  transition: filter 0.5s var(--ease-expo);
+  /* Hover/raise glow is the ::before bloom (opacity-only crossfade). The
+     tilt/lift physics is owned by useTilt (framer springs) on the element. */
 }
-.ucard:hover {
-  filter: drop-shadow(
-    0 30px 45px color-mix(in srgb, var(--card-accent, #8a4dff) 45%, transparent)
-  );
+/* Raise bloom: accent inner light + brighter top specular, opacity only. */
+.ucard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: inherit;
+  background:
+    radial-gradient(
+      130% 90% at 50% 115%,
+      color-mix(in srgb, var(--card-accent, #8a4dff) 24%, transparent),
+      transparent 62%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 16%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  opacity: 0;
+  transition: opacity 0.45s var(--ease-expo);
+  pointer-events: none;
+}
+.ucard:hover::before,
+.ucard:focus-visible::before {
+  opacity: 1;
 }
 .ucard__media {
   position: relative;
-  border-radius: 13px;
+  border-radius: calc(var(--r-lg) - 6px);
   overflow: hidden;
   aspect-ratio: 3 / 4;
   background: var(--abyss);
+}
+/* Obsidian grain over the art — above image and scrims, below chrome. */
+.ucard__media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: var(--noise);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+/* Parallax layer: the art counter-moves against the tilt springs while the
+   scrims, chrome and body stay put — separation sells the depth. */
+.ucard__media-inner {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+.ucard__media picture {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .ucard__media img {
   width: 100%;
@@ -660,8 +712,10 @@
   transition: transform 0.9s var(--ease-expo), filter 0.9s var(--ease-expo);
   filter: saturate(1.05);
 }
-.ucard:hover .ucard__media img {
+.ucard:hover .ucard__media img,
+.ucard:focus-visible .ucard__media img {
   transform: scale(1.07);
+  filter: saturate(1.1) brightness(1.03);
 }
 .ucard__media .scrim {
   position: absolute;
@@ -680,7 +734,7 @@
   position: absolute;
   top: 12px;
   left: 12px;
-  z-index: 2;
+  z-index: 3;
   font-family: var(--font-mono);
   font-size: 0.66rem;
   font-weight: 700;
@@ -696,7 +750,7 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -706,7 +760,7 @@
   position: absolute;
   bottom: 12px;
   right: 12px;
-  z-index: 2;
+  z-index: 3;
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.2em;
@@ -717,7 +771,7 @@
   border-radius: 6px;
 }
 .ucard__body {
-  padding: 14px 10px 6px;
+  padding: 14px 2px 8px;
 }
 .ucard__name {
   font-family: var(--font-display);
@@ -727,6 +781,11 @@
   line-height: 1.2;
   letter-spacing: 0.01em;
   margin-bottom: 0.25rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.55em;
 }
 .ucard__world {
   font-family: var(--font-mono);
@@ -870,13 +929,20 @@
   width: min(1080px, 100%);
   max-height: 92vh;
   overflow-y: auto;
-  border-radius: 22px;
+  overscroll-behavior: contain;
+  border-radius: var(--r-xl);
   background:
+    var(--noise) padding-box,
     linear-gradient(170deg, rgba(20, 20, 34, 0.96), rgba(8, 8, 16, 0.98)) padding-box,
-    linear-gradient(170deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.07) 45%, var(--card-accent, rgba(138, 77, 255, 0.6)))
+    linear-gradient(
+        170deg,
+        rgba(255, 255, 255, 0.3),
+        rgba(255, 255, 255, 0.07) 45%,
+        color-mix(in srgb, var(--card-accent, #8a4dff) 60%, transparent)
+      )
       border-box;
-  background-size: 100% 100%, 260% 260%;
-  animation: gdrift 16s ease-in-out infinite;
+  background-size: 180px 180px, 100% 100%, 100% 100%;
+  background-blend-mode: overlay, normal, normal;
   border: 1px solid transparent;
   box-shadow: 0 60px 140px -40px rgba(0, 0, 0, 0.9), 0 0 120px -50px var(--card-accent, #8a4dff);
 }
@@ -928,13 +994,22 @@
 .dialog__media {
   position: relative;
   min-height: 100%;
+  overflow: hidden;
 }
+.dialog__media-parallax {
+  position: absolute;
+  inset: 0;
+}
+.dialog__media-parallax picture,
 .dialog__media img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  position: absolute;
-  inset: 0;
+  /* oversized so the internal-scroll parallax (±3% y, UniverseDialog) never
+     exposes an edge */
+  scale: 1.07;
 }
 .dialog__media::after {
   content: '';
@@ -1161,11 +1236,23 @@
 }
 .perk {
   padding: 1.6rem 1.5rem 1.5rem;
-  transition: transform 0.5s var(--ease-expo), border-color 0.5s var(--ease-expo);
+  /* Lift/tilt is owned by useTilt springs on the element (see Perks.tsx);
+     the old `transform: translateY(-6px)` hover never actually rendered —
+     framer's inline `transform: none` beat it in the cascade. */
+  transition: border-color 0.45s var(--ease-expo);
 }
-.perk:hover {
-  transform: translateY(-6px);
+.perk:hover,
+.perk:focus-within {
   border-color: color-mix(in srgb, var(--pc, var(--gold)) 60%, transparent);
+}
+.perk__list li::before {
+  transition: transform 0.35s var(--ease-expo), opacity 0.35s var(--ease-expo);
+  opacity: 0.55;
+}
+.perk:hover .perk__list li::before,
+.perk:focus-within .perk__list li::before {
+  opacity: 1;
+  transform: scale(1.25);
 }
 .perk__head {
   display: flex;
@@ -1258,40 +1345,58 @@
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
-  border-radius: 8px;
-  transition: transform 0.5s var(--ease-expo), box-shadow 0.5s var(--ease-expo);
-}
-.product:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 30px 70px -28px rgba(63, 232, 255, 0.35);
+  border-radius: var(--r-lg);
+  --card-accent: var(--cyan);
+  /* Lift/tilt owned by useTilt (Store.tsx). The previous hover pair was
+     doubly dead: inline framer transform beat the CSS translateY, and the
+     transitioned box-shadow repainted the card every frame. Elevation is
+     static at rest; hover intensity is the .card::before bloom. */
 }
 .product__media {
   position: relative;
-  border-radius: 12px;
+  border-radius: calc(var(--r-lg) - 6px);
   overflow: hidden;
   aspect-ratio: 4 / 3;
   background: var(--abyss);
+}
+.product__media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--noise);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+.product__media picture {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .product__media img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.8s var(--ease-expo);
+  transition: transform 0.8s var(--ease-expo), filter 0.8s var(--ease-expo);
 }
-.product:hover .product__media img {
+.product:hover .product__media img,
+.product:focus-within .product__media img {
   transform: scale(1.06);
+  filter: saturate(1.08) brightness(1.04);
 }
 .product__media .tag {
   position: absolute;
   top: 10px;
   left: 10px;
-  z-index: 2;
+  z-index: 3;
 }
 .product__media .gated-tag {
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 2;
+  z-index: 3;
 }
 .product__sku {
   font-family: var(--font-mono);
@@ -1306,6 +1411,11 @@
   text-transform: uppercase;
   font-size: 0.98rem;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.6em;
 }
 .product__kind {
   font-family: var(--font-mono);
@@ -1370,10 +1480,11 @@
   display: flex;
   gap: 1rem;
   align-items: flex-start;
-  transition: transform 0.5s var(--ease-expo), border-color 0.5s var(--ease-expo);
+  /* Lift/tilt owned by useTilt (Artists.tsx). */
+  transition: border-color 0.45s var(--ease-expo);
 }
-.artistcard:hover {
-  transform: translateY(-5px);
+.artistcard:hover,
+.artistcard:focus-within {
   border-color: color-mix(in srgb, var(--ac, var(--cyan)) 55%, transparent);
 }
 .artistcard__ava {
@@ -1390,7 +1501,9 @@
   background: linear-gradient(135deg, var(--a1, #fff), var(--a2, #888));
   background-size: 240% 240%;
   animation: gdrift 15s ease-in-out infinite;
-  box-shadow: 0 8px 26px -8px color-mix(in srgb, var(--a2, #888) 80%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 10px 28px -10px color-mix(in srgb, var(--a2, #888) 85%, transparent);
 }
 .artistcard__body b {
   display: block;
@@ -1408,16 +1521,23 @@
 }
 .artistcard__body .credit {
   font-family: var(--font-mono);
-  font-size: 0.6rem;
+  font-size: var(--fs-meta-min);
   letter-spacing: 0.2em;
   color: var(--ink-faint);
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .artistcard__body .quote {
   font-size: 0.9rem;
   color: var(--ink-dim);
   font-style: italic;
   margin-top: 0.7rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ================================ LORE ================================ */
@@ -1456,21 +1576,49 @@
   margin-top: 2.2rem;
 }
 .lorestat {
+  position: relative;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--r-md);
   padding: 1rem 1.1rem;
   background: rgba(255, 255, 255, 0.02);
-  transition: transform 0.4s var(--ease-expo), border-color 0.4s var(--ease-expo);
+  box-shadow: var(--elev-rest);
+  --card-accent: var(--iris);
+  /* Lift/tilt owned by useTilt (Lore.tsx); hover is accent + light. */
+  transition: border-color 0.4s var(--ease-expo);
+  overflow: hidden;
 }
-.lorestat:hover {
-  transform: translateY(-4px);
+.lorestat::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 18%;
+  bottom: 18%;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--iris);
+  box-shadow: 0 0 12px -2px var(--iris);
+  opacity: 0.45;
+  transition: opacity 0.4s var(--ease-expo), top 0.4s var(--ease-expo), bottom 0.4s var(--ease-expo);
+}
+.lorestat:hover,
+.lorestat:focus-within {
   border-color: rgba(138, 77, 255, 0.5);
+}
+.lorestat:hover::before,
+.lorestat:focus-within::before {
+  opacity: 1;
+  top: 10%;
+  bottom: 10%;
 }
 .lorestat b {
   font-family: var(--font-display);
   font-weight: 800;
   font-size: clamp(1.2rem, 0.9rem + 1vw, 1.7rem);
   display: block;
+  background: var(--grad-ghost);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 .lorestat span {
   font-family: var(--font-mono);

@@ -834,6 +834,10 @@
   overflow: hidden;
   margin-bottom: 0.4rem;
 }
+.npx__reveal-portrait picture {
+  position: absolute;
+  inset: 0;
+}
 .npx__reveal-portrait img {
   position: absolute;
   inset: 0;
@@ -984,8 +988,12 @@
 .npx__slot {
   position: relative;
   aspect-ratio: 3 / 4;
-  border-radius: 14px;
+  border-radius: var(--r-md, 14px);
   transform-style: preserve-3d;
+  /* The slot is a container so its internals can scale in cqw — the 4-col
+     grid reaches ~78px-wide slots on small phones, where fixed 14px chamfers
+     and 12px insets are proportionally enormous. */
+  container-type: inline-size;
 }
 .npx__slot-tilt {
   width: 100%;
@@ -1019,6 +1027,10 @@
     0 0 26px -10px var(--srg, rgba(224, 228, 236, 0.35)),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
+.npx__slot-front picture {
+  position: absolute;
+  inset: 0;
+}
 .npx__slot-front img {
   position: absolute;
   inset: 0;
@@ -1040,7 +1052,7 @@
   z-index: 2;
   font-family: var(--font-accent);
   font-weight: 700;
-  font-size: 0.6rem;
+  font-size: clamp(0.58rem, 1.8cqw + 0.42rem, 0.66rem);
   letter-spacing: 0.14em;
   color: #fff;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
@@ -1053,7 +1065,8 @@
   z-index: 2;
   font-family: var(--font-heading);
   font-weight: 800;
-  font-size: 0.52rem;
+  /* was 0.52rem (8.3px) — below the legibility floor; now scales in cqw */
+  font-size: clamp(0.56rem, 2.2cqw + 0.4rem, 0.68rem);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.85);
@@ -1096,17 +1109,19 @@
   border: none;
   box-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.9);
 }
-/* sharp 45° tactical chamfered corners on the inner housing */
+/* sharp 45° tactical chamfered corners on the inner housing — chamfer
+   length scales with the slot (14cqw, clamped) instead of a fixed 14px */
 .npx__slot:not(.is-next) .npx__slot-back {
+  --ch: clamp(8px, 14cqw, 16px);
   clip-path: polygon(
-    14px 0,
-    calc(100% - 14px) 0,
-    100% 14px,
-    100% calc(100% - 14px),
-    calc(100% - 14px) 100%,
-    14px 100%,
-    0 calc(100% - 14px),
-    0 14px
+    var(--ch) 0,
+    calc(100% - var(--ch)) 0,
+    100% var(--ch),
+    100% calc(100% - var(--ch)),
+    calc(100% - var(--ch)) 100%,
+    var(--ch) 100%,
+    0 calc(100% - var(--ch)),
+    0 var(--ch)
   );
 }
 
@@ -1125,7 +1140,7 @@
 /* low-opacity dark grid fill */
 .npx__pod-grid {
   position: absolute;
-  inset: 12px;
+  inset: clamp(8px, 12cqw, 12px);
   background:
     repeating-linear-gradient(0deg, rgba(147, 168, 196, 0.05) 0 1px, transparent 1px 12px),
     repeating-linear-gradient(90deg, rgba(147, 168, 196, 0.05) 0 1px, transparent 1px 12px);
@@ -1244,13 +1259,13 @@
 /* crisp high-contrast serial pill badge */
 .npx__pod-serial {
   position: absolute;
-  bottom: 9px;
+  bottom: clamp(6px, 9cqw, 9px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
   font-family: var(--font-accent);
   font-weight: 600;
-  font-size: 0.5rem;
+  font-size: clamp(0.5rem, 1.4cqw + 0.38rem, 0.6rem);
   letter-spacing: 0.2em;
   color: #e9eff8;
   background: rgba(9, 12, 18, 0.94);
@@ -1570,7 +1585,7 @@
     display: none;
   }
   .npx__slot-nextlabel {
-    font-size: 0.5rem;
+    font-size: var(--fs-meta-min, 0.625rem); /* never below the floor */
     letter-spacing: 0.14em;
   }
 }

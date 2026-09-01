@@ -48,7 +48,9 @@
 .mv__stat b,
 .lorestat b,
 .countdown__cell b,
-.product__price {
+.product__price,
+.ucard__meta b,
+.npx__slot-code {
   font-variant-numeric: tabular-nums;
 }
 

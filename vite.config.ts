@@ -16,5 +16,16 @@ export default defineConfig({
   build: {
     target: 'es2020',
     chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        // three + gsap are multi-hundred-kB libs used below the fold
+        // (ambient WebGL, magnetic pull) — split them so the hero shell
+        // (react + framer) paints while the heavy chunks stream in parallel.
+        manualChunks: {
+          webgl: ['three'],
+          animation: ['gsap'],
+        },
+      },
+    },
   },
 });

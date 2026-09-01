@@ -1,6 +1,35 @@
 import { motion } from 'framer-motion';
 import { Reveal, SectionHead, Verified, WalletButton, useMockWallet, MOCK_ADDRESS } from '../components/ui';
+import { useTilt } from '../components/motion';
 import { PERK_TIERS } from '../lib/data';
+
+/* Tier cards share the flagship physics family at reduced throw — one
+   motion language across the page instead of two products. */
+function PerkCard({ tier, i }: { tier: (typeof PERK_TIERS)[number]; i: number }) {
+  const tilt = useTilt<HTMLDivElement>({ maxDeg: 1.4, lift: -4 });
+  return (
+    <Reveal delay={i * 0.08} y={34} blur={false}>
+      <motion.div
+        ref={tilt.ref}
+        className="card perk sheen"
+        style={{ '--card-accent': tier.color, '--pc': tier.color, ...tilt.style }}
+        {...tilt.handlers}
+      >
+        <div className="perk__head">
+          <h3 className="perk__trait">{tier.trait}</h3>
+          <span className="badge" style={{ '--c': tier.color }}>
+            {tier.tag}
+          </span>
+        </div>
+        <ul className="perk__list">
+          {tier.perks.map((p) => (
+            <li key={p}>{p}</li>
+          ))}
+        </ul>
+      </motion.div>
+    </Reveal>
+  );
+}
 
 export default function Perks() {
   const wallet = useMockWallet();
@@ -28,21 +57,7 @@ export default function Perks() {
 
         <div className="perks__grid">
           {PERK_TIERS.map((tier, i) => (
-            <Reveal key={tier.tag} delay={i * 0.08} y={34}>
-              <div className="card perk sheen" style={{ '--pc': tier.color }}>
-                <div className="perk__head">
-                  <h3 className="perk__trait">{tier.trait}</h3>
-                  <span className="badge" style={{ '--c': tier.color }}>
-                    {tier.tag}
-                  </span>
-                </div>
-                <ul className="perk__list">
-                  {tier.perks.map((p) => (
-                    <li key={p}>{p}</li>
-                  ))}
-                </ul>
-              </div>
-            </Reveal>
+            <PerkCard key={tier.tag} tier={tier} i={i} />
           ))}
         </div>
 

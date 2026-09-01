@@ -69,18 +69,71 @@
   --fs-mono: clamp(0.7rem, 0.68rem + 0.08vw, 0.8rem);
   --fs-kicker: clamp(0.68rem, 0.65rem + 0.1vw, 0.78rem);
 
-  /* ---- Motion ---- */
-  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-swift: cubic-bezier(0.22, 1, 0.36, 1);
-  --dur-1: 0.5s;
-  --dur-2: 0.9s;
-  --dur-3: 1.4s;
-
   /* ---- Layout ---- */
   --gutter: clamp(1.25rem, 4.2vw, 4.5rem);
   --max: 1500px;
   --nav-h: 78px;
   --r-card: 18px;
+
+  /* ---- Surface radius scale ----
+     One concentric system: outer radii come from the scale, inner (media)
+     radii derive as `calc(var(--r-lg) - 6px)` at the standard 12px inset.
+     Stamp slots keep their tactical 14px + chamfer language (--r-md). */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 22px;
+  --r-pill: 999px;
+
+  /* ---- Elevation ----
+     Static resting treatment — applied directly (never transitioned; a
+     static box-shadow costs one paint, a transitioned one costs one per
+     frame). Hover/raise intensity is crossfaded separately via a
+     pseudo-element bloom (opacity only — see .card::before / .ucard::before).
+     --card-accent propagates the rarity/tier hue into the bloom shadow. */
+  --elev-rest:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 24px 48px -24px rgba(0, 0, 0, 0.62),
+    0 8px 32px -16px color-mix(in srgb, var(--card-accent, #8a4dff) 22%, transparent);
+  --elev-raise:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 34px 64px -28px rgba(0, 0, 0, 0.72),
+    0 14px 48px -18px color-mix(in srgb, var(--card-accent, #8a4dff) 40%, transparent);
+
+  /* ---- Material ----
+     180px monochrome fractal-noise tile: the "obsidian" grain that keeps
+     glass surfaces from reading as flat plastic. Baked faint (~5% perceived
+     under any blend mode) so every consumer can use it as-is. */
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.16'/%3E%3C/svg%3E");
+  --glass-blur: blur(16px) saturate(140%);
+
+  /* ---- Motion ---- */
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1); /* entrances / pointer-in */
+  --ease-swift: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.76, 0, 0.24, 1); /* exits / collapses */
+  --dur-1: 0.5s;
+  --dur-2: 0.9s;
+  --dur-3: 1.4s;
+
+  /* ---- Type floors ----
+     Tracked-uppercase metadata never drops below these; below 10px the
+     Space Grotesk tracking collapses into noise. */
+  --fs-meta-min: 0.625rem;
+  --fs-meta-mobile: 0.6875rem;
+}
+
+/* Visually hidden, still screen-reader available (card action labels etc). */
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 /* ============================ RESET / BASE ============================ */
@@ -259,21 +312,58 @@ section[id] {
 
 /* ============================ SURFACES ============================ */
 
-/* Glass card: gradient border + blur + inner gradient */
+/* Glass card: gradient border + blur + inner gradient + obsidian material.
+   The border gradient is STATIC by policy: gdrift (background-position)
+   animation is reserved for small chrome (buttons/pills/avatars ≤64px tall);
+   animating it on card-scale surfaces rasterizes hundreds of thousands of
+   pixels per frame, forever. Card "life" comes from the cursor-tracked sheen
+   and the ::before bloom instead — both opacity-only. */
 .card {
   position: relative;
   border-radius: var(--r-card);
   background:
+    var(--noise) padding-box,
     linear-gradient(165deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012) 55%)
       padding-box,
-    linear-gradient(165deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.05) 45%, rgba(138, 77, 255, 0.3))
+    linear-gradient(
+        165deg,
+        rgba(255, 255, 255, 0.24),
+        rgba(255, 255, 255, 0.05) 45%,
+        color-mix(in srgb, var(--card-accent, var(--pc, var(--ac, #8a4dff))) 45%, transparent)
+      )
       border-box;
-  background-size: 100% 100%, 260% 260%;
-  animation: gdrift 20s ease-in-out infinite;
+  background-size: 180px 180px, 100% 100%, 100% 100%;
+  background-blend-mode: overlay, normal, normal;
   border: 1px solid transparent;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--elev-rest);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   overflow: hidden;
+}
+/* Raise bloom — accent-tinted inner light + brighter top specular, faded in
+   with opacity only (compositor-friendly; zero box-shadow transitions). */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  background:
+    radial-gradient(
+      130% 90% at 50% 115%,
+      color-mix(in srgb, var(--card-accent, var(--pc, var(--ac, #8a4dff))) 22%, transparent),
+      transparent 62%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 18%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  transition: opacity 0.45s var(--ease-expo);
+  pointer-events: none;
+}
+.card:hover::before,
+.card:focus-visible::before,
+.card:focus-within::before {
+  opacity: 1;
 }
 
 /* Holographic glare — was a one-shot linear sweep on a timer; now a soft
@@ -292,7 +382,9 @@ section[id] {
   transition: opacity 0.45s var(--ease-expo);
   pointer-events: none;
 }
-.sheen:hover::after {
+.sheen:hover::after,
+.sheen:focus-visible::after,
+.sheen:focus-within::after {
   opacity: 1;
 }
 

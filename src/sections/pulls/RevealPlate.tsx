@@ -16,6 +16,7 @@ import { RARITY_ACCENT, spinPool, type PullPhase, type PullResult } from './useP
 import { StatRoll } from './StatRoll';
 import RadarGrid from './RadarGrid';
 import { MagneticButton, RollText } from '../../components/motion';
+import CardImage from '../../components/CardImage';
 
 interface RevealPlateProps {
   phase: PullPhase;
@@ -91,7 +92,7 @@ export default function RevealPlate({ phase, spinIdx, result, onPull, onDone }: 
           >
             <span className="npx__reveal-burst" aria-hidden="true" />
             <div className="npx__reveal-portrait">
-              <img src={result.u.image} alt={`${result.u.name} pull`} />
+              <CardImage src={result.u.image} alt={`${result.u.name} pull`} eager sizes="300px" />
               <span className="npx__reveal-rim" aria-hidden="true" />
             </div>
             <span className="npx__reveal-badge">

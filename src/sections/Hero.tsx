@@ -3,6 +3,7 @@ import { motion, useScroll, useSpring, useTransform, useMotionValue } from 'fram
 import { Reveal } from '../components/ui';
 import { LiquidButton, GlassButton, PortalMagnetic } from '../components/PortalButton';
 import { art, UNIVERSES, UNIVERSE_DROP_ISO } from '../lib/data';
+import CardImage from '../components/CardImage';
 import { useCountdown } from '../lib/hooks';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -147,7 +148,7 @@ export default function Hero() {
         className="hero__bg"
         style={{ scale: bgScale, y: bgY, x: bgX }}
       >
-        <img src={art('hero.jpg')} alt="" />
+        <CardImage src={art('hero.jpg')} alt="" sizes="100vw" eager fade={false} fetchpriority="high" />
       </motion.div>
       <div className="hero__wash" />
       <div className="hero__scanlines" />

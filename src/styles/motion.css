@@ -231,6 +231,36 @@
   }
 }
 
+/* ==================== MOTION SYSTEM — AUTHORITATIVE RULES ===================
+   SPRING REGISTRY (framer-motion; keep new motion in this family):
+     TILT    { stiffness: 260, damping: 22, mass: 0.6 }  — card tilt (useTilt)
+     LIFT    { stiffness: 220, damping: 20, mass: 0.6 }  — card hover lift
+     PRESS   { stiffness: 500, damping: 26, mass: 1 }    — pointer-down confirm
+     PARALLAX{ stiffness: 200, damping: 24, mass: 0.6 }  — inner-layer drift
+     FLIP    { stiffness: 320, damping: 18, mass: 1 }    — stamp-slot unlock
+     LAYOUT  { stiffness: 240, damping: 26, mass: 1 }    — filter/sort reflow
+     MAGNETIC presets live in Magnetic.tsx (240/17, 320/24 chrome).
+
+   TRANSFORM AUTHORITY:
+     · framer-motion owns `transform` on any element it animates. At rest it
+       writes inline `transform: none`, which BEATS every stylesheet
+       `transform` in the cascade — a CSS `transform` rule on the same
+       element is silently dead code (this is exactly how the roster zig-zag
+       and the product hover-lift shipped broken).
+     · Stylesheet-authored motion (rhythm offsets, scroll-velocity effects)
+       MUST use the independent `translate` / `rotate` / `scale` properties,
+       which compose with framer's transform instead of competing.
+
+   SURFACE ANIMATION BUDGET:
+     · gdrift (background-position) only on chrome ≤64px tall — never on
+       card-scale surfaces.
+     · No transitioned box-shadow / filter on card-size elements: elevation
+       intensity crossfades via pseudo-element opacity (--elev-* tokens).
+     · Blur-ins (Reveal) are for text lines; card-size subtrees animate
+       opacity + transform only (pass Reveal blur={false} when wrapping
+       cards).
+   ========================================================================== */
+
 /* ================= GLOBAL GRADIENT DRIFT ENGINE ============================
    One shared slow pan for every converted gradient surface in the system:
    diagonal 0% 0% → 100% 100% → back, always oversized via background-size on

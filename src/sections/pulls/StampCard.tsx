@@ -26,6 +26,7 @@ import { RARITY, SET_BONUS_AT, STAMP_SLOTS, UNIVERSES } from '../../lib/data';
 import { RARITY_ACCENT, type StoredPull } from './usePullEngine';
 import WireframeGlobe from './WireframeGlobe';
 import { MagneticButton, RollText } from '../../components/motion';
+import CardImage from '../../components/CardImage';
 
 interface StampCardProps {
   stamps: number;
@@ -196,7 +197,11 @@ function StampSlot({ index, filled, next, universe, isLatest }: SlotProps) {
           <div className="npx__slot-face npx__slot-front">
             {universe && (
               <>
-                <img src={universe.image} alt={`${universe.code} — ${universe.name}`} loading="lazy" />
+                <CardImage
+                  src={universe.image}
+                  alt={`${universe.code} — ${universe.name}`}
+                  sizes="140px"
+                />
                 <span className="npx__slot-veil" aria-hidden="true" />
                 <span className="npx__slot-code">{universe.code}</span>
                 <span className="npx__slot-name">{universe.name}</span>
