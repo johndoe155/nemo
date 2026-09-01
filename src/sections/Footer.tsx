@@ -1,5 +1,5 @@
 import { Marquee } from '../components/ui';
-import { Magnetic } from '../components/Cursor';
+import { KineticLink, RollText } from '../components/motion';
 import { ARTISTS, UNIVERSES } from '../lib/data';
 import { LOGO_SRC } from '../lib/assets';
 
@@ -22,12 +22,13 @@ export default function Footer() {
         <h2 className="display-xl">
           ENTER THE <span className="txt-grad chroma" data-text="NEMOVERSE.">NEMOVERSE.</span>
         </h2>
-        <Magnetic>
-          <a href="#nemoverse" className="btn btn-primary" data-cursor="ENTER">
-            <span className="btn-spark" />
-            EXPLORE THE UNIVERSES
-          </a>
-        </Magnetic>
+        <KineticLink
+          href="#nemoverse"
+          className="btn btn-primary"
+          cursor="ENTER"
+          label="EXPLORE THE UNIVERSES"
+          swap="ENTER THE VOID"
+        />
         <p
           style={{
             marginTop: '1.6rem',
@@ -59,16 +60,16 @@ export default function Footer() {
           </div>
           <div className="footer__col">
             <h4>UNIVERSE</h4>
-            <a href="#nemoverse">The Nemoverse</a>
-            <a href="#lore">Core Identity</a>
-            <a href="#artists">Artists</a>
-            <a href="#persona">The Persona</a>
+            <a href="#nemoverse"><RollText text="The Nemoverse" /></a>
+            <a href="#lore"><RollText text="Core Identity" /></a>
+            <a href="#artists"><RollText text="Artists" /></a>
+            <a href="#persona"><RollText text="The Persona" /></a>
           </div>
           <div className="footer__col">
             <h4>SYSTEMS</h4>
-            <a href="#perks">Holder Perks</a>
-            <a href="#pulls">POP Pulls</a>
-            <a href="#store">Store</a>
+            <a href="#perks"><RollText text="Holder Perks" /></a>
+            <a href="#pulls"><RollText text="POP Pulls" /></a>
+            <a href="#store"><RollText text="Store" /></a>
           </div>
         </div>
         <div className="footer__bottom">

@@ -26,7 +26,7 @@ import {
   useMotionValue,
   useReducedMotion,
 } from 'framer-motion';
-import { MagneticButton } from '../lib/magnetic';
+import { MagneticButton, RollText } from './motion';
 import { ScrambleText, StaticText } from './ScrambleText';
 import { CHAT_FALLBACKS, CHAT_RULES, PERSONA_GREETING, QUICK_REPLIES } from '../lib/data';
 
@@ -355,7 +355,7 @@ export default function NemoChat() {
                 onClick={() => send(q)}
                 disabled={typing}
               >
-                {q}
+                <RollText text={q} />
               </MagneticButton>
             ))}
           </div>
@@ -394,7 +394,7 @@ export default function NemoChat() {
               disabled={typing || !input.trim()}
               aria-label="Send message to NEMO"
             >
-              SEND
+              <RollText text="SEND" />
             </MagneticButton>
           </div>
         </motion.form>

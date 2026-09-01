@@ -16,14 +16,6 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import { webglSupported } from './webgl';
 
-interface Props {
-  onClick: () => void;
-  disabled?: boolean;
-  spin?: boolean;
-  label: string;
-  spinLabel?: string;
-}
-
 import { CTA_VERT, CTA_FRAG } from './shaders';
 
 interface Props {
@@ -194,6 +186,7 @@ export default function LiquidPullButton({ onClick, disabled, spin, label, spinL
       onClick={onClick}
       disabled={disabled}
       data-spin={spin ? 'true' : 'false'}
+      data-cursor="PULL"
       aria-label={spin ? spinLabel ?? 'Archives splitting' : label}
     >
       <canvas ref={canvasRef} className="npx__cta-gl" aria-hidden="true" />

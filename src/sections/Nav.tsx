@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { WalletButton, useMockWallet } from '../components/ui';
+import { Magnetic, RollText } from '../components/motion';
 import { useScrollspy } from '../lib/hooks';
 import { LOGO_SRC } from '../lib/assets';
 
@@ -56,7 +57,7 @@ export default function Nav() {
                 aria-current={active === l.href.slice(1) ? 'true' : undefined}
               >
                 <span className="num">{l.n}</span>
-                {l.label}
+                <RollText text={l.label} />
               </a>
             ))}
           </div>
@@ -65,16 +66,18 @@ export default function Nav() {
             <WalletButton connected={wallet.connected} onConnect={wallet.connect} compact />
           </div>
 
-          <button
-            className="nav__burger"
-            aria-expanded={open}
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            onClick={() => setOpen((v) => !v)}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
+          <Magnetic preset="chrome" className="nav__burger-mag">
+            <button
+              className="nav__burger"
+              aria-expanded={open}
+              aria-label={open ? 'Close menu' : 'Open menu'}
+              onClick={() => setOpen((v) => !v)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+          </Magnetic>
         </div>
       </nav>
 
@@ -96,7 +99,7 @@ export default function Nav() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.06 + i * 0.05, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
               >
-                <span className="num">{l.n}</span> {l.label}
+                <span className="num">{l.n}</span> <RollText text={l.label} />
               </motion.a>
             ))}
             <div className="mmenu__foot" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>

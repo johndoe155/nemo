@@ -16,6 +16,10 @@ import './styles/components.css';
 import './styles/overhaul.css';
 import './styles/audit-gaps.css';
 import './styles/portal.css';
+// Motion system (.pk / .rt / .magnetic / .btn bloom) — the kinetic layer
+// shared by every control; loads right after portal.css so hero scoping
+// (prefixed .hero__ctas) still wins where both define a rule.
+import './styles/motion.css';
 import './styles/nemo-chat.css';
 // Art-directed typographic application layer — loaded LAST so the role
 // assignments (Plain sub-headings/nav, Montreal Text dense reading, active

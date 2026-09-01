@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { KineticLink } from './motion';
 import type { Universe } from '../lib/data';
 import { RARITY } from '../lib/data';
 
@@ -171,42 +172,66 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
                   <span>{soldPct}%</span>
                 </div>
                 <div className="progress">
-                  <i style={{ width: `${soldPct}%` }} />
+                  <i style={{ ['--p' as string]: soldPct / 100 }} />
                 </div>
               </div>
             )}
 
             <div className="dialog__ctas">
               {u.status === 'live' && (
-                <a href="#perks" className="btn btn-primary" onClick={onClose}>
-                  <span className="btn-spark" />
-                  CLAIM THIS UNIVERSE
-                </a>
+                <KineticLink
+                  href="#perks"
+                  className="btn btn-primary"
+                  cursor="CLAIM"
+                  label="CLAIM THIS UNIVERSE"
+                  swap="SECURE THE EDITION"
+                  onClick={onClose}
+                />
               )}
               {u.status === 'upcoming' && (
-                <a href="#perks" className="btn btn-primary" onClick={onClose}>
-                  <span className="btn-spark" />
-                  HOLDERS ENTER FIRST
-                </a>
+                <KineticLink
+                  href="#perks"
+                  className="btn btn-primary"
+                  cursor="ENTER"
+                  label="HOLDERS ENTER FIRST"
+                  swap="CROSS THE GATE"
+                  onClick={onClose}
+                />
               )}
               {u.status === 'sold-out' && (
                 <span className="btn btn-ghost" style={{ cursor: 'default' }}>
-                  SOLD OUT — CHECK SECONDARY
+                  <span className="btn__txt">SOLD OUT — CHECK SECONDARY</span>
                 </span>
               )}
               {u.status === 'encrypted' && (
-                <a href="#persona" className="btn btn-gold" onClick={onClose}>
-                  ASK THE PERSONA ABOUT #008
-                </a>
+                <KineticLink
+                  href="#persona"
+                  className="btn btn-gold"
+                  cursor="ASK"
+                  label="ASK THE PERSONA ABOUT #008"
+                  swap="SUMMON NEMO"
+                  onClick={onClose}
+                />
               )}
               {u.status === 'secret' && (
-                <a href="#pulls" className="btn btn-gold" onClick={onClose}>
-                  NO ONE COMMISSIONED THIS
-                </a>
+                <KineticLink
+                  href="#pulls"
+                  className="btn btn-gold"
+                  cursor="PULL"
+                  label="NO ONE COMMISSIONED THIS"
+                  swap="UNWRITTEN CANON"
+                  onClick={onClose}
+                />
               )}
-              <a href="#pulls" className="btn btn-ghost" onClick={onClose}>
-                HOW PULLS WORK ▸
-              </a>
+              <KineticLink
+                href="#pulls"
+                className="btn btn-ghost"
+                cursor="VIEW"
+                label="HOW PULLS WORK"
+                arrow
+                spark={false}
+                onClick={onClose}
+              />
             </div>
           </div>
         </div>

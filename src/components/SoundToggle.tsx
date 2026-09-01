@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { attractTick, confirmTick } from '../lib/sound';
+import { MagneticButton, RollText } from './motion';
 
 /* ---------------------------------------------------------------------------
    SoundToggle — fixed "SOUND ON/OFF" pill (DESIGN_AUDIT P2.5). Off by
@@ -62,8 +63,12 @@ export default function SoundToggle() {
   };
 
   return (
-    <button
+    /* The button itself is the magnetic element — wrapping a position:fixed
+       node in a transformed ancestor would re-root its containing block, so
+       the physics live directly on the control. */
+    <MagneticButton
       type="button"
+      preset="chrome"
       className="soundtoggle"
       onClick={toggle}
       aria-pressed={enabled}
@@ -74,7 +79,7 @@ export default function SoundToggle() {
         <i />
         <i />
       </span>
-      SOUND {enabled ? 'ON' : 'OFF'}
-    </button>
+      <RollText text={`SOUND ${enabled ? 'ON' : 'OFF'}`} />
+    </MagneticButton>
   );
 }

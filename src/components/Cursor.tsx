@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 
 /* ---------------------------------------------------------------------------
@@ -56,13 +56,19 @@ export function CustomCursor() {
       <motion.div
         className="cursor-glow"
         data-hover={hovering}
-        style={{ x: glowX, y: glowY, opacity: visible ? 0.7 : 0 }}
+        style={{ x: glowX, y: glowY }}
+        /* rest scale 0.418 = the old 46px rest size at the constant 110px
+           authored geometry; hover blooms to full size on one transform */
+        animate={{ scale: hovering ? 1 : 0.418, opacity: visible ? (hovering ? 0.9 : 0.7) : 0 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         aria-hidden="true"
       />
       <motion.div
         className="cursor-dot"
         data-hover={hovering}
-        style={{ x: dotX, y: dotY, opacity: visible ? 1 : 0 }}
+        style={{ x: dotX, y: dotY }}
+        animate={{ scale: hovering ? 1 : 0.667, opacity: visible ? 1 : 0 }} /* 8px at rest */
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
         aria-hidden="true"
       />
       {label && (
@@ -81,47 +87,7 @@ export function CustomCursor() {
 }
 
 /* ---------------------------------------------------------------------------
-   Magnetic — pulls its child toward the cursor within a radius, springs back
-   on leave. Reduced-motion safe.
+   The <Magnetic> wrapper that used to live here has been UNIFIED into
+   components/motion/Magnetic.tsx (the single magnetic primitive for the
+   whole system). Consumers import from 'components/motion'.
 --------------------------------------------------------------------------- */
-
-export function Magnetic({
-  children,
-  strength = 0.35,
-  className = '',
-}: {
-  children: ReactNode;
-  strength?: number;
-  className?: string;
-}) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const sx = useSpring(x, { stiffness: 180, damping: 18, mass: 0.5 });
-  const sy = useSpring(y, { stiffness: 180, damping: 18, mass: 0.5 });
-
-  const onMove = (e: React.MouseEvent) => {
-    const el = ref.current;
-    if (!el) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const r = el.getBoundingClientRect();
-    x.set((e.clientX - (r.left + r.width / 2)) * strength);
-    y.set((e.clientY - (r.top + r.height / 2)) * strength);
-  };
-  const onLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  return (
-    <motion.div
-      ref={ref}
-      className={className}
-      style={{ x: sx, y: sy, display: 'inline-block' }}
-      onMouseMove={onMove}
-      onMouseLeave={onLeave}
-    >
-      {children}
-    </motion.div>
-  );
-}

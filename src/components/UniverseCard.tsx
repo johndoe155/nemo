@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { useTilt } from './motion';
 import type { Universe } from '../lib/data';
 import { RARITY } from '../lib/data';
 
@@ -17,20 +19,24 @@ export default function UniverseCard({
   const accent = rarity.color;
   const soldPct = u.supply ? Math.round((u.minted / u.supply) * 100) : 0;
   const [loaded, setLoaded] = useState(false);
+  const tilt = useTilt<HTMLElement>({ maxDeg: 2.5, lift: -8 });
 
   return (
-    <article
+    <motion.article
+      ref={tilt.ref}
       className="ucard sheen"
-      style={
-        {
-          '--card-accent': accent,
-          '--a1': u.artist.hue[0],
-          '--a2': u.artist.hue[1],
-        }
-      }
+      style={{
+        '--card-accent': accent,
+        '--a1': u.artist.hue[0],
+        '--a2': u.artist.hue[1],
+        ...tilt.style,
+      }}
+      {...tilt.handlers}
       onClick={() => onClick(u)}
       role="button"
       tabIndex={0}
+      aria-haspopup="dialog"
+      data-cursor="OPEN"
       aria-label={`Open ${u.code} — ${u.name}`}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -109,7 +115,7 @@ export default function UniverseCard({
         </div>
         {u.status === 'live' && (
           <div className="progress" style={{ marginTop: 10 }} aria-label={`${soldPct}% claimed`}>
-            <i style={{ width: `${soldPct}%` }} />
+            <i style={{ ['--p' as string]: soldPct / 100 }} />
           </div>
         )}
         <div className="ucard__artist">
@@ -119,6 +125,6 @@ export default function UniverseCard({
           </span>
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }

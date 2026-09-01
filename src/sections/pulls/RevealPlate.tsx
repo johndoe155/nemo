@@ -15,6 +15,7 @@ import { RARITY } from '../../lib/data';
 import { RARITY_ACCENT, spinPool, type PullPhase, type PullResult } from './usePullEngine';
 import { StatRoll } from './StatRoll';
 import RadarGrid from './RadarGrid';
+import { MagneticButton, RollText } from '../../components/motion';
 
 interface RevealPlateProps {
   phase: PullPhase;
@@ -102,12 +103,23 @@ export default function RevealPlate({ phase, spinIdx, result, onPull, onDone }: 
               {result.u.code} · MINT <StatRoll value={parseInt(result.mintNo, 10) || 0} pad={3} /> / {result.u.supply}
             </span>
             <div className="npx__reveal-actions">
-              <button type="button" className="npx__cta-mini" onClick={onPull}>
-                PULL AGAIN
-              </button>
-              <button type="button" className="npx__ghostbtn" onClick={onDone}>
-                DONE
-              </button>
+              <MagneticButton
+                type="button"
+                preset="chrome"
+                className="npx__cta-mini"
+                onClick={onPull}
+                data-cursor="PULL"
+              >
+                <RollText text="PULL AGAIN" />
+              </MagneticButton>
+              <MagneticButton
+                type="button"
+                preset="chrome"
+                className="npx__ghostbtn"
+                onClick={onDone}
+              >
+                <RollText text="DONE" />
+              </MagneticButton>
             </div>
           </motion.div>
         )}

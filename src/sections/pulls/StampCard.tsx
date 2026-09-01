@@ -25,6 +25,7 @@ import {
 import { RARITY, SET_BONUS_AT, STAMP_SLOTS, UNIVERSES } from '../../lib/data';
 import { RARITY_ACCENT, type StoredPull } from './usePullEngine';
 import WireframeGlobe from './WireframeGlobe';
+import { MagneticButton, RollText } from '../../components/motion';
 
 interface StampCardProps {
   stamps: number;
@@ -53,14 +54,15 @@ export default function StampCard({
         <span className="npx__plate-kicker">
           <i aria-hidden="true" /> STAMP CARD — PROOF OF PURCHASE
         </span>
-        <button
+        <MagneticButton
           type="button"
+          preset="chrome"
           className="npx__ghostbtn"
           onClick={onReset}
           disabled={phase === 'spinning' || pulls.length === 0}
         >
-          ⟲ RESET ARCHIVE
-        </button>
+          <RollText text="⟲ RESET ARCHIVE" />
+        </MagneticButton>
       </div>
 
       <div className="npx__slots">
@@ -90,7 +92,7 @@ export default function StampCard({
           </span>
         </div>
         <div className="npx__progress-track" role="progressbar" aria-valuenow={stamps} aria-valuemax={STAMP_SLOTS}>
-          <i style={{ width: `${(stamps / STAMP_SLOTS) * 100}%` }} />
+          <i style={{ ['--p' as string]: stamps / STAMP_SLOTS }} />
           <span className="npx__progress-ticks" aria-hidden="true">
             {Array.from({ length: STAMP_SLOTS }, (_, i) => (
               <em key={i} data-on={i < stamps} />

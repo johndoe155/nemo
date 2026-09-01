@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Reveal, SectionHead, toast, useMockWallet } from '../components/ui';
+import { KineticButton, useTilt } from '../components/motion';
 import type { Product } from '../lib/data';
 import { PRODUCTS } from '../lib/data';
 
@@ -16,6 +18,7 @@ function ProductCard({
 }) {
   const gated = p.gated && !wallet.connected;
   const [loaded, setLoaded] = useState(false);
+  const tilt = useTilt<HTMLDivElement>({ maxDeg: hero ? 1.6 : 2.2, lift: hero ? -5 : -7 });
   const onAdd = () => {
     if (gated) {
       toast('CONNECT WALLET TO UNLOCK HOLDER SKU');
@@ -25,7 +28,12 @@ function ProductCard({
   };
   return (
     <Reveal delay={delay} y={34} className={hero ? '' : ''}>
-      <div className={`card product sheen ${hero ? 'store__hero' : ''}`}>
+      <motion.div
+        ref={tilt.ref}
+        className={`card product sheen ${hero ? 'store__hero' : ''}`}
+        style={tilt.style}
+        {...tilt.handlers}
+      >
         <div className="product__media" style={{ position: 'relative' }}>
           {/* Image shimmer skeleton */}
           <div
@@ -71,16 +79,27 @@ function ProductCard({
               ${p.price}
               <span className="eth">{wallet.connected ? 'HOLDER −25%' : 'USD'}</span>
             </span>
-            <button
-              className={`btn ${gated ? 'btn-ghost' : 'btn-primary'}`}
-              onClick={onAdd}
-            >
-              <span className="btn-spark" />
-              {gated ? 'CONNECT TO VIEW' : 'ADD TO CART'}
-            </button>
+            {gated ? (
+              <KineticButton
+                className="btn btn-ghost"
+                label="CONNECT TO VIEW"
+                arrow
+                spark={false}
+                cursor="UNLOCK"
+                onClick={onAdd}
+              />
+            ) : (
+              <KineticButton
+                className="btn btn-primary"
+                label="ADD TO CART"
+                swap="SECURE THE PIECE"
+                cursor="ADD"
+                onClick={onAdd}
+              />
+            )}
           </div>
         </div>
-      </div>
+      </motion.div>
     </Reveal>
   );
 }

@@ -24,6 +24,7 @@ import SideRail from './components/SideRail';
 import SoundToggle from './components/SoundToggle';
 import VelocityFX from './components/VelocityFX';
 import { CustomCursor } from './components/Cursor';
+import { KineticButton, useCursorGlow } from './components/motion';
 
 /* ---------------------------------------------------------------------------
    SectionBoundary — guarantees a section can never blank itself out. If the
@@ -58,13 +59,12 @@ class SectionBoundary extends Component<{ children: ReactNode }, { failed: boole
           >
             THE ARCHIVE FAILED TO MATERIALISE
           </p>
-          <button
-            type="button"
+          <KineticButton
             className="btn btn-primary"
+            label="RETRY SECTION"
+            spark={false}
             onClick={() => this.setState({ failed: false })}
-          >
-            RETRY SECTION
-          </button>
+          />
         </div>
       </section>
     );
@@ -72,6 +72,12 @@ class SectionBoundary extends Component<{ children: ReactNode }, { failed: boole
 }
 
 export default function App() {
+  /* Delegated cursor→bloom tracking: writes --mx/--my onto whichever
+     interactive control is hovered (buttons, chips, cards, sheen surfaces)
+     so every glow layer is cursor-anchored. One passive listener, rAF-batched,
+     no React state. */
+  useCursorGlow();
+
   return (
     <>
       <a className="skip-link" href="#nemoverse" style={skipStyle}>

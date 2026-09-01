@@ -1,0 +1,220 @@
+/* ============================================================================
+   MOTION SYSTEM — shared interaction physics layer
+   Companion to src/components/motion/. Loaded after portal.css; everything
+   here is class-scoped and additive — no existing component restyles.
+
+   Contents
+     · .magnetic            unified magnetic wrapper (was 3 implementations)
+     · .pk-*                kinetic label chars + ghost chevron (from hero)
+     · .rt-*                pure character roll (nav/links/utility)
+     · .btn::* bloom        cursor-anchored radial bloom (+tier tints)
+     · focus ring           one accessible ring token for every control
+   ========================================================================== */
+
+/* ------------------------------- magnetic --------------------------------- */
+
+.magnetic {
+  will-change: transform;
+}
+.magnetic--block,
+.magnetic--block > * {
+  display: block;
+}
+
+/* --------------------------- kinetic label (pk) --------------------------- */
+/* Moved verbatim from portal.css — the hero's CTA technique, now system IP. */
+
+.pk-stack {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  pointer-events: none;
+}
+.pk-layer {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+.pk-char {
+  display: inline-block;
+  overflow: hidden; /* vertical Y-axis mask per character */
+}
+.pk-char-in {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+.pk-char--sp {
+  width: 0.34em;
+}
+/* swap layer is hidden until the GSAP timeline lifts it in */
+.pk-layer--in {
+  opacity: 0;
+}
+
+/* -------------------------- ghost chevron (pk-chev) ------------------------ */
+/* Previously scoped to .hero__ctas .portal-btn--glass; now generic so the
+   ghost tier anywhere (dialog, store) gets the morphing arrow. */
+
+.pk-chev-slot {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  color: var(--cyan);
+  will-change: transform;
+  flex: none;
+}
+.pk-chevron {
+  display: block;
+  transition: filter 0.3s var(--ease-expo);
+}
+:is(a, button):hover .pk-chevron,
+:is(a, button):focus-visible .pk-chevron {
+  filter: drop-shadow(0 0 6px rgba(63, 232, 255, 0.7));
+}
+
+/* ------------------------------ roll text (rt) ---------------------------- */
+/* Single-layer character roll. transform-only; cascade via --i. */
+
+.rt {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  overflow: hidden;
+}
+.rt__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.rt__chars {
+  display: inline-flex;
+}
+.rt__ch {
+  position: relative;
+  display: inline-block;
+}
+.rt__ch-in {
+  display: block;
+  /* fixed compact line box: the duplicate parks exactly one slot below and
+     the -100% roll lands pixel-perfect; 1.15 clears Montreal descenders
+     (footer link case) while uppercase UI labels never reach that far */
+  line-height: 1.15;
+  transform: translateY(0);
+  transition: transform 0.45s cubic-bezier(0.76, 0, 0.24, 1);
+  transition-delay: calc(var(--i, 0) * 22ms);
+  will-change: transform;
+}
+.rt__ch-in--dup {
+  position: absolute;
+  inset: 100% auto auto 0;
+}
+:is(a, button, [role='button']):hover .rt__ch-in,
+:is(a, button, [role='button']):focus-visible .rt__ch-in,
+.magnetic:hover .rt__ch-in,
+.magnetic:focus-within .rt__ch-in {
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rt__ch-in {
+    transition: none;
+  }
+}
+
+/* ------------------------- btn bloom layer (::before) ---------------------- */
+/* A soft light follows the cursor across every .btn (vars fed by
+   useCursorGlow; default 50%/50% means touch + reduced-motion users still
+   get the centred bloom fade). transform/opacity only, paint-cheap. */
+
+.btn {
+  isolation: isolate; /* keep bloom/spark layers inside the button's context */
+  --bloom: rgba(255, 255, 255, 0.26);
+}
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    170px circle at var(--mx, 50%) var(--my, 50%),
+    var(--bloom),
+    transparent 66%
+  );
+  opacity: 0;
+  transition: opacity 0.45s var(--ease-expo);
+  pointer-events: none;
+}
+.btn:hover::before,
+.btn:focus-visible::before,
+.btn[data-magnetic='engaged']::before {
+  opacity: 1;
+}
+.btn:active::before {
+  /* press: bloom swells brighter for tactile confirmation */
+  --bloom: rgba(255, 255, 255, 0.38);
+  transition-duration: 0.12s;
+}
+.btn-ghost {
+  --bloom: rgba(63, 232, 255, 0.16);
+}
+.btn-ghost:active::before {
+  --bloom: rgba(63, 232, 255, 0.28);
+}
+.btn-gold {
+  --bloom: rgba(255, 240, 200, 0.3);
+}
+.btn-gold:active::before {
+  --bloom: rgba(255, 244, 214, 0.42);
+}
+/* existing sheen keeps painting above the bloom, below the label */
+.btn .btn-spark {
+  z-index: 1;
+}
+/* plain-text labels sit above the bloom */
+.btn > .btn__txt {
+  position: relative;
+  z-index: 2;
+}
+/* Hero stays pixel-identical — the portal buttons own their full feedback
+   stack (shader, breathe cycle, frosted sheen); no generic bloom there. */
+.hero__ctas .portal-btn::before {
+  content: none;
+}
+
+/* --------------------- unified focus ring (WCAG 2.1 AAA) ------------------- */
+/* One ring for every button-like control, ≥3:1 against the void palette. */
+
+:is(
+  .btn,
+  .chip,
+  .npill,
+  .nchat__send,
+  .sort-dd__trigger,
+  .roster__arrow,
+  .roster__minimap button,
+  .dialog__close,
+  .soundtoggle,
+  .npx__cta-mini,
+  .npx__ghostbtn,
+  .nav__burger
+):focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+/* ----------------------- kinetic label reduced motion ---------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-layer--in {
+    display: none;
+  }
+}

@@ -41,36 +41,9 @@
 }
 
 /* ---------- kinetic label (shared) ---------- */
-
-.pk-stack {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  justify-items: center;
-  pointer-events: none;
-}
-.pk-layer {
-  grid-area: 1 / 1;
-  display: inline-flex;
-  white-space: nowrap;
-  font-family: var(--font-mono);
-  font-weight: 700;
-}
-.pk-char {
-  display: inline-block;
-  overflow: hidden; /* vertical Y-axis mask per character */
-}
-.pk-char-in {
-  display: inline-block;
-  will-change: transform, opacity;
-}
-.pk-char--sp {
-  width: 0.34em;
-}
-/* swap layer is hidden until the GSAP timeline lifts it in */
-.pk-layer--in {
-  opacity: 0;
-}
+/* The .pk-* core (stack/layer/char) has been PROMOTED to styles/motion.css —
+   it now powers every tier-1/2 CTA, not just the hero. Only hero-scoped
+   blend/treatment overrides remain below. */
 
 /* ---------- PRIMARY — liquid WebGL surface ---------- */
 
@@ -207,22 +180,8 @@
 }
 
 /* ---------- custom kinetic chevron icon ---------- */
-
-.hero__ctas .portal-btn--glass .pk-chev-slot {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  color: var(--cyan);
-  will-change: transform;
-}
-.hero__ctas .portal-btn--glass .pk-chevron {
-  display: block;
-  transition: filter 0.3s var(--ease-expo);
-}
-.hero__ctas .portal-btn--glass:hover .pk-chevron {
-  filter: drop-shadow(0 0 6px rgba(63, 232, 255, 0.7));
-}
+/* The .pk-chev-* chrome has been PROMOTED to styles/motion.css (generic,
+   unscoped) so ghost-tier buttons across the site share the morphing arrow. */
 
 /* ---------- reduced motion: everything freezes, labels stay put ---------- */
 
@@ -231,9 +190,6 @@
   .hero__ctas .portal-btn--glass,
   .hero__ctas .portal-btn--liquid.is-burst {
     animation: none;
-  }
-  .pk-layer--in {
-    display: none;
   }
   .hero__ctas .portal-btn--glass::after {
     display: none;

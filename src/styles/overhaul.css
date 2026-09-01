@@ -254,27 +254,23 @@ html[data-scene='abyss'] {
   translate: -50% -50%;
   will-change: transform;
 }
+/* Constant-geometry cursor: the dot/glow are authored at their FULL hover
+   size and scaled down at rest via framer `animate` (merged into the same
+   GPU transform channel as the x/y followers). The old width/height hover
+   transitions were layout property animation on every cursor state flip. */
 .cursor-dot {
-  width: 8px; height: 8px;
+  width: 12px; height: 12px;
   background: var(--cyan);
   box-shadow: 0 0 12px var(--cyan);
-  transition: width 0.25s var(--ease-expo), height 0.25s var(--ease-expo),
-    background 0.25s var(--ease-expo);
+  transition: background-color 0.25s var(--ease-expo), box-shadow 0.25s var(--ease-expo);
 }
 .cursor-glow {
-  width: 46px; height: 46px;
+  width: 110px; height: 110px;
   background: radial-gradient(circle, rgba(138, 77, 255, 0.4), rgba(63, 232, 255, 0.08) 65%);
   mix-blend-mode: screen;
   opacity: 0.7;
-  transition: width 0.35s var(--ease-expo), height 0.35s var(--ease-expo),
-    opacity 0.35s var(--ease-expo);
-}
-.cursor-glow[data-hover='true'] {
-  width: 110px; height: 110px;
-  opacity: 0.9;
 }
 .cursor-dot[data-hover='true'] {
-  width: 12px; height: 12px;
   background: var(--gold);
   box-shadow: 0 0 16px var(--gold);
 }
@@ -371,16 +367,43 @@ html[data-scene='abyss'] {
   gap: 0.6rem;
 }
 .roster__arrow {
+  position: relative;
   width: 46px; height: 46px;
   border-radius: 12px;
   border: 1px solid var(--line-strong);
   background: rgba(5, 5, 10, 0.6);
   backdrop-filter: blur(8px);
   color: var(--ink);
+  overflow: hidden; /* masks the arrow travel track */
   display: grid;
   place-items: center;
-  font-size: 1rem;
-  transition: all 0.3s var(--ease-expo);
+  transition: border-color 0.35s var(--ease-expo), color 0.35s var(--ease-expo),
+    background-color 0.35s var(--ease-expo), transform 0.3s var(--ease-expo);
+}
+/* kinetic arrow travel — two identical glyphs on a track; hover slides the
+   track so the arrow exits toward its own direction and a fresh one enters */
+.roster__arrow-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  /* rest offset centers glyph 1 in the 46px button; hover shifts exactly one
+     glyph + gap so glyph 2 lands where glyph 1 sat (Δ = 14px + 8px = 22px) */
+  transform: translateX(11px);
+  transition: transform 0.4s var(--ease-expo);
+  will-change: transform;
+}
+.roster__arrow-track svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  display: block;
+}
+.roster__arrow:hover:not(:disabled) .roster__arrow-track,
+.roster__arrow:focus-visible .roster__arrow-track {
+  transform: translateX(-11px);
+}
+.roster__arrow:not(:disabled):active {
+  transform: scale(0.92);
 }
 .roster__arrow:hover:not(:disabled) {
   border-color: var(--cyan);
@@ -395,31 +418,58 @@ html[data-scene='abyss'] {
   bottom: 5.2rem;
   z-index: 6;
   display: flex;
-  gap: 0.5rem;
+  gap: 0.35rem;
   align-items: flex-end;
 }
+/* Full-size keyboard hit target (24×44 — was 14×26 and lived inside an
+   aria-hidden container). The VISIBLE bar is a ::before that grows with a
+   composited scaleY from the bottom; button geometry never changes. */
 .roster__minimap button {
-  width: 14px;
-  height: 26px;
+  position: relative;
+  width: 24px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 4px;
+}
+.roster__minimap button::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 13px;
+  height: 25px;
   border-radius: 3px;
   border: 1px solid var(--line-strong);
   background: rgba(255, 255, 255, 0.03);
-  transition: all 0.3s var(--ease-expo);
-  display: grid;
-  place-items: end center;
+  transform: translateX(-50%) scaleY(1);
+  transform-origin: bottom;
+  transition: transform 0.35s var(--ease-expo), border-color 0.3s var(--ease-expo),
+    background-color 0.3s var(--ease-expo);
+}
+.roster__minimap button:hover::before {
+  border-color: rgba(63, 232, 255, 0.5);
+  background: rgba(63, 232, 255, 0.07);
+}
+.roster__minimap button.active::before {
+  transform: translateX(-50%) scaleY(1.32); /* ≈ the old 26 → 34px grow */
+  border-color: var(--cyan);
+  background: rgba(63, 232, 255, 0.12);
 }
 .roster__minimap button span {
+  position: absolute;
+  left: 50%;
+  bottom: 7px;
   font-family: var(--font-mono);
   font-size: 0.46rem;
   letter-spacing: 0.1em;
   color: var(--ink-faint);
-  transform: rotate(-90deg);
+  transform: translateX(-50%) rotate(-90deg);
+  transform-origin: center;
   white-space: nowrap;
-}
-.roster__minimap button.active {
-  border-color: var(--cyan);
-  background: rgba(63, 232, 255, 0.12);
-  height: 34px;
+  pointer-events: none;
+  transition: color 0.3s var(--ease-expo);
 }
 .roster__minimap button.active span { color: var(--cyan); }
 
@@ -1103,11 +1153,11 @@ html[data-scene='abyss'] {
   opacity: 0.7;
 }
 
-/* Border glow for active elements */
-.btn-primary:focus-visible,
-.btn-ghost:focus-visible,
+/* Focus rings: unified — the single 2px cyan ring in styles/motion.css
+   (:is(.btn, …):focus-visible) now governs every control; the local 1px
+   override that used to live here has been retired (WCAG visibility). */
 .hero__badge:focus-visible {
-  outline: 1px solid var(--cyan);
+  outline: 2px solid var(--cyan);
   outline-offset: 3px;
 }
 

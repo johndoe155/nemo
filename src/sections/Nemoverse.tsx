@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useMotionValueEvent, useScroll, useTransform }
 import UniverseCard from '../components/UniverseCard';
 import UniverseDialog from '../components/UniverseDialog';
 import { Countdown, Reveal, SortDropdown, type SortMode } from '../components/ui';
+import { KineticLink, Magnetic, MagneticButton, RollText } from '../components/motion';
 import type { Rarity, Universe } from '../lib/data';
 import { RARITY, UNIVERSE_DROP_ISO, UNIVERSES, visibleUniverses } from '../lib/data';
 import { useCountdown, useCountUp } from '../lib/hooks';
@@ -155,16 +156,17 @@ export default function Nemoverse() {
 
         <div className="mv__filters">
           {rarityChips.map((c) => (
-            <button
+            <MagneticButton
               key={c.id}
+              preset="chrome"
               className={`chip ${filter === c.id ? 'active' : ''}`}
-              style={{ '--c': c.id === 'all' ? 'var(--cyan)' : RARITY[c.id as Rarity].color }}
+              style={{ '--c': c.id === 'all' ? 'var(--cyan)' : RARITY[c.id as Rarity].color } as React.CSSProperties}
               aria-pressed={filter === c.id}
               onClick={() => setFilter(c.id)}
             >
               {c.id !== 'all' && <span className="dot" />}
-              {c.label}
-            </button>
+              <RollText text={c.label} />
+            </MagneticButton>
           ))}
           <span style={{ marginLeft: 'auto' }}>
             <SortDropdown value={sort} onChange={setSort} />
@@ -187,39 +189,63 @@ export default function Nemoverse() {
             <div className="roster__counter">
               <span>SCROLL TO TRAVERSE</span>
               <div className="progress roster__progress" aria-label="roster progress">
-                <i style={{ width: `${progress * 100}%` }} />
+                <i style={{ ['--p' as string]: progress }} />
               </div>
               <span>
                 {Math.round(progress * 100)}%
               </span>
             </div>
-            <div className="roster__controls" aria-label="Step through universes">
-              <button
-                className="roster__arrow"
-                onClick={() => goToCard(activeCard - 1)}
-                disabled={activeCard <= 0}
-                aria-label="Previous universe"
-              >
-                ←
-              </button>
-              <button
-                className="roster__arrow"
-                onClick={() => goToCard(activeCard + 1)}
-                disabled={activeCard >= cardCount - 1}
-                aria-label="Next universe"
-              >
-                →
-              </button>
+            <div className="roster__controls" role="group" aria-label="Step through universes">
+              <Magnetic preset="chrome">
+                <button
+                  className="roster__arrow"
+                  onClick={() => goToCard(activeCard - 1)}
+                  disabled={activeCard <= 0}
+                  aria-label="Previous universe"
+                  data-cursor="PREV"
+                >
+                  <span className="roster__arrow-track" aria-hidden="true">
+                    <svg viewBox="0 0 14 14" fill="none">
+                      <path d="M11.5 7h-9m4.2-4.2L2.5 7l4.2 4.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <svg viewBox="0 0 14 14" fill="none">
+                      <path d="M11.5 7h-9m4.2-4.2L2.5 7l4.2 4.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </button>
+              </Magnetic>
+              <Magnetic preset="chrome">
+                <button
+                  className="roster__arrow"
+                  onClick={() => goToCard(activeCard + 1)}
+                  disabled={activeCard >= cardCount - 1}
+                  aria-label="Next universe"
+                  data-cursor="NEXT"
+                >
+                  <span className="roster__arrow-track" aria-hidden="true">
+                    <svg viewBox="0 0 14 14" fill="none">
+                      <path d="M2.5 7h9M7.3 2.8 11.5 7l-4.2 4.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <svg viewBox="0 0 14 14" fill="none">
+                      <path d="M2.5 7h9M7.3 2.8 11.5 7l-4.2 4.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </button>
+              </Magnetic>
             </div>
-            <div className="roster__minimap" aria-hidden="true">
+            {/* Real focusable controls — the aria-hidden wrapper that used to
+                cloak these buttons (a WCAG focusable-inside-hidden violation)
+                has been removed; bars are named and current-state-exposed. */}
+            <div className="roster__minimap" role="group" aria-label="Jump to a universe">
               {list.map((u, i) => (
                 <button
                   key={u.id}
                   className={i === activeCard ? 'active' : ''}
                   onClick={() => goToCard(i)}
-                  title={`${u.code} — ${u.name}`}
+                  aria-label={`Jump to ${u.code} — ${u.name}`}
+                  aria-current={i === activeCard ? 'true' : undefined}
                 >
-                  <span>{u.code}</span>
+                  <span aria-hidden="true">{u.code}</span>
                 </button>
               ))}
             </div>
@@ -285,9 +311,15 @@ function DropTeaserCard() {
           Holders cross first — up to 96 hours early, at a discount. Legendary traits get guaranteed
           variants.
         </p>
-        <a href="#perks" className="btn btn-gold" style={{ width: '100%' }}>
-          {t.done ? 'CLAIM THE LAST AURORA' : 'HOLD TO ENTER FIRST'}
-        </a>
+        <KineticLink
+          href="#perks"
+          className="btn btn-gold"
+          style={{ width: '100%' }}
+          block
+          cursor="ENTER"
+          label={t.done ? 'CLAIM THE LAST AURORA' : 'HOLD TO ENTER FIRST'}
+          swap={t.done ? 'ENTER THE DROP' : 'HOLDERS CROSS FIRST'}
+        />
       </div>
     </div>
   );

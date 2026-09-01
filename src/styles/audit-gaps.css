@@ -86,7 +86,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.45rem 0.75rem;
+  /* was 0.45rem 0.75rem (~28px) — AAA: 40px visual + hit-slop = 44px+ */
+  min-height: 40px;
+  padding: 0 0.95rem;
   font-family: var(--font-mono, monospace);
   font-size: 0.58rem;
   letter-spacing: 0.24em;
@@ -96,7 +98,15 @@
   border-radius: 999px;
   cursor: pointer;
   backdrop-filter: blur(8px);
-  transition: color 0.25s ease, border-color 0.25s ease;
+  transition: color 0.3s var(--ease-expo), border-color 0.3s var(--ease-expo),
+    background-color 0.3s var(--ease-expo);
+}
+/* invisible hit-slop expands the pointer target past 44px */
+.soundtoggle::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: inherit;
 }
 .soundtoggle:hover,
 .soundtoggle:focus-visible {
@@ -111,9 +121,13 @@
 }
 .soundtoggle__wave i {
   width: 2px;
-  height: 4px;
+  /* full ten pixels of material, scaled — the old build animated `height`,
+     which is a layout property; scaleY is pure compositor work */
+  height: 10px;
   background: currentColor;
   border-radius: 1px;
+  transform: scaleY(0.35);
+  transform-origin: bottom;
 }
 .soundtoggle__wave[data-on='true'] i {
   animation: soundbar 0.9s ease-in-out infinite alternate;
@@ -126,10 +140,10 @@
 }
 @keyframes soundbar {
   from {
-    height: 3px;
+    transform: scaleY(0.3);
   }
   to {
-    height: 10px;
+    transform: scaleY(1);
   }
 }
 

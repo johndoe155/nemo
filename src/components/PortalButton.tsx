@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { gsap } from 'gsap';
+import { KineticLabel } from './motion/KineticLabel';
+import { GhostArrow } from './motion/GhostArrow';
 
 /* ============================================================================
    PORTAL BUTTONS — hero CTA overhaul ("ENTER THE NEMOVERSE" + "HOLDER PERKS")
@@ -33,85 +35,9 @@ function prefersReduced(): boolean {
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /* ---------------------------------------------------------------------------
-   KineticLabel — splits a label into per-character mask wrappers and rolls
-   the default label out / the swap label in on hover/focus with a GSAP
-   timeline. Both layers share one grid cell so the button never reflows.
+   KineticLabel — MOVED to components/motion/KineticLabel.tsx (system
+   primitive). Imported above; hero usage below is unchanged.
 --------------------------------------------------------------------------- */
-
-function splitChars(text: string) {
-  return text.split('').map((c, i) =>
-    c === ' ' ? (
-      <span key={i} className="pk-char pk-char--sp">
-        {'\u00A0'}
-      </span>
-    ) : (
-      <span key={i} className="pk-char">
-        <span className="pk-char-in">{c}</span>
-      </span>
-    ),
-  );
-}
-
-export function KineticLabel({ label, swap, open }: { label: string; swap: string; open: boolean }) {
-  const ref = useRef<HTMLSpanElement | null>(null);
-  const tlRef = useRef<gsap.core.Timeline | null>(null);
-  const reduced = useRef(prefersReduced()).current;
-
-  useEffect(() => {
-    if (reduced) return;
-    const el = ref.current;
-    if (!el) return;
-    const ctx = gsap.context(() => {
-      tlRef.current = gsap
-        .timeline({ paused: true })
-        /* default label rolls up and out, per char, with a slight rotation */
-        .to(
-          '.pk-layer--out .pk-char-in',
-          {
-            yPercent: -120,
-            rotation: 7,
-            opacity: 0,
-            duration: 0.32,
-            ease: 'power3.in',
-            stagger: 0.02,
-          },
-          0,
-        )
-        /* swap label rolls in from below with a tilt, then snaps flat */
-        .fromTo(
-          '.pk-layer--in .pk-char-in',
-          { yPercent: 120, rotation: -11, opacity: 0 },
-          {
-            yPercent: 0,
-            rotation: 0,
-            opacity: 1,
-            duration: 0.52,
-            ease: 'power4.out',
-            stagger: 0.026,
-          },
-          0.05,
-        );
-    }, el);
-    return () => ctx.revert();
-  }, [reduced]);
-
-  useEffect(() => {
-    if (reduced) return;
-    const tl = tlRef.current;
-    if (!tl) return;
-    if (open) tl.play();
-    else tl.reverse();
-  }, [open, reduced]);
-
-  return (
-    <span className="pk-stack" ref={ref}>
-      <span className="pk-layer pk-layer--out">{splitChars(label)}</span>
-      <span className="pk-layer pk-layer--in" aria-hidden="true">
-        {splitChars(swap)}
-      </span>
-    </span>
-  );
-}
 
 /* ---------------------------------------------------------------------------
    PortalMagnetic — GSAP spring container. Within a 60px threshold of the
@@ -482,71 +408,9 @@ export function LiquidButton({ href }: { href: string }) {
 }
 
 /* ---------------------------------------------------------------------------
-   GhostArrow — custom SVG chevron. On hover it elongates while a second
-   stroke draws in behind it: the single chevron "splits" into a dynamic
-   double arrow. GSAP reverses the timeline on leave.
+   GhostArrow — MOVED to components/motion/GhostArrow.tsx (system primitive).
+   Imported above; hero usage below is unchanged.
 --------------------------------------------------------------------------- */
-
-export function GhostArrow({ open }: { open: boolean }) {
-  const ref = useRef<HTMLSpanElement | null>(null);
-  const tlRef = useRef<gsap.core.Timeline | null>(null);
-
-  useEffect(() => {
-    if (prefersReduced()) return;
-    const el = ref.current;
-    if (!el) return;
-    const ctx = gsap.context(() => {
-      tlRef.current = gsap
-        .timeline({ paused: true })
-        .to(
-          '.pk-chev',
-          { attr: { d: 'M1.5 3.5 L11.5 10 L1.5 16.5' }, duration: 0.4, ease: 'power3.inOut' },
-          0,
-        )
-        .to(
-          '.pk-chev-duo',
-          { strokeDashoffset: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
-          0.14,
-        )
-        .to(el, { x: 4, duration: 0.45, ease: 'power3.out' }, 0);
-    }, el);
-    return () => ctx.revert();
-  }, []);
-
-  useEffect(() => {
-    if (prefersReduced()) return;
-    const tl = tlRef.current;
-    if (!tl) return;
-    if (open) tl.play();
-    else tl.reverse();
-  }, [open]);
-
-  return (
-    <span className="pk-chev-slot" ref={ref} aria-hidden="true">
-      <svg className="pk-chevron" viewBox="0 0 20 20" width="13" height="13" fill="none">
-        <path
-          className="pk-chev"
-          d="M2.5 4.5 L10.5 10 L2.5 15.5"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          className="pk-chev-duo"
-          d="M12 4.5 L19 10 L12 15.5"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeDasharray="18"
-          strokeDashoffset="18"
-          opacity="0"
-        />
-      </svg>
-    </span>
-  );
-}
 
 /* ---------------------------------------------------------------------------
    GlassButton — the secondary CTA. Refractive glassmorphism with an animated

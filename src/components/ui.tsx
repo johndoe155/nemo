@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCountdown } from '../lib/hooks';
+import { KineticButton, MagneticButton, RollText } from './motion';
 import type { Rarity } from '../lib/data';
 import { RARITY } from '../lib/data';
 
@@ -186,21 +187,27 @@ export function WalletButton({
 }) {
   if (connected) {
     return (
-      <button
+      <MagneticButton
         className={`btn btn-ghost ${compact ? 'nav__cta' : ''}`}
+        preset={compact ? 'chrome' : 'pill'}
         onClick={onConnect}
         title="Demo state — disconnects this mock session"
+        data-cursor="UNLINK"
       >
         <span className="pulse-dot" style={{ width: 7, height: 7 }} />
-        {MOCK_ADDRESS}
-      </button>
+        <span className="btn__txt">{MOCK_ADDRESS}</span>
+      </MagneticButton>
     );
   }
   return (
-    <button className={`btn btn-primary ${compact ? 'nav__cta' : ''}`} onClick={onConnect}>
-      <span className="btn-spark" />
-      {label}
-    </button>
+    <KineticButton
+      className={`btn btn-primary ${compact ? 'nav__cta' : ''}`}
+      preset={compact ? 'chrome' : 'pill'}
+      onClick={onConnect}
+      label={label}
+      swap="LINK THE VAULT"
+      cursor="LINK"
+    />
   );
 }
 
@@ -418,7 +425,9 @@ export function SortDropdown({
         onClick={() => setOpen((v) => !v)}
         onKeyDown={onTriggerKey}
       >
-        <span>{selected.label}</span>
+        <span>
+          <RollText text={selected.label} />
+        </span>
         <svg className="sort-dd__chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true">
           <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6" fill="none" />
         </svg>
@@ -439,6 +448,7 @@ export function SortDropdown({
             tabIndex={open && i === active ? 0 : -1}
             aria-selected={opt.value === value}
             className={`sort-dd__opt ${opt.value === value ? 'is-selected' : ''} ${i === active ? 'is-active' : ''}`}
+            style={{ ['--i' as string]: i }}
             onClick={() => choose(opt.value)}
             onMouseEnter={() => setActive(i)}
           >

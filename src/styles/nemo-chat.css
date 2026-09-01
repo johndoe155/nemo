@@ -532,7 +532,7 @@
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   transition:
     color 0.35s var(--ease-expo),
-    background 0.35s var(--ease-expo),
+    background-color 0.35s var(--ease-expo),
     box-shadow 0.45s var(--ease-expo);
   will-change: transform;
 }
@@ -558,10 +558,8 @@
   background: rgba(255, 255, 255, 0.085);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
-.npill:focus-visible {
-  outline: 1px solid rgba(63, 232, 255, 0.7);
-  outline-offset: 3px;
-}
+/* focus outline: unified 2px cyan ring from motion.css (the 1px local
+   override was retired in the AAA sweep) */
 .npill:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -643,7 +641,7 @@
     inset 0 0 0 1px rgba(255, 255, 255, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.24);
   transition:
-    background 0.4s var(--ease-expo),
+    background-color 0.4s var(--ease-expo),
     box-shadow 0.5s var(--ease-expo),
     color 0.3s var(--ease-expo),
     opacity 0.3s linear;
@@ -674,10 +672,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.32),
     0 0 38px -8px rgba(138, 77, 255, 0.6);
 }
-.nchat__send:focus-visible {
-  outline: 1px solid rgba(63, 232, 255, 0.75);
-  outline-offset: 3px;
-}
+/* focus outline: unified 2px cyan ring from motion.css */
 .nchat__send:active {
   background: rgba(255, 255, 255, 0.18);
 }

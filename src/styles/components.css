@@ -90,23 +90,45 @@
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   position: relative;
+  transition: border-color 0.35s var(--ease-expo), background-color 0.35s var(--ease-expo);
 }
+.nav__burger:hover {
+  border-color: rgba(63, 232, 255, 0.55);
+  background: rgba(63, 232, 255, 0.06);
+}
+/* The morph is now transform-only — all three bars are emitted at the
+   vertical centre and offset with translateY (the old build animated `top`,
+   a layout property, through `transition: all`). */
 .nav__burger span {
   position: absolute;
   left: 12px;
   right: 12px;
+  top: 22px;
   height: 1.5px;
   background: var(--ink);
-  transition: all 0.35s var(--ease-expo);
+  transform-origin: center;
+  transition: transform 0.4s var(--ease-expo), opacity 0.25s var(--ease-expo),
+    background-color 0.35s var(--ease-expo);
 }
-.nav__burger span:nth-child(1) { top: 16px; }
-.nav__burger span:nth-child(2) { top: 22px; }
-.nav__burger span:nth-child(3) { top: 28px; }
-.nav__burger[aria-expanded='true'] span:nth-child(1) { top: 22px; transform: rotate(45deg); }
+.nav__burger span:nth-child(1) { transform: translateY(-6px); }
+.nav__burger span:nth-child(2) { transform: translateY(0); }
+.nav__burger span:nth-child(3) { transform: translateY(6px); }
+.nav__burger:hover span { background: var(--cyan); }
+/* closed → middle bar tightens before the X snaps open */
+.nav__burger:hover span:nth-child(2),
+.nav__burger[aria-expanded='true']:hover span:nth-child(2) { transform: translateY(0) scaleX(0.7); }
+.nav__burger[aria-expanded='true'] span:nth-child(1) { transform: translateY(0) rotate(45deg); }
 .nav__burger[aria-expanded='true'] span:nth-child(2) { opacity: 0; }
-.nav__burger[aria-expanded='true'] span:nth-child(3) { top: 22px; transform: rotate(-45deg); }
+.nav__burger[aria-expanded='true'] span:nth-child(3) { transform: translateY(0) rotate(-45deg); }
 
+/* Magnetic wrapper around the burger: zero-size on desktop (the burger
+   inside is display:none), picks up the auto-margin at mobile so the button
+   parks flush right. Visibility never lives on the wrapper itself — its
+   inline transform styles would override a display:none class rule. */
 @media (max-width: 1080px) {
+  .nav__burger-mag {
+    margin-left: auto;
+  }
   .nav__links {
     display: none;
   }
@@ -416,15 +438,34 @@
   margin-bottom: 1.1rem;
 }
 .footer__col a {
+  position: relative;
   display: block;
+  width: fit-content;
   color: var(--ink-dim);
   font-size: 0.95rem;
   padding: 0.28rem 0;
-  transition: color 0.3s var(--ease-expo), transform 0.3s var(--ease-expo);
+  /* the label itself carries the motion now (RollText char cascade);
+     the underline draws instead of the translateX nudge */
+  transition: color 0.3s var(--ease-expo);
+}
+.footer__col a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, var(--cyan), transparent 80%);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.45s var(--ease-expo);
 }
 .footer__col a:hover {
   color: var(--ink);
-  transform: translateX(4px);
+}
+.footer__col a:hover::after,
+.footer__col a:focus-visible::after {
+  transform: scaleX(1);
 }
 .footer__bottom {
   border-top: 1px solid var(--line);
@@ -571,11 +612,16 @@
   border: 1px solid transparent;
   padding: 12px;
   overflow: hidden;
-  transition: transform 0.5s var(--ease-expo), box-shadow 0.5s var(--ease-expo);
+  /* The hover lift/tilt is owned by useTilt (framer springs) on the element;
+     the glow uses `filter: drop-shadow`, which is compositor-friendly —
+     unlike the old transitioned `box-shadow`, which repainted a 380px card
+     every frame of the hover. */
+  transition: filter 0.5s var(--ease-expo);
 }
 .ucard:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 30px 70px -24px color-mix(in srgb, var(--card-accent, #8a4dff) 55%, transparent);
+  filter: drop-shadow(
+    0 30px 45px color-mix(in srgb, var(--card-accent, #8a4dff) 45%, transparent)
+  );
 }
 .ucard__media {
   position: relative;
@@ -810,8 +856,8 @@
   top: 16px;
   right: 16px;
   z-index: 5;
-  width: 42px;
-  height: 42px;
+  width: 48px; /* was 42 — AAA target floor */
+  height: 48px;
   border-radius: 12px;
   border: 1px solid var(--line-strong);
   background: rgba(5, 5, 10, 0.6);
@@ -820,12 +866,30 @@
   font-size: 1.05rem;
   display: grid;
   place-items: center;
-  transition: all 0.3s var(--ease-expo);
+  /* was `transition: all` */
+  transition: transform 0.35s var(--ease-expo), border-color 0.3s var(--ease-expo),
+    color 0.3s var(--ease-expo);
+}
+/* counter-rotating orbital ring — the close signature */
+.dialog__close::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid transparent;
+  border-top-color: var(--magenta);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease-expo), transform 0.55s var(--ease-expo);
 }
 .dialog__close:hover {
   border-color: var(--magenta);
   color: var(--magenta);
   transform: rotate(90deg);
+}
+.dialog__close:hover::before {
+  opacity: 1;
+  transform: rotate(-180deg);
 }
 .dialog__grid {
   display: grid;
