@@ -67,16 +67,20 @@ export default function Nav() {
           </div>
 
           <Magnetic preset="chrome" className="nav__burger-mag">
-            <button
+            <motion.button
               className="nav__burger"
               aria-expanded={open}
               aria-label={open ? 'Close menu' : 'Open menu'}
               onClick={() => setOpen((v) => !v)}
+              /* gentle spring squash on press — serves touch too, where
+                 magnetism is disabled; hover brightness stays in CSS so
+                 framer's inline styles never fight the :hover rule */
+              whileTap={{ scale: 0.92, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
             >
               <span />
               <span />
               <span />
-            </button>
+            </motion.button>
           </Magnetic>
         </div>
       </nav>

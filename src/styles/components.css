@@ -84,29 +84,46 @@
   padding: 0.6rem 1.1rem;
   font-size: 0.66rem;
 }
+/* NAV BURGER — dark desaturated frosted glass: heavy blur (xl-equivalent)
+   over a near-neutral slate base, crisp 1px white/0.1 hairline, luxury
+   shadow-2xl lift with an inset edge light. Shape is intentionally
+   unchanged (44×44, 10px radius — the square chrome of the reference). */
 .nav__burger {
   display: none;
   margin-left: auto;
   width: 44px;
   height: 44px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   position: relative;
+  background: rgba(12, 14, 19, 0.46);
+  -webkit-backdrop-filter: blur(24px) saturate(0.9);
+  backdrop-filter: blur(24px) saturate(0.9);
+  box-shadow: 0 24px 48px -14px rgba(0, 0, 0, 0.55), 0 8px 18px -8px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition: border-color 0.35s var(--ease-expo), background-color 0.35s var(--ease-expo);
 }
+/* tap squash arrives via framer whileTap inline transform — no CSS :active */
 .nav__burger:hover {
-  border-color: rgba(63, 232, 255, 0.55);
-  background: rgba(63, 232, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.22);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+/* no-blur environments: keep the control legible without translucency */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .nav__burger {
+    background: rgba(12, 14, 19, 0.92);
+  }
 }
 /* The morph is now transform-only — all three bars are emitted at the
    vertical centre and offset with translateY (the old build animated `top`,
-   a layout property, through `transition: all`). */
+   a layout property, through `transition: all`). Bars are a hair thinner
+   than before (1.25px) for the frosted-tier elegance. */
 .nav__burger span {
   position: absolute;
   left: 12px;
   right: 12px;
   top: 22px;
-  height: 1.5px;
+  height: 1.25px;
   background: var(--ink);
   transform-origin: center;
   transition: transform 0.4s var(--ease-expo), opacity 0.25s var(--ease-expo),
