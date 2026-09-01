@@ -26,7 +26,7 @@
 
 .pk-stack {
   position: relative;
-  z-index: 1;
+  z-index: 2; /* above: aurora strata (0) + cursor bloom (1); below spark (3) */
   display: grid;
   justify-items: center;
   pointer-events: none;
@@ -81,7 +81,7 @@
 
 .rt {
   position: relative;
-  z-index: 1;
+  z-index: 2; /* above: aurora strata (0) + cursor bloom (1) */
   display: inline-flex;
   overflow: hidden;
 }
@@ -138,11 +138,16 @@
   isolation: isolate; /* keep bloom/spark layers inside the button's context */
   --bloom: rgba(255, 255, 255, 0.26);
 }
+/* Layer contract inside .btn (isolation: isolate):
+   0 = aurora strata (primary ::after, global.css)
+   1 = cursor bloom (::before, here)
+   2 = kinetic labels (.pk-stack / .rt / .btn__txt)
+   3 = spark sheen sweep (.btn-spark)                                    */
 .btn::before {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 1;
   border-radius: inherit;
   background: radial-gradient(
     170px circle at var(--mx, 50%) var(--my, 50%),
@@ -175,9 +180,9 @@
 .btn-gold:active::before {
   --bloom: rgba(255, 244, 214, 0.42);
 }
-/* existing sheen keeps painting above the bloom, below the label */
+/* existing sheen sweeps over the label, as in the hero's portal buttons */
 .btn .btn-spark {
-  z-index: 1;
+  z-index: 3;
 }
 /* plain-text labels sit above the bloom */
 .btn > .btn__txt {
@@ -185,9 +190,16 @@
   z-index: 2;
 }
 /* Hero stays pixel-identical — the portal buttons own their full feedback
-   stack (shader, breathe cycle, frosted sheen); no generic bloom there. */
+   stack (shader, breathe cycle, frosted sheen): no generic bloom, no aurora
+   strata, and no inherited primary drop-shadow at rest. */
 .hero__ctas .portal-btn::before {
   content: none;
+}
+.hero__ctas .portal-btn--liquid::after {
+  content: none;
+}
+.hero__ctas .portal-btn {
+  filter: none; /* pk-burst keyframes still win while the burst animation runs */
 }
 
 /* --------------------- unified focus ring (WCAG 2.1 AAA) ------------------- */

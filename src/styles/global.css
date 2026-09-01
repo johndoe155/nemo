@@ -349,15 +349,83 @@ section[id] {
   transform: scale(0.97);
 }
 
+/* ===== PRIMARY TIER — the living aurora material ==========================
+   The face everyone recognises from the reference frame (Connect Wallet /
+   Explore the Universes): an exact violet → cyan → pink strata drawn on a
+   200% canvas, background-position drifting 0% → 100% → 0% in a slow
+   10s ease-in-out loop. The strata lives on an inset:0 ::after — inside the
+   pill's own overflow clip — so the spark sweep, cursor bloom, magnetic
+   springs, press squash and kinetic labels are all untouched.
+
+   Performance: the loop repaints a single ~220×56px gradient per frame per
+   visible primary CTA (GPU raster thread), zero layout invalidation; the
+   hover backplate uses filter: drop-shadow() — the only glow channel that
+   escapes overflow:hidden and stays on the compositor.
+
+   Reduced motion: the global kill-switch freezes the loop at each button's
+   staggered phase — the static aurora reads as a variant marker, not a bug.
+   ========================================================================== */
 .btn-primary {
-  background: var(--grad-primary);
+  background: var(--grad-primary); /* boot/fallback face beneath the strata */
   color: #07030f;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 12px 44px -10px rgba(120, 70, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 12px 44px -10px rgba(124, 58, 237, 0.55);
+  filter: drop-shadow(0 6px 18px rgba(124, 58, 237, 0.22));
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0; /* beneath bloom (::before, z1) and labels (z2/z3) */
+  border-radius: inherit;
+  background: linear-gradient(135deg, #7c3aed 0%, #22d3ee 50%, #ec4899 100%);
+  background-size: 200% 200%;
+  /* edge-light hairline carried on the strata (the aurora paints over the
+     button's own inset shadow, so the light line re-asserts itself here) */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  animation: btn-aurora-drift 10s ease-in-out infinite;
+  animation-delay: var(--aurora-phase, 0s);
+  pointer-events: none;
+}
+@keyframes btn-aurora-drift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+/* Negative phase stagger — sections never breathe in unison (a luxury tic). */
+.nav__cta.btn-primary::after {
+  --aurora-phase: -8.5s;
+}
+.footer .btn-primary::after {
+  --aurora-phase: -3.4s;
+}
+.dialog .btn-primary::after {
+  --aurora-phase: -6.8s;
+}
+.store .btn-primary::after {
+  --aurora-phase: -1.7s;
 }
 .btn-primary:hover {
-  filter: brightness(1.12) saturate(1.15);
   transform: translateY(-2px);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) inset, 0 18px 60px -12px rgba(63, 232, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) inset,
+    0 18px 60px -12px rgba(34, 211, 238, 0.5);
+  /* hover: ambient backplate intensifies across the cyan→pink spectrum */
+  filter: drop-shadow(0 10px 30px rgba(34, 211, 238, 0.4))
+    drop-shadow(0 4px 18px rgba(236, 72, 153, 0.42)) brightness(1.08) saturate(1.12);
+}
+/* hover subtly accelerates the drift loop */
+.btn-primary:hover::after {
+  animation-duration: 5s;
+}
+.btn-primary:focus-visible::after {
+  animation-duration: 5s;
+}
+.btn-primary:disabled::after {
+  animation-play-state: paused;
 }
 
 /* GHOST TIER — refractive glass: frosted fill + slowly orbiting conic rim.
