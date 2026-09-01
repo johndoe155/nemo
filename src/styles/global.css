@@ -644,23 +644,10 @@ section[id] {
 }
 .chip[aria-pressed='true'],
 .chip.active {
-  border-color: transparent; /* border-box rim paints the edge now */
+  border-color: var(--c, var(--cyan));
   color: var(--c, var(--cyan));
-  background:
-    linear-gradient(color-mix(in srgb, var(--c, var(--cyan)) 13%, transparent), color-mix(in srgb, var(--c, var(--cyan)) 13%, transparent))
-      padding-box,
-    conic-gradient(
-        from var(--rim) at 50% 50%,
-        rgba(255, 255, 255, 0.12) 0deg,
-        color-mix(in srgb, var(--c, var(--cyan)) 88%, transparent) 46deg,
-        color-mix(in srgb, var(--c, var(--cyan)) 20%, transparent) 100deg,
-        rgba(255, 255, 255, 0.08) 200deg,
-        color-mix(in srgb, var(--c, var(--cyan)) 62%, transparent) 246deg,
-        rgba(255, 255, 255, 0.12) 320deg
-      )
-      border-box;
+  background: color-mix(in srgb, var(--c, var(--cyan)) 13%, transparent);
   box-shadow: 0 0 22px -6px color-mix(in srgb, var(--c, var(--cyan)) 55%, transparent);
-  animation: btn-rim-orbit 12s linear infinite;
 }
 .chip .dot {
   width: 7px;
@@ -897,19 +884,8 @@ section[id] {
   gap: 0.85rem;
   min-width: 13.5rem;
   justify-content: space-between;
-  /* frosted fill pinned to the padding box, orbiting two-node rim on the border box */
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.035)) padding-box,
-    conic-gradient(
-        from var(--rim) at 50% 50%,
-        rgba(255, 255, 255, 0.16) 0%,
-        rgba(138, 77, 255, 0.55) 12%,
-        rgba(63, 232, 255, 0.45) 26%,
-        rgba(255, 255, 255, 0.08) 42%,
-        rgba(255, 255, 255, 0.16) 68%
-      )
-      border-box;
-  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--line-strong);
   border-radius: 10px;
   padding: 0.8rem 1rem;
   color: var(--ink);
@@ -918,14 +894,14 @@ section[id] {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: box-shadow 0.3s var(--ease-expo);
-  animation: btn-rim-orbit 18s linear infinite;
+  transition: border-color 0.3s var(--ease-expo), box-shadow 0.3s var(--ease-expo),
+    background-color 0.3s var(--ease-expo);
 }
 .sort-dd__trigger:hover,
 .sort-dd.is-open .sort-dd__trigger {
-  /* no background shorthand here — it would clobber the layered rim */
+  border-color: rgba(138, 77, 255, 0.7);
+  background: rgba(138, 77, 255, 0.08);
   box-shadow: 0 0 22px -8px rgba(138, 77, 255, 0.55);
-  animation-duration: 6s;
 }
 .sort-dd__chev {
   color: var(--iris);
