@@ -247,6 +247,8 @@
   height: 1px;
   flex: none;
   background: linear-gradient(90deg, transparent, currentColor);
+  background-size: 260% 100%;
+  animation: gdrift 11s ease-in-out infinite;
 }
 
 /* ============================== RESPONSIVE =============================== */

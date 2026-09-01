@@ -216,12 +216,16 @@ html[data-scene='abyss'] {
 }
 .chroma::before {
   background-image: var(--grad-primary);
+  background-size: 240% 240%;
+  animation: gdrift 16s ease-in-out infinite;
   transform: translate(-2px, 0);
   z-index: -1;
   mix-blend-mode: screen;
 }
 .chroma::after {
   background-image: var(--grad-primary);
+  background-size: 240% 240%;
+  animation: gdrift 16s ease-in-out infinite;
   transform: translate(2px, 0);
   z-index: -1;
   mix-blend-mode: screen;
@@ -327,6 +331,8 @@ html[data-scene='abyss'] {
   left: 0.85rem; right: 0.85rem; bottom: 0.28rem;
   height: 1px;
   background: linear-gradient(90deg, var(--cyan), var(--magenta));
+  background-size: 260% 100%;
+  animation: gdrift 9s ease-in-out infinite;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.4s var(--ease-expo);

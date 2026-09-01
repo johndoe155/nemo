@@ -161,11 +161,14 @@ select {
 }
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #3d2a77, #1b3a4d);
+  background-size: 100% 300%;
+  animation: gdrift 14s ease-in-out infinite;
   border-radius: 99px;
   border: 2px solid var(--void);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #5a3bd6, #1f7a93);
+  background-size: 100% 300%;
 }
 
 section[id] {
@@ -200,6 +203,8 @@ section[id] {
   width: 2.4rem;
   height: 1px;
   background: linear-gradient(90deg, transparent, currentColor);
+  background-size: 260% 100%;
+  animation: gdrift 11s ease-in-out infinite;
   flex: none;
 }
 .kicker.gold {
@@ -226,12 +231,16 @@ section[id] {
 /* Gradient + outline ink treatments */
 .txt-grad {
   background: var(--grad-primary);
+  background-size: 240% 240%;
+  animation: gdrift 16s ease-in-out infinite; /* living ink — panel/slot chroma sync at 16s */
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 .txt-gold {
   background: var(--grad-gold);
+  background-size: 240% 240%;
+  animation: gdrift 18s ease-in-out infinite; /* rarer rhythm than the primary ink */
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -259,6 +268,8 @@ section[id] {
       padding-box,
     linear-gradient(165deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.05) 45%, rgba(138, 77, 255, 0.3))
       border-box;
+  background-size: 100% 100%, 260% 260%;
+  animation: gdrift 20s ease-in-out infinite;
   border: 1px solid transparent;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -430,9 +441,9 @@ section[id] {
 
 /* GHOST TIER — refractive glass: frosted fill + slowly orbiting conic rim.
    The rim rotates via the registered --rim custom property (paint confined
-   to a 1px border ring) and only animates while engaged; beneath it, the
-   cursor-anchored bloom (motion.css) and the morphing GhostArrow carry the
-   interaction. */
+   to a 1px border ring) and never sleeps: a 14s patrol at rest, tightening
+   to a 5s sprint while engaged; beneath it, the cursor-anchored bloom
+   (motion.css) and the morphing GhostArrow carry the interaction. */
 @property --rim {
   syntax: '<angle>';
   inherits: false;
@@ -455,12 +466,16 @@ section[id] {
   backdrop-filter: blur(10px) saturate(1.4);
   -webkit-backdrop-filter: blur(10px) saturate(1.4);
 }
+.btn-ghost {
+  /* the rim patrols at rest — engagement only changes cadence */
+  animation: btn-rim-orbit 14s linear infinite;
+}
 .btn-ghost:hover,
 .btn-ghost:focus-visible {
   color: var(--cyan);
   box-shadow: 0 10px 34px -14px rgba(63, 232, 255, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transform: translateY(-2px);
-  animation: btn-rim-orbit 6s linear infinite;
+  animation-duration: 5s;
 }
 @keyframes btn-rim-orbit {
   to {
@@ -468,17 +483,54 @@ section[id] {
   }
 }
 
-/* GOLD TIER — the reserved "fire" tier: ambient ember halo breathing BEHIND
-   the button at rest, glint sweep via .btn-spark, warm cursor bloom
-   (motion.css). The halo lives on the magnetic wrapper — .btn is
-   overflow:hidden (the spark sweep needs it), which would clip a pseudo
-   halo on the button itself. Opacity/scale keyframes only: composited,
-   zero paint per frame. */
+/* GOLD TIER — the living molten strata. Same engine as the primary aurora,
+   luxury palette: luminous yellow-gold #FDE047 → rich amber #FACC15 →
+   #EAB308 → deep liquid bronze #D97706, dark-void ink (#080B11) for max
+   contrast (≈12:1 against amber — AAA). 11s drift (never in step with the
+   10s primary), hover accelerates + fires the amber/bronze backplate, and
+   the wrapper's ambient halo runs a hotter breath cycle while engaged. */
 .btn-gold {
-  background: var(--grad-gold);
-  color: #1c1000;
+  background: var(--grad-gold); /* boot/fallback face beneath the strata */
+  color: #080b11;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) inset, 0 12px 44px -10px rgba(255, 200, 87, 0.45);
+  filter: drop-shadow(0 6px 18px rgba(217, 119, 6, 0.22));
 }
+.btn-gold::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #fde047 0%, #facc15 35%, #eab308 62%, #d97706 100%);
+  background-size: 200% 200%;
+  box-shadow: inset 0 0 0 1px rgba(60, 38, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  animation: btn-aurora-drift 11s ease-in-out infinite;
+  animation-delay: var(--aurora-phase, 0s);
+  pointer-events: none;
+}
+/* gold phase stagger — each luxury CTA breathes on its own clock */
+.dialog .btn-gold::after {
+  --aurora-phase: -4.9s;
+}
+.ucard .btn-gold::after {
+  --aurora-phase: -2.2s;
+}
+.btn-gold:hover {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 10px 30px rgba(250, 204, 21, 0.42))
+    drop-shadow(0 4px 18px rgba(217, 119, 6, 0.45)) brightness(1.08);
+}
+.btn-gold:hover::after,
+.btn-gold:focus-visible::after {
+  animation-duration: 5.5s;
+}
+.btn-gold:disabled::after {
+  animation-play-state: paused;
+}
+.btn-gold:disabled {
+  filter: grayscale(0.5);
+}
+/* ambient gold backplate on the magnetic wrapper — breathes hotter on hover */
 .kcta:has(.btn-gold) {
   position: relative;
 }
@@ -488,10 +540,14 @@ section[id] {
   inset: -7px;
   z-index: -1; /* inside the wrapper's stacking context, behind the button */
   border-radius: 16px;
-  background: radial-gradient(62% 90% at 50% 50%, rgba(255, 200, 87, 0.4), transparent 70%);
+  background: radial-gradient(62% 90% at 50% 50%, rgba(250, 204, 21, 0.38), transparent 70%);
   opacity: 0.4;
   animation: btn-gold-breathe 3.2s ease-in-out infinite;
   pointer-events: none;
+}
+.kcta:has(.btn-gold:hover)::after,
+.kcta:has(.btn-gold:focus-visible)::after {
+  animation: btn-gold-breathe-hot 2.4s ease-in-out infinite;
 }
 @keyframes btn-gold-breathe {
   0%,
@@ -504,9 +560,16 @@ section[id] {
     transform: scale(1.02);
   }
 }
-.btn-gold:hover {
-  filter: brightness(1.1);
-  transform: translateY(-2px);
+@keyframes btn-gold-breathe-hot {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.07);
+  }
 }
 .kcta:has(.btn-gold:disabled)::after {
   animation: none;
@@ -581,10 +644,23 @@ section[id] {
 }
 .chip[aria-pressed='true'],
 .chip.active {
-  border-color: var(--c, var(--cyan));
+  border-color: transparent; /* border-box rim paints the edge now */
   color: var(--c, var(--cyan));
-  background: color-mix(in srgb, var(--c, var(--cyan)) 13%, transparent);
+  background:
+    linear-gradient(color-mix(in srgb, var(--c, var(--cyan)) 13%, transparent), color-mix(in srgb, var(--c, var(--cyan)) 13%, transparent))
+      padding-box,
+    conic-gradient(
+        from var(--rim) at 50% 50%,
+        rgba(255, 255, 255, 0.12) 0deg,
+        color-mix(in srgb, var(--c, var(--cyan)) 88%, transparent) 46deg,
+        color-mix(in srgb, var(--c, var(--cyan)) 20%, transparent) 100deg,
+        rgba(255, 255, 255, 0.08) 200deg,
+        color-mix(in srgb, var(--c, var(--cyan)) 62%, transparent) 246deg,
+        rgba(255, 255, 255, 0.12) 320deg
+      )
+      border-box;
   box-shadow: 0 0 22px -6px color-mix(in srgb, var(--c, var(--cyan)) 55%, transparent);
+  animation: btn-rim-orbit 12s linear infinite;
 }
 .chip .dot {
   width: 7px;
@@ -681,6 +757,8 @@ section[id] {
   height: 100%;
   border-radius: 99px;
   background: var(--grad-primary);
+  background-size: 240% 240%;
+  animation: gdrift 13s ease-in-out infinite;
   box-shadow: 0 0 14px rgba(63, 232, 255, 0.6);
   /* fills are driven with scaleX from JS — transform-only, zero relayout */
   transform: scaleX(var(--p, 1));
@@ -819,8 +897,19 @@ section[id] {
   gap: 0.85rem;
   min-width: 13.5rem;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid var(--line-strong);
+  /* frosted fill pinned to the padding box, orbiting two-node rim on the border box */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.035)) padding-box,
+    conic-gradient(
+        from var(--rim) at 50% 50%,
+        rgba(255, 255, 255, 0.16) 0%,
+        rgba(138, 77, 255, 0.55) 12%,
+        rgba(63, 232, 255, 0.45) 26%,
+        rgba(255, 255, 255, 0.08) 42%,
+        rgba(255, 255, 255, 0.16) 68%
+      )
+      border-box;
+  border: 1px solid transparent;
   border-radius: 10px;
   padding: 0.8rem 1rem;
   color: var(--ink);
@@ -829,14 +918,14 @@ section[id] {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: border-color 0.3s var(--ease-expo), box-shadow 0.3s var(--ease-expo),
-    background-color 0.3s var(--ease-expo);
+  transition: box-shadow 0.3s var(--ease-expo);
+  animation: btn-rim-orbit 18s linear infinite;
 }
 .sort-dd__trigger:hover,
 .sort-dd.is-open .sort-dd__trigger {
-  border-color: rgba(138, 77, 255, 0.7);
-  background: rgba(138, 77, 255, 0.08);
+  /* no background shorthand here — it would clobber the layered rim */
   box-shadow: 0 0 22px -8px rgba(138, 77, 255, 0.55);
+  animation-duration: 6s;
 }
 .sort-dd__chev {
   color: var(--iris);
@@ -859,12 +948,14 @@ section[id] {
     linear-gradient(170deg, rgba(18, 16, 32, 0.96), rgba(8, 8, 16, 0.98)) padding-box,
     linear-gradient(170deg, rgba(138, 77, 255, 0.55), rgba(63, 232, 255, 0.18) 55%, rgba(255, 61, 154, 0.35))
       border-box;
+  background-size: 100% 100%, 260% 260%;
   border: 1px solid transparent;
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.85), 0 0 40px -18px rgba(138, 77, 255, 0.45);
   transform-origin: top right;
-  animation: sortDdIn 0.28s var(--ease-expo) both;
+  /* entry pop resolves and yields; the rim keeps drifting while the menu lives */
+  animation: sortDdIn 0.28s var(--ease-expo) both, gdrift 14s ease-in-out infinite;
 }
 @keyframes sortDdIn {
   from {

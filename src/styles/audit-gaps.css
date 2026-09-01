@@ -64,6 +64,8 @@
    (and reads as ambient card lighting for transparent art). */
 .ucard__media img {
   background: radial-gradient(80% 70% at 50% 40%, rgba(255, 255, 255, 0.05), transparent 72%);
+  background-size: 220% 220%;
+  animation: gdrift 18s ease-in-out infinite;
 }
 
 /* -------- P2.4 · Scroll-velocity "hyperdrive" numerals ----

@@ -230,3 +230,24 @@
     display: none;
   }
 }
+
+/* ================= GLOBAL GRADIENT DRIFT ENGINE ============================
+   One shared slow pan for every converted gradient surface in the system:
+   diagonal 0% 0% → 100% 100% → back, always oversized via background-size on
+   the consumer, always ~8–28s, always ease-in-out. Pure background-position
+   — no layout, no reflow; the raster area is bounded to the small chrome
+   surfaces it's applied to. The global prefers-reduced-motion kill-switch
+   freezes every consumer at its current phase.
+
+   Consumers set `--gdur` to pick their rhythm (buttons 10–11s, text 12–18s,
+   furniture 20–28s) — neighbouring surfaces never share a phase signature.
+   ========================================================================== */
+@keyframes gdrift {
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+}

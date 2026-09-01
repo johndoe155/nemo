@@ -46,6 +46,8 @@
 }
 .nav__brand b {
   background: var(--grad-primary);
+  background-size: 240% 240%;
+  animation: gdrift 12s ease-in-out infinite;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -456,6 +458,8 @@
   width: 100%;
   height: 1px;
   background: linear-gradient(90deg, var(--cyan), transparent 80%);
+  background-size: 260% 100%;
+  animation: gdrift 9s ease-in-out infinite;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.45s var(--ease-expo);
@@ -609,6 +613,8 @@
     linear-gradient(170deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015) 60%) padding-box,
     linear-gradient(170deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.06) 40%, var(--card-accent, rgba(138, 77, 255, 0.5)))
       border-box;
+  background-size: 100% 100%, 260% 260%;
+  animation: gdrift 18s ease-in-out infinite;
   border: 1px solid transparent;
   padding: 12px;
   overflow: hidden;
@@ -769,6 +775,8 @@
   font-weight: 700;
   color: #0a0a14;
   background: linear-gradient(135deg, var(--a1, #fff), var(--a2, #888));
+  background-size: 240% 240%;
+  animation: gdrift 13s ease-in-out infinite;
 }
 .ucard__artist span {
   font-family: var(--font-mono);
@@ -787,6 +795,8 @@
   background:
     radial-gradient(60% 50% at 50% 40%, rgba(138, 77, 255, 0.16), transparent 70%),
     var(--abyss);
+  background-size: 180% 180%, 100% 100%;
+  animation: gdrift 16s ease-in-out infinite;
   display: grid;
   place-items: center;
 }
@@ -848,6 +858,8 @@
     linear-gradient(170deg, rgba(20, 20, 34, 0.96), rgba(8, 8, 16, 0.98)) padding-box,
     linear-gradient(170deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.07) 45%, var(--card-accent, rgba(138, 77, 255, 0.6)))
       border-box;
+  background-size: 100% 100%, 260% 260%;
+  animation: gdrift 16s ease-in-out infinite;
   border: 1px solid transparent;
   box-shadow: 0 60px 140px -40px rgba(0, 0, 0, 0.9), 0 0 120px -50px var(--card-accent, #8a4dff);
 }
@@ -1006,6 +1018,8 @@
   font-weight: 700;
   color: #0a0a14;
   background: linear-gradient(135deg, var(--a1, #fff), var(--a2, #888));
+  background-size: 240% 240%;
+  animation: gdrift 11s ease-in-out infinite;
 }
 .dialog__artist .who b {
   display: block;
@@ -1357,6 +1371,8 @@
   font-size: 0.95rem;
   color: #0a0a14;
   background: linear-gradient(135deg, var(--a1, #fff), var(--a2, #888));
+  background-size: 240% 240%;
+  animation: gdrift 15s ease-in-out infinite;
   box-shadow: 0 8px 26px -8px color-mix(in srgb, var(--a2, #888) 80%, transparent);
 }
 .artistcard__body b {
