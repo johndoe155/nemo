@@ -126,7 +126,12 @@ export default function HangingCard({
   return (
     <motion.div
       className={`hang ${className}`.trim()}
-      style={{ ['--cord' as string]: `${drop}px`, ...style }}
+      style={{
+        ['--cord' as string]: `${drop}px`,
+        /* Idle-sway period: long cords loll, short cords tick. */
+        ['--sway' as string]: `${6.4 + seed * 1.15}s`,
+        ...style,
+      }}
       /* Rail reflow (filter/sort) rides the LAYOUT spring, matching the card
          it carries; presence owns the fade so the cord leaves with it. */
       layout={!reduce}

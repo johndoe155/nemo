@@ -134,6 +134,21 @@
   position: relative;
   padding-top: var(--cord, 34px);
   will-change: transform;
+  /* Idle life: a hair of residual sway so a resting rig never looks welded.
+     Authored on the independent `rotate` property, which COMPOSES with the
+     framer-driven `transform` on this same element (motion.css rule) — and is
+     frozen by the global prefers-reduced-motion kill-switch. */
+  animation: hangSway var(--sway, 8s) ease-in-out infinite;
+  animation-delay: calc(var(--sway, 8s) * -0.37);
+}
+@keyframes hangSway {
+  0%,
+  100% {
+    rotate: -0.34deg;
+  }
+  50% {
+    rotate: 0.34deg;
+  }
 }
 
 /* Sliding carriage: the bearing that rides the rod. */
@@ -153,13 +168,15 @@
     0 6px 14px -8px rgba(0, 0, 0, 0.9);
 }
 
-/* Cord: rod line → grommet centre (card top edge + 15px). */
+/* Cord: rod line → the ring it's tied to. Painted above the card so it reads
+   as one continuous line from the carriage down to the grommet. */
 .hang__cord {
   position: absolute;
   top: 0;
   left: 50%;
+  z-index: 6;
   width: 2px;
-  height: calc(var(--cord, 34px) + 15px);
+  height: calc(var(--cord, 34px) + 4px);
   translate: -50% 0;
   border-radius: var(--r-pill);
   background: linear-gradient(
