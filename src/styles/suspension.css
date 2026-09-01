@@ -1,0 +1,747 @@
+/* ============================================================================
+   SUSPENSION.CSS — the rod system
+   Loaded LAST so its scoped rules win where they overlap the base component
+   layer. Three rigs, one vocabulary; every value is a token pulled from
+   global.css (radius scale, --elev-*, --noise, --line, palette, easings).
+
+     · .hangrod / .hang     01 · THE ANCHOR FEATURE — roster cards hang from a
+                            horizontal rod on cords, punched through grommets.
+     · .credits / .creditcard
+                            06 · PERMANENT PUBLIC CREDITS — dual-segment quote
+                            plates skewered onto a masked vertical rod.
+     · .ctl                 CANON TIMELINE — alternating node cards on a
+                            scroll-linked rod that drills down through them.
+
+   Motion authority (styles/motion.css): framer-motion owns `transform` on any
+   element it animates — every static offset/rotation authored here therefore
+   uses the independent `translate` / `rotate` properties, and no rule below
+   sets `transform` on a framer-driven node.
+   ========================================================================== */
+
+/* ==========================================================================
+   01 · SUSPENSION ROD — the roster hangs
+   ========================================================================== */
+
+.roster {
+  /* Rod line measured from the top of the sticky frame. Everything else in
+     the rig (cord length, card scale) is sized so rod + cord + card clears a
+     100vh frame on a laptop without touching the counter chrome. */
+  --rod-y: clamp(44px, 6.5vh, 92px);
+  --rod-thick: 6px;
+}
+
+.roster__sticky {
+  /* Cards are no longer centred in the frame — they are suspended from the
+     top rod, so the rail starts at the rod line. */
+  justify-content: flex-start;
+}
+
+.roster__rail {
+  align-items: flex-start;
+  padding-top: var(--rod-y);
+  /* A touch more air between hangers: a swinging card needs room to pass its
+     neighbour without clipping it. */
+  gap: clamp(1.6rem, 3.4vw, 3rem);
+}
+
+/* The rig fits the frame: hung cards run slightly tighter than free ones so
+   rod + cord + card always clears a 100vh sticky frame (the height term is
+   what keeps short laptop viewports honest). */
+.roster__rail .ucard {
+  width: clamp(220px, min(21vw, 34vh), 320px);
+  /* Head-room for the punched grommet inside the card's own top edge. */
+  padding-top: 30px;
+}
+
+/* The old zig-zag rhythm is retired — rhythm now comes from cord length, and
+   a stylesheet `translate` on the card would fight the pendulum arm. */
+.roster__rail .hang .ucard:nth-child(odd),
+.roster__rail .hang .ucard:nth-child(even) {
+  translate: none;
+}
+
+/* ---- the rod itself ------------------------------------------------------ */
+
+.hangrod {
+  position: absolute;
+  top: var(--rod-y);
+  left: 0;
+  right: 0;
+  height: var(--rod-thick);
+  z-index: 4;
+  pointer-events: none;
+  translate: 0 -50%;
+}
+
+.hangrod__bar {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-pill);
+  /* Machined-metal read: specular top, core body, contact shadow underneath —
+     all neutral, tinted only by the section's iris→cyan spine. */
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.16) 26%,
+      rgba(255, 255, 255, 0.05) 52%,
+      rgba(0, 0, 0, 0.45) 100%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--iris) 40%, transparent) 10%,
+      color-mix(in srgb, var(--cyan) 34%, transparent) 50%,
+      color-mix(in srgb, var(--magenta) 34%, transparent) 90%,
+      transparent 100%
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 10px 26px -14px rgba(0, 0, 0, 0.9),
+    0 0 24px -6px color-mix(in srgb, var(--cyan) 40%, transparent);
+  /* Clean fade into the section walls at both ends. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+
+.hangrod__mount {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 26px;
+  translate: 0 -50%;
+  border-radius: var(--r-xs);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--elev-rest);
+}
+.hangrod__mount--l {
+  left: calc(var(--gutter) * 0.35);
+}
+.hangrod__mount--r {
+  right: calc(var(--gutter) * 0.35);
+}
+
+/* ---- the hanger ---------------------------------------------------------- */
+
+.hang {
+  position: relative;
+  flex: none;
+  /* The wrapper's own top edge IS the rod line — the arm pivots from y = 0. */
+}
+
+.hang__arm {
+  position: relative;
+  padding-top: var(--cord, 34px);
+  will-change: transform;
+}
+
+/* Sliding carriage: the bearing that rides the rod. */
+.hang__carriage {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 5;
+  width: 22px;
+  height: 12px;
+  translate: -50% -50%;
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.1) 60%, rgba(0, 0, 0, 0.4));
+  border: 1px solid var(--line-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 6px 14px -8px rgba(0, 0, 0, 0.9);
+}
+
+/* Cord: rod line → grommet centre (card top edge + 15px). */
+.hang__cord {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: calc(var(--cord, 34px) + 15px);
+  translate: -50% 0;
+  border-radius: var(--r-pill);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.62),
+    rgba(255, 255, 255, 0.26) 45%,
+    color-mix(in srgb, var(--cyan) 55%, rgba(255, 255, 255, 0.3))
+  );
+  box-shadow: 0 0 10px -2px color-mix(in srgb, var(--cyan) 45%, transparent);
+}
+
+/* Punched hole through the card's top strip. */
+.hang__punch {
+  position: absolute;
+  top: calc(var(--cord, 34px) + 6px);
+  left: 50%;
+  z-index: 6;
+  width: 18px;
+  height: 18px;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #000 40%, rgba(0, 0, 0, 0.86));
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.14),
+    0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+/* Ring threaded through the punch. */
+.hang__ring {
+  position: absolute;
+  top: calc(var(--cord, 34px) + 2px);
+  left: 50%;
+  z-index: 7;
+  width: 26px;
+  height: 26px;
+  translate: -50% 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  background: transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 0 14px -4px color-mix(in srgb, var(--cyan) 65%, transparent);
+}
+
+/* Hover raises the light on the whole rig, not just the card. */
+.hang__arm:hover .hang__ring {
+  border-color: color-mix(in srgb, var(--cyan) 65%, rgba(255, 255, 255, 0.45));
+}
+
+@media (max-width: 860px) {
+  /* Mobile roster is a wrapping grid, not a rail — no rod to hang from. */
+  .roster__rail--wrap .ucard {
+    padding-top: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hang__arm {
+    rotate: none;
+  }
+}
+
+/* ==========================================================================
+   06 · PERMANENT PUBLIC CREDITS — the skewered quote plates
+   ========================================================================== */
+
+.credits {
+  position: relative;
+  margin-top: clamp(2.6rem, 5vw, 4.2rem);
+  padding-block: clamp(1.5rem, 4vw, 3rem);
+}
+
+/* Central rod — masked so it materialises at the top and phases out at the
+   bottom instead of butting into the section edges. */
+.credits__rod {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 4px;
+  translate: -50% 0;
+  border-radius: var(--r-pill);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.55) 0%,
+      rgba(255, 255, 255, 0.42) 28%,
+      rgba(255, 255, 255, 0.12) 62%,
+      rgba(0, 0, 0, 0.5) 100%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--gold) 45%, transparent),
+      color-mix(in srgb, var(--iris) 40%, transparent) 50%,
+      color-mix(in srgb, var(--cyan) 40%, transparent)
+    );
+  box-shadow: 0 0 26px -8px color-mix(in srgb, var(--gold) 55%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 86%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 86%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.credits__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: clamp(2.2rem, 5vw, 4.4rem);
+  align-items: center;
+  margin-bottom: clamp(1.4rem, 3vw, 2.6rem);
+}
+.credits__row:last-child {
+  margin-bottom: 0;
+}
+.credits__row--left .credits__slot {
+  grid-column: 1;
+  justify-self: end;
+}
+.credits__row--right .credits__slot {
+  grid-column: 2;
+  justify-self: start;
+}
+.credits__slot {
+  width: 100%;
+  max-width: 34rem;
+}
+
+/* Node + arm: where the plate meets the rod. */
+.credits__node {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  width: 15px;
+  height: 15px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 2px solid var(--void);
+  background: var(--ac, var(--cyan));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ac, var(--cyan)) 60%, transparent),
+    0 0 18px -2px color-mix(in srgb, var(--ac, var(--cyan)) 75%, transparent);
+}
+.credits__arm {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  height: 1px;
+  translate: 0 -50%;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ac, var(--cyan)) 70%, transparent));
+  pointer-events: none;
+}
+.credits__row--left .credits__arm {
+  right: 50%;
+  width: calc(clamp(2.2rem, 5vw, 4.4rem) / 2);
+  background: linear-gradient(270deg, color-mix(in srgb, var(--ac, var(--cyan)) 70%, transparent), transparent);
+}
+.credits__row--right .credits__arm {
+  left: 50%;
+  width: calc(clamp(2.2rem, 5vw, 4.4rem) / 2);
+}
+
+/* ---- the dual-segment plate ---------------------------------------------- */
+
+.creditcard {
+  position: relative;
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  align-items: stretch;
+  min-height: 148px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  cursor: pointer;
+  will-change: transform;
+  /* Card material and elevation inherited from the design system. */
+  box-shadow: var(--elev-rest);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012) 55%) padding-box,
+    linear-gradient(
+        165deg,
+        rgba(255, 255, 255, 0.24),
+        rgba(255, 255, 255, 0.05) 45%,
+        color-mix(in srgb, var(--ac, var(--iris)) 45%, transparent)
+      )
+      border-box;
+  transition: border-color 0.45s var(--ease-expo);
+}
+/* Left-side plates mirror: the detail block always faces the rod. */
+.credits__row--left .creditcard {
+  grid-template-columns: 1fr 74px;
+}
+.credits__row--left .creditcard__seg {
+  order: 2;
+}
+.credits__row--left .creditcard__main {
+  order: 1;
+}
+
+/* Segment A — the narrow vertical detail block (contrasting fill). */
+.creditcard__seg {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.9rem 0.5rem;
+  background:
+    var(--noise) padding-box,
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ac, var(--iris)) 26%, var(--abyss)),
+      color-mix(in srgb, var(--ac, var(--iris)) 8%, var(--void))
+    );
+  background-size: 180px 180px, 100% 100%;
+  background-blend-mode: overlay, normal;
+  border-right: 1px solid var(--line);
+}
+.credits__row--left .creditcard__seg {
+  border-right: 0;
+  border-left: 1px solid var(--line);
+}
+.creditcard__ava {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--r-sm);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.78rem;
+  color: #0a0a14;
+  background: linear-gradient(135deg, var(--a1, #fff), var(--a2, #888));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 10px 24px -12px color-mix(in srgb, var(--a2, #888) 85%, transparent);
+}
+.creditcard__vert {
+  writing-mode: vertical-rl;
+  rotate: 180deg;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta-min);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ac, var(--cyan)) 78%, var(--ink));
+  white-space: nowrap;
+  overflow: hidden;
+  max-height: 8.5rem;
+  text-overflow: ellipsis;
+}
+.creditcard__idx {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta-min);
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+}
+
+/* Segment B — the quote itself. */
+.creditcard__main {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.4rem;
+  background: rgba(255, 255, 255, 0.022);
+}
+.creditcard__quote {
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--ink);
+  font-style: italic;
+}
+.creditcard__by {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.creditcard__by b {
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+}
+.creditcard__by span {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ac, var(--cyan));
+}
+.creditcard:hover {
+  border-color: color-mix(in srgb, var(--ac, var(--cyan)) 55%, transparent);
+}
+
+@media (max-width: 860px) {
+  .credits__rod {
+    left: 18px;
+  }
+  .credits__row,
+  .credits__row--left .credits__slot,
+  .credits__row--right .credits__slot {
+    display: block;
+    grid-column: auto;
+    justify-self: stretch;
+  }
+  .credits__slot {
+    max-width: none;
+    margin-left: 42px;
+  }
+  .credits__node {
+    left: 18px;
+  }
+  .credits__row--left .credits__arm,
+  .credits__row--right .credits__arm {
+    left: 18px;
+    right: auto;
+    width: 24px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--ac, var(--cyan)) 70%, transparent), transparent);
+  }
+  .creditcard,
+  .credits__row--left .creditcard {
+    grid-template-columns: 62px 1fr;
+  }
+  .credits__row--left .creditcard__seg {
+    order: 1;
+    border-left: 0;
+    border-right: 1px solid var(--line);
+  }
+  .credits__row--left .creditcard__main {
+    order: 2;
+  }
+}
+
+/* ==========================================================================
+   CANON TIMELINE — node cards on a drilling rod
+   ========================================================================== */
+
+.ctl {
+  position: relative;
+  margin-top: clamp(2rem, 4vw, 3.4rem);
+  padding-block: clamp(1rem, 3vw, 2.2rem);
+}
+
+/* Rod housing (the drilled shaft) + fill (the rod itself, scroll-linked). */
+.ctl__rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  translate: -50% 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 6%, #000 94%, transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+.ctl__fill {
+  position: absolute;
+  top: 0;
+  left: -1px;
+  width: 4px;
+  height: 100%;
+  transform-origin: 50% 0%;
+  border-radius: var(--r-pill);
+  background: linear-gradient(
+    180deg,
+    var(--gold),
+    var(--iris) 45%,
+    var(--cyan) 78%,
+    var(--magenta)
+  );
+  box-shadow: 0 0 18px -4px color-mix(in srgb, var(--cyan) 70%, transparent);
+}
+/* Drill head — sits at the growing tip of the rod. */
+.ctl__head {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--cyan) 30%, transparent),
+    0 0 24px 2px color-mix(in srgb, var(--cyan) 70%, transparent);
+  z-index: 2;
+}
+
+.ctl__row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: clamp(2.2rem, 5vw, 4.4rem);
+  align-items: center;
+  margin-bottom: clamp(1.2rem, 2.6vw, 2rem);
+}
+.ctl__row:last-child {
+  margin-bottom: 0;
+}
+.ctl__row--left .ctl__slot {
+  grid-column: 1;
+  justify-self: end;
+  text-align: right;
+}
+.ctl__row--right .ctl__slot {
+  grid-column: 2;
+  justify-self: start;
+}
+.ctl__slot {
+  width: 100%;
+  max-width: 30rem;
+}
+
+/* Node on the axis — dark until the rod's head passes through it. */
+.ctl__node {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  width: 16px;
+  height: 16px;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--abyss);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: background 0.45s var(--ease-expo), box-shadow 0.45s var(--ease-expo),
+    border-color 0.45s var(--ease-expo), scale 0.45s var(--ease-expo);
+}
+.ctl__node::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: var(--void);
+  transition: background 0.45s var(--ease-expo);
+}
+.ctl__row.is-pierced .ctl__node {
+  border-color: color-mix(in srgb, var(--tc, var(--cyan)) 70%, transparent);
+  background: color-mix(in srgb, var(--tc, var(--cyan)) 28%, var(--abyss));
+  box-shadow: 0 0 20px -2px color-mix(in srgb, var(--tc, var(--cyan)) 80%, transparent);
+  scale: 1.12;
+}
+.ctl__row.is-pierced .ctl__node::after {
+  background: var(--tc, var(--cyan));
+}
+
+/* Connector arm from card edge to node. */
+.ctl__arm {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  height: 1px;
+  width: calc(clamp(2.2rem, 5vw, 4.4rem) / 2);
+  translate: 0 -50%;
+  opacity: 0.35;
+  transition: opacity 0.5s var(--ease-expo);
+  pointer-events: none;
+}
+.ctl__row.is-pierced .ctl__arm {
+  opacity: 1;
+}
+.ctl__row--left .ctl__arm {
+  right: 50%;
+  background: linear-gradient(270deg, color-mix(in srgb, var(--tc, var(--cyan)) 75%, transparent), transparent);
+}
+.ctl__row--right .ctl__arm {
+  left: 50%;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tc, var(--cyan)) 75%, transparent), transparent);
+}
+
+/* ---- timeline card ------------------------------------------------------- */
+
+.ctlcard {
+  position: relative;
+  padding: 1.15rem 1.35rem 1.25rem;
+  border-radius: var(--r-lg);
+  border: 1px solid transparent;
+  box-shadow: var(--elev-rest);
+  background:
+    var(--noise) padding-box,
+    linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012) 55%) padding-box,
+    linear-gradient(
+        165deg,
+        rgba(255, 255, 255, 0.22),
+        rgba(255, 255, 255, 0.05) 45%,
+        color-mix(in srgb, var(--tc, var(--cyan)) 42%, transparent)
+      )
+      border-box;
+  background-size: 180px 180px, 100% 100%, 100% 100%;
+  background-blend-mode: overlay, normal, normal;
+  transition: border-color 0.45s var(--ease-expo);
+}
+.ctlcard:hover {
+  border-color: color-mix(in srgb, var(--tc, var(--cyan)) 55%, transparent);
+}
+/* Accent edge on the side that faces the rod. */
+.ctlcard::after {
+  content: '';
+  position: absolute;
+  top: 22%;
+  bottom: 22%;
+  width: 2px;
+  border-radius: var(--r-pill);
+  background: var(--tc, var(--cyan));
+  opacity: 0.5;
+  box-shadow: 0 0 12px -2px var(--tc, var(--cyan));
+  transition: opacity 0.45s var(--ease-expo), top 0.45s var(--ease-expo), bottom 0.45s var(--ease-expo);
+}
+.ctl__row--left .ctlcard::after {
+  right: 0;
+}
+.ctl__row--right .ctlcard::after {
+  left: 0;
+}
+.ctl__row.is-pierced .ctlcard::after {
+  opacity: 1;
+  top: 12%;
+  bottom: 12%;
+}
+.ctlcard time {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.24em;
+  color: var(--tc, var(--cyan));
+  text-transform: uppercase;
+}
+.ctlcard b {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.98rem;
+  margin: 0.3rem 0 0.35rem;
+}
+.ctlcard p {
+  font-family: var(--font-body-text, var(--font-body));
+  font-size: 0.88rem;
+  color: var(--ink-dim);
+}
+
+/* Timeline now runs the full shell width beneath the lore copy. */
+.lore .lore__grid {
+  grid-template-columns: 1fr;
+}
+.lore__timeline {
+  margin-top: clamp(2.6rem, 6vw, 4.6rem);
+}
+
+@media (max-width: 860px) {
+  .ctl__rail,
+  .ctl__node {
+    left: 18px;
+  }
+  .ctl__row {
+    display: block;
+  }
+  .ctl__slot,
+  .ctl__row--left .ctl__slot,
+  .ctl__row--right .ctl__slot {
+    max-width: none;
+    margin-left: 42px;
+    text-align: left;
+    justify-self: stretch;
+  }
+  .ctl__row--left .ctl__arm,
+  .ctl__row--right .ctl__arm {
+    left: 18px;
+    right: auto;
+    width: 24px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--tc, var(--cyan)) 75%, transparent), transparent);
+  }
+  .ctl__row--left .ctlcard::after {
+    right: auto;
+    left: 0;
+  }
+}

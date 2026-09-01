@@ -31,6 +31,10 @@ import './styles/pulls.css';
 // 3D rotunda (CircularGallery) — scoped .cg-* layer, last so its plate
 // typography wins where tokens overlap.
 import './styles/circular-gallery.css';
+// Rod system — suspended roster (01), skewered credit plates (06) and the
+// drilling canon-timeline rod. Loaded LAST: its scoped rules intentionally
+// win over the base card/timeline layer they rebuild.
+import './styles/suspension.css';
 import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

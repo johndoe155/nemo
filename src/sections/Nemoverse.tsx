@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useScroll, useTransform } from 'framer-motion';
+import HangingCard from '../components/HangingCard';
 import UniverseCard from '../components/UniverseCard';
 import UniverseDialog from '../components/UniverseDialog';
 import { Countdown, Reveal, SortDropdown, type SortMode } from '../components/ui';
@@ -64,6 +65,20 @@ export default function Nemoverse() {
   useMotionValueEvent(scrollYProgress, 'change', (v) =>
     setProgress(Math.min(1, Math.max(0, (v - 0.06) / 0.88))),
   );
+
+  /* ---- Suspension carriage -------------------------------------------------
+     The rail is driven by two different motion values (scroll-bound `x`, and
+     `dragX` while a drag is live). The hanging cards need ONE continuous
+     position to differentiate for their pendulum physics, so both sources
+     mirror into `carriage`. Velocity of this value = how hard the rod is
+     being yanked, which is exactly the force the cards swing against. */
+  const carriage = useMotionValue(0);
+  useMotionValueEvent(x, 'change', (v) => {
+    if (!isDragging) carriage.set(v);
+  });
+  useMotionValueEvent(dragX, 'change', (v) => {
+    if (isDragging) carriage.set(v);
+  });
 
   // Drag support for roster rail (P0.5) — compositor-only, with a 6px
   // threshold that separates "drag the rail" from "click a card".
@@ -211,12 +226,24 @@ export default function Nemoverse() {
             <div className="roster__ghost ghost-text" aria-hidden="true">
               NEMOVERSE
             </div>
+            {/* Suspension rod — the roster hangs off this. Mounted to the
+                section walls, it spans the full sticky width and the cards
+                ride it on sliding carriages. */}
+            <div className="hangrod" aria-hidden="true">
+              <span className="hangrod__mount hangrod__mount--l" />
+              <span className="hangrod__bar" />
+              <span className="hangrod__mount hangrod__mount--r" />
+            </div>
             <motion.div className="roster__rail" ref={railRef} style={{ x: isDragging ? dragX : x, opacity: railOpacity }}>
               <AnimatePresence mode="popLayout" initial={false}>
                 {list.map((u, i) => (
-                  <UniverseCard key={u.id} u={u} index={i} onClick={setSelected} />
+                  <HangingCard key={u.id} index={i} drive={carriage}>
+                    <UniverseCard u={u} index={i} onClick={setSelected} />
+                  </HangingCard>
                 ))}
-                <DropTeaserCard key="drop-teaser" />
+                <HangingCard key="drop-teaser" index={list.length} drive={carriage}>
+                  <DropTeaserCard />
+                </HangingCard>
               </AnimatePresence>
             </motion.div>
             <div className="roster__counter">

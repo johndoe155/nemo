@@ -89,6 +89,21 @@ products) in `src/lib/data.ts` — the UI renders whatever the data layer says.
 sweeps, word-level reveals, film grain, and a drifting starfield canvas.
 `prefers-reduced-motion` collapses all of it.
 
+**Rod system (`styles/suspension.css`):** three sections share one piece of
+structural furniture — a rod — and one vocabulary of rods, cords, grommets and
+nodes. All of it inherits the existing tokens (radius scale, `--elev-*`,
+`--noise`, palette, easings); nothing new is hardcoded.
+
+| Rig | Section | Physics |
+| --- | --- | --- |
+| Suspension rod | 01 · roster | `components/HangingCard.tsx` — framer-motion pendulum. `useVelocity` on the rail carriage → negated, clamped inertia target → an intentionally under-damped spring (PENDULUM 34–52 / 5.6–7.1 / ~1.1). Cord length, stiffness and mass vary per index so the rail never swings in lockstep; the pivot sits on the rod, so the arc lift is geometric. Pointer-down injects a torque impulse whose sign follows the side that was poked. |
+| Credit rod | 06 · credits | Masked (top/bottom fade) vertical rod; dual-segment plates alternate in from their own side and halt against it, resting at an alternating ±1.7° tilt (left = clockwise, right = counter-clockwise). Click = under-damped rotate + lift spring that rings back to the resting tilt. |
+| Drilling rod | canon timeline | GSAP `ScrollTrigger` (scrubbed) scales the rod fill so its tip is pinned to the 65% viewport line — scrolling literally drives it deeper. Each node owns a trigger on that same line, so it lights up on the exact frame the rod pierces it. Cards slide in left/right via framer. |
+
+Split authority is deliberate: framer owns `transform` on the nodes it drives,
+GSAP owns the rod fill, and stylesheet-authored offsets use `translate` /
+`rotate` (see the rules block at the bottom of `styles/motion.css`).
+
 ## Production wiring (what the demo stubs)
 
 | Surface | Stub | Replace with |

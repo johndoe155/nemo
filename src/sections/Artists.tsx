@@ -1,30 +1,120 @@
-import { motion } from 'framer-motion';
-import { Reveal, SectionHead } from '../components/ui';
-import { useTilt } from '../components/motion';
+import { useCallback, useEffect, useRef } from 'react';
+import { motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
+import { SectionHead } from '../components/ui';
 import { ARTISTS, UNIVERSES } from '../lib/data';
 
-/* Artist cards share the tilt family at reduced throw (see Perks). */
-function ArtistCard({ a, i }: { a: (typeof ARTISTS)[number]; i: number }) {
-  const tilt = useTilt<HTMLDivElement>({ maxDeg: 1.6, lift: -4 });
+/* ============================================================================
+   06 · PERMANENT PUBLIC CREDITS — the credit rod
+
+   The masonry of quote cards is replaced by a single spine: one vertical rod
+   running the section's Y-axis (masked so it fades in at the top and phases
+   out at the bottom), with dual-segment credit plates skewered onto it,
+   alternating left and right.
+
+   Each plate is two segments in contrasting palette fills:
+     · a narrow vertical block (the details: avatar, canon credit codes, index)
+       always facing the rod, filled with the artist's accent over --abyss
+     · the wide block (the quote itself) on the standard glass panel
+
+   MOTION
+     · Entrance — the plate slides in horizontally from its own side and comes
+       to rest against the rod (outer node owns x/opacity).
+     · Rest — a static alternating tilt: plates right of the rod sit
+       counter-clockwise (angling up to the right), plates left of it sit
+       clockwise (angling up to the left).
+     · Click — an under-damped spring impulse: the plate bobs on its pin and
+       rings back down to its resting tilt (inner node owns rotate/y).
+   Splitting the two across nested nodes keeps a single framer transform
+   authority per element, per styles/motion.css.
+   ========================================================================== */
+
+/** Resting tilt, in degrees. CSS-positive = clockwise. */
+const TILT = 1.7;
+/** Impulse thrown by a click, before the spring rings it out. */
+const BOB_ROT = 4.6;
+const BOB_LIFT = -12;
+const BOB_HOLD = 110;
+
+const EASE_EXPO = [0.16, 1, 0.3, 1] as const;
+
+function CreditPlate({ a, i }: { a: (typeof ARTISTS)[number]; i: number }) {
+  const reduce = useReducedMotion();
+  const side: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right';
+  /* Left of the rod → clockwise (up to the left). Right of it → counter-
+     clockwise (up to the right). */
+  const rest = side === 'left' ? TILT : -TILT;
+
   const credited = UNIVERSES.filter((u) => u.artist.name === a.name);
-  const credit = `CANON CREDIT · ${credited.map((u) => u.code).join(' · ') || 'UPCOMING'}`;
+  const codes = credited.map((u) => u.code).join(' · ') || 'UPCOMING';
+
+  /* --- click physics: an under-damped spring around the resting tilt ------ */
+  const rotRaw = useMotionValue(rest);
+  const liftRaw = useMotionValue(0);
+  const rotate = useSpring(rotRaw, { stiffness: 120, damping: 7.5, mass: 0.9 });
+  const y = useSpring(liftRaw, { stiffness: 150, damping: 9, mass: 0.9 });
+  const timer = useRef<number>(0);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  const bob = useCallback(() => {
+    if (reduce) return;
+    window.clearTimeout(timer.current);
+    rotRaw.set(rest + (side === 'left' ? -BOB_ROT : BOB_ROT));
+    liftRaw.set(BOB_LIFT);
+    timer.current = window.setTimeout(() => {
+      rotRaw.set(rest);
+      liftRaw.set(0);
+    }, BOB_HOLD);
+  }, [reduce, rest, rotRaw, liftRaw, side]);
+
   return (
-    <Reveal className="artists__grid-item" delay={i * 0.06} y={30} blur={false}>
+    <div
+      className={`credits__row credits__row--${side}`}
+      style={{ '--ac': a.hue[0], '--a1': a.hue[0], '--a2': a.hue[1] } as React.CSSProperties}
+    >
+      <span className="credits__arm" aria-hidden="true" />
+      <span className="credits__node" aria-hidden="true" />
       <motion.div
-        ref={tilt.ref}
-        className="card artistcard sheen"
-        style={{ '--card-accent': a.hue[0], '--ac': a.hue[0], '--a1': a.hue[0], '--a2': a.hue[1], ...tilt.style }}
-        {...tilt.handlers}
+        className="credits__slot"
+        initial={reduce ? { opacity: 0 } : { opacity: 0, x: side === 'left' ? -110 : 110 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: true, margin: '-90px' }}
+        transition={{ duration: 1, ease: EASE_EXPO, delay: (i % 2) * 0.08 }}
       >
-        <span className="artistcard__ava">{a.initials}</span>
-        <div className="artistcard__body">
-          <b>{a.name}</b>
-          <span className="handle">{a.handle}</span>
-          <span className="credit" title={credit}>{credit}</span>
-          <p className="quote">{a.quote}</p>
-        </div>
+        <motion.article
+          className="creditcard sheen"
+          style={{
+            '--card-accent': a.hue[0],
+            rotate: reduce ? rest : rotate,
+            y: reduce ? 0 : y,
+          } as React.ComponentProps<typeof motion.article>['style']}
+          onClick={bob}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              bob();
+            }
+          }}
+          tabIndex={0}
+          aria-label={`${a.name} — ${a.handle}. Canon credit: ${codes}`}
+          data-cursor="NUDGE"
+        >
+          <div className="creditcard__seg">
+            <span className="creditcard__ava" aria-hidden="true">{a.initials}</span>
+            <span className="creditcard__vert" title={`CANON CREDIT · ${codes}`}>
+              CANON · {codes}
+            </span>
+            <span className="creditcard__idx">{String(i + 1).padStart(2, '0')}</span>
+          </div>
+          <div className="creditcard__main">
+            <p className="creditcard__quote">{a.quote}</p>
+            <div className="creditcard__by">
+              <b>{a.name}</b>
+              <span>{a.handle}</span>
+            </div>
+          </div>
+        </motion.article>
       </motion.div>
-    </Reveal>
+    </div>
   );
 }
 
@@ -50,9 +140,10 @@ export default function Artists() {
           }
         />
 
-        <div className="artists__grid artists__grid--masonry">
+        <div className="credits">
+          <span className="credits__rod" aria-hidden="true" />
           {ARTISTS.map((a, i) => (
-            <ArtistCard key={a.name} a={a} i={i} />
+            <CreditPlate key={a.name} a={a} i={i} />
           ))}
         </div>
       </div>
