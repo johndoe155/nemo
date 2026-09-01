@@ -16,3 +16,7 @@ Thumbs.db
 *~
 
 .arena/
+
+# Local Netlify folder
+.netlify
+.vercel
