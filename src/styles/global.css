@@ -111,12 +111,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  /* Deep-space ambience: layered radial nebula wash fixed behind everything */
-  background-image:
-    radial-gradient(60rem 42rem at 82% -8%, rgba(138, 77, 255, 0.14), transparent 62%),
-    radial-gradient(52rem 38rem at -12% 28%, rgba(63, 232, 255, 0.09), transparent 60%),
-    radial-gradient(46rem 40rem at 108% 74%, rgba(255, 61, 154, 0.08), transparent 62%);
-  background-attachment: fixed;
+  /* The deep-space nebula wash lives on the fixed .ambience layer (scene-aware
+     WebGL quad with a CSS fallback — see components/Ambience.tsx). The body
+     stays flat void: no background-attachment:fixed, so no full-page repaints
+     on scroll and no broken attachment on iOS Safari. */
 }
 
 img {
