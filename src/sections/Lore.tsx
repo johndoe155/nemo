@@ -159,6 +159,10 @@ function CanonTimeline() {
                 </div>
               </article>
             </motion.div>
+            {/* Below the node the rod is painted IN FRONT of the card and over
+                its bottom edge; above it, behind. It appears the frame the
+                drill head passes through (.is-pierced). */}
+            <span className="ctl__exit" aria-hidden="true" />
           </div>
         );
       })}

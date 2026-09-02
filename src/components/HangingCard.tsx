@@ -24,7 +24,8 @@
        direction the cursor crossed the card.
 
    SPRING REGISTRY (companion to styles/motion.css):
-     PENDULUM { stiffness: 34–52, damping: 7.2–9.2, mass: 1.05–1.3 }
+     PENDULUM { stiffness: 35.6–46, mass: 1.15–1.35, damping = 2ζ√(km) at
+                ζ = 0.92 (≈ 13.3–15.0) — heavy, settles in one soft kick }
 
    Transform authority: the outer node owns layout/presence (no transform
    motion values — layout projection and `rotate` must never share an
@@ -43,38 +44,44 @@ import {
 } from 'framer-motion';
 
 /* ---------------------------------------------------------------------------
-   SWING RESPONSE CURVE
-   The swing is bound directly to the velocity delta of whatever is dragging
-   the rig, and the response is deliberately NOT linear. Amplitude follows
+   SWING RESPONSE — a heavy rack, dampened hard
 
-       angle = MAX * (|v| / FLICK) ^ CURVE          (signed, clamped)
+   The cards read as HEAVY. Three limiters, in series:
 
-   With CURVE = 1.75 the low end is crushed and the top end is preserved:
-
-       ~300 px/s  (slow scroll)   →  0.12°   — a whisper, barely legible
-       ~800 px/s  (steady scroll) →  0.7°    — a gentle sway
-       ~1800 px/s (brisk swipe)   →  3.0°    — visible momentum
-       3400+ px/s (hard flick)    →  8.0°    — the rack really moves
-
-   Linear mapping (the previous behaviour) gave a slow scroll ~1.3° and any
-   ordinary movement near full throw, which is what read as exaggerated.
+   1. A power response bound to the carriage's velocity delta:
+          angle = MAX * (|v| / FLICK) ^ CURVE            (signed)
+      with MAX only 3°, so even a saturating flick is a micro-interaction:
+          ~300 px/s  (slow scroll)   →  0.02°   — imperceptible
+          ~900 px/s  (steady scroll) →  0.15°   — a breath
+          ~1800 px/s (brisk swipe)   →  0.79°   — a visible nudge
+          3200+ px/s (hard flick)    →  3.0°    — the cap
+   2. A near-critically damped spring (ζ = 0.92, derived per card from its own
+      stiffness and mass below) — one small overshoot, then it is done. The
+      old ζ ≈ 0.45 is what made it wallow like a playground swing.
+   3. A HARD CLAMP on the spring's OUTPUT. Springs overshoot their target, and
+      impulses stack on top of the velocity term, so the visible rotation is
+      clamped to ±HARD_CAP no matter what the inputs do.
 --------------------------------------------------------------------------- */
 
 /** Degrees of swing at (and above) a hard flick. */
-const MAX_SWING = 8;
+const MAX_SWING = 3;
 /** Carriage speed (px/s) that saturates the swing. */
-const FLICK = 3400;
+const FLICK = 3200;
 /** Response exponent — >1 crushes slow movement, preserves fast movement. */
-const CURVE = 1.75;
+const CURVE = 1.7;
+/** Absolute ceiling on visible rotation, applied AFTER the spring. */
+const HARD_CAP = 3.2;
+/** Damping ratio: 1 = critical. Just under, so it settles with one soft kick. */
+const ZETA = 0.92;
 
 /* A secondary, much weaker channel: the page's own scroll velocity jostles
-   the rack as the section passes. Same curve, a quarter of the throw. */
-const GUST_MAX = 1.6;
+   the rack as the section passes. */
+const GUST_MAX = 0.7;
 const GUST_AT = 3200;
 const GUST_CURVE = 1.9;
 
 /** Torque impulse (deg) injected by a deliberate poke. */
-const POKE = 4.5;
+const POKE = 2.4;
 /** How long an impulse is held before the spring is allowed to ring out. */
 const POKE_HOLD = 90;
 
@@ -139,15 +146,23 @@ export default function HangingCard({
   );
 
   /* Per-card pendulum character. Longer cord → lazier spring, heavier bob.
-     Damping runs a little tighter than a true free pendulum so the ring-out
-     stays proportional to the impulse instead of wallowing. */
+     Damping is DERIVED from the card's own stiffness and mass at a fixed
+     ratio (c = 2ζ√(km)), so every card in the rack settles with the same
+     heavy, near-critical character no matter how its cord is tuned. */
   const seed = index % 5;
   const drop = cord ?? 26 + seed * 6; // 26…50px of cord
+  const stiffness = 46 - seed * 2.6; // 46 → 35.6
+  const mass = 1.15 + seed * 0.05; // 1.15 → 1.35
   const rotate = useSpring(torque, {
-    stiffness: 52 - seed * 4.4, // 52 → 34.4
-    damping: 7.2 + seed * 0.5, // 7.2 → 9.2
-    mass: 1.05 + seed * 0.06,
+    stiffness,
+    mass,
+    damping: ZETA * 2 * Math.sqrt(stiffness * mass), // ζ = 0.92
+    restDelta: 0.005,
   });
+
+  /* Hard ceiling on the visible angle — the spring may overshoot and the
+     impulse channels stack, but the card physically cannot swing past this. */
+  const capped = useTransform(rotate, (v) => Math.max(-HARD_CAP, Math.min(HARD_CAP, v)));
 
   const nudge = useCallback(
     (deg: number) => {
@@ -170,7 +185,7 @@ export default function HangingCard({
   const onPointerEnter = (e: React.PointerEvent<HTMLDivElement>) => {
     const dx = e.movementX;
     if (Math.abs(dx) < 0.5) return;
-    nudge(Math.max(-1.4, Math.min(1.4, -dx * 0.22)));
+    nudge(Math.max(-0.7, Math.min(0.7, -dx * 0.12)));
   };
 
   /* Scroll-past release: a card entering the frame gets a small gust so the
@@ -186,7 +201,7 @@ export default function HangingCard({
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
           const dir = index % 2 === 0 ? 1 : -1;
-          window.setTimeout(() => nudge(dir * 1.1), (index % 4) * 70);
+          window.setTimeout(() => nudge(dir * 0.55), (index % 4) * 70);
         });
       },
       { threshold: 0.4 },
@@ -217,7 +232,7 @@ export default function HangingCard({
       <span className="hang__carriage" aria-hidden="true" />
       <motion.div
         className="hang__arm"
-        style={{ rotate: reduce ? 0 : rotate, transformOrigin: '50% 0%' }}
+        style={{ rotate: reduce ? 0 : capped, transformOrigin: '50% 0%' }}
         onPointerDown={onPointerDown}
         onPointerEnter={onPointerEnter}
       >

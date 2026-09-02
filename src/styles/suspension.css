@@ -214,10 +214,10 @@
 @keyframes hangSway {
   0%,
   100% {
-    rotate: -0.16deg;
+    rotate: -0.1deg;
   }
   50% {
-    rotate: 0.16deg;
+    rotate: 0.1deg;
   }
 }
 
@@ -369,6 +369,49 @@
   --hole-x: var(--hole-inset);
 }
 
+/* ---- 3D penetration ------------------------------------------------------
+   A hole alone reads flat, because the rod is behind the card everywhere. The
+   depth cue is the HANDOFF: above the hole's centre the rod stays behind the
+   card (it is entering), below it the rod is painted IN FRONT — over the
+   card's lower half and over its bottom edge (it has come out the other
+   side). Both halves are the same bar at the same x, so they read as one
+   continuous rod; the front half carries a cast shadow, which is what sells
+   which side of the card it is on.
+
+   Layering inside a row: rod/rail (0) · collar or node (1) · card slot (2) ·
+   exit segment (4).
+-------------------------------------------------------------------------- */
+.credits__exit,
+.ctl__exit {
+  position: absolute;
+  top: 50%; /* the hole's centre — the handoff line */
+  left: 50%;
+  z-index: 4;
+  width: var(--rod-w);
+  translate: -50% 0;
+  border-radius: 0 0 var(--r-pill) var(--r-pill);
+  pointer-events: none;
+  /* Cast shadow onto the card it now sits in front of. */
+  box-shadow:
+    3px 1px 10px -2px rgba(0, 0, 0, 0.85),
+    0 0 14px -6px rgba(0, 0, 0, 0.9);
+}
+/* The lip of the hole the rod has just come through: a soft occlusion so the
+   emergence point is not a hard seam. */
+.credits__exit::before,
+.ctl__exit::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--hole-r) * -0.9);
+  left: 50%;
+  width: calc(var(--hole-r) * 2.6);
+  height: calc(var(--hole-r) * 2.2);
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 35%, rgba(0, 0, 0, 0.55), transparent 68%);
+  z-index: -1;
+}
+
 /* Bevelled rim around the cut (its own centre is cut away by the same mask). */
 .creditcard__grommet,
 .ctlcard__grommet {
@@ -407,6 +450,7 @@
   position: relative;
   margin-top: clamp(2.6rem, 5vw, 4.2rem);
   padding-block: clamp(1.5rem, 4vw, 3rem);
+  --row-gap: clamp(1rem, 2.4vw, 1.9rem);
 }
 
 /* Central rod — dead centre at every breakpoint, masked so it materialises at
@@ -443,7 +487,25 @@
 /* Uniform vertical stack — each plate centred on the rod. */
 .credits__row {
   position: relative;
-  margin-bottom: clamp(1rem, 2.4vw, 1.9rem);
+  margin-bottom: var(--row-gap);
+}
+/* Front half of the rod: from the hole's centre, down over the plate and out
+   past its bottom edge into the gap, where it rejoins the rod behind. */
+.credits__exit {
+  bottom: calc(var(--row-gap) / -2);
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.55) 0%,
+      rgba(255, 255, 255, 0.46) 28%,
+      rgba(255, 255, 255, 0.14) 62%,
+      rgba(0, 0, 0, 0.5) 100%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ac, var(--cyan)) 26%, transparent),
+      color-mix(in srgb, var(--ac, var(--cyan)) 18%, transparent)
+    );
 }
 .credits__row:last-child {
   margin-bottom: 0;
@@ -640,9 +702,7 @@
 @media (max-width: 600px) {
   .credits {
     padding-block: 1.2rem;
-  }
-  .credits__row {
-    margin-bottom: 0.85rem;
+    --row-gap: 0.85rem;
   }
   .creditcard {
     min-height: 118px;
@@ -695,6 +755,7 @@
   position: relative;
   margin-top: clamp(2rem, 4vw, 3.4rem);
   padding-block: clamp(1rem, 3vw, 2.2rem);
+  --row-gap: clamp(1rem, 2.4vw, 1.8rem);
 }
 
 /* Rod housing (the drilled shaft) + fill (the rod itself, scroll-linked).
@@ -752,7 +813,30 @@
   grid-template-columns: 1fr 1fr; /* the column boundary IS the rod */
   column-gap: 0;
   align-items: center;
-  margin-bottom: clamp(1rem, 2.4vw, 1.8rem);
+  margin-bottom: var(--row-gap);
+}
+/* Front half of the rod — appears the frame the drill head pierces the node,
+   then runs down over the card and out past its bottom edge. */
+.ctl__exit {
+  bottom: calc(var(--row-gap) / -2);
+  opacity: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(255, 255, 255, 0.4) 28%,
+      rgba(255, 255, 255, 0.12) 62%,
+      rgba(0, 0, 0, 0.45) 100%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--tc, var(--cyan)) 85%, transparent),
+      color-mix(in srgb, var(--tc, var(--cyan)) 60%, transparent)
+    );
+  transition: opacity 0.4s var(--ease-expo);
+}
+.ctl__row.is-pierced .ctl__exit {
+  opacity: 1;
 }
 .ctl__row:last-child {
   margin-bottom: 0;
@@ -896,8 +980,8 @@
   }
 }
 @media (max-width: 600px) {
-  .ctl__row {
-    margin-bottom: 0.85rem;
+  .ctl {
+    --row-gap: 0.85rem;
   }
   .ctlcard {
     padding: 0.8rem 0.9rem 0.9rem;

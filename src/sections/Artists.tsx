@@ -126,6 +126,11 @@ function CreditPlate({ a, i }: { a: (typeof ARTISTS)[number]; i: number }) {
           </div>
         </motion.article>
       </motion.div>
+      {/* The rod's exit: from the hole's centre downward the rod is painted
+          IN FRONT of the plate (and over its bottom edge), while above the
+          hole it stays behind — the two halves read as one rod piercing the
+          card. See suspension.css → "3D penetration". */}
+      <span className="credits__exit" aria-hidden="true" />
     </div>
   );
 }
