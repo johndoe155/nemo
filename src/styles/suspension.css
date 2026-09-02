@@ -14,13 +14,17 @@
                                    out of each plate's inner edge.
      · .ctl                        CANON TIMELINE — alternating node cards on a
                                    dead-centre scroll-linked rod that drills
-                                   down through their holes.
+                                   down through their holes and then threads
+                                   OVER the lower half of each card on its way
+                                   out (one rod, two z-layers).
 
    THE HOLE IS A REAL HOLE: the card is masked with a radial-gradient so the
    circle is cut out of its background, border and children. What you see
-   inside it is the rod itself, painted behind. The elevation shadow therefore
-   lives on an unmasked "pin" wrapper — mask-clip would eat a shadow drawn on
-   the masked element.
+   inside it is the rod itself — painted BEHIND the card above the hole's
+   centre and IN FRONT of it below, so the rod weaves through the stack instead
+   of sitting flat behind it. The elevation shadow therefore lives on an
+   unmasked "pin" wrapper — mask-clip would eat a shadow drawn on the masked
+   element.
 
    Motion authority (styles/motion.css): framer-motion owns `transform` on any
    element it animates — every static offset/rotation authored here therefore
@@ -439,11 +443,17 @@
    continuous rod; the front half carries a cast shadow, which is what sells
    which side of the card it is on.
 
-   Layering inside a row: rod/rail (0) · collar or node (1) · card slot (2) ·
+   Two rigs, one principle:
+     · 06 · credits — a per-plate `.credits__exit` segment (below), because the
+       plate is static and its rod is never scrubbed.
+     · canon timeline — ONE full-height `.ctl__rail--front` masked to each
+       row's lower half, because that rod is drilled by scroll and both halves
+       have to advance in lockstep (see the CANON TIMELINE block).
+
+   Layering inside a credits row: rod (0) · collar (1) · plate slot (2) ·
    exit segment (4).
 -------------------------------------------------------------------------- */
-.credits__exit,
-.ctl__exit {
+.credits__exit {
   position: absolute;
   top: 50%; /* the hole's centre — the handoff line */
   left: 50%;
@@ -469,8 +479,7 @@
 }
 /* The lip of the hole the rod has just come through: a soft occlusion so the
    emergence point is not a hard seam. */
-.credits__exit::before,
-.ctl__exit::before {
+.credits__exit::before {
   content: '';
   position: absolute;
   top: calc(var(--hole-r) * -0.9);
@@ -827,23 +836,92 @@
   margin-top: clamp(2rem, 4vw, 3.4rem);
   padding-block: clamp(1rem, 3vw, 2.2rem);
   --row-gap: clamp(1rem, 2.4vw, 1.8rem);
+
+  /* ---- THE ROD IS COLOUR-AGNOSTIC --------------------------------------
+     One neutral paint — muted-white specular over a slate body over a slate
+     shade — mixed down onto the opaque --rod-base. No --gold, no --iris, no
+     --tc: accent belongs to the cards, and the rod is the quiet anchor they
+     hang their accents off. Neutral is also what makes it CONSISTENT: the
+     same stops read the same over a tinted card and over the bare page, so
+     one bar can go under a card and come back out the other side without a
+     seam giving the trick away. */
+  --rod-spec: rgba(233, 238, 248, 0.5);
+  --rod-body: rgba(150, 163, 190, 0.26);
+  --rod-shade: rgba(3, 4, 10, 0.78);
+  --rod-glow: rgba(226, 232, 240, 0.34);
+
+  /* Front-half mask — one window per row, measured in CanonTimeline(). Hidden
+     until measured, so an unmeasured rod can never paint itself over a card. */
+  --thread-mask: linear-gradient(180deg, transparent, transparent);
 }
 
-/* Rod housing (the drilled shaft) + fill (the rod itself, scroll-linked).
-   Dead centre at every breakpoint. */
+/* ---- the threading rig ---------------------------------------------------
+   ONE rod, TWO layers. Same width, same axis, same gradient; the only things
+   that differ are z, and the mask that keeps the front layer to the lower
+   half of each row. Stack inside .ctl:
+
+     0  .ctl__rail--back   the shaft + the length still ENTERING the cards
+     1  .ctl__node         collar, seen through the punched hole
+     2  .ctl__slot         the card
+     3  .ctl__row::after    the rod's cast shadow on the card it has exited
+     4  .ctl__rail--front  the length already THROUGH — over the card's lower
+                           half and over its bottom edge
+     5  .ctl__head         the drill bit
+
+   Above a card's centre line the rod is behind it; below, in front. That
+   handoff — not a shadow, not a gradient — is what makes the bar read as a
+   solid object passing through the stack.
+
+   Both halves live in a deliberately WIDER box than the rod (34px, not
+   --rod-w): a mask clips to its own box, so a rod-wide rail would guillotine
+   the bar's glow at the rail's own edges — and would do it on one half only,
+   which is exactly the kind of mismatch that gives the thread away. The bar
+   stays var(--rod-w) and dead-centred; only the clip box is generous.
+-------------------------------------------------------------------------- */
 .ctl__rail {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 50%;
-  z-index: 0;
-  width: 2px;
+  width: 34px;
   translate: -50% 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.04));
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 6%, #000 94%, transparent);
-  mask-image: linear-gradient(180deg, transparent, #000 6%, #000 94%, transparent);
   pointer-events: none;
 }
+
+/* Back half — the drilled shaft: a faint rod-width groove, recessed, faded at
+   both ends so the rod materialises rather than butting into the section
+   edges. Same fade the front half bakes into its mask. */
+.ctl__rail--back {
+  z-index: 0;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 6%, #000 94%, transparent);
+}
+.ctl__rail--back::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: var(--rod-w);
+  translate: -50% 0;
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, rgba(233, 238, 248, 0.1), rgba(233, 238, 248, 0.03));
+}
+
+/* Front half — the length that has come through, promoted over the cards.
+   isolation + normal blending: nothing in the card's subtree composites into
+   the half that now sits on top of it. */
+.ctl__rail--front {
+  z-index: 4;
+  isolation: isolate;
+  mix-blend-mode: normal;
+  -webkit-mask-image: var(--thread-mask);
+  mask-image: var(--thread-mask);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+/* The bar. ONE rule feeds both halves, which is why they cannot disagree. */
 .ctl__fill {
   position: absolute;
   top: 0;
@@ -853,33 +931,86 @@
   translate: -50% 0;
   transform-origin: 50% 0%;
   border-radius: var(--r-pill);
-  /* Solid palette stops — the drilling rod, like the credit rod, is an opaque
-     object and never samples what is behind it. */
-  background: linear-gradient(
-    180deg,
-    var(--gold),
-    var(--iris) 45%,
-    var(--cyan) 78%,
-    var(--magenta)
-  );
-  box-shadow: 0 0 18px -4px color-mix(in srgb, var(--cyan) 70%, transparent);
+  /* Paint order, top layer first: a specular band travelling the length of the
+     rod · cylinder shading (dark edges, off-centre highlight) · the neutral
+     top→bottom ramp. All three are mixed down onto the opaque base colour, so
+     the rod never samples what happens to be behind it. */
+  background-color: var(--rod-base);
+  background-image:
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      var(--rod-spec) 44%,
+      rgba(233, 238, 248, 0.12) 58%,
+      transparent 100%
+    ),
+    linear-gradient(
+      90deg,
+      var(--rod-shade) 0%,
+      var(--rod-spec) 30%,
+      var(--rod-body) 64%,
+      var(--rod-shade) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(233, 238, 248, 0.2),
+      rgba(150, 163, 190, 0.09) 48%,
+      rgba(233, 238, 248, 0.16)
+    );
+  background-repeat: no-repeat;
+  background-size: 100% 42%, 100% 100%, 100% 100%;
+  background-position: 50% -60%, 0 0, 0 0;
+  background-blend-mode: normal;
+  mix-blend-mode: normal;
+  box-shadow: 0 0 16px -7px var(--rod-glow);
+  animation: ctl-rod-drift 9s linear infinite;
   /* GSAP scrubs scaleY on this node every frame — keep it on the compositor. */
   will-change: transform;
 }
-/* Drill head — sits at the growing tip of the rod. */
+/* The only thing that moves on the rod by itself: a slow specular band walking
+   its length. Both halves mount together and run the same keyframes, so the
+   band crosses the handoff line in phase — the rod never breaks where it comes
+   through a card. */
+@keyframes ctl-rod-drift {
+  from {
+    background-position: 50% -60%, 0 0, 0 0;
+  }
+  to {
+    background-position: 50% 160%, 0 0, 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ctl__fill {
+    /* Parked mid-rod: the ramp stays, the travel goes. */
+    animation: none;
+    background-position: 50% 30%, 0 0, 0 0;
+  }
+}
+
+/* Drill head — its own layer, above the cards. At 10px it is smaller than the
+   22px punch, so the bit itself is only ever seen THROUGH the hole; what lands
+   on the card is its halo, i.e. the rod's own light. Neutral like the rod — a
+   cyan bit would fight every accent it drills past. */
 .ctl__head {
   position: absolute;
   top: 0;
   left: 50%;
-  width: 12px;
-  height: 12px;
+  z-index: 5;
+  width: 10px;
+  height: 10px;
   translate: -50% -50%;
   border-radius: 50%;
-  background: var(--ink);
+  background: radial-gradient(
+    circle at 50% 32%,
+    #fcfdff,
+    rgba(226, 232, 240, 0.86) 52%,
+    rgba(148, 163, 196, 0.3) 100%
+  );
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--cyan) 30%, transparent),
-    0 0 24px 2px color-mix(in srgb, var(--cyan) 70%, transparent);
-  z-index: 1;
+    0 0 0 2px rgba(5, 5, 10, 0.5),
+    0 0 12px 1px var(--rod-glow),
+    0 0 28px 6px rgba(148, 163, 196, 0.16);
+  pointer-events: none;
   will-change: transform, opacity;
 }
 
@@ -891,28 +1022,55 @@
   align-items: center;
   margin-bottom: var(--row-gap);
 }
-/* Front half of the rod — appears the frame the drill head pierces the node,
-   then runs down over the card and out past its bottom edge. */
-.ctl__exit {
+/* The rod's cast shadow — the cue that says which side of the card the bar is
+   on. It belongs to the ROW rather than to the rod for two reasons: the front
+   rail's mask clips to a vertical band and would guillotine a soft shadow, and
+   the shadow has to lean TOWARDS the card, which alternates. It opens on the
+   handoff line, runs down over the card and out past its bottom edge into the
+   gap, and grows downward the frame .is-pierced lands — i.e. exactly as the
+   front half of the rod starts emerging. Absolutely positioned, so it is never
+   a grid item. */
+.ctl__row::after {
+  content: '';
+  position: absolute;
+  top: 50%; /* the hole's centre — the handoff line */
   bottom: calc(var(--row-gap) / -2);
+  left: 50%;
+  z-index: 3;
+  /* A contact shadow, not a smear: it hugs the bar and falls off within a few
+     px, which is what reads as "the rod is a couple of mm off the card". */
+  width: calc(var(--rod-w) + 8px);
+  transform-origin: 50% 0;
+  translate: -50% 0;
+  scale: 1 0.02;
   opacity: 0;
-  background:
-    linear-gradient(
-      90deg,
-      rgba(0, 0, 0, 0.5) 0%,
-      rgba(255, 255, 255, 0.4) 28%,
-      rgba(255, 255, 255, 0.12) 62%,
-      rgba(0, 0, 0, 0.45) 100%
-    ),
-    linear-gradient(
-      180deg,
-      var(--tc, var(--cyan)),
-      color-mix(in srgb, var(--tc, var(--cyan)) 82%, var(--rod-base))
-    );
-  transition: opacity 0.4s var(--ease-expo);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.5) 34%,
+    rgba(0, 0, 0, 0.5) 66%,
+    transparent 100%
+  );
+  filter: blur(4px);
+  pointer-events: none;
+  transition: scale 0.5s var(--ease-expo), opacity 0.4s var(--ease-expo);
 }
-.ctl__row.is-pierced .ctl__exit {
+/* Light sits on the axis, so the shadow falls towards the card the rod has
+   just come through. */
+.ctl__row--left::after {
+  translate: calc(-50% - 3px) 0;
+}
+.ctl__row--right::after {
+  translate: calc(-50% + 3px) 0;
+}
+.ctl__row.is-pierced::after {
+  scale: 1 1;
   opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ctl__row::after {
+    transition: none;
+  }
 }
 .ctl__row:last-child {
   margin-bottom: 0;
@@ -1058,6 +1216,23 @@
 @media (max-width: 600px) {
   .ctl {
     --row-gap: 0.85rem;
+  }
+  /* Smaller punch, smaller bit, tighter clip box — the weave survives the
+     phone without the rod's halo eating the card. */
+  .ctl__rail {
+    width: 26px;
+  }
+  .ctl__head {
+    width: 8px;
+    height: 8px;
+    box-shadow:
+      0 0 0 2px rgba(5, 5, 10, 0.5),
+      0 0 10px 1px var(--rod-glow),
+      0 0 20px 4px rgba(148, 163, 196, 0.14);
+  }
+  .ctl__row::after {
+    width: calc(var(--rod-w) + 6px);
+    filter: blur(3px);
   }
   .ctlcard {
     padding: 0.8rem 0.9rem 0.9rem;
