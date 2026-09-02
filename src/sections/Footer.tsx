@@ -1,11 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Marquee } from '../components/ui';
-import { KineticLabel } from '../components/motion';
-import { ARTISTS, DROP_LABEL, UNIVERSES } from '../lib/data';
+import { Marquee, toast } from '../components/ui';
+import { KineticLabel, MagneticButton, RollText } from '../components/motion';
+import {
+  ARTISTS,
+  DROP_LABEL,
+  FOOTER_NAV,
+  SOCIALS,
+  UNIVERSES,
+} from '../lib/data';
+import { LOGO_SRC } from '../lib/assets';
 
 gsap.registerPlugin(ScrollTrigger);
+
+const EASE_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+/* House pattern (Hero.tsx reads matchMedia the same way): stable, no first-
+   pass flicker — every reveal below collapses to its finished state for
+   reduced-motion visitors. */
+const prefersReduced =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const CRAWL_ITEMS = [
   `${UNIVERSES.length} UNIVERSES REGISTERED`,
@@ -33,11 +50,11 @@ function useOpen() {
 }
 
 /* ============================================================================
-   THE SIGN-OFF — minimal closing statement
+   THE SIGN-OFF — closing statement + global footer
 
-   DOM contract (strict): the anchor holds ONLY the stacked headline
-   ("ENTER THE" / "NEMOVERSE.") and the single primary CTA. All elevation is
-   motion, driven strictly by GSAP:
+   The anchor holds ONLY the stacked headline ("ENTER THE" / "NEMOVERSE.")
+   and the single primary CTA — the approved minimal layout constraints.
+   All elevation there is motion, driven strictly by GSAP:
 
      1 · Cinematic scroll reveal  — masked line translates, staggered,
                                     power4.out (ScrollTrigger)
@@ -48,10 +65,89 @@ function useOpen() {
      4 · Living gradient ink      — the hero CANON/VERSIONS sweep on the
                                     NEMOVERSE. gradient (background-position)
 
-   The static styling of the headline and the button (classes, type, colors,
-   gradients) is untouched. Hover/focus effects on NEMOVERSE. (txt-grad
-   reveal + chroma aberration) are CSS and stay active as before.
+   Below the anchor sits the global site footer: the closing-credit crawl,
+   the credits grid (identity + UNIVERSE / SYSTEMS / SIGNALS link groups,
+   staggered entrance) and the full-bleed legal ribbon with the magnetic
+   REWIND control. Easter egg: hold NEMO's star ≥ 1.2s — the persona signs
+   off.
    ========================================================================== */
+
+/* --------------------------- Easter egg: star --------------------------- */
+/* Press and hold NEMO's star for 1.2s — the persona has been teasing all
+   page; this is where it pays off. Pure bonus: never blocks anything, so a
+   plain release (or any other pointer) is a no-op. */
+
+function StarEasterEgg() {
+  const [holding, setHolding] = useState(false);
+  const timer = useRef(0);
+
+  const start = () => {
+    setHolding(true);
+    timer.current = window.setTimeout(() => {
+      setHolding(false);
+      toast('you made it to the end. i always knew you would.');
+    }, 1200);
+  };
+  const cancel = () => {
+    window.clearTimeout(timer.current);
+    setHolding(false);
+  };
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  return (
+    <div
+      className={`footer__brand ${holding ? 'is-holding' : ''}`}
+      onPointerDown={start}
+      onPointerUp={cancel}
+      onPointerLeave={cancel}
+      onContextMenu={(e) => e.preventDefault()}
+      data-cursor="NEMO SEES YOU"
+      role="img"
+      aria-label="The Nemoverse logo — hold to hear from NEMO"
+    >
+      <img src={LOGO_SRC} alt="" width={48} height={48} loading="lazy" />
+      <span>
+        NEMO<b>VERSE</b>
+      </span>
+    </div>
+  );
+}
+
+/* ------------------------------ REWIND ------------------------------ */
+
+function RewindButton() {
+  return (
+    <MagneticButton
+      className="signoff__rewind"
+      preset="chrome"
+      data-cursor="TOP"
+      aria-label="Back to top"
+      title="Back to top"
+      onClick={() => window.scrollTo({ top: 0, behavior: 'auto' })}
+    >
+      <RollText text="REWIND" />
+      <svg
+        className="signoff__rewind-chev"
+        viewBox="0 0 20 20"
+        width="12"
+        height="12"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M4.5 12.5 L10 4.5 L15.5 12.5"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </MagneticButton>
+  );
+}
+
+/* ------------------------------ Footer ------------------------------ */
 
 export default function Footer() {
   const root = useRef<HTMLElement | null>(null);
@@ -237,6 +333,88 @@ export default function Footer() {
           </a>
         </div>
       </div>
+
+      {/* Beat 2 — closing credits */}
+      <div className="shell signoff__credits">
+        <motion.div
+          className="signoff__identity"
+          initial={prefersReduced ? false : { opacity: 0, y: 26 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.8, ease: EASE_EXPO }}
+        >
+          <StarEasterEgg />
+          <p className="signoff__prose">
+            A connected Web3 ecosystem anchored by the Nemoverse — for the character, the
+            collectors, and the store. Built for <b>nemo</b> · pitched by Skippy Rizzo · July
+            2026.
+          </p>
+          <p className="signoff__stats">
+            {UNIVERSES.length} UNIVERSES REGISTERED · {ARTISTS.length} ARTISTS CREDITED · CHAIN:
+            BASE / POLYGON
+          </p>
+        </motion.div>
+
+        {FOOTER_NAV.map((group, gi) => (
+          <motion.nav
+            className="signoff__col"
+            aria-label={group.label}
+            key={group.label}
+            initial={prefersReduced ? false : { opacity: 0, y: 26 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.8, delay: 0.1 + gi * 0.08, ease: EASE_EXPO }}
+          >
+            <h4 className="signoff__col-label">
+              <span className="signoff__col-num" aria-hidden="true">
+                {String(gi + 1).padStart(2, '0')}
+              </span>
+              {group.label}
+            </h4>
+            {group.links.map((l) => (
+              <a href={l.href} key={l.href}>
+                <RollText text={l.label} />
+              </a>
+            ))}
+          </motion.nav>
+        ))}
+
+        <motion.nav
+          className="signoff__col"
+          aria-label="SIGNALS"
+          initial={prefersReduced ? false : { opacity: 0, y: 26 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.8, delay: 0.34, ease: EASE_EXPO }}
+        >
+          <h4 className="signoff__col-label">
+            <span className="signoff__col-num" aria-hidden="true">
+              04
+            </span>
+            SIGNALS
+          </h4>
+          {SOCIALS.map((s) => (
+            <a href={s.href} className="signoff__social" key={s.label}>
+              <RollText text={s.label} />
+              <span className="signoff__social-handle">{s.handle}</span>
+            </a>
+          ))}
+        </motion.nav>
+      </div>
+
+      {/* Beat 3 — the ribbon (full-bleed: the hairline rule spans the viewport) */}
+      <motion.div
+        className="signoff__ribbon"
+        initial={prefersReduced ? false : { opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-40px' }}
+        transition={{ duration: 0.7, delay: 0.25, ease: EASE_EXPO }}
+      >
+        <span>© 2026 THE NEMOVERSE · CONCEPT PITCH DEMO</span>
+        <span>NEMOVERSE PROTOCOL v0.1.0</span>
+        <span className="signoff__made">MADE IN THE VOID</span>
+        <RewindButton />
+      </motion.div>
     </footer>
   );
 }

@@ -418,12 +418,12 @@
 }
 
 /* =============================== FOOTER =============================== */
-/* The footer is the minimal "Sign-Off": credit crawl + stacked headline +
-   single primary CTA, elevated entirely by GSAP motion. See
-   src/sections/Footer.tsx and the SIGN-OFF layer in styles/overhaul.css.
-   The legacy .footer__top / .footer__col / .footer__bottom rules were
-   removed — the surface is .signoff__* only (the .footer base shell lives
-   in overhaul.css). */
+/* The footer is the "Sign-Off": a minimal closing anchor (stacked headline +
+   single primary CTA, elevated by GSAP motion) above the global site footer
+   (credit crawl, credits grid, legal ribbon). See src/sections/Footer.tsx
+   and the SIGN-OFF layer in styles/overhaul.css. The legacy .footer__top /
+   .footer__col / .footer__bottom rules were removed — the surface is
+   .signoff__* only (the .footer base shell lives in overhaul.css). */
 
 /* ============================ NEMOVERSE ============================ */
 
