@@ -30,6 +30,18 @@
    Transform authority: the outer node owns layout/presence (no transform
    motion values — layout projection and `rotate` must never share an
    element), the inner arm owns the rotation.
+
+   MOBILE RENDERING
+     The rig animates ONE property, on ONE element: `transform` on .hang__arm.
+     Nothing here touches layout (width/height/top/left) or paint (box-shadow,
+     filter, background) per frame, so a swing is a compositor job.
+     · The arm is force-promoted with translateZ(0) + will-change: transform
+       + backface-visibility: hidden, so the swinging subtree is rasterised
+       once and only re-composited.
+     · suspension.css strips the per-frame-expensive passes INSIDE a hanger on
+       touch/small screens (the blend-mode grain pass, image filters, the
+       idle-sway keyframes and the parallax layer's will-change) — those are
+       what turned a cheap rotation into a full re-raster of every card.
    ========================================================================== */
 
 import { useCallback, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
@@ -232,7 +244,21 @@ export default function HangingCard({
       <span className="hang__carriage" aria-hidden="true" />
       <motion.div
         className="hang__arm"
-        style={{ rotate: reduce ? 0 : capped, transformOrigin: '50% 0%' }}
+        style={{
+          rotate: reduce ? 0 : capped,
+          transformOrigin: '50% 0%',
+          /* Compositor contract (see MOBILE RENDERING below): promote the arm
+             to its own GPU layer and keep it there for the life of the rig. */
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+        }}
+        /* Force a 3D matrix. Framer emits only the transforms it is driving —
+           a lone `rotate()` is a 2D matrix, which several mobile GPUs
+           re-rasterise per frame instead of compositing, producing the
+           tearing/stutter this rig showed on phones. Prefixing translateZ(0)
+           (the CSS equivalent of `transform-gpu`, and the same thing GSAP's
+           force3D does) guarantees a 3D matrix on every frame. */
+        transformTemplate={(_, generated) => `translateZ(0) ${generated}`}
         onPointerDown={onPointerDown}
         onPointerEnter={onPointerEnter}
       >

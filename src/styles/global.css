@@ -163,11 +163,29 @@ body {
   letter-spacing: 0.005em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* ---- horizontal overflow guard --------------------------------------
+     Slide-in sections start their cards off-axis (±90…120px), which on a
+     phone is wider than the viewport and used to open a horizontal scroll
+     gutter. `hidden` first as the fallback; `clip` wins where supported and
+     is the one we actually want: unlike `hidden` it never turns the element
+     into a scroll container, so the pinned/sticky rigs on this page keep
+     resolving against the viewport. */
   overflow-x: hidden;
+  overflow-x: clip;
+  max-width: 100%;
   /* The deep-space nebula wash lives on the fixed .ambience layer (scene-aware
      WebGL quad with a CSS fallback — see components/Ambience.tsx). The body
      stays flat void: no background-attachment:fixed, so no full-page repaints
      on scroll and no broken attachment on iOS Safari. */
+}
+
+/* The app wrapper carries the same guard so nothing inside a section can
+   widen the document. `clip` only (no `hidden` fallback) — `hidden` here
+   would make #root a scroll container and break every sticky rig on the
+   page; body above already covers browsers without `clip`. */
+#root {
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 img {

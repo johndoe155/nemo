@@ -203,7 +203,18 @@
 .hang__arm {
   position: relative;
   padding-top: var(--cord, 34px);
-  will-change: transform;
+  /* GPU contract — the swing must be a composite, never a re-raster.
+     translateZ(0) is authored on the independent `translate` property so it
+     COMPOSES with framer's transform instead of being overwritten by it
+     (framer also emits its own translateZ(0) via transformTemplate; both
+     paths are belt-and-braces because the CSS one still applies before
+     hydration and under reduced motion). */
+  translate: 0 0 0;
+  /* `rotate` is listed too: the idle sway animates the independent rotate
+     property, and will-change: transform alone does not always cover it. */
+  will-change: transform, rotate;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   /* Idle life: a hair of residual sway so a resting rig never looks welded.
      Authored on the independent `rotate` property, which COMPOSES with the
      framer-driven `transform` on this same element (motion.css rule) — and is
@@ -303,6 +314,39 @@
   }
 }
 
+/* ---- mobile rendering budget ---------------------------------------------
+   A rotating layer has to be re-rasterised every frame if anything inside it
+   forces a paint pass. Inside a hanger, three things did:
+     · the grain overlay's mix-blend-mode (blending re-composites the whole
+       card subtree each frame — the single worst offender on mobile GPUs),
+     · a saturate() filter on the full-bleed artwork,
+     · the parallax layer's permanent will-change, one extra layer per card
+       on a device that has no cursor to drive it.
+   On touch/small screens they are stripped, and the always-on idle sway is
+   parked so a resting rack costs literally zero frames. The physics itself
+   is untouched.
+-------------------------------------------------------------------------- */
+@media (hover: none), (max-width: 900px) {
+  .hang__arm {
+    animation: none;
+  }
+  .hang .ucard__media::after {
+    mix-blend-mode: normal;
+    opacity: 0.4;
+  }
+  .hang .ucard__media img {
+    filter: none;
+  }
+  .hang .ucard__media-inner {
+    will-change: auto;
+  }
+  .hang .ucard,
+  .hang .ucard__media {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+}
+
 /* ==========================================================================
    SHARED — vertical rod geometry
    One set of tokens drives the rod width, the cut-out radius, the card's
@@ -320,6 +364,23 @@
   --hole-r: 11px;
   --hole-inset: 20px;
   --grommet: 30px;
+  /* THE ROD IS AN OPAQUE OBJECT. Every rod surface — the length behind the
+     cards and the length in front of them — is mixed down onto this solid
+     base instead of being laid over the page as a translucent film. A
+     translucent rod picks up whatever is behind it, which over a card means
+     it camouflages into that card's fill; over the section background it
+     stays dark. Same paint, two colours — the illusion dies. Mixing onto
+     --void (the page's own base, so nothing new is introduced) makes the
+     front and back halves render the identical colour. */
+  --rod-base: var(--void);
+
+  /* Overflow guard: the plates/cards fly in from ±120px off-axis, which is
+     wider than the shell on a phone. `clip` (not `hidden`) contains it
+     WITHOUT creating a scroll container — position: sticky elsewhere on the
+     page keeps resolving against the viewport. The clip margin lets the
+     rod's own glow spill while still catching the entrance offsets. */
+  overflow-x: clip;
+  overflow-clip-margin: 28px;
 }
 @media (max-width: 900px) {
   .credits,
@@ -391,6 +452,16 @@
   translate: -50% 0;
   border-radius: 0 0 var(--r-pill) var(--r-pill);
   pointer-events: none;
+  /* --- strict paint authority ------------------------------------------
+     The front half sits ON TOP of a card, so it must not borrow one pixel
+     from it. An opaque base colour under the gradients, blending explicitly
+     switched off, and its own stacking/blending context so nothing in the
+     card's subtree can composite into it. */
+  isolation: isolate;
+  mix-blend-mode: normal;
+  background-color: var(--rod-base);
+  background-blend-mode: normal;
+  opacity: 1;
   /* Cast shadow onto the card it now sits in front of. */
   box-shadow:
     3px 1px 10px -2px rgba(0, 0, 0, 0.85),
@@ -474,9 +545,9 @@
     ),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--gold) 45%, transparent),
-      color-mix(in srgb, var(--iris) 40%, transparent) 50%,
-      color-mix(in srgb, var(--cyan) 40%, transparent)
+      color-mix(in srgb, var(--gold) 45%, var(--rod-base)),
+      color-mix(in srgb, var(--iris) 42%, var(--rod-base)) 50%,
+      color-mix(in srgb, var(--cyan) 42%, var(--rod-base))
     );
   box-shadow: 0 0 26px -8px color-mix(in srgb, var(--gold) 55%, transparent);
   -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 12%, #000 86%, transparent 100%);
@@ -503,8 +574,8 @@
     ),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--ac, var(--cyan)) 26%, transparent),
-      color-mix(in srgb, var(--ac, var(--cyan)) 18%, transparent)
+      color-mix(in srgb, var(--rod-hue, var(--iris)) 45%, var(--rod-base)),
+      color-mix(in srgb, var(--rod-hue, var(--iris)) 42%, var(--rod-base))
     );
 }
 .credits__row:last-child {
@@ -782,6 +853,8 @@
   translate: -50% 0;
   transform-origin: 50% 0%;
   border-radius: var(--r-pill);
+  /* Solid palette stops — the drilling rod, like the credit rod, is an opaque
+     object and never samples what is behind it. */
   background: linear-gradient(
     180deg,
     var(--gold),
@@ -790,6 +863,8 @@
     var(--magenta)
   );
   box-shadow: 0 0 18px -4px color-mix(in srgb, var(--cyan) 70%, transparent);
+  /* GSAP scrubs scaleY on this node every frame — keep it on the compositor. */
+  will-change: transform;
 }
 /* Drill head — sits at the growing tip of the rod. */
 .ctl__head {
@@ -805,6 +880,7 @@
     0 0 0 3px color-mix(in srgb, var(--cyan) 30%, transparent),
     0 0 24px 2px color-mix(in srgb, var(--cyan) 70%, transparent);
   z-index: 1;
+  will-change: transform, opacity;
 }
 
 .ctl__row {
@@ -830,8 +906,8 @@
     ),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--tc, var(--cyan)) 85%, transparent),
-      color-mix(in srgb, var(--tc, var(--cyan)) 60%, transparent)
+      var(--tc, var(--cyan)),
+      color-mix(in srgb, var(--tc, var(--cyan)) 82%, var(--rod-base))
     );
   transition: opacity 0.4s var(--ease-expo);
 }

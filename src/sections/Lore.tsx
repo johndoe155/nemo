@@ -64,9 +64,16 @@ function CanonTimeline() {
     const rows = gsap.utils.toArray<HTMLElement>('.ctl__row', el);
     const mm = gsap.matchMedia();
 
+    /* Everything this timeline animates is a composited property — scaleY on
+       the rod, y/autoAlpha on the drill head, class toggles for the nodes. No
+       width/height/top tween anywhere, so nothing in here can trigger layout.
+       force3D pins them to a 3D matrix (GPU layer) rather than letting GSAP
+       drop back to a 2D matrix once a tween settles. */
+    gsap.defaults({ force3D: true });
+
     /* Reduced motion: the rod is simply already driven all the way home. */
     mm.add('(prefers-reduced-motion: reduce)', () => {
-      gsap.set(fill.current, { scaleY: 1 });
+      gsap.set(fill.current, { scaleY: 1, force3D: true });
       gsap.set(head.current, { autoAlpha: 0 });
       rows.forEach((r) => r.classList.add('is-pierced'));
     });
@@ -75,8 +82,8 @@ function CanonTimeline() {
       const rail = el.querySelector<HTMLElement>('.ctl__rail');
       if (!rail) return;
 
-      gsap.set(fill.current, { scaleY: 0, transformOrigin: '50% 0%' });
-      gsap.set(head.current, { y: 0, autoAlpha: 0 });
+      gsap.set(fill.current, { scaleY: 0, transformOrigin: '50% 0%', force3D: true });
+      gsap.set(head.current, { y: 0, autoAlpha: 0, force3D: true });
 
       /* The rod grows while the section travels from tip-line to tip-line —
          the tip is therefore pinned to 65% of the viewport at all times. */
@@ -90,11 +97,11 @@ function CanonTimeline() {
             invalidateOnRefresh: true,
           },
         })
-        .fromTo(fill.current, { scaleY: 0 }, { scaleY: 1, ease: 'none' }, 0)
+        .fromTo(fill.current, { scaleY: 0 }, { scaleY: 1, ease: 'none', force3D: true }, 0)
         .fromTo(
           head.current,
           { y: 0, autoAlpha: 0 },
-          { y: () => rail.offsetHeight, autoAlpha: 1, ease: 'none' },
+          { y: () => rail.offsetHeight, autoAlpha: 1, ease: 'none', force3D: true },
           0,
         );
 

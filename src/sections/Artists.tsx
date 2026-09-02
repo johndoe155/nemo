@@ -43,7 +43,22 @@ const BOB_HOLD = 110;
 
 const EASE_EXPO = [0.16, 1, 0.3, 1] as const;
 
-function CreditPlate({ a, i }: { a: (typeof ARTISTS)[number]; i: number }) {
+/* The rod's own colour at a given fraction of its length.
+
+   The rod is painted gold → iris (50%) → cyan. The length that passes IN
+   FRONT of a plate is a separate element, so it has to be told which slice of
+   that ramp it represents — otherwise the front half and the back half of the
+   same rod are two different colours. Two chained color-mix()es reproduce the
+   three-stop ramp exactly, using nothing but existing palette tokens. */
+function rodHueAt(t: number) {
+  const first = t < 0.5;
+  const from = first ? 'var(--gold)' : 'var(--iris)';
+  const to = first ? 'var(--iris)' : 'var(--cyan)';
+  const p = ((first ? t : t - 0.5) * 200).toFixed(2);
+  return `color-mix(in srgb, ${to} ${p}%, ${from})`;
+}
+
+function CreditPlate({ a, i, n }: { a: (typeof ARTISTS)[number]; i: number; n: number }) {
   const reduce = useReducedMotion();
   /* Entrance side only — the layout itself is a centred stack. */
   const from: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right';
@@ -75,7 +90,16 @@ function CreditPlate({ a, i }: { a: (typeof ARTISTS)[number]; i: number }) {
   return (
     <div
       className="credits__row"
-      style={{ '--ac': a.hue[0], '--a1': a.hue[0], '--a2': a.hue[1] } as React.CSSProperties}
+      style={
+        {
+          '--ac': a.hue[0],
+          '--a1': a.hue[0],
+          '--a2': a.hue[1],
+          /* Colour of the rod where it crosses THIS plate — the exiting
+             length is tinted with it so front and back match exactly. */
+          '--rod-hue': rodHueAt(n > 1 ? (i + 0.5) / n : 0.5),
+        } as React.CSSProperties
+      }
     >
       {/* Collar on the rod, behind the plate — seen THROUGH the punched hole. */}
       <span className="credits__collar" aria-hidden="true" />
@@ -160,7 +184,7 @@ export default function Artists() {
         <div className="credits">
           <span className="credits__rod" aria-hidden="true" />
           {ARTISTS.map((a, i) => (
-            <CreditPlate key={a.name} a={a} i={i} />
+            <CreditPlate key={a.name} a={a} i={i} n={ARTISTS.length} />
           ))}
         </div>
       </div>
