@@ -101,18 +101,36 @@ export function Reveal({
 
 /* ------------------------------ Marquee ------------------------------ */
 
-export function Marquee({ items, speed = '36s' }: { items: string[]; speed?: string }) {
+export function Marquee({
+  items,
+  speed = '36s',
+  variant = 'default',
+}: {
+  items: string[];
+  speed?: string;
+  /** 'credits' — the closing-credit crawl: slower, larger, outlined type,
+      reversed direction (see .marquee--credits in overhaul.css). */
+  variant?: 'default' | 'credits';
+}) {
+  /* Two identical rows create the seamless loop; only one is ever spoken —
+     the rows are aria-hidden and a single visually-hidden caption carries
+     the full list for assistive tech (previously the whole list was
+     announced twice). */
   const row = (key: string) => (
-    <div className="marquee__item" key={key}>
+    <div className="marquee__item" key={key} aria-hidden="true">
       {items.map((t, i) => (
         <span key={`${key}-${i}`}>
-          <span className="star">✦</span> {t}
+          <span className="star" aria-hidden="true">✦</span> {t}
         </span>
       ))}
     </div>
   );
   return (
-    <div className="marquee" style={{ '--speed': speed }}>
+    <div
+      className={`marquee ${variant === 'credits' ? 'marquee--credits' : ''}`}
+      style={{ '--speed': speed }}
+    >
+      <span className="vh">{items.join(' · ')}</span>
       <div className="marquee__track">
         {row('a')}
         {row('b')}

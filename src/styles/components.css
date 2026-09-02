@@ -418,100 +418,10 @@
 }
 
 /* =============================== FOOTER =============================== */
-
-.footer {
-  border-top: 1px solid var(--line);
-  background: linear-gradient(180deg, transparent, rgba(138, 77, 255, 0.06));
-  padding: 4.5rem 0 2.5rem;
-  position: relative;
-  overflow: hidden;
-}
-.footer__top {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
-  gap: 3rem;
-  margin-bottom: 3.5rem;
-}
-.footer__brand {
-  display: flex;
-  align-items: center;
-  font-family: var(--font-display);
-  font-weight: 800;
-  text-transform: uppercase;
-  font-size: clamp(1.3rem, 1rem + 1.4vw, 2rem);
-  letter-spacing: 0.1em;
-  margin-bottom: 0.8rem;
-}
-.footer__brand img {
-  display: block;
-  width: clamp(1.3rem, 1rem + 1.4vw, 2rem);
-  height: clamp(1.3rem, 1rem + 1.4vw, 2rem);
-  object-fit: contain;
-}
-.footer p {
-  color: var(--ink-dim);
-  font-size: 0.95rem;
-  max-width: 34rem;
-}
-.footer__col h4 {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--cyan);
-  margin-bottom: 1.1rem;
-}
-.footer__col a {
-  position: relative;
-  display: block;
-  width: fit-content;
-  color: var(--ink-dim);
-  font-size: 0.95rem;
-  padding: 0.28rem 0;
-  /* the label itself carries the motion now (RollText char cascade);
-     the underline draws instead of the translateX nudge */
-  transition: color 0.3s var(--ease-expo);
-}
-.footer__col a::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, var(--cyan), transparent 80%);
-  background-size: 260% 100%;
-  animation: gdrift 9s ease-in-out infinite;
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.45s var(--ease-expo);
-}
-.footer__col a:hover {
-  color: var(--ink);
-}
-.footer__col a:hover::after,
-.footer__col a:focus-visible::after {
-  transform: scaleX(1);
-}
-.footer__bottom {
-  border-top: 1px solid var(--line);
-  padding-top: 1.8rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-@media (max-width: 860px) {
-  .footer__top {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-  }
-}
+/* The footer was rebuilt as "The Sign-Off" (see src/sections/Footer.tsx +
+   the SIGN-OFF layer in styles/overhaul.css). The legacy .footer__top /
+   .footer__col / .footer__bottom rules were removed — the new surface is
+   .signoff__* only (the .footer base shell lives in overhaul.css now). */
 
 /* ============================ NEMOVERSE ============================ */
 
@@ -1708,7 +1618,6 @@
 .persona__grid > *,
 .lore__grid > *,
 .npx__layout > *,
-.footer__top > *,
 .dialog__grid > *,
 .mv__head > * {
   min-width: 0;

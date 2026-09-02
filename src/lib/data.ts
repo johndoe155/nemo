@@ -66,6 +66,55 @@ export const ARTISTS: Artist[] = [
 
 export const UNIVERSE_DROP_ISO = '2026-08-22T17:00:00Z';
 
+/** Drop label derived from the ISO so it can never drift (same pattern as
+    Nemoverse.tsx DROP_LABEL — the footer marquee/caption used to hardcode
+    "AUG 22" and went stale). */
+export const DROP_LABEL = new Date(UNIVERSE_DROP_ISO)
+  .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  .toUpperCase();
+
+export interface FooterNavGroup {
+  label: string;
+  links: Array<{ label: string; href: string }>;
+}
+
+/** Footer link groups — "The Sign-Off" credits. Re-grouped so every major
+    district is reachable from the closing screen. */
+export const FOOTER_NAV: FooterNavGroup[] = [
+  {
+    label: 'UNIVERSE',
+    links: [
+      { label: 'The Nemoverse', href: '#nemoverse' },
+      { label: 'The Rotunda', href: '#rotunda' },
+      { label: 'Artists', href: '#artists' },
+      { label: 'Lore', href: '#lore' },
+    ],
+  },
+  {
+    label: 'SYSTEMS',
+    links: [
+      { label: 'Holder Perks', href: '#perks' },
+      { label: 'POP Pulls', href: '#pulls' },
+      { label: 'Store', href: '#store' },
+      { label: 'The Persona', href: '#persona' },
+    ],
+  },
+];
+
+export interface SocialLink {
+  label: string;
+  href: string;
+  handle: string;
+}
+
+/** Demo stubs — replace with live community handles before shipping. */
+export const SOCIALS: SocialLink[] = [
+  { label: 'X / TWITTER', href: '#', handle: '@thenemoverse' },
+  { label: 'DISCORD', href: '#', handle: 'discord.gg/nemoverse' },
+  { label: 'OPENSEA', href: '#', handle: 'opensea.io/nemoverse' },
+  { label: 'EMAIL', href: 'mailto:void@thenemoverse.xyz', handle: 'void@thenemoverse.xyz' },
+];
+
 export const UNIVERSES: Universe[] = [
   {
     id: 1,
