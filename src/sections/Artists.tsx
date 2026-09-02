@@ -6,30 +6,28 @@ import { ARTISTS, UNIVERSES } from '../lib/data';
 /* ============================================================================
    06 · PERMANENT PUBLIC CREDITS — the credit rod
 
-   The masonry of quote cards is replaced by a single spine: one vertical rod
-   running the exact centre of the section's Y-axis at EVERY breakpoint
-   (masked so it fades in at the top and phases out at the bottom), with
-   dual-segment credit plates skewered onto it, alternating left and right.
+   ONE centred spine, ONE column. The masonry is replaced by a vertical rod
+   running the exact centre of the section's Y-axis (masked so it fades in at
+   the top and phases out at the bottom), with the credit plates stacked
+   uniformly on top of each other — no left/right stagger; that language
+   belongs to the canon timeline.
 
-   Each plate is two segments in contrasting palette fills:
-     · a narrow vertical block (the details: avatar, canon credit codes, index)
-       always facing the rod, filled with the artist's accent over --abyss
-     · the wide block (the quote itself) on the standard glass panel
-
-   THE PIN
-     The plate's inner edge overhangs the centre line by exactly --hole-inset,
-     and a circular hole is CUT out of the plate there with a radial-gradient
-     mask — so the rod behind is genuinely visible through the card, not faked
-     with a drawn circle. The elevation shadow lives on an unmasked pin
-     wrapper (a mask would clip it), and the plate rotates about that hole, so
-     no tilt or bob can ever knock it off the rod.
+   THE ROD DISSECTS THE PLATE
+     Each plate is centred on the rod, and the plate's own segment boundary is
+     placed on that same centre line, so the rod is the divider between the
+     two contrasting fills:
+       · left  — the detail block  (accent over --abyss): index, avatar,
+                 artist, handle, permanent canon credits
+       · right — the quote block   (glass panel): the artist's own words
+     A circular hole is CUT out of the plate dead centre with a radial-gradient
+     mask, so the rod behind is genuinely visible passing through the card —
+     entering above it, showing in the hole, exiting below.
 
    MOTION
-     · Entrance — the plate slides in horizontally from its own side and comes
-       to rest against the rod (outer node owns x/opacity).
-     · Rest — a static alternating tilt: plates right of the rod sit
-       counter-clockwise (angling up to the right), plates left of it sit
-       clockwise (angling up to the left).
+     · Entrance — plates still fly in horizontally from alternating sides and
+       halt centred on the rod (outer node owns x/opacity).
+     · Rest — an alternating static tilt (clockwise / counter-clockwise by
+       index), pivoted on the hole so the pin never leaves the rod.
      · Click — an under-damped spring impulse: the plate bobs on its pin and
        rings back down to its resting tilt (inner node owns rotate/y).
    Splitting the two across nested nodes keeps a single framer transform
@@ -37,9 +35,9 @@ import { ARTISTS, UNIVERSES } from '../lib/data';
    ========================================================================== */
 
 /** Resting tilt, in degrees. CSS-positive = clockwise. */
-const TILT = 1.7;
+const TILT = 1.5;
 /** Impulse thrown by a click, before the spring rings it out. */
-const BOB_ROT = 4.6;
+const BOB_ROT = 4.2;
 const BOB_LIFT = -12;
 const BOB_HOLD = 110;
 
@@ -47,10 +45,10 @@ const EASE_EXPO = [0.16, 1, 0.3, 1] as const;
 
 function CreditPlate({ a, i }: { a: (typeof ARTISTS)[number]; i: number }) {
   const reduce = useReducedMotion();
-  const side: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right';
-  /* Left of the rod → clockwise (up to the left). Right of it → counter-
-     clockwise (up to the right). */
-  const rest = side === 'left' ? TILT : -TILT;
+  /* Entrance side only — the layout itself is a centred stack. */
+  const from: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right';
+  /* Alternating natural tilt down the stack. */
+  const rest = i % 2 === 0 ? TILT : -TILT;
 
   const credited = UNIVERSES.filter((u) => u.artist.name === a.name);
   const codes = credited.map((u) => u.code).join(' · ') || 'UPCOMING';
@@ -66,27 +64,27 @@ function CreditPlate({ a, i }: { a: (typeof ARTISTS)[number]; i: number }) {
   const bob = useCallback(() => {
     if (reduce) return;
     window.clearTimeout(timer.current);
-    rotRaw.set(rest + (side === 'left' ? -BOB_ROT : BOB_ROT));
+    rotRaw.set(rest + (i % 2 === 0 ? -BOB_ROT : BOB_ROT));
     liftRaw.set(BOB_LIFT);
     timer.current = window.setTimeout(() => {
       rotRaw.set(rest);
       liftRaw.set(0);
     }, BOB_HOLD);
-  }, [reduce, rest, rotRaw, liftRaw, side]);
+  }, [reduce, rest, rotRaw, liftRaw, i]);
 
   return (
     <div
-      className={`credits__row credits__row--${side}`}
+      className="credits__row"
       style={{ '--ac': a.hue[0], '--a1': a.hue[0], '--a2': a.hue[1] } as React.CSSProperties}
     >
       {/* Collar on the rod, behind the plate — seen THROUGH the punched hole. */}
       <span className="credits__collar" aria-hidden="true" />
       <motion.div
         className="credits__slot"
-        initial={reduce ? { opacity: 0 } : { opacity: 0, x: side === 'left' ? -110 : 110 }}
+        initial={reduce ? { opacity: 0 } : { opacity: 0, x: from === 'left' ? -120 : 120 }}
         whileInView={{ opacity: 1, x: 0 }}
         viewport={{ once: true, margin: '-90px' }}
-        transition={{ duration: 1, ease: EASE_EXPO, delay: (i % 2) * 0.08 }}
+        transition={{ duration: 1, ease: EASE_EXPO }}
       >
         <motion.article
           className="creditpin"
@@ -107,22 +105,21 @@ function CreditPlate({ a, i }: { a: (typeof ARTISTS)[number]; i: number }) {
           data-cursor="NUDGE"
         >
           <div className="creditcard sheen">
+            {/* Segment A — details, left of the rod. */}
             <div className="creditcard__seg">
-              <span className="creditcard__ava" aria-hidden="true">{a.initials}</span>
-              <span className="creditcard__vert" title={`CANON CREDIT · ${codes}`}>
-                CANON · {codes}
-              </span>
-              <span className="creditcard__idx">{String(i + 1).padStart(2, '0')}</span>
+              <div className="creditcard__id">
+                <span className="creditcard__ava" aria-hidden="true">{a.initials}</span>
+                <span className="creditcard__idx">{String(i + 1).padStart(2, '0')}</span>
+              </div>
+              <div className="creditcard__who">
+                <b>{a.name}</b>
+                <span className="creditcard__handle">{a.handle}</span>
+              </div>
+              <span className="creditcard__codes">CANON · {codes}</span>
             </div>
+            {/* Segment B — the quote, right of the rod. */}
             <div className="creditcard__main">
               <p className="creditcard__quote">{a.quote}</p>
-              <div className="creditcard__by">
-                <b>{a.name}</b>
-                <span>{a.handle}</span>
-              </div>
-              {/* Compact rig: the canon codes move out of the vertical block
-                  and under the byline where there is room to read them. */}
-              <span className="creditcard__codes">CANON · {codes}</span>
             </div>
             {/* Bevelled rim of the punched hole (its centre is cut away). */}
             <span className="creditcard__grommet" aria-hidden="true" />

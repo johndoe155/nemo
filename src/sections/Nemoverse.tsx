@@ -59,6 +59,9 @@ export default function Nemoverse() {
     target: rosterRef,
     offset: ['start start', 'end end'],
   });
+  /* Page scroll — the weak "gust" channel every hanger listens to, so the rack
+     reacts to being scrolled past even when the carriage itself is still. */
+  const { scrollY: pageScroll } = useScroll();
   const x = useTransform(scrollYProgress, [0.06, 0.94], [0, -maxX]);
   const railOpacity = useTransform(scrollYProgress, [0, 0.05, 0.95, 1], [0.25, 1, 1, 0.3]);
 
@@ -251,11 +254,11 @@ export default function Nemoverse() {
             <motion.div className="roster__rail" ref={railRef} style={{ x: isDragging ? dragX : x, opacity: railOpacity }}>
               <AnimatePresence mode="popLayout" initial={false}>
                 {list.map((u, i) => (
-                  <HangingCard key={u.id} index={i} drive={carriage}>
+                  <HangingCard key={u.id} index={i} drive={carriage} gust={pageScroll}>
                     <UniverseCard u={u} index={i} onClick={setSelected} />
                   </HangingCard>
                 ))}
-                <HangingCard key="drop-teaser" index={list.length} drive={carriage}>
+                <HangingCard key="drop-teaser" index={list.length} drive={carriage} gust={pageScroll}>
                   <DropTeaserCard />
                 </HangingCard>
               </AnimatePresence>
@@ -342,11 +345,11 @@ export default function Nemoverse() {
           <div className="mrail__track" ref={mTrackRef}>
             <AnimatePresence mode="popLayout" initial={false}>
               {list.map((u, i) => (
-                <HangingCard key={u.id} index={i} drive={mCarriage}>
+                <HangingCard key={u.id} index={i} drive={mCarriage} gust={pageScroll}>
                   <UniverseCard u={u} index={i} onClick={setSelected} />
                 </HangingCard>
               ))}
-              <HangingCard key="drop-teaser" index={list.length} drive={mCarriage}>
+              <HangingCard key="drop-teaser" index={list.length} drive={mCarriage} gust={pageScroll}>
                 <DropTeaserCard />
               </HangingCard>
             </AnimatePresence>
