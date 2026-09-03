@@ -59,33 +59,31 @@ present. `package.json` is unchanged.
 | three | ^0.172.0 | ^0.185.1 | **Verified empirically**: the donor app was run under three 0.185.1 and renders pixel-equivalent to 0.172 (incl. the internal `renderer.properties` access used by `verifyPrograms`). Kept 0.185.1 — downgrading would risk `Pulls`/`Starfield`/`Ambience`. |
 | vite | ^6.0.7 | ^5.4.11 | Donor uses only `?raw` GLSL imports + PNG asset imports — identical in Vite 5. |
 
-## Verbatim-extraction exceptions (donor files touched ONLY where listed; raymarch/bloom buffers still byte-for-byte)
+## Verbatim-extraction exceptions (donor code is byte-for-byte; all integration lives in wrapper files)
 
-0. **Background de-black pass (follow-up tasks)** — the section originally carried
-   the donor's black in two layers, both removed:
-   - *Wrapper CSS (integration file, donor rules neutralised by override):*
-     every wrapper-level black in `gargantua.css` was removed (`.gargantua`
-     background, `.shader-root` background via a scoped override,
+0. **Background de-black pass (follow-up tasks)** — removed in three stages:
+   - *Wrapper CSS:* every wrapper-level black in `gargantua.css` was removed
+     (`.gargantua` background, `.shader-root` background via a scoped override,
      placeholder/still gradient stops) so the section reveals the site's real
-     backdrop — `body { var(--void) }` + the fixed `.starfield`. Necessary but
-     not sufficient: the canvas itself painted opaque black.
-   - *Canvas pixels (documented donor-file deviations, authorised by the
-     background-removal task):* the donor renderer builds its context
-     `alpha:false` with an opaque black clear, and `image.glsl` — the only pass
-     that writes to the visible screen — hardcodes `fragColor.a = 1.0`, while
-     `bufferA.glsl` has no sky term, so the shader's empty space is opaque black
-     by design. Two surgical changes key that empty space to transparent
-     **without touching the black-hole render**: (1) `gargantuaRenderer.ts`
-     context creation → `alpha: true`, `premultipliedAlpha: false` (straight
-     alpha — opaque pixels composite pixel-identically) and
-     `setClearColor(0x000000, 0)` (inert for the bloom chain; no pass reads
-     target alpha); (2) `image.glsl` final write →
-     `alpha = smoothstep(0.0, 0.04, max(r,g,b))` of the final display-referred
-     color — pure black → alpha 0, every rendered pixel above the 4% knee
-     (disc, lensed ring, haze) → alpha 1 and pixel-identical; sub-knee
-     differences are invisible over the near-black page backdrop, and the
-     entrance ramp now fades in from transparent instead of a black flash.
-     `bufferA/B/C/D.glsl` remain byte-for-byte untouched.
+     backdrop — `body { var(--void) }` + the fixed `.starfield`.
+   - *Canvas-alpha attempt (REVERTED):* a follow-up keyed the canvas's empty
+     space transparent (`alpha:true` + clear alpha 0 in the renderer, and an
+     alpha-key on the final color in `image.glsl`). It failed, instructively:
+     the render's "empty space" is not black. The composite adds an 8-octave
+     HDR bloom veil (`GetBloom` octaves 1..8 → `×200` gain → `pow(0.7/2.2)`
+     gamma lift) that paints a faint blue-gray glow (≈ rgb(42,49,78) measured
+     at the corners of a converged donor frame) across the whole rectangle —
+     and that veil overlaps in brightness with the render's own shadow
+     (~0.24+ display), so no per-pixel threshold can separate "box" from
+     "black hole"; the key left an opaque box whose opacity tracked the
+     shader's brightness. Both donor-file edits were reverted; sha256-verified
+     byte-identical to `Gargantua.zip` again.
+   - *Final approach (edge dissolve):* the canvas keeps its donor pixels
+     exactly — opaque, constant alpha — and the RECTANGLE is dissolved
+     instead: `OVERRIDE 4` in `gargantua.css` applies a soft radial vignette
+     `mask-image` to `.shader-canvas` (same edge-dissolve pattern as the
+     footer credit marquee), fading the veil's outer fringe into the page
+     backdrop. The black hole and its inner glow are untouched.
 
 1. **Donor CSS re-anchoring** — `.shader-root` is `position: fixed; inset: 0` (a full-viewport
    app). Inside the section it is overridden to `position: absolute` via the scoped selector

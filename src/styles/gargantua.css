@@ -12,7 +12,7 @@
 
      2 · INTEGRATION LAYER — Nemoverse-side rules, all scoped under
          .gargantua / .nemo-gargantua so nothing can bleed into (or in from)
-         neighbouring sections. No edits are made to donor files; the two
+         neighbouring sections. No edits are made to donor files; the four
          behavioural re-anchors below are pure CSS overrides with higher
          specificity, each flagged so a human can revert them.
    ========================================================================== */
@@ -58,13 +58,13 @@
   inset: 0;
 }
 
-/* OVERRIDE 1 of 3 — the donor app is a fixed, full-viewport overlay; here it
+/* OVERRIDE 1 of 4 — the donor app is a fixed, full-viewport overlay; here it
    must fill this section instead. Won by specificity (0,2,0 > 0,1,0), so the
    donor rule above stays verbatim. Delete this override to restore the
    donor's fixed-viewport behaviour. */
 .nemo-gargantua .shader-root {
   position: absolute;
-  /* OVERRIDE 2 of 3 — background. The donor rule above paints its app shell
+  /* OVERRIDE 2 of 4 — background. The donor rule above paints its app shell
      black; embedded here that black would box the band against the site's
      void + starfield backdrop. Neutralised to transparent (Option B: the
      WebGL canvas itself stays opaque per the donor's renderer — its
@@ -73,7 +73,7 @@
   background: transparent;
 }
 
-/* OVERRIDE 3 of 3 — the donor bans every touch gesture (correct for a
+/* OVERRIDE 3 of 4 — the donor bans every touch gesture (correct for a
    full-viewport app; the canvas IS the page). Embedded mid-scroll, a
    touch-action:none band covering most of a phone screen would swallow the
    vertical page-scroll gesture. pan-y lets vertical pans scroll the page
@@ -82,6 +82,35 @@
    restore strict donor behaviour. */
 .nemo-gargantua .shader-canvas {
   touch-action: pan-y;
+}
+
+/* OVERRIDE 4 of 4 — edge dissolve. The donor render's "empty space" is not
+   black: the composite adds an 8-octave HDR bloom veil (image.glsl:
+   GetBloom octaves 1..8, then ×200 gain and a pow(0.7/2.2) gamma lift) that
+   paints a faint blue-gray glow (measured ≈ rgb(42,49,78) at the corners of
+   a converged frame) across the ENTIRE canvas rectangle. That veil is render
+   content — the black hole's own light — and it overlaps in brightness with
+   the render's dark shadow regions, so no per-pixel alpha key can separate
+   "box" from "black hole" (verified: an attempted canvas-alpha key left the
+   veil as an opaque box whose opacity tracked the shader's brightness).
+
+   So the canvas keeps its donor pixels exactly (opaque, constant alpha —
+   byte-for-byte verbatim renderer and shaders), and the RECTANGLE is
+   dissolved instead: a soft vignette mask fades the canvas's outer fringe
+   into the page backdrop, the same edge-dissolve treatment the footer
+   credit marquee uses. The black hole and its inner glow are untouched;
+   only the outer edge of the veil fades out — no box boundary remains. */
+.nemo-gargantua .shader-canvas {
+  -webkit-mask-image: radial-gradient(
+    ellipse 78% 74% at 50% 50%,
+    #000 62%,
+    transparent 99%
+  );
+  mask-image: radial-gradient(
+    ellipse 78% 74% at 50% 50%,
+    #000 62%,
+    transparent 99%
+  );
 }
 
 /* Still placeholder — shown before the section nears the viewport (chunk not
