@@ -38,13 +38,15 @@
 
 /* ---- 2 · Integration layer (scoped) --------------------------------------- */
 
-/* The band itself. Opaque black by design — the black hole reads as a void
-   cut into the page between the two neighbouring sections. Fixed height
-   reserves the space up-front (no layout shift when the canvas mounts). */
+/* The band itself. Transparent by design — like every other section on the
+   page it sits over the body background (var(--void)) and the fixed
+   .starfield layer (z -1), which flow unbroken past the band. The canvas
+   itself supplies the black space of the render; the wrapper adds no black
+   of its own (see OVERRIDE 2 below). Fixed height reserves the space
+   up-front (no layout shift when the canvas mounts). */
 .gargantua {
   position: relative;
   height: clamp(420px, 72vh, 820px);
-  background: #000;
   overflow: hidden;
   isolation: isolate;
   contain: layout paint;
@@ -56,15 +58,22 @@
   inset: 0;
 }
 
-/* OVERRIDE 1 of 2 — the donor app is a fixed, full-viewport overlay; here it
+/* OVERRIDE 1 of 3 — the donor app is a fixed, full-viewport overlay; here it
    must fill this section instead. Won by specificity (0,2,0 > 0,1,0), so the
    donor rule above stays verbatim. Delete this override to restore the
    donor's fixed-viewport behaviour. */
 .nemo-gargantua .shader-root {
   position: absolute;
+  /* OVERRIDE 2 of 3 — background. The donor rule above paints its app shell
+     black; embedded here that black would box the band against the site's
+     void + starfield backdrop. Neutralised to transparent (Option B: the
+     WebGL canvas itself stays opaque per the donor's renderer — its
+     bloom/tonemap pipeline composites against black — so only the wrapper's
+     own paint is changed, never the shader). */
+  background: transparent;
 }
 
-/* OVERRIDE 2 of 2 — the donor bans every touch gesture (correct for a
+/* OVERRIDE 3 of 3 — the donor bans every touch gesture (correct for a
    full-viewport app; the canvas IS the page). Embedded mid-scroll, a
    touch-action:none band covering most of a phone screen would swallow the
    vertical page-scroll gesture. pan-y lets vertical pans scroll the page
@@ -76,25 +85,27 @@
 }
 
 /* Still placeholder — shown before the section nears the viewport (chunk not
-   yet requested) and as the Suspense fallback while it streams. */
+   yet requested) and as the Suspense fallback while it streams. Transparent:
+   the site void + starfield show through, with only a faint disk-shaped glow
+   hinting at what loads in (no black box while streaming). */
 .gargantua__placeholder {
   position: absolute;
   inset: 0;
   background:
     radial-gradient(46% 38% at 50% 52%, rgba(255, 200, 87, 0.09), transparent 72%),
-    radial-gradient(64% 52% at 50% 55%, rgba(138, 77, 255, 0.07), transparent 78%),
-    #000;
+    radial-gradient(64% 52% at 50% 55%, rgba(138, 77, 255, 0.07), transparent 78%);
 }
 
 /* Static frame for prefers-reduced-motion: a still eclipse — event horizon,
-   thin bright rim, a low accretion haze. No animation of any kind. */
+   thin bright rim, a low accretion haze — floating on the site's own
+   void + starfield backdrop (transparent sky, not donor black). No animation
+   of any kind. */
 .gargantua__still {
   position: absolute;
   inset: 0;
   background:
     radial-gradient(58% 16% at 50% 54%, rgba(255, 200, 87, 0.16), transparent 74%),
-    radial-gradient(42% 30% at 50% 52%, rgba(255, 170, 80, 0.1), transparent 76%),
-    #000;
+    radial-gradient(42% 30% at 50% 52%, rgba(255, 170, 80, 0.1), transparent 76%);
 }
 
 .gargantua__still::after {

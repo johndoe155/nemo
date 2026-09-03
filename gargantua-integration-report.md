@@ -61,6 +61,18 @@ present. `package.json` is unchanged.
 
 ## Verbatim-extraction exceptions (all in *new* files; donor files untouched)
 
+0. **Background de-black pass (follow-up task)** — the shader section originally
+   carried the donor's black shell. Fixed with **Option B** (matching/transparent
+   background — *not* a transparent canvas): the donor renderer keeps
+   `alpha: false` + black clear color because its bloom/tonemap pipeline
+   composites against black and the donor files must stay verbatim; instead every
+   *wrapper-level* black in `gargantua.css` was removed (`.gargantua` background,
+   `.shader-root` background via a scoped override, placeholder/still gradient
+   stops) so the section reveals the site's real backdrop — `body { var(--void) }`
+   + the fixed `.starfield` — exactly like every neighbouring section. The
+   `.gargantua__still::after` black disc remains (it is the black hole, not a
+   background).
+
 1. **Donor CSS re-anchoring** — `.shader-root` is `position: fixed; inset: 0` (a full-viewport
    app). Inside the section it is overridden to `position: absolute` via the scoped selector
    `.nemo-gargantua .shader-root` (higher specificity; the verbatim rule above it is untouched).
