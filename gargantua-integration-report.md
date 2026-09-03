@@ -59,39 +59,31 @@ present. `package.json` is unchanged.
 | three | ^0.172.0 | ^0.185.1 | **Verified empirically**: the donor app was run under three 0.185.1 and renders pixel-equivalent to 0.172 (incl. the internal `renderer.properties` access used by `verifyPrograms`). Kept 0.185.1 — downgrading would risk `Pulls`/`Starfield`/`Ambience`. |
 | vite | ^6.0.7 | ^5.4.11 | Donor uses only `?raw` GLSL imports + PNG asset imports — identical in Vite 5. |
 
-## Verbatim-extraction exceptions (documented deviations; bufferA/B/C/D.glsl remain byte-for-byte)
+## Verbatim-extraction exceptions (donor code is byte-for-byte; all integration lives in wrapper CSS)
 
-0. **Background de-black pass (follow-up tasks)** — final state after three
-   stages (wrapper CSS → canvas-alpha attempt, reverted → CSS vignette mask,
-   superseded):
-   - *Wrapper CSS:* every wrapper-level black in `gargantua.css` removed
-     (`.gargantua` background, `.shader-root` background via OVERRIDE 2,
-     placeholder/still gradient stops) — the section reveals the site's real
-     backdrop (`body { var(--void) }` + fixed `.starfield`).
-   - *Root cause found (after two failed threshold attempts):* the render's
-     "empty space" was never black — the composite's `GetBloom` sums 8 octave
-     downsamples of the bloom chain, and because the disc band crosses the
-     entire frame, even the "near" octaves deposit the disc's light frame-wide.
-     The veil is render content that scales with the object's brightness, so
-     ANY per-pixel brightness threshold (final-color key, veil-octave
-     truncation) leaves a box whose opacity tracks the shader — observed twice
-     in the wild before this was understood.
-   - *Final fix (geometric matte, `image.glsl` screen pass only):* the canvas
-     alpha is no longer derived from brightness at all. It is the product of
-     (1) `contentMatte` — keyed on `base`, the PRE-bloom raymarch output
-     (`smoothstep(0.012, 0.06, max(r,g,b))`): the disc, ring and their
-     immediate glow sit far above the key while the bloom veil (added only
-     afterwards) and residual dust lie inside the dead-zone and key to exactly
-     zero — the matte follows the object's footprint, never the rectangle;
-     (2) `edgeFade` — a feathered falloff to the canvas borders (~10% of
-     width / ~8% of height) so the disc band, which crosses the full frame
-     width, dissolves before the section edge instead of being guillotined by
-     it; (3) `uEntrance`, so the object fades in from transparent. Color
-     channels of rendered pixels are donor-exact (all 8 bloom octaves
-     restored). `gargantuaRenderer.ts` keeps `alpha: true`,
-     `premultipliedAlpha: false` (straight alpha), `setClearColor(0x000000,
-     0)`. Verified over a red test backdrop: GL corners alpha 0 / rgb 0,
-     composited corners exactly the backdrop colour, disc opaque and bright.
+0. **Background de-black pass (follow-up tasks)** — final state after four
+   attempts (two canvas-alpha keys, one veil-octave truncation + key, one
+   geometric content matte — all reverted):
+   - *What the attempts proved:* the donor render fills its whole canvas with
+     a continuous glow field — black hole and halo brightest at the centre,
+     decaying smoothly into a faint frame-wide veil at the edges (the disc's
+     light spread by the bloom chain, plus bufferA's far-field haze). Halo and
+     veil are the same substance at different intensities with NO clean
+     threshold, so every per-pixel key failed identically: tight enough to
+     kill the veil → most of the halo died with it; loose enough to keep the
+     halo → the rectangle survived, its opacity tracking the shader's
+     brightness.
+   - *Final fix (pure CSS, donor files pristine):* `image.glsl` and
+     `gargantuaRenderer.ts` are sha256-verified byte-identical to
+     `Gargantua.zip` (opaque canvas, donor alpha and clear color). The canvas
+     rectangle is dissolved by OVERRIDE 4 in `gargantua.css`: a wide, gentle
+     elliptical vignette `mask-image` on `.shader-canvas` (opaque to ~58% of
+     the ellipse, fading to transparent at ~98%), centred on the object. The
+     full donor image — disc, ring, the bulk of the halo — shows untouched in
+     the inner region and dissolves smoothly into the site backdrop before
+     the section edge: no rectangle, no seam, no opacity tracking. Wrapper
+     transparency (`.gargantua`, `.shader-root` override, placeholder/still)
+     from the earlier pass remains. Tuning knobs are documented at OVERRIDE 4.
 
 1. **Donor CSS re-anchoring** — `.shader-root` is `position: fixed; inset: 0` (a full-viewport
    app). Inside the section it is overridden to `position: absolute` via the scoped selector

@@ -107,11 +107,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     vec2 uv = fragCoord.xy / iResolution.xy;
     
-    // Integration change (Nemoverse): keep the pre-bloom base accessible —
-    // below, the canvas alpha is keyed to the raymarched OBJECT footprint
-    // (this value), not to the post-bloom brightness.
-    vec3 base = ColorFetch(uv);
-    vec3 color = base;
+    vec3 color = ColorFetch(uv);
     
     
     color += GetBloom(uv) * 0.08;
@@ -137,29 +133,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // the composite fades in once and never dims or resets again.
     color *= uEntrance;
 
-    // Integration change (Nemoverse): composite ONLY the black hole over the
-    // site backdrop. Brightness keying was tried twice and failed — the bloom
-    // veil is frame-wide render content that tracks the object's brightness,
-    // so any threshold on the final color leaves a box whose opacity follows
-    // the shader. Instead the alpha is GEOMETRIC, from two multiplicative
-    // terms:
-    //   contentMatte — keyed on `base`, the pre-bloom raymarch output. The
-    //     disc, lensed ring and their immediate glow sit far above the key;
-    //     the bloom veil (added only later, in `color`) and any residual dust
-    //     lie inside the dead-zone below 0.012 and key to exactly zero. The
-    //     matte therefore follows the object's true footprint, never the
-    //     rectangle.
-    //   edgeFade — a feathered falloff to the canvas borders. The donor's
-    //     disc band crosses the full frame width; without this it would be
-    //     guillotined by the canvas edge (a hard box side). It dissolves
-    //     instead, ~10% of width / ~8% of height.
-    // Both are ramped by uEntrance so the object also fades IN from
-    // transparent. Color channels of rendered pixels are donor-exact.
-    float contentMatte = smoothstep(0.012, 0.06, max(base.r, max(base.g, base.b)));
-    vec2 edge = min(uv, 1.0 - uv);
-    float edgeFade = smoothstep(0.0, 0.10, edge.x) * smoothstep(0.0, 0.08, edge.y);
-    float canvasAlpha = contentMatte * edgeFade * uEntrance;
-
-    fragColor = vec4(color, canvasAlpha);
+    fragColor = vec4(color, 1.0);
 
 }

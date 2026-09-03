@@ -12,12 +12,10 @@
 
      2 · INTEGRATION LAYER — Nemoverse-side rules, all scoped under
          .gargantua / .nemo-gargantua so nothing can bleed into (or in from)
-         neighbouring sections. The three behavioural re-anchors below are
-         pure CSS overrides with higher specificity, each flagged so a human
-         can revert them. (Two documented integration changes also live in
-         the donor's screen pass and renderer — veil-octave truncation and a
-         transparent canvas context, both authorised by the background
-         removal task and detailed in gargantua-integration-report.md.)
+         neighbouring sections. No edits are made to donor files — the shader
+         and renderer are byte-for-byte from Gargantua.zip; the four
+         behavioural re-anchors below are pure CSS, each flagged so a human
+         can revert them. OVERRIDE 4 is what removes the canvas rectangle.
    ========================================================================== */
 
 /* ---- 1 · Donor component styles (verbatim) -------------------------------- */
@@ -43,10 +41,10 @@
 
 /* The band itself. Transparent by design — like every other section on the
    page it sits over the body background (var(--void)) and the fixed
-   .starfield layer (z -1), which flow unbroken past the band and show
-   through the canvas's transparent empty space. The wrapper adds no black
-   of its own (see OVERRIDE 2 below). Fixed height reserves the space
-   up-front (no layout shift when the canvas mounts). */
+   .starfield layer (z -1), which flow unbroken past the band. The canvas is
+   the donor's own opaque render, and OVERRIDE 4 dissolves its outer edge so
+   no rectangle shows; the wrapper adds no black of its own. Fixed height
+   reserves the space up-front (no layout shift when the canvas mounts). */
 .gargantua {
   position: relative;
   height: clamp(420px, 72vh, 820px);
@@ -61,36 +59,66 @@
   inset: 0;
 }
 
-/* OVERRIDE 1 of 3 — the donor app is a fixed, full-viewport overlay; here it
+/* OVERRIDE 1 of 4 — the donor app is a fixed, full-viewport overlay; here it
    must fill this section instead. Won by specificity (0,2,0 > 0,1,0), so the
    donor rule above stays verbatim. Delete this override to restore the
    donor's fixed-viewport behaviour. */
 .nemo-gargantua .shader-root {
   position: absolute;
-  /* OVERRIDE 2 of 3 — background. The donor rule above paints its app shell
+  /* OVERRIDE 2 of 4 — background. The donor rule above paints its app shell
      black; embedded here that black would box the band against the site's
-     void + starfield backdrop. Neutralised to transparent — the canvas's
-     own empty space is keyed transparent in the screen pass (see
-     image.glsl), so the wrapper must not re-introduce a black of its
-     own. */
+     void + starfield backdrop. Neutralised to transparent — the wrapper must
+     not add any black of its own (the canvas's own rectangle is handled by
+     the OVERRIDE 4 mask, not by wrapper paint). */
   background: transparent;
 }
 
-/* OVERRIDE 3 of 3 — the donor bans every touch gesture (correct for a
+/* OVERRIDE 3 of 4 — the donor bans every touch gesture (correct for a
    full-viewport app; the canvas IS the page). Embedded mid-scroll, a
    touch-action:none band covering most of a phone screen would swallow the
    vertical page-scroll gesture. pan-y lets vertical pans scroll the page
    while horizontal drags still orbit the camera — the donor already handles
    the pointercancel a browser-taken pan fires. Delete this override to
-   restore strict donor behaviour.
-
-   (A radial vignette mask on the canvas lived here briefly — the interim
-   edge-dissolve while the canvas was still opaque. It was removed when the
-   veil octaves were dropped from the screen pass and the canvas empty space
-   became genuinely transparent: with true per-pixel alpha the mask was
-   redundant and would have clipped the glow's fringe on narrow viewports.) */
+   restore strict donor behaviour. */
 .nemo-gargantua .shader-canvas {
   touch-action: pan-y;
+}
+
+/* OVERRIDE 4 of 4 — dissolve the canvas rectangle. The donor's render fills
+   its whole canvas with a continuous glow field: the black hole and its
+   halo are brightest at the centre and decay smoothly towards the edges,
+   where they settle into a faint frame-wide veil (the disc's light, spread
+   by the bloom chain). That field has NO clean threshold — halo and veil
+   are the same substance at different intensities — so per-pixel alpha
+   keying was tried three times and always failed the same way: a key tight
+   enough to remove the veil also removed most of the halo, and a key loose
+   enough to keep the halo kept the rectangle (whose opacity then tracked
+   the shader's brightness).
+
+   The donor pixels are therefore kept EXACTLY as rendered (opaque canvas,
+   byte-for-byte shader and renderer), and the separation is GEOMETRIC
+   instead: a wide, gentle elliptical vignette mask centred on the object.
+   Inside ~58% of the ellipse the full donor image — disc, ring, the bulk of
+   the halo — shows untouched; from there to ~98% it fades smoothly into the
+   site backdrop, so the canvas ends before its border does: no rectangle,
+   no seam, no opacity tracking. The glow necessarily dims before the
+   section edge — that is the trade that kills the box (the donor's glow
+   reaching the canvas border IS the box).
+
+   Tuning: raise the first stop (58%) to keep more halo, lower it to shrink
+   the glow; raise the second stop (98%) for a longer dissolve; shrink the
+   ellipse (95% 90%) to pull the fade inward on wide screens. */
+.nemo-gargantua .shader-canvas {
+  -webkit-mask-image: radial-gradient(
+    ellipse 95% 90% at 50% 50%,
+    #000 58%,
+    transparent 98%
+  );
+  mask-image: radial-gradient(
+    ellipse 95% 90% at 50% 50%,
+    #000 58%,
+    transparent 98%
+  );
 }
 
 /* Still placeholder — shown before the section nears the viewport (chunk not

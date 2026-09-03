@@ -202,23 +202,12 @@ export class GargantuaRenderer {
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: false,
-      // Integration change (Nemoverse): the donor renders its own app shell,
-      // so its canvas could be opaque. Embedded over the site's void +
-      // starfield backdrop the empty space must be see-through instead:
-      // alpha:true gives the canvas an alpha channel, premultipliedAlpha:false
-      // makes the compositor treat the shader's output as STRAIGHT alpha —
-      // color values of opaque pixels composite exactly as before, with no
-      // double-multiply dimming on partially transparent ones. (The screen
-      // pass keys its empty space to alpha 0; the intermediate HalfFloat
-      // targets never read their alpha channel, so the 0 clear alpha below is
-      // inert for the bloom chain.)
-      alpha: true,
-      premultipliedAlpha: false,
+      alpha: false,
       powerPreference: 'high-performance',
       stencil: false,
       depth: false,
     })
-    this.renderer.setClearColor(0x000000, 0)
+    this.renderer.setClearColor(0x000000, 1)
     this.renderer.autoClear = true
     // The shader performs its own tone mapping / gamma.
     this.renderer.toneMapping = THREE.NoToneMapping
