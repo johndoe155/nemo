@@ -35,6 +35,11 @@ import './styles/circular-gallery.css';
 // drilling canon-timeline rod. Loaded LAST: its scoped rules intentionally
 // win over the base card/timeline layer they rebuild.
 import './styles/suspension.css';
+// Gargantua — donor black-hole shader band (between the Canon Timeline and
+// the credit crawl). Loaded last: it carries the donor's own component rules
+// (.shader-root/.shader-canvas, unique to this feature) plus the scoped
+// .gargantua overrides that re-anchor them inside the section.
+import './styles/gargantua.css';
 import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

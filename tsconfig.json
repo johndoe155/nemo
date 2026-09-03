@@ -14,7 +14,13 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    // '@/*' → src/* — mirrors the vite resolve alias used by the verbatim
+    // Gargantua donor files (components/ShaderCanvas.tsx, hooks/useDeviceCapabilities.ts).
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src"]
 }

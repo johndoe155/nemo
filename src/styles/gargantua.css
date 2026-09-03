@@ -1,0 +1,115 @@
+/* ============================================================================
+   GARGANTUA — scoped styles for the donor black-hole shader section
+   --------------------------------------------------------------------------
+   Sits between the Canon Timeline (Lore) and the footer credit crawl. Two
+   layers live in this file and they must not be confused:
+
+     1 · DONOR COMPONENT STYLES — copied verbatim from the donor project's
+         src/index.css, .shader-root / .shader-canvas rules only. The donor's
+         html/body/#root global rules (height/margin/overflow:hidden/overscroll
+         resets) are deliberately NOT brought over: they would hijack the
+         Nemoverse shell's scroll and background.
+
+     2 · INTEGRATION LAYER — Nemoverse-side rules, all scoped under
+         .gargantua / .nemo-gargantua so nothing can bleed into (or in from)
+         neighbouring sections. No edits are made to donor files; the two
+         behavioural re-anchors below are pure CSS overrides with higher
+         specificity, each flagged so a human can revert them.
+   ========================================================================== */
+
+/* ---- 1 · Donor component styles (verbatim) -------------------------------- */
+
+.shader-root {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.shader-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
+
+/* ---- 2 · Integration layer (scoped) --------------------------------------- */
+
+/* The band itself. Opaque black by design — the black hole reads as a void
+   cut into the page between the two neighbouring sections. Fixed height
+   reserves the space up-front (no layout shift when the canvas mounts). */
+.gargantua {
+  position: relative;
+  height: clamp(420px, 72vh, 820px);
+  background: #000;
+  overflow: hidden;
+  isolation: isolate;
+  contain: layout paint;
+}
+
+/* Positioning context that re-anchors the donor root (below). */
+.nemo-gargantua {
+  position: absolute;
+  inset: 0;
+}
+
+/* OVERRIDE 1 of 2 — the donor app is a fixed, full-viewport overlay; here it
+   must fill this section instead. Won by specificity (0,2,0 > 0,1,0), so the
+   donor rule above stays verbatim. Delete this override to restore the
+   donor's fixed-viewport behaviour. */
+.nemo-gargantua .shader-root {
+  position: absolute;
+}
+
+/* OVERRIDE 2 of 2 — the donor bans every touch gesture (correct for a
+   full-viewport app; the canvas IS the page). Embedded mid-scroll, a
+   touch-action:none band covering most of a phone screen would swallow the
+   vertical page-scroll gesture. pan-y lets vertical pans scroll the page
+   while horizontal drags still orbit the camera — the donor already handles
+   the pointercancel a browser-taken pan fires. Delete this override to
+   restore strict donor behaviour. */
+.nemo-gargantua .shader-canvas {
+  touch-action: pan-y;
+}
+
+/* Still placeholder — shown before the section nears the viewport (chunk not
+   yet requested) and as the Suspense fallback while it streams. */
+.gargantua__placeholder {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(46% 38% at 50% 52%, rgba(255, 200, 87, 0.09), transparent 72%),
+    radial-gradient(64% 52% at 50% 55%, rgba(138, 77, 255, 0.07), transparent 78%),
+    #000;
+}
+
+/* Static frame for prefers-reduced-motion: a still eclipse — event horizon,
+   thin bright rim, a low accretion haze. No animation of any kind. */
+.gargantua__still {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(58% 16% at 50% 54%, rgba(255, 200, 87, 0.16), transparent 74%),
+    radial-gradient(42% 30% at 50% 52%, rgba(255, 170, 80, 0.1), transparent 76%),
+    #000;
+}
+
+.gargantua__still::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 30vmin;
+  height: 30vmin;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #000;
+  border: 2px solid rgba(255, 214, 120, 0.9);
+  box-shadow:
+    0 0 26px rgba(255, 190, 80, 0.4),
+    0 0 90px rgba(255, 170, 60, 0.18),
+    inset 0 0 30px rgba(0, 0, 0, 1);
+}

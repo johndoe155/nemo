@@ -16,6 +16,10 @@ import Pulls from './sections/pulls/Pulls';
 import Store from './sections/Store';
 import Artists from './sections/Artists';
 import Lore from './sections/Lore';
+// Gargantua — the donor black-hole WebGL shader (Gargantua.zip), mounted as
+// its own band between the Canon Timeline above and the footer's credit-crawl
+// marquee below. Lazy + intersection-gated; see sections/Gargantua.tsx.
+import Gargantua from './sections/Gargantua';
 import Footer from './sections/Footer';
 import { Marquee, Starfield, ToastHost } from './components/ui';
 import Ambience from './components/Ambience';
@@ -118,6 +122,11 @@ export default function App() {
         <Store />
         <Artists />
         <Lore />
+        {/* Gargantua black-hole shader — its own section, slotting exactly
+            between the Canon Timeline (last band of <main>) and the footer,
+            whose first element is the tilted credit-crawl marquee. The two
+            neighbouring sections are untouched. */}
+        <Gargantua />
       </main>
       <Footer />
       <ToastHost />
