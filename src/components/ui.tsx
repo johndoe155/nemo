@@ -170,7 +170,10 @@ export function Marquee({
     if (!track) return;
 
     const baseSec = (parseFloat(speed) || 110) * (speed.includes('ms') ? 0.001 : 1);
-    const SPIN_SEC = 14; // 12–16s window, centred
+    // Slow, continuous 360° spin (~8–10s/rev). svgOrigin '12 12' = the exact
+    // geometric midpoint of the viewBox (the three chords cross at 12,12), so
+    // the element rotates about its own centre with no off-axis wobble.
+    const SPIN_SEC = 9;
     const VEL_GAIN = 3; // ×(1 + |v|·gain), |v|≤1 → up to ×4
     const VEL_MAX = 5;
 

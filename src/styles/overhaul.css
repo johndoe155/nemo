@@ -639,19 +639,32 @@ html[data-scene='abyss'] {
 .signoff__crawl {
   position: relative;
   z-index: 1;
+  /* Hosts the tilted band. overflow:hidden clips the band's overhang (the
+     rotated corners + the horizontal overshoot) so the diagonal never spawns
+     a page scrollbar; the vertical padding gives those corners headroom so
+     they clear the footer's straight border above and the anchor below
+     instead of being clipped mid-glass. */
+  overflow: hidden;
+  padding-block: clamp(1.75rem, 1rem + 2.5vw, 4.25rem);
 }
-/* ---- Credit crawl — the Sign-Off's refractive glass strip ----
+/* ---- Credit crawl — the Sign-Off's tilted glass slice ----
    The marquee directly above the footer proper. The generic-AI-template
    ticker is pushed to an editorial close: line-art asterisks instead of a
    filled glyph, alternating solid/outlined phrasing, an edge-dissolve that
-   makes the roll read as an infinite band, and a hairline glass bar whose
-   backdrop blur lets the drifting star/nebula layer ghost through it. */
+   makes the roll read as an infinite band, a hairline glass bar whose
+   backdrop blur lets the drifting star/nebula layer ghost through it, and a
+   −2.5° angular tilt that slices the band diagonally across the closing
+   scene. All transforms are composited (translate/rotate) with
+   will-change + backface-visibility so nothing re-layouts per frame. */
 
 .marquee--credits {
-  /* Refractive glass strip — subtle blur + hairline 1px top/bottom borders.
-     The footer's own border-top serves as the strip's top rule (kept in sync
-     below) so the two never stack into a doubled line. */
-  border-top: none; /* footer border is the strip's top hairline */
+  /* Uniform token: every inter-token gap (asterisk↔text and text↔asterisk)
+     resolves to this one value, so the separator is optically centred
+     between its two neighbouring phrases on both sides. */
+  --creds-gap: clamp(1.4rem, 1rem + 1.4vw, 2.6rem);
+
+  /* Refractive glass strip — subtle blur + hairline 1px top/bottom borders. */
+  border-top: none;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   background: linear-gradient(
     180deg,
@@ -660,8 +673,8 @@ html[data-scene='abyss'] {
   );
   -webkit-backdrop-filter: blur(12px) saturate(1.12);
   backdrop-filter: blur(12px) saturate(1.12);
-  /* Edge dissolve — fade text at the viewport borders into the void so the
-     bar never shows a hard clip; the band looks like it continues forever. */
+  /* Edge dissolve — fade text at the band's borders into the void so the
+     roll reads as an infinite band rather than a hard-clipped bar. */
   -webkit-mask-image: linear-gradient(
     90deg,
     transparent,
@@ -670,6 +683,20 @@ html[data-scene='abyss'] {
     transparent
   );
   mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
+
+  /* --- Angular tilt + layout safety ---
+     Rotate the full-width band −2.5° about its midpoint and extend it beyond
+     the viewport (±3.5vw) so the rotated ends always cover the full parent
+     width with no corner gaps; .signoff__crawl / .footer.signoff
+     (overflow:hidden) then absorb the overhang — zero horizontal scrollbars,
+     no harsh clip where the band meets the screen edge. */
+  transform: rotate(-2.5deg);
+  transform-origin: 50% 50%;
+  width: calc(100% + 7vw);
+  margin-inline: -3.5vw;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 /* Keep the strip's top hairline at the same faint alpha as its bottom border
    (the strip reads as one bordered bar rather than two stacked rules). */
@@ -681,11 +708,18 @@ html[data-scene='abyss'] {
 .marquee--credits .marquee__track {
   animation: none;
   will-change: transform;
-  padding-block: 1.15rem;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  padding-block: 1rem;
 }
 /* Items keep the crawl's scale; the filled/outlined rhythm lives on each
-   phrase (see .creds__phrase below) so a long roll never goes flat. */
+   phrase. gap uses the shared --creds-gap token so spacing is identical to
+   the intra-phrase gap — the asterisk is mathematically centred between the
+   neighbouring text columns. */
 .marquee--credits .marquee__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--creds-gap);
   font-size: clamp(0.95rem, 0.7rem + 1.5vw, 1.5rem);
   letter-spacing: 0.34em;
 }
@@ -698,10 +732,11 @@ html[data-scene='abyss'] {
 .creds__phrase {
   display: inline-flex;
   align-items: center;
-  gap: 1.15rem;
+  gap: var(--creds-gap);
 }
 .creds__phrase .creds__txt {
   white-space: nowrap;
+  line-height: 1;
 }
 /* stroked register (even phrases) */
 .creds__phrase:not(.is-solid) .creds__txt {
@@ -718,14 +753,20 @@ html[data-scene='abyss'] {
 
 /* --- 6-point line-art asterisk ---
    Thin vector stroke, gradient-painted (icy silver → warm champagne) with an
-   ultra-faint luminescent drop-shadow. Rotation is driven from JS on the svg
-   (its own axis, independent of the horizontal crawl) — see the Marquee
-   credits effect. */
+   ultra-faint luminescent drop-shadow. It sits between two phrases inside a
+   flex row (align-items:center) so it is vertically centred on the cap line,
+   and its own inline-flex wrapper keeps the glyph from disturbing the text
+   baseline. Rotation is driven from JS on the svg (its own axis, independent
+   of the horizontal crawl) — see the Marquee credits effect. */
 .creds__ast {
   display: inline-flex;
   align-items: center;
-  line-height: 0;
+  justify-content: center;
   flex: none;
+  line-height: 0;
+  /* Optical nudge so the hairline glyph sits on the type's optical centre. */
+  transform: translateY(0.05em);
+  will-change: transform;
 }
 .creds__ast svg {
   display: block;
@@ -734,6 +775,10 @@ html[data-scene='abyss'] {
   overflow: visible;
   filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.25));
   opacity: 0.92;
+  /* Rotation is transform-only — promote it off the main thread. */
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 /* .cr-defs — gradient definition is zero-sized; keep it inert. */
 .cr-defs {
