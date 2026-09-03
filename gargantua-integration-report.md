@@ -59,19 +59,33 @@ present. `package.json` is unchanged.
 | three | ^0.172.0 | ^0.185.1 | **Verified empirically**: the donor app was run under three 0.185.1 and renders pixel-equivalent to 0.172 (incl. the internal `renderer.properties` access used by `verifyPrograms`). Kept 0.185.1 — downgrading would risk `Pulls`/`Starfield`/`Ambience`. |
 | vite | ^6.0.7 | ^5.4.11 | Donor uses only `?raw` GLSL imports + PNG asset imports — identical in Vite 5. |
 
-## Verbatim-extraction exceptions (all in *new* files; donor files untouched)
+## Verbatim-extraction exceptions (donor files touched ONLY where listed; raymarch/bloom buffers still byte-for-byte)
 
-0. **Background de-black pass (follow-up task)** — the shader section originally
-   carried the donor's black shell. Fixed with **Option B** (matching/transparent
-   background — *not* a transparent canvas): the donor renderer keeps
-   `alpha: false` + black clear color because its bloom/tonemap pipeline
-   composites against black and the donor files must stay verbatim; instead every
-   *wrapper-level* black in `gargantua.css` was removed (`.gargantua` background,
-   `.shader-root` background via a scoped override, placeholder/still gradient
-   stops) so the section reveals the site's real backdrop — `body { var(--void) }`
-   + the fixed `.starfield` — exactly like every neighbouring section. The
-   `.gargantua__still::after` black disc remains (it is the black hole, not a
-   background).
+0. **Background de-black pass (follow-up tasks)** — the section originally carried
+   the donor's black in two layers, both removed:
+   - *Wrapper CSS (integration file, donor rules neutralised by override):*
+     every wrapper-level black in `gargantua.css` was removed (`.gargantua`
+     background, `.shader-root` background via a scoped override,
+     placeholder/still gradient stops) so the section reveals the site's real
+     backdrop — `body { var(--void) }` + the fixed `.starfield`. Necessary but
+     not sufficient: the canvas itself painted opaque black.
+   - *Canvas pixels (documented donor-file deviations, authorised by the
+     background-removal task):* the donor renderer builds its context
+     `alpha:false` with an opaque black clear, and `image.glsl` — the only pass
+     that writes to the visible screen — hardcodes `fragColor.a = 1.0`, while
+     `bufferA.glsl` has no sky term, so the shader's empty space is opaque black
+     by design. Two surgical changes key that empty space to transparent
+     **without touching the black-hole render**: (1) `gargantuaRenderer.ts`
+     context creation → `alpha: true`, `premultipliedAlpha: false` (straight
+     alpha — opaque pixels composite pixel-identically) and
+     `setClearColor(0x000000, 0)` (inert for the bloom chain; no pass reads
+     target alpha); (2) `image.glsl` final write →
+     `alpha = smoothstep(0.0, 0.04, max(r,g,b))` of the final display-referred
+     color — pure black → alpha 0, every rendered pixel above the 4% knee
+     (disc, lensed ring, haze) → alpha 1 and pixel-identical; sub-knee
+     differences are invisible over the near-black page backdrop, and the
+     entrance ramp now fades in from transparent instead of a black flash.
+     `bufferA/B/C/D.glsl` remain byte-for-byte untouched.
 
 1. **Donor CSS re-anchoring** — `.shader-root` is `position: fixed; inset: 0` (a full-viewport
    app). Inside the section it is overridden to `position: absolute` via the scoped selector

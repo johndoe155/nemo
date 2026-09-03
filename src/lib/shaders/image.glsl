@@ -133,6 +133,17 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // the composite fades in once and never dims or resets again.
     color *= uEntrance;
 
-    fragColor = vec4(color, 1.0);
+    // Integration change (Nemoverse): alpha-key the canvas's empty space so the
+    // site backdrop (void + starfield) shows through. Empty space in this pass
+    // is exactly (0,0,0) — bufferA carries no sky term — so a soft knee on the
+    // final display-referred color turns pure black transparent while every
+    // pixel of the rendered black hole above the knee (disc, lensed ring, haze)
+    // keeps alpha 1.0 and is pixel-identical to the donor output. Below the
+    // knee the page background is near-black, so opaque-vs-keyed is visually
+    // indistinguishable there. The key is taken AFTER the entrance ramp, so the
+    // frame also fades in from transparent rather than from a black flash.
+    float canvasAlpha = smoothstep(0.0, 0.04, max(color.r, max(color.g, color.b)));
+
+    fragColor = vec4(color, canvasAlpha);
 
 }
