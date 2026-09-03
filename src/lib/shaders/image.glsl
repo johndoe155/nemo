@@ -95,9 +95,17 @@ vec3 GetBloom(vec2 coord)
 	bloom += Grab(coord, 3.0, vec2(CalcOffset(2.0))) * 1.0;
     bloom += Grab(coord, 4.0, vec2(CalcOffset(3.0))) * 1.5;
     bloom += Grab(coord, 5.0, vec2(CalcOffset(4.0))) * 1.8;
-    bloom += Grab(coord, 6.0, vec2(CalcOffset(5.0))) * 1.0;
-    bloom += Grab(coord, 7.0, vec2(CalcOffset(6.0))) * 1.0;
-    bloom += Grab(coord, 8.0, vec2(CalcOffset(7.0))) * 1.0;
+    // Integration change (Nemoverse): octaves 6..8 removed — the veil. At
+    // 64x..256x downsample these three are frame-wide: they deposit the disc's
+    // average HDR brightness on every pixel of the canvas (a uniform blanket
+    // that, after the x200 gain and pow(0.7/2.2) lift, reads as a faint box
+    // the size of the canvas). Octaves 1..5 carry the black hole's actual
+    // glow; the object's render is unchanged (the removed term was a
+    // near-constant additive worth <1% post-tonemap on bright pixels).
+    // Donor lines retained below, commented, for exact provenance:
+    // bloom += Grab(coord, 6.0, vec2(CalcOffset(5.0))) * 1.0;
+    // bloom += Grab(coord, 7.0, vec2(CalcOffset(6.0))) * 1.0;
+    // bloom += Grab(coord, 8.0, vec2(CalcOffset(7.0))) * 1.0;
 
 	return bloom;
 }
@@ -133,6 +141,17 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // the composite fades in once and never dims or resets again.
     color *= uEntrance;
 
-    fragColor = vec4(color, 1.0);
+    // Integration change (Nemoverse): key the canvas's empty space to
+    // transparent so the site backdrop (void + starfield) shows through. With
+    // the frame-wide veil octaves removed above, empty space in this pass is
+    // exactly (0,0,0) — the base raymarch has no sky term and octaves 1..5 are
+    // local to the glow — so a soft knee on the final display-referred color
+    // is an exact separation: pure black -> alpha 0, every rendered pixel of
+    // the black hole above the knee (disc, lensed ring, glow) -> alpha 1.0,
+    // byte-identical color. The key is taken AFTER the entrance ramp so the
+    // frame also fades in from transparent rather than from a black flash.
+    float canvasAlpha = smoothstep(0.0, 0.04, max(color.r, max(color.g, color.b)));
+
+    fragColor = vec4(color, canvasAlpha);
 
 }
