@@ -627,10 +627,21 @@ html[data-scene='abyss'] {
 .footer.signoff {
   position: relative;
   overflow: hidden;
-  border-top: 1px solid var(--line);
-  background:
-    radial-gradient(90% 62% at 50% 0%, rgba(138, 77, 255, 0.1), transparent 62%),
-    linear-gradient(180deg, transparent, rgba(91, 43, 214, 0.12) 42%, rgba(5, 5, 10, 0.5));
+  /* No top border and no tint over the crawl: the Lore section's starfield
+     (the single fixed canvas behind the page) flows unbroken down past the
+     floating marquee band. The band — not a painted bar or a hairline — is the
+     divider between the Lore backdrop and the "ENTER THE NEMOVERSE" anchor
+     below. Darkening eases in only lower down so the credits grid and ribbon
+     keep their readable depth without carving a seam out of the background
+     above the marquee. */
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 18%,
+    rgba(91, 43, 214, 0.05) 46%,
+    rgba(5, 5, 10, 0.26) 78%,
+    rgba(5, 5, 10, 0.58) 100%
+  );
   padding: 0 0 clamp(1.6rem, 3vw, 2.5rem);
 }
 
@@ -641,11 +652,11 @@ html[data-scene='abyss'] {
   z-index: 1;
   /* Hosts the tilted band. overflow:hidden clips the band's overhang (the
      rotated corners + the horizontal overshoot) so the diagonal never spawns
-     a page scrollbar; the vertical padding gives those corners headroom so
-     they clear the footer's straight border above and the anchor below
-     instead of being clipped mid-glass. */
+     a page scrollbar; the generous transparent vertical padding gives those
+     corners headroom and lets the Lore starfield show through above and below
+     the band instead of any clipped mid-glass edge. */
   overflow: hidden;
-  padding-block: clamp(1.75rem, 1rem + 2.5vw, 4.25rem);
+  padding-block: clamp(2.2rem, 1.5rem + 3vw, 5.5rem);
 }
 /* ---- Credit crawl — the Sign-Off's tilted glass slice ----
    The marquee directly above the footer proper. The generic-AI-template
@@ -698,19 +709,17 @@ html[data-scene='abyss'] {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
-/* Keep the strip's top hairline at the same faint alpha as its bottom border
-   (the strip reads as one bordered bar rather than two stacked rules). */
-.footer.signoff {
-  border-top-color: rgba(255, 255, 255, 0.07);
-}
 /* GSAP owns the crawl's translation (velocity-reactive) — retire the CSS
-   loop so the two never fight. Baseline static frame is row A at x 0. */
+   loop so the two never fight. Baseline static frame is row A at x 0. The
+   vertical padding is the bar's thickness: kept substantial (≈py-5 weight) so
+   the strip reads as a confident, well-proportioned band rather than a thin
+   sliver of type. */
 .marquee--credits .marquee__track {
   animation: none;
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  padding-block: 1rem;
+  padding-block: clamp(1.5rem, 1.2rem + 0.8vw, 2.4rem);
 }
 /* Items keep the crawl's scale; the filled/outlined rhythm lives on each
    phrase. gap uses the shared --creds-gap token so spacing is identical to
@@ -753,32 +762,49 @@ html[data-scene='abyss'] {
 
 /* --- 6-point line-art asterisk ---
    Thin vector stroke, gradient-painted (icy silver → warm champagne) with an
-   ultra-faint luminescent drop-shadow. It sits between two phrases inside a
-   flex row (align-items:center) so it is vertically centred on the cap line,
-   and its own inline-flex wrapper keeps the glyph from disturbing the text
-   baseline. Rotation is driven from JS on the svg (its own axis, independent
-   of the horizontal crawl) — see the Marquee credits effect. */
+   ultra-faint luminescent drop-shadow.
+
+   Structure / spin-axis contract:
+     .creds__ast      — flex socket between the two phrases. align-items:center
+                        centres it vertically on the cap line; identical gaps
+                        on both sides centre it horizontally. Purely layout —
+                        it never rotates.
+     .creds__ast-spin — the ONLY rotating element. A square (1:1) HTML box
+                        with transform-origin: 50% 50%, so GSAP writes a plain
+                        `rotate()` that pivots on its exact centre. Nothing in
+                        the loop translates, shifts margins, or moves relative
+                        to the text — so the glyph cannot orbit or wobble.
+     svg              — never transformed. 1:1 square artboard (viewBox 24×24)
+                        at equal rendered width/height inside the spin box, so
+                        its centre coincides with the box centre.
+   The icon stays locked in its flex position while the neutral spin box turns
+   around it — kinetic without any off-axis drift. */
 .creds__ast {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
   line-height: 0;
-  /* Optical nudge so the hairline glyph sits on the type's optical centre. */
-  transform: translateY(0.05em);
-  will-change: transform;
 }
-.creds__ast svg {
+.creds__ast-spin {
   display: block;
-  width: 0.6em;
-  height: 0.6em;
-  overflow: visible;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.25));
-  opacity: 0.92;
-  /* Rotation is transform-only — promote it off the main thread. */
+  width: 0.72em;
+  height: 0.72em; /* 1:1 — equal width & height */
+  flex: none;
+  /* Pivot strictly on the box's own centre — no SVG origin handling needed. */
+  transform-origin: 50% 50%;
+  /* Rotation is transform-only; promote the layer off the main thread. */
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+}
+.creds__ast-spin svg {
+  display: block;
+  width: 100%;
+  height: 100%; /* 1:1 — matches the square viewBox */
+  overflow: visible;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.25));
+  opacity: 0.92;
 }
 /* .cr-defs — gradient definition is zero-sized; keep it inert. */
 .cr-defs {

@@ -109,17 +109,25 @@ export function Reveal({
 function LineAsterisk() {
   return (
     <span className="creds__ast" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="1em" height="1em" focusable="false">
-        <path
-          d="M3 12 H21 M16.63 19.46 L7.37 4.54 M16.63 4.54 L7.37 19.46"
-          fill="none"
-          stroke="url(#cr-ast-grad)"
-          strokeWidth="1.15"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
+      {/* The rotation target. A plain square HTML box (1:1, .creds__ast-spin
+          in CSS) that sits locked inside the flex row — the SVG it contains is
+          never itself transformed, so the icon can't drift or orbit. Only this
+          neutral box rotates, about its own exact centre. */}
+      <span className="creds__ast-spin">
+        {/* 1:1 square artboard (24×24), equal rendered width & height via the
+            spin box. Pure geometry — no transforms of its own. */}
+        <svg viewBox="0 0 24 24" width="100%" height="100%" focusable="false">
+          <path
+            d="M3 12 H21 M16.63 19.46 L7.37 4.54 M16.63 4.54 L7.37 19.46"
+            fill="none"
+            stroke="url(#cr-ast-grad)"
+            strokeWidth="1.15"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      </span>
     </span>
   );
 }
@@ -164,15 +172,19 @@ export function Marquee({
     if (!el) return;
 
     const track = el.querySelector<HTMLElement>('.marquee__track');
-    const asterisks = Array.from(
-      el.querySelectorAll<HTMLElement>('.creds__ast svg'),
+    // Each spin box is a square HTML element (.creds__ast-spin) that holds the
+    // SVG. Rotating an HTML box about its CSS transform-origin (50% 50%) is a
+    // clean single-axis rotation — no SVG origin handling, no translate or
+    // margin in the loop, so there is nothing that could orbit or wobble.
+    const spins = Array.from(
+      el.querySelectorAll<HTMLElement>('.creds__ast-spin'),
     );
     if (!track) return;
 
     const baseSec = (parseFloat(speed) || 110) * (speed.includes('ms') ? 0.001 : 1);
-    // Slow, continuous 360° spin (~8–10s/rev). svgOrigin '12 12' = the exact
-    // geometric midpoint of the viewBox (the three chords cross at 12,12), so
-    // the element rotates about its own centre with no off-axis wobble.
+    // Slow, continuous 360° spin (~9s/rev). transform-origin is set in CSS to
+    // 50% 50%, so GSAP only ever writes `rotate()` — the loop is transform-only
+    // and pivots strictly on the box's own centre.
     const SPIN_SEC = 9;
     const VEL_GAIN = 3; // ×(1 + |v|·gain), |v|≤1 → up to ×4
     const VEL_MAX = 5;
@@ -184,10 +196,10 @@ export function Marquee({
       ease: 'none',
       repeat: -1,
     });
-    const spins = asterisks.map((a) =>
+    const spinTweens = spins.map((a) =>
       gsap.fromTo(
         a,
-        { rotation: 0, svgOrigin: '12 12' },
+        { rotation: 0 },
         { rotation: 360, duration: SPIN_SEC, ease: 'none', repeat: -1 },
       ),
     );
@@ -197,7 +209,7 @@ export function Marquee({
       const v = Math.abs(parseFloat(raw) || 0);
       const factor = Math.min(1 + v * VEL_GAIN, VEL_MAX);
       crawl.timeScale(factor);
-      for (const s of spins) s.timeScale(factor);
+      for (const t of spinTweens) t.timeScale(factor);
     };
     drive();
     gsap.ticker.add(drive);
@@ -205,7 +217,7 @@ export function Marquee({
     return () => {
       gsap.ticker.remove(drive);
       crawl.kill();
-      for (const s of spins) s.kill();
+      for (const t of spinTweens) t.kill();
     };
   }, [variant, speed]);
 
