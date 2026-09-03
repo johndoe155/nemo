@@ -640,25 +640,107 @@ html[data-scene='abyss'] {
   position: relative;
   z-index: 1;
 }
+/* ---- Credit crawl — the Sign-Off's refractive glass strip ----
+   The marquee directly above the footer proper. The generic-AI-template
+   ticker is pushed to an editorial close: line-art asterisks instead of a
+   filled glyph, alternating solid/outlined phrasing, an edge-dissolve that
+   makes the roll read as an infinite band, and a hairline glass bar whose
+   backdrop blur lets the drifting star/nebula layer ghost through it. */
+
 .marquee--credits {
-  border-top: none; /* the footer border is the single top rule */
+  /* Refractive glass strip — subtle blur + hairline 1px top/bottom borders.
+     The footer's own border-top serves as the strip's top rule (kept in sync
+     below) so the two never stack into a doubled line. */
+  border-top: none; /* footer border is the strip's top hairline */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.045),
+    rgba(255, 255, 255, 0.015)
+  );
+  -webkit-backdrop-filter: blur(12px) saturate(1.12);
+  backdrop-filter: blur(12px) saturate(1.12);
+  /* Edge dissolve — fade text at the viewport borders into the void so the
+     bar never shows a hard clip; the band looks like it continues forever. */
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 15%,
+    #000 85%,
+    transparent
+  );
+  mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
 }
+/* Keep the strip's top hairline at the same faint alpha as its bottom border
+   (the strip reads as one bordered bar rather than two stacked rules). */
+.footer.signoff {
+  border-top-color: rgba(255, 255, 255, 0.07);
+}
+/* GSAP owns the crawl's translation (velocity-reactive) — retire the CSS
+   loop so the two never fight. Baseline static frame is row A at x 0. */
 .marquee--credits .marquee__track {
-  animation-direction: reverse; /* credits roll the other way */
+  animation: none;
+  will-change: transform;
   padding-block: 1.15rem;
 }
+/* Items keep the crawl's scale; the filled/outlined rhythm lives on each
+   phrase (see .creds__phrase below) so a long roll never goes flat. */
 .marquee--credits .marquee__item {
   font-size: clamp(0.95rem, 0.7rem + 1.5vw, 1.5rem);
-  font-weight: 800;
   letter-spacing: 0.34em;
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.3);
-  text-shadow: 0 0 26px rgba(138, 77, 255, 0.16);
 }
-.marquee--credits .marquee__item .star {
+
+/* --- Typographic rhythm: outlined ⟷ filled phrasing ---
+   Even phrases stay in the stroked outline register; odd phrases flip to
+   solid filled type so the eye travels instead of drowning in uniform
+   outline. */
+
+.creds__phrase {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.15rem;
+}
+.creds__phrase .creds__txt {
+  white-space: nowrap;
+}
+/* stroked register (even phrases) */
+.creds__phrase:not(.is-solid) .creds__txt {
+  color: transparent;
+  font-weight: 800;
+  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.34);
+}
+/* filled register (odd phrases) */
+.creds__phrase.is-solid .creds__txt {
+  color: rgba(248, 250, 255, 0.78);
+  font-weight: 600;
   -webkit-text-stroke: 0;
-  color: var(--gold);
-  text-shadow: 0 0 10px rgba(255, 200, 87, 0.7);
+}
+
+/* --- 6-point line-art asterisk ---
+   Thin vector stroke, gradient-painted (icy silver → warm champagne) with an
+   ultra-faint luminescent drop-shadow. Rotation is driven from JS on the svg
+   (its own axis, independent of the horizontal crawl) — see the Marquee
+   credits effect. */
+.creds__ast {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  flex: none;
+}
+.creds__ast svg {
+  display: block;
+  width: 0.6em;
+  height: 0.6em;
+  overflow: visible;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.25));
+  opacity: 0.92;
+}
+/* .cr-defs — gradient definition is zero-sized; keep it inert. */
+.cr-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }
 
 /* ---- The anchor — headline + single CTA ---- */

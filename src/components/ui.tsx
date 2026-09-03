@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { gsap } from 'gsap';
 import { useCountdown } from '../lib/hooks';
 import { KineticButton, MagneticButton, RollText } from './motion';
 import type { Rarity } from '../lib/data';
@@ -101,6 +102,32 @@ export function Reveal({
 
 /* ------------------------------ Marquee ------------------------------ */
 
+/* Line-art 6-point asterisk (three chords through centre ⇒ six arms). Thin
+   1px vector stroke instead of the template's filled ★/✦ glyph — painted
+   with a shared icy-silver → champagne gradient + a faint luminescent
+   drop-shadow. Used as the separator in the credits crawl. */
+function LineAsterisk() {
+  return (
+    <span className="creds__ast" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="1em" height="1em" focusable="false">
+        <path
+          d="M3 12 H21 M16.63 19.46 L7.37 4.54 M16.63 4.54 L7.37 19.46"
+          fill="none"
+          stroke="url(#cr-ast-grad)"
+          strokeWidth="1.15"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+    </span>
+  );
+}
+
+const reducedMotionMq =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)');
+
 export function Marquee({
   items,
   speed = '36s',
@@ -108,15 +135,81 @@ export function Marquee({
 }: {
   items: string[];
   speed?: string;
-  /** 'credits' — the closing-credit crawl: slower, larger, outlined type,
-      reversed direction (see .marquee--credits in overhaul.css). */
+  /** 'credits' — the closing-credit crawl: slower, larger, alternating
+      filled/outlined type, line-art spinning asterisks, refractive glass
+      strip. Driven by GSAP (not the CSS loop) so its pace and the asterisk
+      spin both respond to scroll velocity (see .marquee--credits in
+      overhaul.css + the credits velocity effect below). */
   variant?: 'default' | 'credits';
 }) {
-  /* Two identical rows create the seamless loop; only one is ever spoken —
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  /* ---- Credits variant: velocity-reactive kinetic crawl ----
+     Two identical rows create the seamless loop; only one is ever spoken —
      the rows are aria-hidden and a single visually-hidden caption carries
      the full list for assistive tech (previously the whole list was
-     announced twice). */
-  const row = (key: string) => (
+     announced twice).
+
+     Instead of the CSS keyframe loop, the credits track is a GSAP tween
+     (xPercent −50 → 0, i.e. the reversed roll) and each asterisk is a
+     continuous 360° spin. Both share one timeScale that reads the smoothed
+     --scroll-vel custom property VelocityFX publishes on <html>: while the
+     user scrolls fast the crawl accelerates and the asterisks wind up,
+     easing back to base pace as velocity decays to rest. Reading the inline
+     property each tick is cheap; no ScrollTrigger dependency is needed. */
+  useEffect(() => {
+    if (variant !== 'credits') return;
+    if (!reducedMotionMq || reducedMotionMq.matches) return;
+    const el = rootRef.current;
+    if (!el) return;
+
+    const track = el.querySelector<HTMLElement>('.marquee__track');
+    const asterisks = Array.from(
+      el.querySelectorAll<HTMLElement>('.creds__ast svg'),
+    );
+    if (!track) return;
+
+    const baseSec = (parseFloat(speed) || 110) * (speed.includes('ms') ? 0.001 : 1);
+    const SPIN_SEC = 14; // 12–16s window, centred
+    const VEL_GAIN = 3; // ×(1 + |v|·gain), |v|≤1 → up to ×4
+    const VEL_MAX = 5;
+
+    gsap.set(track, { xPercent: -50, force3D: true });
+    const crawl = gsap.to(track, {
+      xPercent: 0,
+      duration: baseSec,
+      ease: 'none',
+      repeat: -1,
+    });
+    const spins = asterisks.map((a) =>
+      gsap.fromTo(
+        a,
+        { rotation: 0, svgOrigin: '12 12' },
+        { rotation: 360, duration: SPIN_SEC, ease: 'none', repeat: -1 },
+      ),
+    );
+
+    const drive = () => {
+      const raw = document.documentElement.style.getPropertyValue('--scroll-vel');
+      const v = Math.abs(parseFloat(raw) || 0);
+      const factor = Math.min(1 + v * VEL_GAIN, VEL_MAX);
+      crawl.timeScale(factor);
+      for (const s of spins) s.timeScale(factor);
+    };
+    drive();
+    gsap.ticker.add(drive);
+
+    return () => {
+      gsap.ticker.remove(drive);
+      crawl.kill();
+      for (const s of spins) s.kill();
+    };
+  }, [variant, speed]);
+
+  /* Default variant keeps the uniform template beat (every phrase gets the
+     glyph star). The credits variant swaps that for line-art asterisks and
+     alternates solid/outline phrasing so a long crawl keeps rhythm. */
+  const defaultRow = (key: string) => (
     <div className="marquee__item" key={key} aria-hidden="true">
       {items.map((t, i) => (
         <span key={`${key}-${i}`}>
@@ -125,15 +218,53 @@ export function Marquee({
       ))}
     </div>
   );
+
+  const creditsRow = (key: string) => (
+    <div className="marquee__item" key={key} aria-hidden="true">
+      {items.map((t, i) => (
+        <span
+          className={`creds__phrase ${i % 2 ? 'is-solid' : ''}`}
+          key={`${key}-${i}`}
+        >
+          <LineAsterisk />
+          <span className="creds__txt">{t}</span>
+        </span>
+      ))}
+    </div>
+  );
+
+  const isCredits = variant === 'credits';
+
   return (
     <div
-      className={`marquee ${variant === 'credits' ? 'marquee--credits' : ''}`}
+      ref={rootRef}
+      className={`marquee ${isCredits ? 'marquee--credits' : ''}`}
       style={{ '--speed': speed }}
     >
+      {/* Gradient paint shared by every line-art asterisk in the crawl. */}
+      {isCredits && (
+        <svg width="0" height="0" className="cr-defs" aria-hidden="true">
+          <defs>
+            <linearGradient
+              id="cr-ast-grad"
+              x1="2"
+              y1="2"
+              x2="22"
+              y2="22"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop stopColor="#f2f6ff" />
+              <stop offset="0.42" stopColor="#c2d2ef" />
+              <stop offset="0.78" stopColor="#f7dfb6" />
+              <stop offset="1" stopColor="#eec07f" />
+            </linearGradient>
+          </defs>
+        </svg>
+      )}
       <span className="vh">{items.join(' · ')}</span>
       <div className="marquee__track">
-        {row('a')}
-        {row('b')}
+        {isCredits ? creditsRow('a') : defaultRow('a')}
+        {isCredits ? creditsRow('b') : defaultRow('b')}
       </div>
     </div>
   );
