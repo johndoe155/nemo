@@ -68,30 +68,30 @@ present. `package.json` is unchanged.
      (`.gargantua` background, `.shader-root` background via OVERRIDE 2,
      placeholder/still gradient stops) — the section reveals the site's real
      backdrop (`body { var(--void) }` + fixed `.starfield`).
-   - *Root cause found:* the render's "empty space" was never black — the
-     composite's `GetBloom` sums 8 octave downsamples of the bloom chain, and
-     octaves 6–8 (64×–256×) are frame-wide: they blanket every pixel with the
-     disc's average HDR brightness (≈ rgb(42,49,78) at converged corners),
-     amplified into visibility by the ×200 gain and pow(0.7/2.2) lift. That
-     veil is render content overlapping the render's own shadow brightness, so
-     per-pixel keying against it cannot separate box from black hole (the
-     first alpha-key attempt failed exactly this way — an opaque box whose
-     opacity tracked the shader's brightness).
-   - *Final fix (authorised "veil fully gone"):* (1) `image.glsl` — octaves
-     6–8 removed from `GetBloom` (donor lines retained commented for
-     provenance); octaves 1–5 keep the black hole's actual glow, and the
-     removed term was a near-constant additive worth <1% post-tonemap on
-     bright pixels, so the object's render is visually identical (and the
-     screen pass gets ~12 texture taps/pixel cheaper); (2) `image.glsl` —
-     with the veil gone, empty space is exactly (0,0,0) again, so the final
-     write is alpha-keyed (`smoothstep(0.0, 0.04, max(r,g,b))` after the
-     entrance ramp): black → α0 (backdrop shows through), every rendered
-     pixel above the knee → α1, color byte-identical; (3)
-     `gargantuaRenderer.ts` — `alpha: true`, `premultipliedAlpha: false`
-     (straight alpha), `setClearColor(0x000000, 0)` (inert for the bloom
-     chain; no pass reads target alpha). The interim CSS vignette mask was
-     removed (redundant with true transparency; would clip the glow fringe
-     on narrow viewports).
+   - *Root cause found (after two failed threshold attempts):* the render's
+     "empty space" was never black — the composite's `GetBloom` sums 8 octave
+     downsamples of the bloom chain, and because the disc band crosses the
+     entire frame, even the "near" octaves deposit the disc's light frame-wide.
+     The veil is render content that scales with the object's brightness, so
+     ANY per-pixel brightness threshold (final-color key, veil-octave
+     truncation) leaves a box whose opacity tracks the shader — observed twice
+     in the wild before this was understood.
+   - *Final fix (geometric matte, `image.glsl` screen pass only):* the canvas
+     alpha is no longer derived from brightness at all. It is the product of
+     (1) `contentMatte` — keyed on `base`, the PRE-bloom raymarch output
+     (`smoothstep(0.012, 0.06, max(r,g,b))`): the disc, ring and their
+     immediate glow sit far above the key while the bloom veil (added only
+     afterwards) and residual dust lie inside the dead-zone and key to exactly
+     zero — the matte follows the object's footprint, never the rectangle;
+     (2) `edgeFade` — a feathered falloff to the canvas borders (~10% of
+     width / ~8% of height) so the disc band, which crosses the full frame
+     width, dissolves before the section edge instead of being guillotined by
+     it; (3) `uEntrance`, so the object fades in from transparent. Color
+     channels of rendered pixels are donor-exact (all 8 bloom octaves
+     restored). `gargantuaRenderer.ts` keeps `alpha: true`,
+     `premultipliedAlpha: false` (straight alpha), `setClearColor(0x000000,
+     0)`. Verified over a red test backdrop: GL corners alpha 0 / rgb 0,
+     composited corners exactly the backdrop colour, disc opaque and bright.
 
 1. **Donor CSS re-anchoring** — `.shader-root` is `position: fixed; inset: 0` (a full-viewport
    app). Inside the section it is overridden to `position: absolute` via the scoped selector
