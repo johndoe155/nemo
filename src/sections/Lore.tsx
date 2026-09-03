@@ -60,17 +60,16 @@ function LoreStat({ value, suffix, label, note, delay }: (typeof LORE_STATS)[num
        Scrolling down literally drives the rod deeper into the section — and
        because the front half is the same tween, it emerges through each card
        in exact lockstep with the tip instead of fading in on a class.
-     · The glowing drill head rides that tip, on its own layer above the cards
-       (it is smaller than the punch, so it is only ever seen THROUGH it).
      · Because the tip line is fixed, each node can own a second trigger on
        exactly the same line — so a node lights up (and starts catching the
-       rod's cast shadow) at the precise frame the rod penetrates it.
+       rod's cast shadow) at the precise frame the rod penetrates it. That
+       light-up is the only marker at the leading edge: the tip is just where
+       the silver stops, no bit riding ahead of it.
    All of it is registered inside a gsap.context + matchMedia so reduced-motion
    visitors get the finished state instantly and cleanup is automatic.
    ========================================================================== */
 function CanonTimeline() {
   const scope = useRef<HTMLDivElement | null>(null);
-  const head = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     const el = scope.current;
@@ -134,17 +133,16 @@ function CanonTimeline() {
     paintThread();
 
     /* Everything this timeline animates is a composited property — scaleY on
-       the two rod halves, y/autoAlpha on the drill head, class toggles for the
-       nodes. No width/height/top tween anywhere, so nothing in here can
-       trigger layout. force3D pins them to a 3D matrix (GPU layer) rather than
-       letting GSAP drop back to a 2D matrix once a tween settles. */
+       the two rod halves, class toggles for the nodes. No width/height/top
+       tween anywhere, so nothing in here can trigger layout. force3D pins them
+       to a 3D matrix (GPU layer) rather than letting GSAP drop back to a 2D
+       matrix once a tween settles. */
     gsap.defaults({ force3D: true });
 
     /* Reduced motion: the rod is simply already driven all the way home, so
        every window is already threaded. */
     mm.add('(prefers-reduced-motion: reduce)', () => {
       gsap.set(fills, { scaleY: 1, force3D: true });
-      gsap.set(head.current, { autoAlpha: 0 });
       rows.forEach((r) => r.classList.add('is-pierced'));
     });
 
@@ -152,14 +150,18 @@ function CanonTimeline() {
       if (!rail) return;
 
       gsap.set(fills, { scaleY: 0, transformOrigin: '50% 0%', force3D: true });
-      gsap.set(head.current, { y: 0, autoAlpha: 0, force3D: true });
 
       /* The rod grows while the section travels from tip-line to tip-line —
          the tip is therefore pinned to 65% of the viewport at all times. One
          tween, both halves: the length behind the cards and the length in
          front of them advance together, frame for frame. */
-      gsap
-        .timeline({
+      gsap.fromTo(
+        fills,
+        { scaleY: 0 },
+        {
+          scaleY: 1,
+          ease: 'none',
+          force3D: true,
           scrollTrigger: {
             trigger: rail,
             start: 'top 65%',
@@ -168,14 +170,8 @@ function CanonTimeline() {
             invalidateOnRefresh: true,
             onRefresh: paintThread,
           },
-        })
-        .fromTo(fills, { scaleY: 0 }, { scaleY: 1, ease: 'none', force3D: true }, 0)
-        .fromTo(
-          head.current,
-          { y: 0, autoAlpha: 0 },
-          { y: () => rail.offsetHeight, autoAlpha: 1, ease: 'none', force3D: true },
-          0,
-        );
+        },
+      );
 
       /* Each node fires the moment the tip reaches it — same viewport line,
          so the light-up (and the cast shadow the card starts catching) is
@@ -222,10 +218,6 @@ function CanonTimeline() {
       <div className="ctl__rail ctl__rail--front" aria-hidden="true">
         <span className="ctl__fill" />
       </div>
-
-      {/* Drill head — own layer (z 5). Smaller than the punch, so the bit is
-          only ever seen through the hole; just its halo lands on the card. */}
-      <span className="ctl__head" ref={head} aria-hidden="true" />
 
       {LORE_TIMELINE.map((t, i) => {
         const side: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right';

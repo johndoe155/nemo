@@ -837,18 +837,20 @@
   padding-block: clamp(1rem, 3vw, 2.2rem);
   --row-gap: clamp(1rem, 2.4vw, 1.8rem);
 
-  /* ---- THE ROD IS COLOUR-AGNOSTIC --------------------------------------
-     One neutral paint — muted-white specular over a slate body over a slate
-     shade — mixed down onto the opaque --rod-base. No --gold, no --iris, no
-     --tc: accent belongs to the cards, and the rod is the quiet anchor they
-     hang their accents off. Neutral is also what makes it CONSISTENT: the
-     same stops read the same over a tinted card and over the bare page, so
-     one bar can go under a card and come back out the other side without a
-     seam giving the trick away. */
-  --rod-spec: rgba(233, 238, 248, 0.5);
-  --rod-body: rgba(150, 163, 190, 0.26);
-  --rod-shade: rgba(3, 4, 10, 0.78);
-  --rod-glow: rgba(226, 232, 240, 0.34);
+  /* ---- THE ROD IS COLOUR-AGNOSTIC: ONE SILVER --------------------------
+     A turned-metal ramp — near-black edges, an off-centre silver specular,
+     a brushed silver body, a cooler falloff — mixed down onto the opaque
+     --rod-base. No --gold, no --iris, no --tc: accent belongs to the cards,
+     and the rod is the quiet anchor they hang their accents off. Neutral is
+     also what makes it CONSISTENT: the same stops read the same over a tinted
+     card and over the bare page, so one bar can go under a card and come back
+     out the other side without a seam giving the trick away. Silver rather
+     than white so it reads as METAL catching the key light, not as a glow. */
+  --rod-spec: rgba(235, 240, 248, 0.74); /* the turned highlight */
+  --rod-body: rgba(178, 190, 208, 0.42); /* brushed silver */
+  --rod-fall: rgba(120, 132, 152, 0.3); /* falloff before the edge */
+  --rod-shade: rgba(5, 6, 12, 0.92); /* edges — this is what makes it round */
+  --rod-glow: rgba(203, 213, 225, 0.4); /* slate-300 halo, separation only */
 
   /* Front-half mask — one window per row, measured in CanonTimeline(). Hidden
      until measured, so an unmeasured rod can never paint itself over a card. */
@@ -866,7 +868,6 @@
      3  .ctl__row::after    the rod's cast shadow on the card it has exited
      4  .ctl__rail--front  the length already THROUGH — over the card's lower
                            half and over its bottom edge
-     5  .ctl__head         the drill bit
 
    Above a card's centre line the rod is behind it; below, in front. That
    handoff — not a shadow, not a gradient — is what makes the bar read as a
@@ -905,7 +906,8 @@
   width: var(--rod-w);
   translate: -50% 0;
   border-radius: var(--r-pill);
-  background: linear-gradient(180deg, rgba(233, 238, 248, 0.1), rgba(233, 238, 248, 0.03));
+  /* The groove is silver too — a shade of the same metal, not a second hue. */
+  background: linear-gradient(180deg, rgba(203, 213, 225, 0.12), rgba(203, 213, 225, 0.035));
 }
 
 /* Front half — the length that has come through, promoted over the cards.
@@ -921,7 +923,12 @@
   mask-repeat: no-repeat;
 }
 
-/* The bar. ONE rule feeds both halves, which is why they cannot disagree. */
+/* The bar. ONE rule feeds both halves, which is why they cannot disagree.
+   STATIC by design: the rod has no animation of its own. The only things that
+   move here are the scroll-driven drill (scaleY, GSAP) and the node the tip is
+   currently piercing — the metal itself just sits there and catches the light
+   the same way at every frame, which is what keeps it reading as an anchor
+   rather than as another effect competing with the cards. */
 .ctl__fill {
   position: absolute;
   top: 0;
@@ -931,88 +938,39 @@
   translate: -50% 0;
   transform-origin: 50% 0%;
   border-radius: var(--r-pill);
-  /* Paint order, top layer first: a specular band travelling the length of the
-     rod · cylinder shading (dark edges, off-centre highlight) · the neutral
-     top→bottom ramp. All three are mixed down onto the opaque base colour, so
-     the rod never samples what happens to be behind it. */
+  /* Paint order, top layer first: the cylinder ramp (near-black edge → silver
+     specular → brushed body → cooler falloff → near-black edge), then the
+     silver top→bottom ramp that keeps the rod from reading flat over its whole
+     length. Both are mixed down onto the opaque base colour, so the rod never
+     samples what happens to be behind it. */
   background-color: var(--rod-base);
   background-image:
     linear-gradient(
-      180deg,
-      transparent 0%,
-      var(--rod-spec) 44%,
-      rgba(233, 238, 248, 0.12) 58%,
-      transparent 100%
-    ),
-    linear-gradient(
       90deg,
       var(--rod-shade) 0%,
-      var(--rod-spec) 30%,
-      var(--rod-body) 64%,
+      var(--rod-spec) 26%,
+      var(--rod-body) 52%,
+      var(--rod-fall) 76%,
       var(--rod-shade) 100%
     ),
     linear-gradient(
       180deg,
-      rgba(233, 238, 248, 0.2),
-      rgba(150, 163, 190, 0.09) 48%,
-      rgba(233, 238, 248, 0.16)
+      rgba(226, 232, 240, 0.22),
+      rgba(148, 163, 184, 0.08) 46%,
+      rgba(203, 213, 225, 0.18)
     );
-  background-repeat: no-repeat;
-  background-size: 100% 42%, 100% 100%, 100% 100%;
-  background-position: 50% -60%, 0 0, 0 0;
   background-blend-mode: normal;
   mix-blend-mode: normal;
-  box-shadow: 0 0 16px -7px var(--rod-glow);
-  animation: ctl-rod-drift 9s linear infinite;
+  /* Separation from the page, not a bloom: tight, silver, and identical on
+     both halves so the handoff line stays invisible. */
+  box-shadow: 0 0 14px -7px var(--rod-glow);
   /* GSAP scrubs scaleY on this node every frame — keep it on the compositor. */
   will-change: transform;
 }
-/* The only thing that moves on the rod by itself: a slow specular band walking
-   its length. Both halves mount together and run the same keyframes, so the
-   band crosses the handoff line in phase — the rod never breaks where it comes
-   through a card. */
-@keyframes ctl-rod-drift {
-  from {
-    background-position: 50% -60%, 0 0, 0 0;
-  }
-  to {
-    background-position: 50% 160%, 0 0, 0 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ctl__fill {
-    /* Parked mid-rod: the ramp stays, the travel goes. */
-    animation: none;
-    background-position: 50% 30%, 0 0, 0 0;
-  }
-}
 
-/* Drill head — its own layer, above the cards. At 10px it is smaller than the
-   22px punch, so the bit itself is only ever seen THROUGH the hole; what lands
-   on the card is its halo, i.e. the rod's own light. Neutral like the rod — a
-   cyan bit would fight every accent it drills past. */
-.ctl__head {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  z-index: 5;
-  width: 10px;
-  height: 10px;
-  translate: -50% -50%;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 32%,
-    #fcfdff,
-    rgba(226, 232, 240, 0.86) 52%,
-    rgba(148, 163, 196, 0.3) 100%
-  );
-  box-shadow:
-    0 0 0 2px rgba(5, 5, 10, 0.5),
-    0 0 12px 1px var(--rod-glow),
-    0 0 28px 6px rgba(148, 163, 196, 0.16);
-  pointer-events: none;
-  will-change: transform, opacity;
-}
+/* The tip is the rod's own rounded cap (--r-pill on .ctl__fill) — no bit, no
+   bead, no halo riding ahead of the drill. The leading edge is legible from
+   the collars lighting up and the cast shadow each card starts catching. */
 
 .ctl__row {
   position: relative;
@@ -1217,18 +1175,10 @@
   .ctl {
     --row-gap: 0.85rem;
   }
-  /* Smaller punch, smaller bit, tighter clip box — the weave survives the
-     phone without the rod's halo eating the card. */
+  /* Smaller punch, tighter clip box and a tighter contact shadow — the weave
+     survives the phone without the rod's halo eating the card. */
   .ctl__rail {
     width: 26px;
-  }
-  .ctl__head {
-    width: 8px;
-    height: 8px;
-    box-shadow:
-      0 0 0 2px rgba(5, 5, 10, 0.5),
-      0 0 10px 1px var(--rod-glow),
-      0 0 20px 4px rgba(148, 163, 196, 0.14);
   }
   .ctl__row::after {
     width: calc(var(--rod-w) + 6px);
