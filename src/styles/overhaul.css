@@ -852,8 +852,29 @@ html[data-scene='abyss'] {
   margin-bottom: 0.18em;
 }
 .signoff__title-main {
-  font-size: clamp(3.2rem, 1.4rem + 9.5vw, 9.5rem);
+  /* Mobile-first fluid scale for the NEMOVERSE. headline word. On small
+     screens the size is viewport-referenced so the tracked uppercase word
+     can never push past the safe margins, while larger breakpoints climb
+     back toward the full 9.5rem dominating scale. Tracking tightens at the
+     small end to keep
+     maximum glyph weight without widening the set past 100% width. This rule
+     targets only the headline word — the "ENTER THE" sub-label
+     (.signoff__line-in--dim) keeps its own fixed tracking below. */
+  font-size: clamp(2.4rem, 10.5vw, 6rem);
+  letter-spacing: -0.04em;
   line-height: 0.9;
+}
+@media (min-width: 640px) {
+  .signoff__title-main {
+    font-size: clamp(3.4rem, 9.5vw, 7.5rem);
+    letter-spacing: -0.03em;
+  }
+}
+@media (min-width: 1024px) {
+  .signoff__title-main {
+    font-size: clamp(4rem, 1.4rem + 9.5vw, 9.5rem);
+    letter-spacing: -0.02em;
+  }
 }
 .signoff__actions {
   display: flex;
@@ -1060,10 +1081,14 @@ html[data-scene='abyss'] {
 @media (max-width: 560px) {
   .signoff__actions {
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
   }
   .signoff__actions .btn {
-    width: 100%;
+    /* Keep the CTA heavy but stop it from stretching edge-to-edge on phones.
+       Centered with a capped width (≈ max-w-sm) so it floats in the middle of
+       the anchor. Vertical padding, aurora gradient and font weight all stay
+       on the shared .btn / .btn-primary base — untouched here. */
+    width: min(90%, 22rem);
   }
   .signoff__credits {
     grid-template-columns: 1fr;
