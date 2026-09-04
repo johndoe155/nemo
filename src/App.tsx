@@ -94,7 +94,7 @@ export default function App() {
       <Ambience />
 
       <Nav />
-      <main>
+      <main className="site-main">
         <Hero />
         <Marquee
           items={[

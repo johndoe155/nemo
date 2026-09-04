@@ -5,5 +5,7 @@ export { KineticLabel } from './KineticLabel';
 export { GhostArrow } from './GhostArrow';
 export { RollText } from './RollText';
 export { KineticLink, KineticButton } from './KineticCta';
+export { CurtainLink } from './CurtainLink';
+export type { CurtainLinkProps } from './CurtainLink';
 export { useCursorGlow } from './useCursorGlow';
 export { useTilt } from './useTilt';

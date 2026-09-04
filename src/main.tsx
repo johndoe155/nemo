@@ -40,6 +40,10 @@ import './styles/suspension.css';
 // into the page, and the static fallback frame. Scoped to .singularity/.bh-*,
 // so it loads last without contending with anything above.
 import './styles/blackhole.css';
+// Curtain Reveal footer — fixed threshold, inverse editorial surface, and
+// its dedicated mask / magnetic interaction layer. Keep this import last so
+// the footer never inherits the dark sign-off treatment above.
+import './styles/curtain-footer.css';
 import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

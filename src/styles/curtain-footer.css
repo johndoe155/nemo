@@ -1,0 +1,479 @@
+/* ============================================================================
+   CURTAIN FOOTER
+   A quiet, hard-edged threshold between the dark canvas and the final frame.
+
+   The footer is intentionally out of document flow. `useCurtainReveal` measures
+   its live height and publishes it as --curtain-footer-height; the main stage
+   reserves that exact amount of reveal space at the end of the page.
+============================================================================ */
+
+:root {
+  /* Stable first-paint fallback before ResizeObserver measures the footer. */
+  --curtain-footer-height: clamp(32rem, 58svh, 44rem);
+}
+
+/* Keep the negative-z footer in a local stacking context: it sits behind the
+   dark main stage, but remains above the document background when revealed. */
+#root {
+  position: relative;
+  display: flow-root;
+  isolation: isolate;
+}
+
+.site-main {
+  position: relative;
+  z-index: 1;
+  margin-bottom: var(--curtain-footer-height);
+}
+
+.curtain-footer {
+  --cf-bg: #f4f4f5;
+  --cf-bg-soft: #fafafa;
+  --cf-bg-deep: #e4e4e7;
+  --cf-ink: #09090b;
+  --cf-muted: #52525b;
+  --cf-faint: #71717a;
+  --cf-line: rgba(9, 9, 11, 0.16);
+  --cf-line-strong: rgba(9, 9, 11, 0.32);
+  --cf-blue: #1d4ed8;
+  --cf-blue-dark: #1e3a8a;
+  --cf-gutter: var(--gutter);
+
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  z-index: -1;
+  width: 100%;
+  max-height: 100svh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--cf-muted) transparent;
+  scrollbar-width: thin;
+  color: var(--cf-ink);
+  background:
+    radial-gradient(110% 130% at 100% 0%, rgba(250, 250, 250, 0.92), transparent 54%),
+    radial-gradient(90% 120% at 0% 100%, rgba(228, 228, 231, 0.7), transparent 62%),
+    var(--cf-bg);
+}
+
+/* A restrained paper grain: texture, not noise-as-decoration. */
+.curtain-footer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.12;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='cf-grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23cf-grain)' opacity='.22'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+.curtain-footer__surface {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  transform: translateZ(0);
+}
+
+.curtain-footer__topbar,
+.curtain-footer__grid,
+.curtain-footer__base {
+  width: min(var(--max), 100% - var(--cf-gutter) * 2);
+  margin-inline: auto;
+}
+
+/* ------------------------------ top rail -------------------------------- */
+
+.curtain-footer__topbar {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 1.5rem;
+  min-height: 3.8rem;
+  border-bottom: 1px solid var(--cf-line);
+  font-family: var(--font-accent);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.curtain-footer__eyebrow,
+.curtain-footer__protocol,
+.curtain-footer__index,
+.curtain-footer__base,
+.curtain-footer__heading,
+.curtain-footer__link,
+.curtain-footer__back {
+  font-variant-numeric: tabular-nums;
+}
+
+.curtain-footer__eyebrow,
+.curtain-footer__protocol {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.curtain-footer__eyebrow {
+  color: var(--cf-ink);
+}
+
+.curtain-footer__protocol {
+  color: var(--cf-faint);
+  white-space: nowrap;
+}
+
+.curtain-footer__signal {
+  display: inline-block;
+  width: 0.42rem;
+  height: 0.42rem;
+  flex: none;
+  background: var(--cf-blue);
+  animation: curtainSignal 2.8s ease-in-out infinite;
+}
+
+@keyframes curtainSignal {
+  0%,
+  100% { opacity: 0.45; transform: scale(0.82); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* ------------------------------- grid ------------------------------------ */
+
+.curtain-footer__grid {
+  display: grid;
+  grid-template-columns: minmax(13rem, 1.28fr) minmax(8rem, 0.72fr) minmax(8rem, 0.72fr) minmax(12rem, 1.08fr);
+  gap: clamp(1.5rem, 3.2vw, 4rem);
+  padding-block: clamp(2.2rem, 4.3vw, 4.4rem) clamp(1.6rem, 3vw, 3rem);
+}
+
+.curtain-footer__intro {
+  min-width: 0;
+  padding-right: clamp(0rem, 2vw, 2rem);
+}
+
+.curtain-footer__index,
+.curtain-footer__heading {
+  font-family: var(--font-accent);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.curtain-footer__index {
+  color: var(--cf-blue);
+}
+
+.curtain-footer__statement {
+  margin-top: clamp(1.4rem, 3vw, 2.7rem);
+  font-family: var(--font-heading);
+  font-size: clamp(1.35rem, 1rem + 1.25vw, 2.35rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  text-transform: uppercase;
+}
+
+.curtain-footer__statement em {
+  color: var(--cf-blue);
+  font-style: normal;
+}
+
+.curtain-footer__note {
+  max-width: 16rem;
+  margin-top: clamp(1.4rem, 2.8vw, 2.8rem);
+  color: var(--cf-muted);
+  font-family: var(--font-body-text);
+  font-size: 0.87rem;
+  line-height: 1.45;
+}
+
+.curtain-footer__column {
+  min-width: 0;
+}
+
+.curtain-footer__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  min-height: 2.35rem;
+  margin-bottom: 0.7rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--cf-line);
+  color: var(--cf-ink);
+}
+
+.curtain-footer__heading > span {
+  color: var(--cf-blue);
+  font-size: 0.58rem;
+}
+
+.curtain-footer__links {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.curtain-footer__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding-block: 0.45rem;
+  color: var(--cf-muted);
+  font-family: var(--font-body);
+  font-size: clamp(0.82rem, 0.75rem + 0.12vw, 0.98rem);
+  line-height: 1.15;
+  transition: color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.curtain-footer__link:hover,
+.curtain-footer__link:focus-visible {
+  color: var(--cf-ink);
+}
+
+.curtain-footer__link:focus-visible,
+.curtain-footer__back:focus-visible,
+.curtain-footer__wordmark:focus-visible {
+  outline: 2px solid var(--cf-blue);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* The two strings occupy the same mask. On entry both translate exactly one
+   line-height upward: the old label leaves while the duplicate lands in its
+   place. */
+.curtain-link__mask {
+  position: relative;
+  display: block;
+  min-width: 0;
+  height: 1.15em;
+  overflow: hidden;
+  flex: 0 1 auto;
+}
+
+.curtain-link__text {
+  display: block;
+  white-space: nowrap;
+  transform: translateY(0);
+  transition: transform 0.52s cubic-bezier(0.76, 0, 0.24, 1);
+  will-change: transform;
+}
+
+.curtain-link__text--duplicate {
+  position: absolute;
+  top: 100%;
+  left: 0;
+}
+
+.curtain-link:hover .curtain-link__text,
+.curtain-link:focus-visible .curtain-link__text {
+  transform: translateY(-100%);
+}
+
+.curtain-link__meta {
+  flex: none;
+  max-width: 58%;
+  overflow: hidden;
+  color: var(--cf-faint);
+  font-family: var(--font-accent);
+  font-size: 0.57rem;
+  letter-spacing: 0.11em;
+  line-height: 1.25;
+  text-align: right;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.curtain-footer__link:hover .curtain-link__meta,
+.curtain-footer__link:focus-visible .curtain-link__meta {
+  color: var(--cf-blue);
+}
+
+/* The magnetic wrapper gets block geometry while Framer owns its transform. */
+.curtain-footer__magnetic {
+  display: block;
+  width: 100%;
+}
+
+.curtain-footer__links--signals .curtain-footer__link {
+  width: 100%;
+}
+
+/* ----------------------------- legal rail -------------------------------- */
+
+.curtain-footer__base {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  border-top: 1px solid var(--cf-line);
+  padding-block: 1rem 1.1rem;
+  color: var(--cf-faint);
+  font-family: var(--font-accent);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+/* --------------------------- NEMO lockup --------------------------------- */
+
+.curtain-footer__lockup {
+  width: 100%;
+  overflow: hidden;
+  border-top: 1px solid var(--cf-line-strong);
+}
+
+.curtain-footer__wordmark {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  color: var(--cf-ink);
+  font-family: var(--font-display);
+  font-size: clamp(7rem, 27vw, 24rem);
+  font-weight: 800;
+  letter-spacing: -0.095em;
+  line-height: 0.72;
+  text-align: center;
+  text-transform: uppercase;
+  transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.curtain-footer__wordmark:hover,
+.curtain-footer__wordmark:focus-visible {
+  color: var(--cf-blue-dark);
+}
+
+.curtain-footer__word-mask {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 0.72em;
+  overflow: hidden;
+}
+
+.curtain-footer__word {
+  display: block;
+  width: 100%;
+  white-space: nowrap;
+  transform: translateY(0) scaleX(1.05);
+  transform-origin: 50% 50%;
+  transition: transform 0.78s cubic-bezier(0.76, 0, 0.24, 1);
+  will-change: transform;
+}
+
+.curtain-footer__word--duplicate {
+  position: absolute;
+  top: 100%;
+  left: 0;
+}
+
+.curtain-footer__wordmark:hover .curtain-footer__word,
+.curtain-footer__wordmark:focus-visible .curtain-footer__word {
+  transform: translateY(-100%) scaleX(1.05);
+}
+
+/* ---------------------------- responsive -------------------------------- */
+
+@media (max-width: 1080px) {
+  .curtain-footer__grid {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr) minmax(0, 1fr);
+  }
+
+  .curtain-footer__intro {
+    grid-column: 1 / -1;
+    padding-right: 0;
+  }
+
+  .curtain-footer__statement {
+    margin-top: 1rem;
+  }
+
+  .curtain-footer__note {
+    max-width: 24rem;
+    margin-top: 1rem;
+  }
+}
+
+@media (max-width: 680px) {
+  :root {
+    --curtain-footer-height: clamp(40rem, 92svh, 52rem);
+  }
+
+  .curtain-footer__topbar {
+    grid-template-columns: 1fr auto;
+    gap: 0.8rem;
+    min-height: 4rem;
+  }
+
+  .curtain-footer__protocol {
+    display: none;
+  }
+
+  .curtain-footer__back {
+    justify-self: end;
+  }
+
+  .curtain-footer__grid {
+    grid-template-columns: 1fr;
+    gap: 1.8rem;
+    padding-block: 1.8rem 1.4rem;
+  }
+
+  .curtain-footer__intro {
+    grid-column: auto;
+  }
+
+  .curtain-footer__statement {
+    margin-top: 1.1rem;
+    font-size: clamp(1.3rem, 6vw, 1.8rem);
+  }
+
+  .curtain-footer__note {
+    margin-top: 0.8rem;
+  }
+
+  .curtain-footer__heading {
+    margin-bottom: 0.35rem;
+  }
+
+  .curtain-footer__link {
+    min-height: 2.6rem;
+  }
+
+  .curtain-footer__base {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding-block: 0.9rem 1rem;
+  }
+
+  .curtain-footer__wordmark {
+    font-size: clamp(7rem, 29vw, 12rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .curtain-footer__signal {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .curtain-footer__word,
+  .curtain-link__text {
+    transition: none;
+  }
+}
