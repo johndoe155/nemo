@@ -7,6 +7,7 @@
      · .magnetic            unified magnetic wrapper (was 3 implementations)
      · .pk-*                kinetic label chars + ghost chevron (from hero)
      · .rt-*                pure character roll (nav/links/utility)
+     · .text-reveal         overflow-hidden text mask reveal
      · .btn::* bloom        cursor-anchored radial bloom (+tier tints)
      · focus ring           one accessible ring token for every control
    ========================================================================== */
@@ -126,6 +127,73 @@
 @media (prefers-reduced-motion: reduce) {
   .rt__ch-in {
     transition: none;
+  }
+}
+
+/* ---------------------------- text reveal (tr) --------------------------- */
+/* Overflow-hidden text mask. On hover/focus, primary string translates up,
+   duplicate string translates in from the bottom. */
+
+.text-reveal {
+  position: relative;
+  display: inline-flex;
+  vertical-align: baseline;
+  line-height: inherit;
+}
+.text-reveal__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.text-reveal__mask {
+  position: relative;
+  display: inline-flex;
+  overflow: hidden;
+  line-height: inherit;
+  vertical-align: bottom;
+}
+.text-reveal__line {
+  display: inline-block;
+  white-space: nowrap;
+  line-height: inherit;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+.text-reveal__line--primary {
+  transform: translateY(0%);
+}
+.text-reveal__line--duplicate {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  transform: translateY(0%);
+}
+:is(a, button, [role='button'], .magnetic, .text-reveal-host):hover .text-reveal__line--primary,
+:is(a, button, [role='button'], .magnetic, .text-reveal-host):focus-visible .text-reveal__line--primary,
+.is-revealed .text-reveal__line--primary {
+  transform: translateY(-100%);
+}
+:is(a, button, [role='button'], .magnetic, .text-reveal-host):hover .text-reveal__line--duplicate,
+:is(a, button, [role='button'], .magnetic, .text-reveal-host):focus-visible .text-reveal__line--duplicate,
+.is-revealed .text-reveal__line--duplicate {
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-reveal__line {
+    transition: none !important;
+    transform: none !important;
+  }
+  .text-reveal__line--duplicate {
+    display: none !important;
   }
 }
 

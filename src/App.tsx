@@ -1,4 +1,4 @@
-import { Component, type CSSProperties, type ReactNode } from 'react';
+import { Component, useState, type CSSProperties, type ReactNode } from 'react';
 import Nav from './sections/Nav';
 import Hero from './sections/Hero';
 import Nemoverse from './sections/Nemoverse';
@@ -79,6 +79,8 @@ export default function App() {
      no React state. */
   useCursorGlow();
 
+  const [footerHeight, setFooterHeight] = useState<number>(0);
+
   return (
     <>
       <a className="skip-link" href="#nemoverse" style={skipStyle}>
@@ -94,7 +96,11 @@ export default function App() {
       <Ambience />
 
       <Nav />
-      <main>
+      {/* The main canvas curtain sits above the fixed footer with z-index: 2
+          and an opaque void background. As the user scrolls to the bottom of
+          the WebGPU black hole, this container slides up like a physical
+          curtain, unveiling the stark, blindingly bright footer underneath. */}
+      <main className="app-main-curtain">
         <Hero />
         <Marquee
           items={[
@@ -121,19 +127,22 @@ export default function App() {
         <Lore />
         {/* THE SINGULARITY — the live WebGPU black hole. Placed in the exact
             gap between the canon timeline above (Lore, whose drilling rod ends
-            on the "U-007 — THE LAST AURORA" node) and the closing credit crawl
-            below (the first thing Footer renders is the Marquee carrying
-            "HOLDERS WALK IN FIRST ✳ EVERY MINT PULLS A PIECE"). It is the last
-            child of <main> because <Footer /> is a sibling of <main>, so this
-            is the seam itself — nothing else sits between them.
-            Statically imported like every other section (see the Pulls note
-            above): a section this deep in the page must always mount. Its own
-            graceful degradation — WebGPU feature detection, a static SVG/CSS
-            frame, off-screen pausing — lives in components/BlackHoleStage.tsx,
-            and the simulation in src/three/blackhole/ is vendored verbatim. */}
+            on the "U-007 — THE LAST AURORA" node) and the footer curtain reveal. */}
         <Singularity />
       </main>
-      <Footer />
+
+      {/* Curtain reveal scroll spacer: reserves exact scroll height for the
+          fixed footer beneath the main canvas curtain. */}
+      <div
+        className="footer-curtain-spacer"
+        style={{ height: footerHeight > 0 ? `${footerHeight}px` : undefined }}
+        aria-hidden="true"
+      />
+
+      {/* The Stark Inverse Footer — fixed to the bottom of the viewport
+          with a negative/lower z-index beneath the dark canvas curtain. */}
+      <Footer onHeightChange={setFooterHeight} />
+
       <ToastHost />
     </>
   );

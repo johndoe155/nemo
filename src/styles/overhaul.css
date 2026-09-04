@@ -624,511 +624,497 @@ html[data-scene='singularity'] {
   .persona__chatwrap { padding-block: 0; }
 }
 
-/* ============================ FOOTER — THE SIGN-OFF ============================
-   Closing statement + global site footer.
+/* ============================ FOOTER — THE STARK INVERSE CURTAIN BASE ============================
+   The "Curtain Reveal" Transition & Stark Inverse Color Mapping.
 
-   The anchor holds ONLY the stacked headline and the single primary CTA —
-   the approved minimal layout — elevated strictly by GSAP motion in
-   src/sections/Footer.tsx (ScrollTrigger reveal, spatial parallax, magnetic
-   button, living gradient ink). The static styling of the headline and the
-   button is the approved baseline — untouched.
+   Decoupled from the main document flow: the footer is fixed to the bottom
+   of the viewport beneath the dark canvas curtain. As the user reaches the
+   end of the WebGL/WebGPU simulation canvas, the main site slides up like a
+   curtain, revealing the stark, blindingly bright footer underneath.
 
-   Below the anchor: the closing-credit crawl, the credits grid (identity +
-   UNIVERSE / SYSTEMS / SIGNALS link groups) and the full-bleed legal ribbon
-   with the magnetic REWIND control — restored verbatim.
+   Design System:
+     · Silent luxury off-white zinc background (#F4F4F5 / subtle pearl gradient)
+     · Deep rich charcoal typography (#09090B)
+     · Strict brutalist saturated ultramarine accents (#002FA7, zero neon glow)
+     · Precise asymmetrical CSS grid for site map (Universe, Systems, Signals)
+     · Massive edge-to-edge kinetic typography lockup of "NEMO" at the base
+     · Fluid magnetic socials with overflow-hidden text mask reveals
    ========================================================================== */
 
-.footer.signoff {
+/* Main canvas curtain container — slides up to reveal the fixed footer base */
+.app-main-curtain {
   position: relative;
-  overflow: hidden;
-  /* No top border and no tint over the crawl: the Lore section's starfield
-     (the single fixed canvas behind the page) flows unbroken down past the
-     floating marquee band. The band — not a painted bar or a hairline — is the
-     divider between the Lore backdrop and the "ENTER THE NEMOVERSE" anchor
-     below. Darkening eases in only lower down so the credits grid and ribbon
-     keep their readable depth without carving a seam out of the background
-     above the marquee. */
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    transparent 18%,
-    rgba(91, 43, 214, 0.05) 46%,
-    rgba(5, 5, 10, 0.26) 78%,
-    rgba(5, 5, 10, 0.58) 100%
-  );
-  padding: 0 0 clamp(1.6rem, 3vw, 2.5rem);
+  z-index: 2;
+  background: var(--void);
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* ---- Credit crawl ---- */
-
-.signoff__crawl {
+/* Spacer in normal document flow that reserves exact scroll height for the footer */
+.footer-curtain-spacer {
   position: relative;
   z-index: 1;
-  /* Hosts the tilted band. overflow:hidden clips the band's overhang (the
-     rotated corners + the horizontal overshoot) so the diagonal never spawns
-     a page scrollbar; the generous transparent vertical padding gives those
-     corners headroom and lets the Lore starfield show through above and below
-     the band instead of any clipped mid-glass edge. */
-  overflow: hidden;
-  padding-block: clamp(2.2rem, 1.5rem + 3vw, 5.5rem);
-}
-/* ---- Credit crawl — the Sign-Off's tilted glass slice ----
-   The marquee directly above the footer proper. The generic-AI-template
-   ticker is pushed to an editorial close: line-art asterisks instead of a
-   filled glyph, alternating solid/outlined phrasing, an edge-dissolve that
-   makes the roll read as an infinite band, a hairline glass bar whose
-   backdrop blur lets the drifting star/nebula layer ghost through it, and a
-   −2.5° angular tilt that slices the band diagonally across the closing
-   scene. All transforms are composited (translate/rotate) with
-   will-change + backface-visibility so nothing re-layouts per frame. */
-
-.marquee--credits {
-  /* Uniform token: every inter-token gap (asterisk↔text and text↔asterisk)
-     resolves to this one value, so the separator is optically centred
-     between its two neighbouring phrases on both sides. */
-  --creds-gap: clamp(1.4rem, 1rem + 1.4vw, 2.6rem);
-
-  /* Refractive glass strip — subtle blur + hairline 1px top/bottom borders. */
-  border-top: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.045),
-    rgba(255, 255, 255, 0.015)
-  );
-  -webkit-backdrop-filter: blur(12px) saturate(1.12);
-  backdrop-filter: blur(12px) saturate(1.12);
-  /* Edge dissolve — fade text at the band's borders into the void so the
-     roll reads as an infinite band rather than a hard-clipped bar. */
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent,
-    #000 15%,
-    #000 85%,
-    transparent
-  );
-  mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent);
-
-  /* --- Angular tilt + layout safety ---
-     Rotate the full-width band −2.5° about its midpoint and extend it beyond
-     the viewport (±3.5vw) so the rotated ends always cover the full parent
-     width with no corner gaps; .signoff__crawl / .footer.signoff
-     (overflow:hidden) then absorb the overhang — zero horizontal scrollbars,
-     no harsh clip where the band meets the screen edge. */
-  transform: rotate(-2.5deg);
-  transform-origin: 50% 50%;
-  width: calc(100% + 7vw);
-  margin-inline: -3.5vw;
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-/* GSAP owns the crawl's translation (velocity-reactive) — retire the CSS
-   loop so the two never fight. Baseline static frame is row A at x 0. The
-   vertical padding is the bar's thickness: kept substantial (≈py-5 weight) so
-   the strip reads as a confident, well-proportioned band rather than a thin
-   sliver of type. */
-.marquee--credits .marquee__track {
-  animation: none;
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  padding-block: clamp(1.5rem, 1.2rem + 0.8vw, 2.4rem);
-}
-/* Items keep the crawl's scale; the filled/outlined rhythm lives on each
-   phrase. gap uses the shared --creds-gap token so spacing is identical to
-   the intra-phrase gap — the asterisk is mathematically centred between the
-   neighbouring text columns. */
-.marquee--credits .marquee__item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--creds-gap);
-  font-size: clamp(0.95rem, 0.7rem + 1.5vw, 1.5rem);
-  letter-spacing: 0.34em;
+  pointer-events: none;
+  background: transparent;
+  min-height: 480px;
+  height: var(--footer-curtain-height, 680px);
 }
 
-/* --- Typographic rhythm: outlined ⟷ filled phrasing ---
-   Even phrases stay in the stroked outline register; odd phrases flip to
-   solid filled type so the eye travels instead of drowning in uniform
-   outline. */
-
-.creds__phrase {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--creds-gap);
-}
-.creds__phrase .creds__txt {
-  white-space: nowrap;
-  line-height: 1;
-}
-/* stroked register (even phrases) */
-.creds__phrase:not(.is-solid) .creds__txt {
-  color: transparent;
-  font-weight: 800;
-  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.34);
-}
-/* filled register (odd phrases) */
-.creds__phrase.is-solid .creds__txt {
-  color: rgba(248, 250, 255, 0.78);
-  font-weight: 600;
-  -webkit-text-stroke: 0;
-}
-
-/* --- 6-point line-art asterisk ---
-   Thin vector stroke, gradient-painted (icy silver → warm champagne) with an
-   ultra-faint luminescent drop-shadow.
-
-   Structure / spin-axis contract:
-     .creds__ast      — flex socket between the two phrases. align-items:center
-                        centres it vertically on the cap line; identical gaps
-                        on both sides centre it horizontally. Purely layout —
-                        it never rotates.
-     .creds__ast-spin — the ONLY rotating element. A square (1:1) HTML box
-                        with transform-origin: 50% 50%, so GSAP writes a plain
-                        `rotate()` that pivots on its exact centre. Nothing in
-                        the loop translates, shifts margins, or moves relative
-                        to the text — so the glyph cannot orbit or wobble.
-     svg              — never transformed. 1:1 square artboard (viewBox 24×24)
-                        at equal rendered width/height inside the spin box, so
-                        its centre coincides with the box centre.
-   The icon stays locked in its flex position while the neutral spin box turns
-   around it — kinetic without any off-axis drift. */
-.creds__ast {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  line-height: 0;
-}
-.creds__ast-spin {
-  display: block;
-  width: 0.72em;
-  height: 0.72em; /* 1:1 — equal width & height */
-  flex: none;
-  /* Pivot strictly on the box's own centre — no SVG origin handling needed. */
-  transform-origin: 50% 50%;
-  /* Rotation is transform-only; promote the layer off the main thread. */
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-.creds__ast-spin svg {
-  display: block;
+/* The Fixed Stark Inverse Footer */
+.footer-curtain.stark-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   width: 100%;
-  height: 100%; /* 1:1 — matches the square viewBox */
-  overflow: visible;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.25));
-  opacity: 0.92;
+  z-index: 0;
+  pointer-events: auto;
+  background: linear-gradient(180deg, #F6F6F7 0%, #F4F4F5 45%, #EBEBED 100%);
+  color: #09090B;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding-top: 0;
 }
-/* .cr-defs — gradient definition is zero-sized; keep it inert. */
-.cr-defs {
+
+/* Editorial Paper Noise Texture Overlay */
+.stark-texture {
   position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.045;
+  background-image: var(--noise);
+  background-size: 180px 180px;
+  mix-blend-mode: multiply;
 }
 
-/* ---- The anchor — headline + single CTA ---- */
-
-.signoff__anchor {
-  position: relative;
-  overflow: hidden;
-  text-align: center;
-  padding: clamp(3rem, 6vw, 5rem) 0 clamp(2.5rem, 4.5vw, 4rem);
-}
-.signoff__title {
+/* Editorial Masthead / Status Bar */
+.stark-masthead {
   position: relative;
   z-index: 1;
-  margin-top: 1.5rem;
-  font-family: var(--font-display);
-  font-weight: 800;
+  border-bottom: 1px solid rgba(9, 9, 11, 0.1);
+  background: rgba(9, 9, 11, 0.02);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta-min);
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  line-height: 0.98;
-  letter-spacing: -0.02em;
+  color: rgba(9, 9, 11, 0.55);
+  padding-block: 0.75rem;
 }
-.signoff__line {
-  display: block;
-  overflow: hidden; /* the mask that makes the wipe a wipe */
-  padding-block: 0.06em; /* cap descenders inside the mask */
-}
-.signoff__line-in {
-  display: block;
-  will-change: transform;
-}
-.signoff__line-in--dim {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: clamp(1.05rem, 0.8rem + 1.6vw, 2rem);
-  letter-spacing: 0.42em;
-  /* optical compensation: trailing tracking would push the line off-centre */
-  padding-left: 0.42em;
-  color: var(--ink-dim);
-  margin-bottom: 0.18em;
-}
-.signoff__title-main {
-  /* Mobile-first fluid scale for the NEMOVERSE. headline word. On small
-     screens the size is viewport-referenced so the tracked uppercase word
-     can never push past the safe margins, while larger breakpoints climb
-     back toward the full 9.5rem dominating scale. Tracking tightens at the
-     small end to keep
-     maximum glyph weight without widening the set past 100% width. This rule
-     targets only the headline word — the "ENTER THE" sub-label
-     (.signoff__line-in--dim) keeps its own fixed tracking below. */
-  font-size: clamp(2.4rem, 10.5vw, 6rem);
-  letter-spacing: -0.04em;
-  line-height: 0.9;
-}
-@media (min-width: 640px) {
-  .signoff__title-main {
-    font-size: clamp(3.4rem, 9.5vw, 7.5rem);
-    letter-spacing: -0.03em;
-  }
-}
-@media (min-width: 1024px) {
-  .signoff__title-main {
-    font-size: clamp(4rem, 1.4rem + 9.5vw, 9.5rem);
-    letter-spacing: -0.02em;
-  }
-}
-.signoff__actions {
+.stark-masthead__inner {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 1.1rem;
-  flex-wrap: wrap;
-  margin-top: 2.6rem;
-  position: relative;
-  z-index: 1;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.stark-masthead__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  white-space: nowrap;
+}
+.stark-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #002FA7; /* Saturated ultramarine accent */
+}
+.stark-masthead__item b {
+  color: #09090B;
+  font-weight: 700;
 }
 
-/* ---- Closing credits ---- */
-
-.signoff__credits {
+/* Top Half — Asymmetrical Grid Content */
+.stark-body {
   position: relative;
   z-index: 1;
+  padding-top: clamp(2rem, 3.8vw, 3.5rem);
+  padding-bottom: clamp(1.2rem, 2vw, 2rem);
+}
+.stark-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr 1fr;
-  gap: clamp(2rem, 4vw, 4.5rem);
-  padding-block: clamp(3.5rem, 6vw, 6rem) 3rem;
+  grid-template-columns: 1.45fr 0.95fr 0.95fr 1.25fr;
+  gap: clamp(1.8rem, 3.4vw, 4rem);
+  align-items: start;
 }
-.signoff__identity {
-  max-width: 34rem;
+
+/* Identity & Mission Column */
+.stark-col--identity {
+  max-width: 32rem;
 }
-.footer__brand {
-  display: flex;
+.stark-brand {
+  display: inline-flex;
   align-items: center;
-  gap: 0.9rem;
-  width: fit-content;
-  margin-bottom: 1.1rem;
-  font-family: var(--font-display);
-  font-weight: 800;
-  text-transform: uppercase;
-  font-size: clamp(1.3rem, 1rem + 1.4vw, 2rem);
-  letter-spacing: 0.1em;
+  gap: 1rem;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   touch-action: manipulation;
+  margin-bottom: 1.1rem;
 }
-.footer__brand img {
+.stark-brand__icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stark-brand img {
   display: block;
-  width: clamp(2.2rem, 1.6rem + 2vw, 3rem);
+  width: clamp(2.2rem, 1.8rem + 1vw, 2.75rem);
   height: auto;
+  filter: brightness(0.08) saturate(0%);
   transition: transform 0.5s var(--ease-expo), filter 0.5s var(--ease-expo);
-  filter: drop-shadow(0 0 12px rgba(255, 200, 87, 0.22));
 }
-.footer__brand:hover img {
+.stark-brand:hover img {
   transform: scale(1.08) rotate(-4deg);
-  filter: drop-shadow(0 0 20px rgba(255, 200, 87, 0.5));
+  filter: brightness(0) drop-shadow(0 0 12px rgba(0, 47, 167, 0.35));
 }
-.footer__brand.is-holding img {
+.stark-brand.is-holding img {
   transform: scale(1.15) rotate(-6deg);
-  filter: drop-shadow(0 0 30px rgba(255, 200, 87, 0.85));
+  filter: brightness(0) drop-shadow(0 0 22px rgba(0, 47, 167, 0.7));
 }
-.signoff__prose {
-  color: var(--ink-dim);
-  font-size: 0.95rem;
-  line-height: 1.65;
-  max-width: 30rem;
+.stark-brand__ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid #002FA7;
+  animation: pulseRing 1.2s var(--ease-expo) infinite;
 }
-.signoff__stats {
-  margin-top: 1.2rem;
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta-mobile);
-  letter-spacing: 0.22em;
+.stark-brand__text {
+  display: flex;
+  flex-direction: column;
+}
+.stark-brand__name {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1rem + 1.1vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-faint);
-  font-variant-numeric: tabular-nums;
+  color: #09090B;
+  line-height: 1;
 }
-.signoff__col-label {
+.stark-brand__meta {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  color: rgba(9, 9, 11, 0.45);
+  margin-top: 0.32rem;
+}
+.stark-prose {
+  color: rgba(9, 9, 11, 0.72);
+  font-size: 0.92rem;
+  line-height: 1.62;
+  max-width: 28rem;
+}
+.stark-prose b {
+  color: #09090B;
+  font-weight: 700;
+}
+.stark-stats-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 1.25rem;
+  padding: 0.4rem 0.8rem;
+  background: rgba(9, 9, 11, 0.04);
+  border: 1px solid rgba(9, 9, 11, 0.12);
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta-min);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(9, 9, 11, 0.65);
+}
+.stark-badge-sep {
+  color: rgba(9, 9, 11, 0.25);
+}
+
+/* Site Map Navigation Columns (01 UNIVERSE, 02 SYSTEMS) */
+.stark-col__heading {
   display: flex;
   align-items: baseline;
-  gap: 0.6rem;
+  gap: 0.55rem;
   margin-bottom: 1.15rem;
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(9, 9, 11, 0.12);
   font-family: var(--font-mono);
   font-size: var(--fs-kicker);
   font-weight: 700;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: var(--cyan);
+  color: #09090B;
 }
-.signoff__col-num {
-  color: var(--ink-faint);
+.stark-kicker-num {
+  color: #002FA7; /* Strict brutalist ultramarine accent */
+  font-weight: 800;
   font-size: var(--fs-meta-min);
 }
-.signoff__col a {
+.stark-col__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.stark-nav-link {
   position: relative;
-  display: block;
+  display: inline-flex;
+  align-items: center;
   width: fit-content;
-  color: var(--ink-dim);
-  font-size: 0.95rem;
-  padding: 0.34rem 0;
-  /* the label carries the motion (RollText char cascade); the underline
-     draws instead of a translateX nudge */
+  padding: 0.2rem 0;
+  color: rgba(9, 9, 11, 0.72);
+  font-size: 0.94rem;
+  font-weight: 500;
+  line-height: 1.35;
   transition: color 0.3s var(--ease-expo);
 }
-.signoff__col a::after {
+.stark-nav-link::after {
   content: '';
   position: absolute;
   left: 0;
   bottom: 0;
   width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, var(--cyan), transparent 80%);
-  background-size: 260% 100%;
-  animation: gdrift 9s ease-in-out infinite;
+  height: 1.5px;
+  background: #002FA7;
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 0.45s var(--ease-expo);
+  transition: transform 0.35s var(--ease-expo);
 }
-.signoff__col a:hover,
-.signoff__col a:focus-visible {
-  color: var(--ink);
+.stark-nav-link:hover,
+.stark-nav-link:focus-visible {
+  color: #09090B;
 }
-.signoff__col a:hover::after,
-.signoff__col a:focus-visible::after {
+.stark-nav-link:hover::after,
+.stark-nav-link:focus-visible::after {
   transform: scaleX(1);
 }
-.signoff__social {
+
+/* Signals Column & Magnetic Social Links */
+.stark-signals-list {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.stark-social-wrap {
+  display: block;
   width: 100%;
 }
-.signoff__social-handle {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta-min);
-  letter-spacing: 0.14em;
-  color: var(--ink-faint);
-  transition: color 0.3s var(--ease-expo);
-}
-.signoff__social:hover .signoff__social-handle,
-.signoff__social:focus-visible .signoff__social-handle {
-  color: var(--gold);
-}
-
-/* ---- The ribbon ---- */
-
-.signoff__ribbon {
-  position: relative;
-  z-index: 1;
+.stark-social-link {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem 2.4rem;
-  flex-wrap: wrap;
-  border-top: 1px solid var(--line);
-  padding: 1.5rem var(--gutter);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  color: var(--ink-faint);
+  gap: 0.75rem;
+  padding: 0.62rem 0.9rem;
+  border: 1px solid rgba(9, 9, 11, 0.12);
+  border-radius: var(--r-sm);
+  background: rgba(9, 9, 11, 0.025);
+  color: #09090B;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background-color 0.3s var(--ease-expo),
+              border-color 0.3s var(--ease-expo),
+              box-shadow 0.3s var(--ease-expo),
+              color 0.3s var(--ease-expo);
 }
-.signoff__rewind {
+.stark-social-link:hover,
+.stark-social-link:focus-visible {
+  background: #09090B;
+  border-color: #09090B;
+  color: #F4F4F5;
+  box-shadow: 0 8px 24px -6px rgba(9, 9, 11, 0.35);
+}
+.stark-social-label {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.stark-social-meta {
   display: inline-flex;
   align-items: center;
-  gap: 0.7rem;
-  margin-left: auto;
-  padding: 0.62rem 1.15rem;
-  border: 1px solid var(--line);
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta-min);
+  letter-spacing: 0.12em;
+  color: rgba(9, 9, 11, 0.45);
+  transition: color 0.3s var(--ease-expo);
+}
+.stark-social-link:hover .stark-social-meta,
+.stark-social-link:focus-visible .stark-social-meta {
+  color: rgba(244, 244, 245, 0.7);
+}
+.stark-social-arrow {
+  color: #002FA7;
+  transition: transform 0.3s var(--ease-expo), color 0.3s var(--ease-expo);
+}
+.stark-social-link:hover .stark-social-arrow,
+.stark-social-link:focus-visible .stark-social-arrow {
+  transform: translate(2px, -2px);
+  color: #F4F4F5;
+}
+
+/* Sub-Ribbon */
+.stark-ribbon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem 2rem;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(9, 9, 11, 0.12);
+  margin-top: clamp(1.8rem, 3vw, 2.5rem);
+  padding-top: 1.2rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta-min);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(9, 9, 11, 0.5);
+}
+.stark-ribbon__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.stark-ribbon__sep {
+  color: rgba(9, 9, 11, 0.25);
+}
+.stark-ribbon__void {
+  color: #002FA7;
+  font-weight: 700;
+}
+.stark-rewind {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.52rem 1.15rem;
+  border: 1px solid rgba(9, 9, 11, 0.16);
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(9, 9, 11, 0.035);
   font-family: var(--font-mono);
   font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--ink-dim);
+  color: #09090B;
   cursor: pointer;
-  transition: color 0.3s var(--ease-expo), border-color 0.3s var(--ease-expo),
-    background-color 0.3s var(--ease-expo);
+  transition: background-color 0.3s var(--ease-expo),
+              border-color 0.3s var(--ease-expo),
+              color 0.3s var(--ease-expo),
+              box-shadow 0.3s var(--ease-expo);
 }
-.signoff__rewind:hover,
-.signoff__rewind:focus-visible {
-  color: var(--cyan);
-  border-color: rgba(63, 232, 255, 0.45);
-  background: rgba(63, 232, 255, 0.05);
+.stark-rewind:hover,
+.stark-rewind:focus-visible {
+  background: #002FA7;
+  border-color: #002FA7;
+  color: #F4F4F5;
+  box-shadow: 0 6px 20px -4px rgba(0, 47, 167, 0.4);
 }
-.signoff__rewind-chev {
-  transition: transform 0.45s var(--ease-expo);
+.stark-rewind__icon {
+  transition: transform 0.35s var(--ease-expo);
 }
-.signoff__rewind:hover .signoff__rewind-chev,
-.signoff__rewind:focus-visible .signoff__rewind-chev {
+.stark-rewind:hover .stark-rewind__icon,
+.stark-rewind:focus-visible .stark-rewind__icon {
   transform: translateY(-3px);
 }
 
-/* ---- Sign-off responsive ---- */
+/* Bottom Anchor — Massive Edge-to-Edge Kinetic Typography Lockup of "NEMO" */
+.stark-nemo {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  overflow: hidden;
+  line-height: 0.72;
+  user-select: none;
+  -webkit-user-select: none;
+  border-top: 1px solid rgba(9, 9, 11, 0.1);
+  padding-top: clamp(0.4rem, 1vw, 1.2rem);
+  margin-top: auto;
+}
+.stark-nemo__track {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+  padding-inline: clamp(1rem, 3.5vw, 4rem);
+  margin-bottom: -0.06em;
+}
+.stark-nemo__char {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: clamp(5.5rem, 21.8vw, 24rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  color: #09090B;
+  cursor: default;
+  will-change: transform, color;
+  transform-origin: bottom center;
+  line-height: 0.72;
+  transition: color 0.3s var(--ease-expo);
+}
 
-@media (max-width: 980px) {
-  .signoff__credits {
+/* Asymmetrical Grid Responsive */
+@media (max-width: 1024px) {
+  .stark-grid {
     grid-template-columns: 1fr 1fr;
-    gap: 2.6rem;
+    gap: 2.5rem;
   }
-  .signoff__identity {
+  .stark-col--identity {
     grid-column: 1 / -1;
     max-width: none;
   }
-}
-@media (max-width: 560px) {
-  .signoff__actions {
-    flex-direction: column;
-    align-items: center;
+  .stark-col--signals {
+    grid-column: 1 / -1;
   }
-  .signoff__actions .btn {
-    /* Keep the CTA heavy but stop it from stretching edge-to-edge on phones.
-       Centered with a capped width (≈ max-w-sm) so it floats in the middle of
-       the anchor. Vertical padding, aurora gradient and font weight all stay
-       on the shared .btn / .btn-primary base — untouched here. */
-    width: min(90%, 22rem);
-  }
-  .signoff__credits {
-    grid-template-columns: 1fr;
-    gap: 2.4rem;
-  }
-  .signoff__ribbon {
-    justify-content: center;
-    text-align: center;
-  }
-  .signoff__rewind {
-    margin-left: 0;
-    width: 100%;
-    justify-content: center;
+  .stark-signals-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
   }
 }
 
-/* ---- Sign-off reduced motion: static styling is the finished state ----
-   (GSAP creates no tweens under reduced motion; only the looping crawl
-   and the brand glow need CSS kill-switches.) */
-@media (prefers-reduced-motion: reduce) {
-  .signoff__crawl .marquee__track {
-    animation: none;
-    transform: none;
+@media (max-width: 640px) {
+  .stark-masthead__center,
+  .stark-masthead__right {
+    display: none;
   }
-  .footer__brand img {
-    transition: none;
+  .stark-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .stark-col--signals {
+    grid-column: 1;
+  }
+  .stark-signals-list {
+    grid-template-columns: 1fr;
+  }
+  .stark-ribbon {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.2rem;
+  }
+  .stark-rewind {
+    width: 100%;
+    justify-content: center;
+  }
+  .stark-nemo__track {
+    padding-inline: 1rem;
+  }
+  .stark-nemo__char {
+    font-size: clamp(4.2rem, 23vw, 7rem);
+  }
+}
+
+/* Reduced motion kill switches */
+@media (prefers-reduced-motion: reduce) {
+  .stark-brand img,
+  .stark-nemo__char,
+  .stark-rewind__icon,
+  .stark-social-arrow {
+    transition: none !important;
+    transform: none !important;
   }
 }
 
