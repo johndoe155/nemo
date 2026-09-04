@@ -26,20 +26,46 @@ import BlackHoleStill from './BlackHoleStill';
    ---------------------------------------------------------------------------
    FAILURE HANDLING — READ THIS BEFORE TOUCHING THE FALLBACK BRANCHES
    ---------------------------------------------------------------------------
-   "WebGPU unavailable" is a claim about the browser, and it is only allowed to
-   be made when the browser actually says so. Exactly two conditions may render
-   the static frame as *unsupported*:
+   THE RULE THIS FILE IS BUILT AROUND: three decides, the glue does not.
 
-     · `navigator.gpu` is absent          → reason 'no-navigator-gpu'
-     · `requestAdapter()` resolves null   → reason 'adapter-null'
+   `WebGPURenderer` installs its own fallback in its constructor:
 
-   EVERYTHING else — a rejected requestAdapter(), a thrown renderer.init(), a
-   TSL graph that fails to build, a per-frame render exception — is a real error
-   with a real message, and it is reported as one: console.error with the
-   message, the stack and an environment dump, an honest on-screen label that
-   names the stage that failed, and a Retry control. Those paths are NOT
-   "unsupported", and labelling them that way is how a version-skew bug ends up
-   disguised as a missing browser feature.
+       parameters.getFallback = () => {
+         warn( 'WebGPURenderer: WebGPU is not available, running under WebGL2 backend.' );
+         return new WebGLBackend( parameters );
+       };
+
+   and `Renderer.init()` catches a failing backend, swaps that fallback in and
+   initialises it, rejecting ONLY if the fallback fails as well. So a resolved
+   `init()` does not mean WebGPU — it means "some backend is live". Upstream
+   main.js relies on exactly that: it contains no capability check at all, just
+
+       renderer.init().then( … animate … ).catch( … "WebGPU Not Supported" … )
+
+   An earlier version of this component probed `navigator.gpu` first and treated
+   its absence — or a null adapter — as fatal. That gate is what put a static
+   frame on screen in browsers where three would have rendered the scene live on
+   WebGL2, i.e. the same browsers that run the upstream demo fine. DO NOT
+   REINTRODUCE IT. The probe below is DIAGNOSTIC ONLY: it acquires the adapter
+   we hand to the renderer (see the r185 note) and explains in the logs which
+   backend we landed on and why.
+
+   What may claim *unsupported* now, and only this: `renderer.init()` rejected
+   AND the browser cannot produce a WebGL2 context either. three has then tried
+   both GPU APIs and there is nothing left to render with. Logged at info level
+   with the real rejection reason, because on such a browser that outcome is
+   expected rather than defective.
+
+   EVERYTHING else — an init() that rejects while WebGL2 exists, a TSL graph
+   that fails to build, a per-frame render exception — is a real error with a
+   real message, and it is reported as one: console.error with the message, the
+   stack and an environment dump, an honest on-screen label naming the stage
+   that failed, and a Retry control. Labelling those "unsupported" is how a
+   version-skew bug ends up disguised as a missing browser feature.
+
+   Which backend came up is recorded on the stage element as
+   `data-backend="webgpu"|"webgl2"` and in the console. Nothing visible changes:
+   a live stage stays bare, on WebGL2 exactly as on WebGPU.
 
    THE r185 ADAPTER REGRESSION (why the glue requests the device itself)
    three r181 — the version the donor demo runs — asked for an adapter like
@@ -54,16 +80,18 @@ import BlackHoleStill from './BlackHoleStill';
 
    Per the WebGPU spec a compatibility-level request resolves to null wherever
    the user agent cannot provide a compatibility-mode adapter, and three then
-   throws "THREE.WebGPUBackend: Unable to create WebGPU adapter." So the same
-   browser and GPU that run the donor demo live can fail here, and the failure
-   lands in the renderer-init path rather than in capability detection. r185
+   throws "THREE.WebGPUBackend: Unable to create WebGPU adapter." — after which
+   it silently drops to WebGL2, so a device that could have had real WebGPU
+   renders the fallback instead. r185
    also documents `parameters.device` ("if there is an existing GPU device on
    app level, it can be passed to the renderer"), so the glue acquires the
    adapter and device itself with a plain core-level request — precisely what
    r181 asked for — and hands the device over, which makes three skip its own
    request entirely. Consequence to remember: three only destroys a device it
    created itself (`if (parameters.device === undefined) device.destroy()`), so
-   release() below must destroy ours.
+   release() below must destroy ours. This applies only when an adapter exists;
+   with no adapter there is nothing to hand over and three's own path (WebGPU
+   attempt, then WebGL2 fallback) runs untouched.
 
    SSR / build safety: every window, document, navigator, renderer and DOM
    write happens inside the effect. Module scope holds imports, types and pure
@@ -102,6 +130,8 @@ type Probe =
   | { ok: false; reason: 'probe-threw'; error: unknown };
 
 type StageStatus = 'booting' | 'live' | 'unsupported' | 'error';
+/** Which of three's backends actually came up. Reported, never rendered. */
+type BackendKind = 'webgpu' | 'webgl2';
 type Note = { label: string; hint?: string };
 
 /* main.js caps at Math.min(devicePixelRatio, 2). Kept identical: the sim should
@@ -157,11 +187,21 @@ function environment(extra?: Record<string, unknown>): Record<string, unknown> {
 }
 
 /** Report a REAL failure: message, stack, and the environment, unmissably. */
-function reportError(stage: string, error: unknown, extra?: Record<string, unknown>): void {
+function reportError(
+  stage: string,
+  error: unknown,
+  extra?: Record<string, unknown>,
+  fatal = true,
+): void {
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
+  // Both severities go to console.error on purpose: a swallowed warning is how
+  // this bug stayed invisible in the first place. Only the framing differs.
+  const framing = fatal
+    ? 'This is NOT a "WebGPU unsupported" case — the real error follows.'
+    : 'This did NOT stop the section from rendering, but it should not have happened — the real error follows.';
   console.error(
-    `[singularity] the black hole failed during ${stage}. This is NOT a "WebGPU unsupported" case — the real error follows.\n` +
+    `[singularity] the black hole failed during ${stage}. ${framing}\n` +
       `  message: ${message}\n` +
       `  stack: ${stack ?? '(none)'}\n` +
       `  environment: ${JSON.stringify(environment(extra), null, 2)}`,
@@ -170,12 +210,14 @@ function reportError(stage: string, error: unknown, extra?: Record<string, unkno
 }
 
 /* --------------------------------------------------------------------------
-   Capability probe. Note what is deliberately NOT here: no featureLevel, no
-   powerPreference — a plain core-level request, matching three r181 and the
-   donor demo. `navigator.gpu` existing is necessary but not sufficient (a
-   browser can expose it and still hand back no adapter), so the adapter is
-   requested too — and kept, because it is used to build the device below
-   instead of being thrown away and re-requested by three.
+   Diagnostic probe — NOT a gate. Nothing here may decide whether the section
+   renders; see the doctrine at the top of the file. Note what is deliberately
+   absent from the request: no featureLevel, no powerPreference — a plain
+   core-level request, matching three r181 and the donor demo. `navigator.gpu`
+   existing is necessary but not sufficient (a browser can expose it and still
+   hand back no adapter), so the adapter is requested too — and kept, because it
+   builds the device below instead of being thrown away and re-requested by
+   three. A failure here is a fact to log, not a reason to stop.
    -------------------------------------------------------------------------- */
 async function probeWebGPU(): Promise<Probe> {
   const nav = navigator as NavigatorWithGPU;
@@ -188,6 +230,46 @@ async function probeWebGPU(): Promise<Probe> {
     return { ok: true, adapter };
   } catch (error) {
     return { ok: false, reason: 'probe-threw', error };
+  }
+}
+
+/* Is there a WebGL2 context to be had? Consulted for exactly one decision:
+   when renderer.init() rejects, three has already tried WebGPU and its WebGL2
+   backend, so this separates "the browser has no GPU API at all" (genuine
+   non-support → static frame) from "WebGL2 exists but three refused it" (a real
+   error → console.error + Retry). The probe context is released immediately:
+   browsers cap the number of live contexts, and leaking one would eat into the
+   renderer's own budget. */
+function hasWebGL2(): boolean {
+  try {
+    const probeCanvas = document.createElement('canvas');
+    const gl = probeCanvas.getContext('webgl2');
+    if (!gl) return false;
+    const lose = gl.getExtension('WEBGL_lose_context') as { loseContext(): void } | null;
+    lose?.loseContext();
+    return true;
+  } catch {
+    return false; // a getContext that throws has answered the question
+  }
+}
+
+/* Free a context three will never free. `Renderer.dispose()` is gated on
+   `if ( this._initialized === true )`, so a renderer whose init() REJECTED is
+   not disposable at all — and by then three has already tried its WebGL2
+   fallback, whose init can create a real context before throwing. Browsers cap
+   live contexts, and Retry makes this path repeatable, so lose it explicitly:
+   getContext() hands back the canvas's EXISTING context rather than making a
+   second one, which is what makes this safe to call on any canvas. */
+function loseAnyContext(canvas: HTMLCanvasElement | null): void {
+  if (!canvas) return;
+  try {
+    const gl = (canvas.getContext('webgl2') ?? canvas.getContext('webgl')) as
+      | (WebGLRenderingContext & { getExtension(name: string): unknown })
+      | null;
+    const lose = gl?.getExtension('WEBGL_lose_context') as { loseContext(): void } | null;
+    lose?.loseContext();
+  } catch {
+    /* no context, or a browser without WEBGL_lose_context: nothing to free */
   }
 }
 
@@ -240,6 +322,10 @@ export default function BlackHoleStage() {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<StageStatus>('booting');
   const [note, setNote] = useState<Note | null>(null);
+  /* Machine-readable only: which of three's backends came up. Deliberately not
+     rendered as text — a live stage stays bare whether it is WebGPU or the
+     WebGL2 fallback. */
+  const [backend, setBackend] = useState<BackendKind | null>(null);
   /* Retry re-runs the whole effect from scratch: teardown is already complete
      by then, so this is a clean cold start rather than a resumed one. */
   const [attempt, setAttempt] = useState(0);
@@ -379,8 +465,10 @@ export default function BlackHoleStage() {
       }
 
       // renderer.dispose() → backend.dispose(): frees pipelines, bindings,
-      // textures and the canvas context. Guarded on initDone because pre-init
-      // it is a no-op that would leave the device alive once init completes.
+      // textures and the canvas context. Guarded on initDone because three's
+      // dispose() is itself gated on `_initialized === true`: pre-init it is a
+      // literal no-op that would leave the device alive once init completes.
+      // The rejected-init case is handled separately by loseAnyContext().
       if (initDone && renderer) {
         try {
           renderer.dispose();
@@ -426,51 +514,43 @@ export default function BlackHoleStage() {
     };
 
     const boot = async () => {
-      /* ---- 1 · capability probe: the ONLY place "unsupported" may be claimed ---- */
+      /* ---- 1 · capability probe — diagnostic only, never a gate ----
+         three's WebGPURenderer installs getFallback → WebGLBackend, so
+         renderer.init() RESOLVES on WebGL2 when WebGPU is missing and rejects
+         only if WebGL2 fails too. Gating here is what used to put a static
+         frame on screen in browsers where three would have rendered live — the
+         same browsers that run the upstream demo fine. All the probe decides is
+         whether we have an adapter to hand over, and what the logs say. */
       const probe = await probeWebGPU();
       if (released) return; // unmounted while the adapter request was in flight
+      const probeReason = probe.ok ? 'adapter-acquired' : probe.reason;
 
       if (!probe.ok) {
         if (probe.reason === 'probe-threw') {
-          // navigator.gpu exists and the request itself threw. That is a real
-          // error with a real message — not a missing browser feature.
-          reportError('navigator.gpu.requestAdapter()', probe.error);
-          fail('error', 'ADAPTER REQUEST THREW — SEE CONSOLE');
-          return;
-        }
-
-        const embedded = isEmbedded();
-        console.info(
-          `[singularity] WebGPU is genuinely unavailable (reason: ${probe.reason}) — rendering the static frame.`,
-          environment(),
-        );
-        if (probe.reason === 'no-navigator-gpu' && embedded) {
-          // The single most misdiagnosed case: WebGPU is gated by Permissions
-          // Policy, so a cross-origin embed has no navigator.gpu at all even
-          // though the browser supports it. Say so instead of blaming the
-          // browser.
-          fail(
-            'unsupported',
-            'WEBGPU IS BLOCKED IN THIS EMBEDDED FRAME',
-            'Open this page in its own tab — the browser supports WebGPU, the frame is not allowed to use it.',
-          );
-        } else if (probe.reason === 'no-navigator-gpu') {
-          fail('unsupported', 'NO WEBGPU IN THIS BROWSER');
+          // navigator.gpu exists and the request itself threw. A real error with
+          // a real message, logged as one — but NOT fatal: three still has its
+          // WebGL2 backend, and refusing to try it would be the original bug.
+          reportError('navigator.gpu.requestAdapter()', probe.error, undefined, false);
         } else {
-          fail('unsupported', 'NO WEBGPU ADAPTER AVAILABLE');
+          console.info(
+            `[singularity] WebGPU is unavailable here (reason: ${probe.reason}) — letting three fall back to its WebGL2 backend, as the upstream demo does.`,
+            environment({ probeReason }),
+          );
         }
-        return;
       }
 
       /* ---- 2 · our own adapter → device (see the r185 note at the top) ---- */
       let stage = 'GPUDevice acquisition';
       let stageLabel = 'DEVICE SETUP';
+      let backendUsed: BackendKind = 'webgpu';
       try {
-        device = await acquireDevice(probe.adapter);
-        if (released) {
-          // Unmounted mid-request; release() destroys the device we just made.
-          release();
-          return;
+        if (probe.ok) {
+          device = await acquireDevice(probe.adapter);
+          if (released) {
+            // Unmounted mid-request; release() destroys the device we just made.
+            release();
+            return;
+          }
         }
 
         /* ---- 3 · scene, camera, renderer, controls, simulation, init ---- */
@@ -564,6 +644,22 @@ export default function BlackHoleStage() {
         await renderer.init();
         initDone = true;
 
+        /* A resolved init() does not mean WebGPU — three may have swapped in
+           its WebGL2 backend. Ask the renderer which one is actually running
+           rather than assuming; `isWebGPUBackend` is stamped on WebGPUBackend
+           itself, and the accessor is cast because it is not on the public
+           Backend type. */
+        stage = 'backend detection after renderer.init()';
+        const liveBackend = (renderer as unknown as { backend?: { isWebGPUBackend?: boolean } })
+          .backend;
+        backendUsed = liveBackend?.isWebGPUBackend === true ? 'webgpu' : 'webgl2';
+        if (backendUsed === 'webgl2') {
+          console.info(
+            `[singularity] live on three’s WebGL2 backend (WebGPU reason: ${probeReason}). Same path the upstream demo takes; the section is rendering, not falling back to the still.`,
+            environment({ probeReason }),
+          );
+        }
+
         if (released) {
           // Unmounted (StrictMode, fast remount, HMR) while init was in flight.
           // The earlier release() ran before the backend existed, so this
@@ -586,10 +682,42 @@ export default function BlackHoleStage() {
         bloomNode.radius.value = config.bloomRadius;
         pipeline.outputNode = scenePassColor.add(bloomNode);
       } catch (error) {
-        // The real error, the stage that produced it, and the environment —
-        // never a silent "unavailable".
+        /* The one and only "unsupported" case left: init() rejected, which
+           means three already tried WebGPU AND its WebGL2 backend — and if this
+           browser cannot produce a WebGL2 context either, there is genuinely no
+           GPU API to render with. Logged at info level with the real rejection
+           reason, because on such a browser that outcome is expected rather
+           than a defect in our code. */
+        const initRejected = stage.startsWith('renderer.init()');
+        // three cannot dispose a renderer that never initialised, so whatever
+        // its failed backends allocated is ours to release. See loseAnyContext.
+        if (initRejected) loseAnyContext(canvas);
+
+        if (initRejected && !hasWebGL2()) {
+          console.info(
+            '[singularity] neither WebGPU nor WebGL2 is usable in this browser — rendering the static frame.',
+            environment({
+              probeReason,
+              initError: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+            }),
+          );
+          release();
+          fail(
+            'unsupported',
+            'NO WEBGPU OR WEBGL2 IN THIS BROWSER',
+            isEmbedded()
+              ? 'This page is inside a frame, where WebGPU is gated by Permissions Policy. Open it in its own tab to get the real thing.'
+              : undefined,
+          );
+          return;
+        }
+
+        // Anything else is a real failure — WebGL2 exists but three refused it,
+        // or the graph/loop broke. The real error, the stage that produced it,
+        // and the environment; never a silent "unavailable".
         reportError(stage, error, {
           usedAppLevelDevice: device !== null,
+          probeReason,
           containerBox: host.getBoundingClientRect().toJSON(),
         });
         release();
@@ -613,6 +741,7 @@ export default function BlackHoleStage() {
       viewObs.observe(host);
 
       setNote(null);
+      setBackend(backendUsed);
       setStatus('live');
 
       if (reduced) {
@@ -631,12 +760,13 @@ export default function BlackHoleStage() {
 
   const retry = () => {
     setNote(null);
+    setBackend(null);
     setStatus('booting');
     setAttempt((a) => a + 1);
   };
 
   return (
-    <div className="bh-stage" data-status={status}>
+    <div className="bh-stage" data-status={status} data-backend={backend ?? undefined}>
       {/* Poster / fallback. Underneath the canvas; cross-faded out by CSS once
           the stage is live, and left in place if the live path never arrives. */}
       <BlackHoleStill />
