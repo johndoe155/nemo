@@ -147,10 +147,24 @@ html[data-scene='constellation'] {
   --amb-b: rgba(63, 232, 255, 0.18);
   --amb-c: rgba(138, 77, 255, 0.2);
 }
+/* abyss — lore (above the black hole) and connect (below it). Retuned toward
+   the simulation's own palette so the page's sky meets the canvas's sky:
+   nebula navy #071f44 leading, the disk's ember #7f1b00 sitting low in the
+   frame (i.e. toward the seam), and one faint iris thread kept so the district
+   still reads as the Nemoverse. Mirrors SCENES.abyss in lib/scenes.ts. */
 html[data-scene='abyss'] {
-  --amb-a: rgba(91, 43, 214, 0.2);
-  --amb-b: rgba(58, 91, 217, 0.09);
-  --amb-c: rgba(255, 61, 154, 0.07);
+  --amb-a: rgba(7, 31, 68, 0.34);
+  --amb-b: rgba(91, 43, 214, 0.1);
+  --amb-c: rgba(127, 27, 0, 0.13);
+}
+/* singularity — the black hole section itself. Navy ingress above the canvas,
+   deep navy at the sides, warm disk-light #a84b23 below it. Mirrors
+   SCENES.singularity in lib/scenes.ts; the raw hexes are the --bh-* tokens in
+   global.css, read off blackhole.config.js. */
+html[data-scene='singularity'] {
+  --amb-a: rgba(7, 31, 68, 0.46);
+  --amb-b: rgba(3, 16, 42, 0.5);
+  --amb-c: rgba(168, 75, 35, 0.18);
 }
 
 .ambience {

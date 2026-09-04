@@ -43,8 +43,13 @@ npm run preview    # serve the production build
 7. **Artists** — permanent public credits, tied to Nemoverse canon.
 8. **Lore** — core identity, the 60/40 self-funding model, stat cards, and the
    canon timeline.
-9. **The Loop** — the pitch's "How It All Connects" as an orbital diagram
-   around the Nemoverse core.
+9. **The Singularity** — a live WebGPU black hole (raymarched gravitational
+   lensing, blackbody accretion disk, procedural starfield/nebula, HDR bloom),
+   sitting in the seam between the canon timeline's last node and the closing
+   credit crawl. Bare stage, no copy: the simulation is the statement. See
+   *The black hole* below.
+10. **The Loop** — the pitch's "How It All Connects" as an orbital diagram
+    around the Nemoverse core.
 
 ## Architecture
 
@@ -57,6 +62,10 @@ src/
   components/ui.tsx        # shared primitives (Reveal, Marquee, WalletButton,
                            #   Countdown, Starfield, badges…)
   components/UniverseCard.tsx / UniverseDialog.tsx
+  components/BlackHoleStage.tsx  # React mounting layer for the WebGPU sim
+  components/BlackHoleStill.tsx  # CSS/SVG static frame (no-WebGPU fallback)
+  three/blackhole/         # the simulation, vendored VERBATIM — do not edit
+                           #   (see PROVENANCE.md in that folder)
   sections/                # one component per page section
   App.tsx / main.tsx
 public/art/                # placeholder AI-generated canon art (replaceable)
@@ -103,6 +112,77 @@ nodes. All of it inherits the existing tokens (radius scale, `--elev-*`,
 Split authority is deliberate: framer owns `transform` on the nodes it drives,
 GSAP owns the rod fill, and stylesheet-authored offsets use `translate` /
 `rotate` (see the rules block at the bottom of `styles/motion.css`).
+
+**The black hole (`src/three/blackhole/` + `components/BlackHoleStage.tsx`):**
+section 09 is a real-time WebGPU simulation — raymarched Schwarzschild lensing,
+a blackbody accretion disk with Keplerian differential rotation, two FBM nebula
+layers, a procedural starfield and an HDR bloom chain — rendered with three's
+TSL node materials (`three/webgpu` + `three/tsl`), not a classic
+`WebGLRenderer`/`ShaderMaterial`.
+
+Two hard rules, and one honest tradeoff:
+
+*The simulation is vendored verbatim.* `blackhole.js`, `blackhole-shader.js`,
+`blackhole.config.js` and `camera-animation.js` are byte-identical to
+`webgpu-black-hole-config-driven.zip` at the repo root (sha256s + a re-check
+command are in `src/three/blackhole/PROVENANCE.md`). `blackhole.config.js` is
+upstream's single source of truth for every tunable parameter, so it is never
+edited — including `camera.cinematicMode`, which ships `false`. When the
+compiler needs help with those plain `.js` files, the fix goes in config
+(`tsconfig.json` sets `allowJs: true` / `checkJs: false`), never in the files.
+
+*Everything around it is glue, and the glue carries the platform concerns.*
+Upstream's `main.js` is a standalone Vite entry point — it sizes off
+`window.innerWidth/innerHeight`, appends its canvas to `document.body` and
+never tears anything down — so `BlackHoleStage.tsx` re-writes only that
+orchestration: the canvas is appended to the section's own container and sized
+off that container's box via `ResizeObserver`; the loop pauses on an
+`IntersectionObserver` so the raymarcher costs nothing off-screen; teardown
+cancels the frame loop, disposes the bloom chain, the simulation mesh and the
+renderer (`renderer.dispose()` → `backend.dispose()` destroys the WebGPU
+device) and removes the canvas. The teardown is written for the async race, not
+just the happy path: React StrictMode double-invokes effects, and
+`Renderer.dispose()` only frees the backend once `init()` has resolved, so a
+cleanup that lands mid-init is followed by a second release pass — otherwise
+hot reload leaks a GPU context.
+
+Degradation is deliberate, because this app has no built-in WebGL fallback:
+`navigator.gpu` is probed *and* an adapter is requested (a browser can expose
+the interface and still hand back no adapter), `renderer.init()` is wrapped in
+try/catch, and any of those failing renders `BlackHoleStill` — an inline
+SVG/CSS still frame drawn from the simulation's own palette, with no binary
+asset added to the repo. The still doubles as the poster underneath the canvas
+while it boots, so there is never a blank gap.
+
+Policies worth knowing before you change them:
+
+| Concern | Behaviour |
+| --- | --- |
+| Touch | Drag-to-orbit is **disabled outright** on coarse pointers, and `OrbitControls`' `touch-action: none` (set in `connect()`, and still scroll-blocking when `enabled` is false) is reset to `pan-y`. A thumb landing mid-page scrolls the page, never the camera. |
+| Wheel | `enableZoom` is off everywhere — a mid-page section must not trap page scroll. |
+| Cinematic camera | The glue starts `CameraAnimation` itself (upstream gates on `config.cinematicMode`, which is `false` and read-only), so the section has a live establishing move. `prefers-reduced-motion` vetoes it. |
+| Reduced motion | No cinematic orbit, no `OrbitControls` damping, and **no animation loop at all** — one static frame, re-drawn on resize. Same contract `Ambience.tsx` gives its static path. |
+| Off-screen | Loop stopped; resumed on re-entry (with an 18% root margin so the first visible frame is already warm). |
+
+*The tradeoff:* the page now ships **two** three builds — classic `three`
+(~545 kB min, the pulls canvases' `WebGLRenderer`) and `three/webgpu`
+(~659 kB min, the simulation) — because the vendored files must keep importing
+`three/webgpu` + `three/tsl` and the existing sections must keep working. Both
+are split into parallel chunks in `vite.config.ts` (`manualChunks`) so the hero
+shell still paints first. Unifying them would mean editing one side or the
+other, which the vendoring rule forbids.
+
+**The seam (`lib/scenes.ts` + `styles/blackhole.css`):** the canvas paints its
+own opaque sky, so the join with the page is the actual visual problem. It is
+solved with the existing scene system, not a parallel one: a new `singularity`
+district plus a retuned `abyss` (the district both neighbours — lore above,
+connect below — already share) ease the ambience toward the simulation's own
+palette, nebula navy `#071f44`/`#010615` with an ember `#7f1b00` hint at the
+seam. Those hexes live once, as `--bh-*` tokens in `global.css`, and are
+mirrored in `overhaul.css` for the no-WebGL ambience path. Locally, the stage
+masks its top and bottom 9% to transparent and `.bh-frame` lays navy above the
+canvas / ember below it, so the two backgrounds meet as continuous sky instead
+of a hard rectangle.
 
 ## Production wiring (what the demo stubs)
 

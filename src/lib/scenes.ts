@@ -19,6 +19,20 @@
      vault          pulls + store     — gold ingress; rarity is the story here
      constellation  artists           — magenta-led, celebratory
      abyss          lore + footer     — near-black, vignette closing in
+     singularity    the black hole    — the canvas's own palette, so the page
+                                        and the simulation read as one sky
+
+   The last two are a matched pair. The black hole section
+   (sections/Singularity.tsx) sits between the canon timeline and the closing
+   credit crawl, and its canvas paints its OWN opaque starfield/nebula
+   background from blackhole.config.js. So `abyss` — the district both of its
+   neighbours live in — is tuned toward that same palette (nebula navy
+   #071f44 / #010615, with an ember #7f1b00 hint low in the frame), and
+   `singularity` carries it the rest of the way: navy ingress above the canvas,
+   warm disk-light #a84b23 below it, deep void at the core. The result is a
+   continuous sky scrolling in and out of the simulation rather than a hard cut.
+   Both districts are mirrored in styles/overhaul.css for the no-WebGL path, and
+   the raw hexes live as --bh-* tokens in styles/global.css.
    ========================================================================== */
 
 export type SceneId =
@@ -28,7 +42,8 @@ export type SceneId =
   | 'arsenal'
   | 'vault'
   | 'constellation'
-  | 'abyss';
+  | 'abyss'
+  | 'singularity';
 
 type RGB = readonly [number, number, number];
 type XY = readonly [number, number];
@@ -60,6 +75,18 @@ const CYAN: RGB = [0.247, 0.91, 1.0]; //       #3fe8ff
 const MAGENTA: RGB = [1.0, 0.239, 0.604]; //   #ff3d9a
 const GOLD: RGB = [1.0, 0.784, 0.341]; //      #ffc857
 const BLUE: RGB = [0.227, 0.357, 0.85]; //     #3a5bd9
+
+/* ---- The black hole's own palette ----
+   Read off src/three/blackhole/blackhole.config.js (vendored verbatim, never
+   edited): nebula1Color / nebula2Color and the accretion disk's warm legacy
+   pair. Normalised to sRGB 0..1 like everything above, and exposed as the
+   --bh-* tokens in styles/global.css so the CSS layers read the same values.
+   These are not house hues — they belong to the simulation, and their only job
+   is to let the page's sky meet the canvas's sky without a seam. */
+const BH_NAVY: RGB = [0.027, 0.122, 0.267]; //       #071f44  nebula layer 1
+const BH_NAVY_DEEP: RGB = [0.004, 0.024, 0.082]; //  #010615  nebula layer 2
+const BH_AMBER: RGB = [0.659, 0.294, 0.137]; //      #a84b23  disk inner
+const BH_EMBER: RGB = [0.498, 0.106, 0.0]; //        #7f1b00  disk outer
 
 export const SCENES: Record<SceneId, Scene> = {
   arrival: {
@@ -116,13 +143,39 @@ export const SCENES: Record<SceneId, Scene> = {
     vig: 0.55,
     warm: 0,
   },
+  /* Retuned for the black hole seam. `abyss` is the district BOTH neighbours of
+     the singularity live in — lore (the canon timeline, immediately above) and
+     connect (the closing credit crawl, immediately below) — and nothing else on
+     the page maps to it, so tuning it here eases both sides of the canvas at
+     once. It was iris-led; it is now nebula-navy-led, with the ember sitting
+     low in the frame (toward the seam) and a faint iris thread kept on the
+     right so the district still reads as the Nemoverse rather than as a
+     different site. Gains are higher than the old values because navy is far
+     darker than iris: the perceived lift is comparable, foreground contrast is
+     untouched. */
   abyss: {
     fields: [
-      { color: IRIS_DEEP, gain: 0.11, pos: [0.5, 0.02], rad: 0.66 },
-      { color: BLUE, gain: 0.05, pos: [0.9, 0.78], rad: 0.55 },
-      { color: MAGENTA, gain: 0.04, pos: [0.06, 1.05], rad: 0.55 },
+      { color: BH_NAVY, gain: 0.19, pos: [0.5, -0.02], rad: 0.74 },
+      { color: BH_EMBER, gain: 0.05, pos: [0.5, 0.98], rad: 0.72 },
+      { color: IRIS_DEEP, gain: 0.05, pos: [0.94, 0.3], rad: 0.5 },
     ],
-    vig: 0.8,
+    vig: 0.82,
+    warm: 0,
+  },
+  /* The black hole's own sky, so the masked edge of the canvas has something
+     continuous to dissolve into. The stage is full-bleed and the simulation
+     paints opaquely, so what is actually visible of this district is the
+     ~9% band the stage mask fades out at the top and the bottom: navy above
+     (meeting the timeline), warm disk-light below (meeting the credit crawl),
+     deep void at the core. Vignette is the strongest on the page — the frame
+     closes in as the hole opens. */
+  singularity: {
+    fields: [
+      { color: BH_NAVY, gain: 0.24, pos: [0.5, -0.04], rad: 0.78 },
+      { color: BH_AMBER, gain: 0.075, pos: [0.5, 1.06], rad: 0.62 },
+      { color: BH_NAVY_DEEP, gain: 0.5, pos: [0.5, 0.5], rad: 0.95 },
+    ],
+    vig: 0.9,
     warm: 0,
   },
 };
@@ -141,6 +194,7 @@ export const SECTION_SCENE: Record<string, SceneId> = {
   store: 'vault',
   artists: 'constellation',
   lore: 'abyss',
+  singularity: 'singularity',
   connect: 'abyss',
 };
 

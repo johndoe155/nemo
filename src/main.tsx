@@ -35,6 +35,11 @@ import './styles/circular-gallery.css';
 // drilling canon-timeline rod. Loaded LAST: its scoped rules intentionally
 // win over the base card/timeline layer they rebuild.
 import './styles/suspension.css';
+// The singularity — the WebGPU black hole stage between the canon timeline and
+// the closing crawl: stage box, the seam gradients that dissolve the canvas
+// into the page, and the static fallback frame. Scoped to .singularity/.bh-*,
+// so it loads last without contending with anything above.
+import './styles/blackhole.css';
 import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

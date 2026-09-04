@@ -1,0 +1,209 @@
+/* ============================================================================
+   THE SINGULARITY — the WebGPU black hole stage
+   (section: sections/Singularity.tsx · glue: components/BlackHoleStage.tsx ·
+    simulation: src/three/blackhole/, vendored verbatim)
+
+   Three jobs, and only three:
+
+     1 · BOX      give the canvas a definite, responsive rectangle. The renderer
+                  sizes itself off THIS element's bounding box (ResizeObserver),
+                  never off window.innerWidth/innerHeight the way upstream's
+                  standalone main.js did.
+
+     2 · SEAM     dissolve the canvas's own hard rectangle into the page. The
+                  simulation paints its own opaque starfield/nebula background
+                  (blackhole.config.js: starBackgroundColor #000000,
+                  nebula1Color #071f44, nebula2Color #010615), so an unmasked
+                  edge reads as a cut. A vertical mask fades the stage's top
+                  and bottom 9% to transparent and lets the scene-tuned
+                  ambience show through, while .bh-frame's pseudo-elements lay
+                  navy above the stage and ember below it — the same palette,
+                  from the same tokens, so the two backgrounds meet as one.
+                  This is host-page code only: nothing from the zip.
+
+     3 · STILL    style the static frame (no WebGPU, failed init, or booting).
+
+   Every colour comes from the --bh-* tokens in global.css, which are read off
+   blackhole.config.js. Nothing is hardcoded twice, and the same palette is
+   mirrored in lib/scenes.ts (GL ambience) and styles/overhaul.css (CSS
+   ambience fallback).
+   ========================================================================== */
+
+.singularity {
+  /* .section already supplies the generous padding-block above and below; the
+     seam gradients live inside that padding. */
+  --bh-seam: clamp(56px, 10vh, 130px);
+}
+
+/* ---------------------------------------------------------------------------
+   The frame — carries the two seam gradients, one on each side of the stage.
+   They are painted into the section's own padding (bottom: 100% / top: 100%),
+   so the PAGE eases toward the canvas rather than the canvas being asked to
+   ease toward the page.
+--------------------------------------------------------------------------- */
+.bh-frame {
+  position: relative;
+  isolation: isolate;
+}
+
+.bh-frame::before,
+.bh-frame::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--bh-seam);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Above the stage: void → deep navy → nebula navy. This is the ramp the canon
+   timeline's rod fades out on. */
+.bh-frame::before {
+  bottom: 100%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--bh-navy-deep) 62%, transparent) 48%,
+    color-mix(in srgb, var(--bh-navy) 52%, transparent) 100%
+  );
+}
+
+/* Below the stage: nebula navy → a hint of the disk's ember → void. The warm
+   note sits exactly at the seam with the closing credit crawl. */
+.bh-frame::after {
+  top: 100%;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bh-navy) 48%, transparent) 0%,
+    color-mix(in srgb, var(--bh-ember) 26%, transparent) 38%,
+    color-mix(in srgb, var(--bh-amber) 10%, transparent) 62%,
+    transparent 100%
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   The stage — the canvas box.
+--------------------------------------------------------------------------- */
+.bh-stage {
+  position: relative;
+  height: clamp(520px, 82vh, 900px);
+  height: clamp(520px, 82svh, 900px); /* small-viewport units where supported */
+  overflow: hidden;
+  background: var(--bh-navy-deep);
+  contain: layout paint style;
+
+  /* The seam. Fading the top/bottom 9% out to transparent lets the ambience
+     behind (already tuned to this palette by the `singularity` scene) continue
+     straight through the canvas edge. One composited mask on a paused-when-
+     off-screen layer; if a low-end mobile GPU ever complains, deleting these
+     two properties degrades to a hard-but-dark edge, not to a broken section. */
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 9%,
+    #000 91%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(180deg, transparent 0, #000 9%, #000 91%, transparent 100%);
+}
+
+/* The renderer's canvas is appended into this element by the effect in
+   BlackHoleStage.tsx. three is told not to write inline sizes
+   (setSize(w, h, false)), so CSS owns the layout box and three owns only the
+   backing-store resolution. */
+.bh-stage__host {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 1.2s var(--ease-expo);
+}
+.bh-stage[data-status='live'] .bh-stage__host {
+  opacity: 1;
+}
+
+.bh-stage__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+   The static frame — underneath the canvas, cross-faded out once the stage
+   reports `live`, and left in place permanently when WebGPU never arrives.
+--------------------------------------------------------------------------- */
+.bh-still {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  isolation: isolate;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.7s var(--ease-exit),
+    visibility 0s linear 0.7s;
+}
+.bh-stage[data-status='live'] .bh-still {
+  opacity: 0;
+  visibility: hidden; /* stops it painting at all behind an opaque canvas */
+}
+
+.bh-still__svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The site's obsidian grain, reused as-is: the still sits in the same material
+   family as every other surface on the page instead of reading as a pasted-in
+   illustration. */
+.bh-still__grain {
+  position: absolute;
+  inset: 0;
+  background-image: var(--noise);
+  background-size: 180px 180px;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+/* Only ever rendered on the degraded path, so it is quiet by design: tracked
+   mono, faint, bottom-centre, out of the way of the hole. */
+.bh-stage__note {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(16px, 4vh, 34px);
+  transform: translateX(-50%);
+  z-index: 3;
+  margin: 0;
+  padding: 0.42rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--bh-navy-deep) 72%, transparent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Reduced motion — the JS already declines to run a loop (one static frame,
+   re-drawn on resize) and never starts the cinematic orbit; this collapses the
+   cross-fade so nothing animates at all on this section.
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .bh-stage__host,
+  .bh-still {
+    transition-duration: 0.01ms;
+    transition-delay: 0s;
+  }
+}

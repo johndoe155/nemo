@@ -16,6 +16,7 @@ import Pulls from './sections/pulls/Pulls';
 import Store from './sections/Store';
 import Artists from './sections/Artists';
 import Lore from './sections/Lore';
+import Singularity from './sections/Singularity';
 import Footer from './sections/Footer';
 import { Marquee, Starfield, ToastHost } from './components/ui';
 import Ambience from './components/Ambience';
@@ -118,6 +119,19 @@ export default function App() {
         <Store />
         <Artists />
         <Lore />
+        {/* THE SINGULARITY — the live WebGPU black hole. Placed in the exact
+            gap between the canon timeline above (Lore, whose drilling rod ends
+            on the "U-007 — THE LAST AURORA" node) and the closing credit crawl
+            below (the first thing Footer renders is the Marquee carrying
+            "HOLDERS WALK IN FIRST ✳ EVERY MINT PULLS A PIECE"). It is the last
+            child of <main> because <Footer /> is a sibling of <main>, so this
+            is the seam itself — nothing else sits between them.
+            Statically imported like every other section (see the Pulls note
+            above): a section this deep in the page must always mount. Its own
+            graceful degradation — WebGPU feature detection, a static SVG/CSS
+            frame, off-screen pausing — lives in components/BlackHoleStage.tsx,
+            and the simulation in src/three/blackhole/ is vendored verbatim. */}
+        <Singularity />
       </main>
       <Footer />
       <ToastHost />

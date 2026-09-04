@@ -35,6 +35,24 @@
   --r-legendary: #ffc857;
   --r-secret: #ff3d9a;
 
+  /* ---- The singularity palette ----
+     Not a new house hue family — these four are read straight off the vendored
+     simulation config (src/three/blackhole/blackhole.config.js, which is the
+     single source of truth for the shader and is never edited):
+       nebula1Color        #071f44   --bh-navy
+       nebula2Color        #010615   --bh-navy-deep
+       legacy diskInner    #a84b23   --bh-amber
+       legacy diskOuter    #7f1b00   --bh-ember
+     They exist because the black hole canvas paints its OWN opaque background,
+     so the host page has to meet it instead of clashing with it. Consumed by
+     styles/blackhole.css (stage mask + seam gradients) and mirrored in
+     lib/scenes.ts (GL ambience districts) and styles/overhaul.css (the
+     no-WebGL ambience wash). */
+  --bh-navy: #071f44;
+  --bh-navy-deep: #010615;
+  --bh-amber: #a84b23;
+  --bh-ember: #7f1b00;
+
   /* ---- Type ----
      Art-directed PP Neue Machina / Montreal stack (self-hosted, see
      assets/fonts/pp-fonts.css). Five semantic roles:

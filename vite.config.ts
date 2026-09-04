@@ -21,8 +21,19 @@ export default defineConfig({
         // three + gsap are multi-hundred-kB libs used below the fold
         // (ambient WebGL, magnetic pull) — split them so the hero shell
         // (react + framer) paints while the heavy chunks stream in parallel.
+        //
+        // The singularity's WebGPU/TSL stack is a SECOND three build: the
+        // classic `three` above has no three/webgpu, and `three/tsl` is a thin
+        // re-export layer over it (34 kB). Both are split out the same way, so
+        // the two builds download as parallel chunks instead of landing in the
+        // entry. Tradeoff, stated plainly: the page ships two three builds
+        // (~365 kB + ~668 kB min) because the vendored simulation must keep
+        // importing three/webgpu + three/tsl verbatim and the existing pulls
+        // canvases keep using WebGLRenderer. Unifying them would mean editing
+        // one side or the other, which the integration brief forbids.
         manualChunks: {
           webgl: ['three'],
+          webgpu: ['three/webgpu', 'three/tsl'],
           animation: ['gsap'],
         },
       },
