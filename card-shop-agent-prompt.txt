@@ -1,0 +1,341 @@
+﻿## 1. Role
+
+
+You are building a **standalone Card Shop** for "The Nemoverse," a Vite +
+React + TypeScript Web3/collectibles hub. You are NOT integrating it into the
+existing app. You are producing a second, independent project that is visually
+and technically consistent with the first one, so integration later is a
+copy-paste job, not a rewrite.
+
+
+Work in two phases. Do not skip Phase 1 — the quality of Phase 2 depends on it.
+
+
+---
+
+
+## 2. Phase 1 — Analyze the existing project
+
+
+Read the main project yourself and confirm/extend the
+ground truth below. Specifically inspect:
+
+
+- `package.json` — exact dependency versions
+- `src/styles/global.css` — the full design-token `:root` block
+- `src/assets/fonts/pp-fonts.css` — self-hosted `@font-face` setup
+- `src/lib/data.ts` — the `Universe`, `Rarity`, `Artist`, `Product` types and
+  the `RARITY` map
+- `src/components/CardImage.tsx`, `src/lib/art-variants.ts`,
+  `scripts/generate-art-variants.sh` — the responsive-image pipeline
+- `src/components/UniverseCard.tsx`, `src/sections/Nemoverse.tsx` — how the
+  existing "card" (the numbered-universe collectible) looks, filters, and sorts
+- `src/sections/Store.tsx` — the existing (minimal, 3-SKU) merch storefront —
+  this is what you must outclass
+- `src/styles/components.css`, `src/styles/motion.css` — card material,
+  elevation, and the shared spring/easing vocabulary
+- `vite.config.ts` — build target and chunking strategy
+- `CAVEATS_AND_ASSUMPTIONS.md` if present — what's stubbed vs. real
+
+
+### Ground truth already extracted (verify, don't re-derive from scratch)
+
+
+**Stack:** Vite 5.4.11, React 18.3.1, TypeScript 5.6.3 (strict), `@vitejs/plugin-react` 4.3.4, `framer-motion` 11.11.17. (The main app also carries `three` ^0.185 and `gsap` ^3.15 for a WebGPU black-hole sim and a rod/pendulum motion system — **do not** pull these into the shop; see §5.)
+
+
+**Design tokens (`global.css :root`) — reuse these exact values, do not reinterpret them:**
+```css
+--void: #05050a;            --abyss: #0a0a16;
+--panel: rgba(255,255,255,0.032);   --line: rgba(255,255,255,0.09);
+--line-strong: rgba(255,255,255,0.18);
+--ink: #f5f3ff;  --ink-dim: rgba(245,243,255,0.66);  --ink-faint: rgba(245,243,255,0.38);
+--iris: #8a4dff; --iris-deep: #5b2bd6; --cyan: #3fe8ff; --magenta: #ff3d9a; --gold: #ffc857;
+
+
+--grad-primary: linear-gradient(100deg, #8a4dff 0%, #3fe8ff 60%, #ff3d9a 115%);
+--grad-gold: linear-gradient(95deg, #f6d47c, #ffc857 45%, #c98a2e);
+
+
+--r-common: #c8cfe0; --r-rare: #3fe8ff; --r-epic: #8a4dff; --r-legendary: #ffc857; --r-secret: #ff3d9a;
+
+
+--font-display: 'PP Neue Machina Inktrap', ui-sans-serif, system-ui, sans-serif;   /* hero/display */
+--font-heading: 'PP Neue Machina Plain', ui-sans-serif, system-ui, sans-serif;      /* H2/H3, nav, badges */
+--font-body: 'PP Neue Montreal', ui-sans-serif, system-ui, sans-serif;              /* body/cards/UI */
+--font-body-text: 'PP Neue Montreal Text', 'PP Neue Montreal', ui-sans-serif, system-ui, sans-serif;
+--font-accent: 'Space Grotesk Variable', 'Space Grotesk', ui-sans-serif, system-ui, sans-serif; /* meta/stats/prices */
+
+
+--fs-h1: clamp(2.7rem, 1rem + 6.6vw, 7.25rem);
+--fs-h2: clamp(1.9rem, 1rem + 3.6vw, 4.1rem);
+--fs-h3: clamp(1.25rem, 1rem + 1.1vw, 1.85rem);
+--fs-lead: clamp(1.05rem, 0.95rem + 0.45vw, 1.35rem);
+--fs-body: clamp(0.98rem, 0.94rem + 0.18vw, 1.1rem);
+
+
+--gutter: clamp(1.25rem, 4.2vw, 4.5rem);  --max: 1500px;  --nav-h: 78px;
+--r-xs:6px; --r-sm:10px; --r-md:14px; --r-lg:18px; --r-xl:22px; --r-pill:999px;
+
+
+--elev-rest: inset 0 1px 0 rgba(255,255,255,.045), 0 24px 48px -24px rgba(0,0,0,.62),
+  0 8px 32px -16px color-mix(in srgb, var(--card-accent, #8a4dff) 22%, transparent);
+--elev-raise: inset 0 1px 0 rgba(255,255,255,.07), 0 34px 64px -28px rgba(0,0,0,.72),
+  0 14px 48px -18px color-mix(in srgb, var(--card-accent, #8a4dff) 40%, transparent);
+
+
+--ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+--ease-swift: cubic-bezier(0.22, 1, 0.36, 1);
+--ease-exit: cubic-bezier(0.76, 0, 0.24, 1);
+--dur-1: 0.5s; --dur-2: 0.9s; --dur-3: 1.4s;
+```
+There is also a baked-in "obsidian grain" noise texture (an inline SVG
+`feTurbulence` data-URI at ~16% opacity) used on glass surfaces — reproduce it
+rather than inventing a new texture language.
+
+
+**Fonts:** PP Neue Machina (Inktrap + Plain cuts) and PP Neue Montreal
+(+ Text cut) are self-hosted `.woff2` files under `src/assets/fonts/`, wired
+via hand-written `@font-face` rules in `pp-fonts.css` (weights 300/400/800,
+normal + italic). Space Grotesk Variable comes from
+`@fontsource-variable/space-grotesk`. **These are licensed commercial fonts
+(Pangram Pangram) that live only inside `nemo-main/`.** Do not copy the
+`.woff2` files into the new project. Instead: reference the same
+`@fontsource-variable/space-grotesk` package directly (it's open and
+installable), and for the two PP families, build the shop against system-font
+fallbacks (`ui-sans-serif, system-ui, sans-serif`) using the *exact same*
+`--font-display / --font-heading / --font-body / --font-body-text` variable
+names with the PP family names listed first in the stack. That way the moment
+this shop is copied into `nemo-main`, the real font files resolve
+automatically with zero code changes — nothing in the shop should hardcode a
+fallback-only stack.
+
+
+**Data contracts (`src/lib/data.ts`) — the shop's data model must be a
+compatible superset of these, field-for-field, so it drops in later:**
+```ts
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'secret';
+
+
+export const RARITY: Record<Rarity, { label: string; color: string; weight: number; tier: number; note: string }>;
+// common #c8cfe0 · rare #3fe8ff · epic #8a4dff · legendary #ffc857 · secret #ff3d9a
+
+
+export interface Artist {
+  name: string; handle: string; quote: string; initials: string; hue: [string, string];
+}
+
+
+export interface Universe {
+  id: number; code: string; name: string; world: string; lore: string;
+  artist: Artist; style: string; released: string; // ISO date
+  status: 'sold-out' | 'live' | 'upcoming' | 'encrypted' | 'secret';
+  rarity: Rarity; supply: number; minted: number; price: number; // ETH on Base
+  palette: [string, string]; image: string; tags: string[]; variant?: string;
+}
+```
+These `Universe` records ARE "the cards" in this product — the numbered,
+artist-commissioned collectibles (U-001…U-009 today). The existing `Store`
+section (`Product` type: sku/name/kind/price/image/gated/note) sells
+*physical merch* and is a separate, much smaller thing you are not replacing.
+The Card Shop you're building is the dedicated, full-featured marketplace for
+the `Universe` cards themselves — something the current site only gives a
+420vh scroll-jacked teaser rail for, with no dedicated buy flow, filtering-only
+browse, and no cart. `RARITY[rarity].weight` also implies a pull-odds context
+(see `sections/pulls/`) — you don't need to replicate the gacha mechanic, just
+be aware price/rarity/supply/minted already carry real meaning.
+
+
+**Image pipeline:** JPG originals in `public/art/` are pre-processed by
+`scripts/generate-art-variants.sh` into AVIF renditions at 540/840/full width
+plus an inline 24px WebP LQIP, catalogued in `src/lib/art-variants.ts`.
+`CardImage.tsx` serves them through `<picture>` + `sizes`, fades the bitmap in
+over a blurred LQIP placeholder on load, and never causes layout shift.
+Replicate this *pattern* (responsive `<picture>`, blur-up placeholder,
+`loading="lazy"` except above-the-fold, `fetchpriority`) using whatever
+source art you generate or placeholder for the shop.
+
+
+**Motion contract:** framer-motion owns `transform` on interactive/tilting
+elements; stylesheet-authored motion uses the independent `translate` /
+`rotate` / `scale` properties so the two never fight. Card hover uses spring
+physics (tilt + lift + parallax on the art layer + a stronger counter-move on
+badges), never a plain CSS `transform: scale()` hover. Every animated thing
+respects `prefers-reduced-motion` — collapse springs to instant/opacity-only
+transitions, never just remove `transition` and leave a snap.
+
+
+**Accessibility contract already in place:** skip link to main content,
+cards are `role="button"` with `tabIndex`, `aria-haspopup="dialog"`,
+`aria-labelledby`, and full `Enter`/`Space` keyboard activation; visually
+hidden (`.vh`) text backs every icon-only control.
+
+
+---
+
+
+## 3. Phase 2 — Build the Card Shop
+
+
+### 3.1 What it is
+A dedicated marketplace page for browsing and acquiring Nemoverse Universe
+cards: grid/list of cards, rich filtering and sorting, a detail view per
+card, a cart/checkout stub, and holder-gated pricing — everything the
+current embedded `Store` section and the scroll-jacked `Nemoverse` rail
+don't give the collector today.
+
+
+### 3.2 Required features
+- **Catalog grid** of card entities (reuse the `Universe` shape). Responsive:
+  1 column mobile → up to 4–5 columns desktop, no layout shift on image load.
+- **Filtering**: by rarity, by status (`live` / `upcoming` / `sold-out` /
+  `secret` / `encrypted`), by tag.
+- **Sorting**: price (asc/desc), rarity (tier), release date, "most minted".
+- **Search** by name/code/artist, debounced, no layout jank.
+- **Card detail** (modal or route — your call, but must be deep-linkable via
+  URL so it survives a refresh/share): lore, artist credit + quote, supply /
+  minted progress, rarity badge, price, palette swatch, buy/mint CTA.
+- **Holder-gated pricing**: mirror the existing pattern — a mock
+  `useWallet()` hook that toggles a "HOLDER −25%" price state and unlocks
+  gated cards, with a clear `// TODO: replace with real wallet connect`
+  marker. Do not build real Web3 wallet integration.
+- **Cart / checkout stub**: add-to-cart, cart drawer or page, quantity,
+  running total, a clearly-labeled "demo checkout — no real payment" CTA.
+  Toast/snackbar feedback on actions (the main app has a `toast()` +
+  `ToastHost` pattern — an equivalent lightweight version is fine).
+- **Empty, loading, and error states** for the catalog (skeleton cards while
+  "loading," a real empty state for zero filter results, not just a blank grid).
+- **Sold-out / upcoming / secret statuses** render distinctly (disabled buy
+  CTA, countdown, or "???" treatment respectively) — don't just hide them.
+
+
+### 3.3 Content
+Populate at least 8–12 card entries using the real `Universe` shape.
+Reuse the *existing* Nemoverse canon data as a starting point if the source
+project's `data.ts` is readable (names like "THE PRIME REALITY," artists like
+Aya Okafor / Kenji "KXM" Matsuda, etc.) rather than inventing an unrelated
+catalog — the goal is a page that could plausibly be this brand's shop, not a
+generic template. Source card art from the project's own `public/art/`
+directory if you copy it in, or generate/placeholder appropriately —
+just don't ship broken image paths.
+
+
+---
+
+
+## 4. Hard technical constraints
+
+
+1. **Standalone project.** New directory, own `package.json`, own
+   `node_modules`, own `vite.config.ts`. Zero imports reaching outside its own
+   folder into `nemo-main/`. It must run with nothing but
+   `npm install && npm run dev` from inside its own folder.
+2. **Match the stack, don't diverge for no reason:** Vite 5.x, React 18.3.x,
+   TypeScript 5.6.x strict mode, `@vitejs/plugin-react`, `framer-motion` 11.x.
+   Do **not** add `three`, `gsap`, a UI kit (MUI/Chakra/shadcn), a router
+   library, or a state-management library unless the feature genuinely needs
+   it — the brief in §5 is about staying lean, and every dependency the main
+   app doesn't already use is something a future integration has to justify.
+   (React Router is a reasonable, justified exception if you implement
+   deep-linkable card detail routes — a lightweight alternative like using
+   the History API directly is equally acceptable.)
+3. **No global-selector collisions.** The main app owns bare-tag and
+   common class selectors (`body`, `.card`, `.btn`, `.shell`, `.section`,
+   etc. — see `global.css`/`components.css`). Scope every shop style under a
+   single root wrapper (e.g. `.nemo-shop` ancestor selector, or CSS Modules)
+   so this can later be mounted inside the existing app without a single
+   style bleeding in either direction. Do not restyle `html`/`body` globally
+   beyond what your own root container needs.
+4. **Clean mount surface.** Export one top-level `<CardShop />` component
+   (default export from a single clear entry file) in addition to the normal
+   standalone `main.tsx`/`index.html` entry — so integrating this later is
+   "import `<CardShop />`, drop it in a route," not an archaeology project.
+5. **Type-compatible data layer.** Your `Universe`/`Rarity`/`Artist` types
+   must be structurally identical to §2's ground truth (same fields, same
+   names) even though they're independently declared. A future merge should
+   be a straight `import` swap, not a data-migration.
+6. **Absolutely do not modify `nemo-main/`.** Don't edit its files, don't add
+   a route/link to it, don't install anything into its `node_modules`, don't
+   touch its `package.json`. This task produces a second, separate artifact.
+
+
+---
+
+
+## 5. Quality bar — this must be *better* than the main app, not a clone of its excess
+
+
+The user will not be polishing this page further, while the main app is still
+under active development. Treat this as the higher bar, not the lower one:
+
+
+- **Leaner by design.** The main app ships two separate `three` builds
+  (~365 kB + ~668 kB min) for a WebGPU black-hole simulation, a GSAP
+  scroll-scrubbed "rod" rig, a custom cursor, ambient starfield canvas, and
+  9,700+ lines of CSS. None of that is a rubric to hit — it's scope this page
+  should deliberately not take on. A shop page should feel instant.
+- **Performance budget:** aim for a production JS bundle in the low hundreds
+  of kB (gzipped) for the initial route, code-split the cart/detail view if
+  it helps, and target Lighthouse ≥95 Performance, ≥95 Accessibility, ≥95
+  Best Practices, ≥90 SEO on a throttled mobile profile. No layout shift from
+  image loading (reserve aspect ratio boxes).
+- **Images:** responsive `srcset`/`sizes`, modern formats (AVIF/WebP) with a
+  fallback, lazy-load everything below the fold, eager + high fetchpriority
+  only for the first visible hero/featured card.
+- **Accessibility:** full keyboard operability (tab through filters, cards,
+  modal; Escape closes the modal and returns focus to its trigger), visible
+  focus states, correct landmark/heading structure, color contrast checked
+  against the dark palette above (several of the rarity accents are light-on-
+  dark tinted — verify body copy never relies on accent color alone for
+  meaning), `prefers-reduced-motion` fully respected.
+- **Code quality:** TypeScript strict with no `any` escapes, no ESLint errors,
+  no console warnings/errors at runtime, no unused dependencies.
+- **Resilience:** a filter/search state that can't produce a broken UI (zero
+  results is a designed state, not a blank grid); an error boundary around
+  the catalog so one bad card entry can't blank the page.
+- **Visual craft:** this is a premium collectibles brand — void-black canvas,
+  glass panels, gradient borders, glow-based elevation (no flat drop
+  shadows), rarity color-coding, tracked-uppercase metadata typography. Hit
+  that bar with restraint and performance in mind, not by porting the main
+  app's heaviest effects wholesale.
+
+
+---
+
+
+## 6. Deliverable & packaging
+
+
+1. Build the complete standalone project (verify `npm install`, `npm run
+   dev`, and `npm run build` all succeed with zero errors).
+2. Zip the project (excluding `node_modules` and any build output) as a
+   single archive, e.g. `nemo-card-shop.zip`.
+3. Place that zip file at the **root of the analyzed project** — the same
+   directory level as `nemo-main/package.json` and `nemo-main/README.md` —
+   not nested inside `src/`, `public/`, or any subfolder.
+4. Do **not** unzip it back into `nemo-main/`, install it there, or wire up
+   any link/route/import between the two projects. Integration is a
+   deliberately separate, future step.
+5. Include a short `INTEGRATION.md` inside the zip (documentation only, take
+   no integration action yourself) noting: which CSS variables/fonts it
+   expects the host app to supply, where its data layer would eventually
+   point at the real `lib/data.ts`, and where its wallet stub would be
+   swapped for the real one — mirroring the "Production wiring" table style
+   already used in `nemo-main/README.md`.
+6. End with a short written summary: what you built, any deliberate
+   deviations from this brief and why, and the actual Lighthouse/bundle-size
+   numbers you measured.
+
+
+## 7. Definition of done (self-check before finishing)
+
+
+- [ ] Lives entirely outside `nemo-main/`; that folder is untouched
+- [ ] `npm install && npm run dev` works from a clean clone of the new project alone
+- [ ] `npm run build` succeeds with no TS errors
+- [ ] Grid, filter, sort, search, detail view, cart stub, holder-gated pricing all work
+- [ ] Empty/loading/error states all implemented, not just the happy path
+- [ ] Keyboard-only pass works end to end; reduced-motion pass verified
+- [ ] No style/class collides with the main app's global selectors
+- [ ] Zip sits at the project root, correctly named, main project untouched
+- [ ] `INTEGRATION.md` included
