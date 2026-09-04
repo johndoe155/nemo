@@ -172,27 +172,87 @@
   pointer-events: none;
 }
 
-/* Only ever rendered on the degraded path, so it is quiet by design: tracked
-   mono, faint, bottom-centre, out of the way of the hole. */
+/* Only ever rendered on a degraded path, so it is quiet by design: tracked
+   mono, faint, bottom-centre, out of the way of the hole.
+
+   It is also the mobile-readable half of the diagnostics. On a phone there is
+   no devtools, so the label itself has to name what actually failed — see the
+   failure taxonomy at the top of BlackHoleStage.tsx. `data-kind="error"` tints
+   toward the disk's amber and becomes interactive: a REAL error offers Retry,
+   genuine non-support does not (offering to retry a browser that has no WebGPU
+   would be the same lie wearing a different hat). */
 .bh-stage__note {
   position: absolute;
   left: 50%;
   bottom: clamp(16px, 4vh, 34px);
   transform: translateX(-50%);
   z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: min(92vw, 46ch);
   margin: 0;
-  padding: 0.42rem 0.85rem;
+  padding: 0.65rem 1rem;
   border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--bh-navy-deep) 72%, transparent);
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--bh-navy-deep) 86%, transparent);
   font-family: var(--font-mono);
+  text-align: center;
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+.bh-stage__note p {
+  margin: 0;
   font-size: var(--fs-mono);
   font-weight: 600;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--ink-faint);
-  white-space: nowrap;
-  pointer-events: none;
+  line-height: 1.55;
+}
+.bh-stage__note[data-kind='error'] {
+  border-color: color-mix(in srgb, var(--bh-amber) 46%, transparent);
+  color: color-mix(in srgb, var(--bh-amber) 58%, var(--ink-dim));
+}
+
+/* The hint is prose, not instrumentation: sentence case, no tracking, readable
+   — it is the line that tells an embedded-frame visitor what to actually do. */
+.bh-stage__hint {
+  max-width: 40ch;
+  font-family: var(--font-body-text);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-dim);
+}
+
+.bh-stage__retry {
+  pointer-events: auto;
+  cursor: pointer;
+  padding: 0.44rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--bh-amber) 55%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--bh-ember) 28%, transparent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink);
+  /* Colour only — the house rule in motion.css forbids transitioning
+     box-shadow/filter on surfaces, and this is no exception. */
+  transition:
+    background-color 0.3s var(--ease-swift),
+    border-color 0.3s var(--ease-swift);
+}
+.bh-stage__retry:hover {
+  background: color-mix(in srgb, var(--bh-amber) 32%, transparent);
+  border-color: var(--bh-amber);
+}
+.bh-stage__retry:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bh-amber) 60%, transparent);
 }
 
 /* ---------------------------------------------------------------------------
@@ -202,7 +262,8 @@
 --------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .bh-stage__host,
-  .bh-still {
+  .bh-still,
+  .bh-stage__retry {
     transition-duration: 0.01ms;
     transition-delay: 0s;
   }
