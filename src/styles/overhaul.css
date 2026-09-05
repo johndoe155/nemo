@@ -640,6 +640,16 @@ html[data-scene='singularity'] {
 
 .footer.signoff {
   position: relative;
+  /* ---- the curtain ------------------------------------------------------
+     This section is the last sheet of the void, and from here down it is also
+     the thing that covers the bright floor. It must therefore out-rank
+     `.curtain-stage` (z-index: 0) in the root stacking context — an ordinary
+     same-context comparison, not a negative-z-index accident — and it is
+     pulled down over the floor by exactly --curtain-travel with the negative
+     margin below. The stage adds that same distance back to its own box, so
+     the overlap costs the page no scroll distance; see .curtain-stage. */
+  z-index: 1;
+  isolation: isolate;
   overflow: hidden;
   /* No top border and no tint over the crawl: the Lore section's starfield
      (the single fixed canvas behind the page) flows unbroken down past the
@@ -647,16 +657,22 @@ html[data-scene='singularity'] {
      divider between the Lore backdrop and the "ENTER THE NEMOVERSE" anchor
      below. Darkening eases in only lower down so the credits grid and ribbon
      keep their readable depth without carving a seam out of the background
-     above the marquee. */
+     above the marquee. The last stops run all the way to opaque #050508: the
+     hem of a curtain has to read as a hard edge against the bright floor it is
+     sliding off, and a translucent hem over white paper reads as grey mud. The
+     0–46% stops are untouched — that transparency is the starfield showing
+     through the top of the section and has nothing to do with the reveal. */
   background: linear-gradient(
     180deg,
     transparent 0%,
     transparent 18%,
     rgba(91, 43, 214, 0.05) 46%,
-    rgba(5, 5, 10, 0.26) 78%,
-    rgba(5, 5, 10, 0.58) 100%
+    rgba(5, 5, 10, 0.42) 70%,
+    rgba(5, 5, 10, 0.97) 92%,
+    #050508 100%
   );
   padding: 0 0 clamp(1.6rem, 3vw, 2.5rem);
+  margin-bottom: calc(-1 * var(--curtain-travel, 0px));
 }
 
 /* ---- Credit crawl ---- */
@@ -1769,33 +1785,109 @@ html[data-scene='singularity'] {
   --curtain-muted: #5d5d66;
   --curtain-line: rgba(9, 9, 11, 0.18);
   --curtain-accent: #1d4ed8;
+  /* Written by components/FloorState.tsx. Every value below degrades to "no
+     reveal, ordinary footer" when the JS never runs. */
   --curtain-footer-height: 0px;
+  --curtain-travel: 0px;
+  --curtain-progress: 0;
+  --curtain-chrome-opacity: 1;
 }
 
 main {
+  /* Keeps <main> painting above the negative-z-index backdrop layers
+     (.starfield at -1, .ambience at -3) and above the curtain stage at 0 for
+     the whole scroll. No margin here: the space the floor needs is owned by
+     .curtain-stage, which is the element that can also grant the sticky
+     travel. */
   position: relative;
   z-index: 1;
-  margin-bottom: var(--curtain-footer-height);
 }
 
+/* ---- the reveal rig ------------------------------------------------------
+   The stage exists to do two things a single element cannot do at once.
+
+   1 · TRAVEL.  `position: sticky` can only shift a box as far as its
+       containing block allows. The stage is (footer + travel) tall with the
+       footer flexed to its bottom edge, so the footer has exactly
+       --curtain-travel of upward travel — enough to hold still against the
+       bottom of the viewport for the whole lift, and not one pixel more.
+       Because the stage is that much taller than the footer, the negative
+       margin on .footer.signoff above costs the document no height: the
+       overlap is paid back here, and the last --curtain-travel pixels of the
+       page are the reveal.
+
+   2 · PAINT WINDOW.  A sticky `bottom: 0` box with room to travel behaves like
+       a fixed bar at the bottom of the screen for as long as it has travel
+       left — which would park the bright surface at the bottom of the viewport
+       for the entire scroll, showing through every transparent section of
+       <main> exactly the way the old negative z-index did. The clip-path is
+       the fix: the stage only ever paints the strip *below* the sign-off's hem
+       (inset from its own top by --curtain-travel, which is precisely where
+       the sign-off ends). Above that line the floor does not exist — no paint,
+       no hit-testing — so it cannot bleed anywhere on the page, whatever the
+       curtain's own opacity happens to be. clip-path clips painting only: it
+       does not touch layout, does not create a scroll container, and does not
+       stop the child's sticky from resolving against the real viewport.
+
+   At --curtain-travel: 0 (no JS, or a footer taller than the viewport) the
+   margin above is 0, the stage is exactly as tall as the footer, the clip is a
+   no-op, the sticky box has nowhere to travel — and the result is the plain
+   in-flow footer this page shipped with. */
+.curtain-stage {
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: calc(var(--curtain-footer-height, 0px) + var(--curtain-travel, 0px));
+  clip-path: inset(var(--curtain-travel, 0px) 0 0 0);
+}
+
+/* ---- the fixed dark chrome gets out of the way ---------------------------
+   Everything fixed and dark would otherwise be left sitting on a blindingly
+   bright surface. Driven off --curtain-progress (via --curtain-chrome-opacity,
+   which holds at 1 for the first third of the lift), so it tracks the scroll
+   1:1 instead of snapping at the last frame. No transition: the value is
+   already a continuous function of scroll position, and a transition would
+   only make it lag the curtain. Base opacities are preserved as factors. */
 .ambience,
-.starfield {
-  transition: opacity 0.9s var(--ease-expo);
+.nav,
+.siderail,
+.soundtoggle,
+.scrollprog {
+  opacity: var(--curtain-chrome-opacity, 1);
 }
 
+.starfield {
+  opacity: calc(0.85 * var(--curtain-chrome-opacity, 1));
+}
+
+.grain {
+  opacity: calc(0.05 * var(--curtain-chrome-opacity, 1));
+}
+
+/* Once the floor is down the faded chrome must not be clickable *or*
+   focusable — an invisible tab stop is worse than a visible one. The custom
+   cursor and the toast host are deliberately left alone: both still have work
+   to do over the footer (StarEasterEgg's toast fires from inside it). */
 html.at-floor .ambience,
-html.at-floor .starfield {
-  opacity: 0;
+html.at-floor .starfield,
+html.at-floor .nav,
+html.at-floor .siderail,
+html.at-floor .soundtoggle,
+html.at-floor .scrollprog,
+html.at-floor .grain {
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .curtain-footer {
-  position: relative;
-  /* Keep the footer in normal document flow. A negative z-index here makes
-     its bright surface paint behind every transparent main section, which
-     replaces the void/starfield across the entire page. The footer only
-     needs to be revealed by reaching its real document position; the floor
-     state fades ambience/starfield at that point. */
+  /* The floor. Sticky — never fixed, never negatively stacked — so it only
+     ever affects its own box, inside the stage's clip window. */
+  position: sticky;
+  bottom: 0;
   z-index: 0;
+  flex: 0 0 auto;
   overflow: hidden;
   color: var(--curtain-ink);
   background:
@@ -1832,8 +1924,14 @@ html.at-floor .starfield {
   text-transform: uppercase;
 }
 
+/* Each dvh-capped measure below is preceded by its pre-cap static value. A
+   browser without dvh support (Safari < 15.4) drops the capped declaration and
+   keeps the fallback, which renders the footer at its original, taller size —
+   at which point FloorState measures it, finds it taller than the viewport and
+   leaves the reveal disarmed. Old browser, plain footer, nothing broken. */
 .curtain-footer__topline {
   padding-block: 1.3rem;
+  padding-block: clamp(0.4rem, 1.6dvh, 1.3rem);
   border-bottom: 1px solid var(--curtain-line);
 }
 
@@ -1843,6 +1941,7 @@ html.at-floor .starfield {
   gap: clamp(2rem, 8vw, 10rem);
   align-items: end;
   padding-block: clamp(5rem, 11vw, 11rem) clamp(4rem, 8vw, 8rem);
+  padding-block: clamp(1.2rem, 4.5dvh, 11rem) clamp(1rem, 3.2dvh, 8rem);
 }
 
 .curtain-footer__eyebrow,
@@ -1858,6 +1957,7 @@ html.at-floor .starfield {
 
 .curtain-footer__eyebrow {
   margin-bottom: 1.5rem;
+  margin-bottom: clamp(0.45rem, 1.6dvh, 1.5rem);
   color: var(--curtain-accent);
 }
 
@@ -1865,6 +1965,7 @@ html.at-floor .starfield {
   max-width: 9ch;
   font-family: var(--font-display);
   font-size: clamp(3.8rem, 11.5vw, 12rem);
+  font-size: min(clamp(2.2rem, 11.5vw, 12rem), 10dvh);
   font-weight: 800;
   letter-spacing: -0.075em;
   line-height: 0.82;
@@ -1889,6 +1990,7 @@ html.at-floor .starfield {
   color: var(--curtain-muted);
   font-family: var(--font-body-text);
   font-size: 0.98rem;
+  font-size: clamp(0.82rem, 2.6dvh, 0.98rem);
   line-height: 1.55;
 }
 
@@ -1897,7 +1999,9 @@ html.at-floor .starfield {
   align-items: center;
   gap: 1.1rem;
   margin-top: 2.2rem;
+  margin-top: clamp(0.7rem, 2.8dvh, 2.2rem);
   padding-block: 0.8rem;
+  padding-block: clamp(0.35rem, 1.1dvh, 0.8rem);
   border-bottom: 1px solid var(--curtain-ink);
   font-family: var(--font-accent);
   font-size: 0.7rem;
@@ -1915,7 +2019,9 @@ html.at-floor .starfield {
   display: grid;
   grid-template-columns: minmax(13rem, 1.5fr) repeat(3, minmax(0, 1fr));
   gap: clamp(2rem, 5vw, 5rem);
+  gap: clamp(1rem, 3.4dvh, 2.6rem) clamp(1.5rem, 5vw, 5rem);
   padding-block: 2.5rem clamp(4rem, 8vw, 8rem);
+  padding-block: clamp(0.6rem, 2dvh, 2.5rem) clamp(0.8rem, 3dvh, 8rem);
   border-top: 1px solid var(--curtain-line);
 }
 
@@ -1926,6 +2032,7 @@ html.at-floor .starfield {
 .curtain-footer__identity .footer__brand {
   color: var(--curtain-ink);
   margin-bottom: 1.8rem;
+  margin-bottom: clamp(0.5rem, 2dvh, 1.8rem);
 }
 
 .curtain-footer__identity .footer__brand img {
@@ -1934,6 +2041,7 @@ html.at-floor .starfield {
 
 .curtain-footer__meta {
   margin-top: 1.4rem;
+  margin-top: clamp(0.45rem, 1.6dvh, 1.4rem);
   color: var(--curtain-muted);
   font-size: 0.58rem;
   line-height: 1.6;
@@ -1943,6 +2051,7 @@ html.at-floor .starfield {
   display: flex;
   gap: 0.75rem;
   margin-bottom: 1.35rem;
+  margin-bottom: clamp(0.45rem, 1.7dvh, 1.35rem);
 }
 
 .curtain-footer__label span {
@@ -1955,11 +2064,13 @@ html.at-floor .starfield {
   color: var(--curtain-ink);
   font-family: var(--font-heading);
   font-size: clamp(1rem, 1rem + 0.25vw, 1.25rem);
+  font-size: min(clamp(0.86rem, 1rem + 0.25vw, 1.25rem), 3dvh);
   line-height: 1.45;
 }
 
 .footer-mask-link + .footer-mask-link {
   margin-top: 0.35rem;
+  margin-top: clamp(0.08rem, 0.5dvh, 0.35rem);
 }
 
 .footer-mask-link__viewport {
@@ -1996,11 +2107,14 @@ html.at-floor .starfield {
 
 .footer-social + .footer-social {
   margin-top: 0.8rem;
+  margin-top: clamp(0.25rem, 1.1dvh, 0.8rem);
 }
 
 .footer-social__label {
   font-family: var(--font-heading);
   font-size: clamp(1rem, 1rem + 0.25vw, 1.25rem);
+  font-size: min(clamp(0.86rem, 1rem + 0.25vw, 1.25rem), 3dvh);
+  white-space: nowrap;
 }
 
 .footer-social__handle {
@@ -2022,6 +2136,7 @@ html.at-floor .starfield {
   color: var(--curtain-ink);
   font-family: var(--font-display);
   font-size: clamp(7.4rem, 29vw, 34rem);
+  font-size: min(clamp(3.4rem, 29vw, 34rem), 22dvh);
   font-weight: 800;
   letter-spacing: -0.1em;
   line-height: 0.68;
@@ -2032,6 +2147,7 @@ html.at-floor .starfield {
 
 .curtain-footer__ribbon {
   padding-block: 1.4rem;
+  padding-block: clamp(0.4rem, 1.6dvh, 1.4rem);
   border-top: 1px solid var(--curtain-line);
   color: var(--curtain-muted);
   font-size: 0.58rem;
@@ -2047,12 +2163,36 @@ html.at-floor .starfield {
   color: var(--curtain-accent);
 }
 
+/* ---- one screen, every breakpoint ----------------------------------------
+   Every vertical measure in this footer is capped in dvh, and the caps are
+   sized so the whole floor fits inside one viewport at every breakpoint the
+   site supports. That is not cosmetic tightening: a sticky `bottom: 0` reveal
+   uncovers the floor with its *bottom* edge held against the bottom of the
+   screen, so anything taller than the screen has its top edge parked above
+   the fold for the entire reveal and can never be read. (FloorState refuses to
+   arm the reveal at all if the measured height ever exceeds the viewport, so a
+   regression here degrades to a plain scrolling footer rather than to hidden
+   content — but the intent is that it never fires.) dvh, not vh: iOS Safari's
+   collapsing toolbar changes the usable height, and static vh would leave the
+   last sliver of the floor unreachable on exactly that platform. */
+
 @media (max-width: 980px) {
   .curtain-footer__intro {
     grid-template-columns: 1fr 0.75fr;
   }
+  /* Tablet-portrait band: three credits columns plus a full-width identity row
+     is the tallest arrangement this footer has, so the display type gives back
+     the difference — the floor still has to clear one screen at 768×1024. */
+  .curtain-footer__heading {
+    font-size: min(10vw, 10dvh);
+  }
+  .curtain-footer__wordmark {
+    font-size: min(29vw, 18dvh);
+  }
   .curtain-footer__grid {
     grid-template-columns: 1.2fr 1fr 1fr;
+    gap: clamp(0.8rem, 2.4dvh, 2.2rem) clamp(1.5rem, 5vw, 5rem);
+    padding-block: clamp(0.6rem, 1.8dvh, 2.5rem) clamp(0.8rem, 2.6dvh, 5rem);
   }
   .curtain-footer__identity {
     grid-column: 1 / -1;
@@ -2061,34 +2201,224 @@ html.at-floor .starfield {
 }
 
 @media (max-width: 640px) {
-  .curtain-footer__topline,
   .curtain-footer__ribbon {
     align-items: flex-start;
     flex-direction: column;
+    gap: clamp(0.1rem, 0.6dvh, 0.8rem);
   }
   .curtain-footer__intro {
     display: block;
-    padding-block: 4rem 4.5rem;
+    padding-block: clamp(1.1rem, 3.4dvh, 4rem) clamp(0.9rem, 2.6dvh, 4.5rem);
+  }
+  .curtain-footer__heading {
+    font-size: min(8.6vw, 11dvh);
+  }
+  .curtain-footer__statement p {
+    font-size: 0.82rem;
   }
   .curtain-footer__statement {
-    margin: 3rem 0 0 auto;
+    margin: clamp(0.8rem, 2.4dvh, 3rem) 0 0 auto;
     max-width: 18rem;
   }
+  .curtain-footer__cta {
+    margin-top: clamp(0.6rem, 2dvh, 2.2rem);
+  }
+  .curtain-footer__prose {
+    font-size: 0.78rem;
+  }
+  .footer-mask-link,
+  .footer-social__label {
+    font-size: 0.85rem;
+  }
+  /* Two credits columns means a narrow SIGNALS column: stack each signal's
+     handle under its label instead of letting a nowrap label push the handle
+     out of the (overflow: hidden) footer. */
+  .footer-social {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    line-height: 1.2;
+  }
+  .footer-social__label {
+    line-height: 1.2;
+  }
+  .footer-social__handle {
+    font-size: 0.52rem;
+    line-height: 1.2;
+    text-align: left;
+  }
+  /* Two columns, two rows — identity beside UNIVERSE, SYSTEMS beside SIGNALS.
+     The previous full-width identity and signals rows made the credits block
+     alone taller than a phone screen, which is the one thing the reveal cannot
+     survive (see the note above). */
   .curtain-footer__grid {
     grid-template-columns: 1fr 1fr;
-    gap: 3rem 1.5rem;
+    gap: clamp(0.7rem, 1.6dvh, 2.2rem) 1.5rem;
+    padding-block: clamp(0.5rem, 1.8dvh, 2.5rem) clamp(0.7rem, 2.4dvh, 5rem);
   }
-  .curtain-footer__identity {
-    grid-column: 1 / -1;
-  }
-  .curtain-footer__column--signals {
-    grid-column: 1 / -1;
-  }
-  .curtain-footer__wordmark {
-    font-size: 28vw;
+  .curtain-footer__topline {
+    padding-block: clamp(0.35rem, 1.2dvh, 1.3rem);
   }
   .curtain-footer__ribbon {
-    gap: 0.8rem;
+    padding-block: clamp(0.35rem, 1.2dvh, 1.4rem);
+  }
+  .curtain-footer__identity .footer__brand {
+    margin-bottom: clamp(0.45rem, 1.6dvh, 1.8rem);
+  }
+  .curtain-footer__meta {
+    margin-top: clamp(0.4rem, 1.2dvh, 1.4rem);
+  }
+  .footer-social + .footer-social {
+    margin-top: clamp(0.25rem, 0.8dvh, 0.8rem);
+  }
+  .curtain-footer__cta {
+    padding-block: clamp(0.3rem, 0.9dvh, 0.8rem);
+  }
+  .curtain-footer__identity,
+  .curtain-footer__column--signals {
+    grid-column: auto;
+    max-width: none;
+  }
+  .curtain-footer__wordmark {
+    font-size: min(22vw, 20dvh);
+  }
+}
+
+/* Small phones (360×640 and friends): the same content, one more notch of
+   compression, so the floor still clears the screen and the reveal stays
+   armed. */
+@media (max-width: 640px) and (max-height: 720px) {
+  .curtain-footer__heading {
+    font-size: min(7.5vw, 10dvh);
+  }
+  .curtain-footer__statement p,
+  .curtain-footer__prose {
+    font-size: 0.7rem;
+  }
+  .curtain-footer__statement {
+    margin-top: clamp(0.4rem, 1.4dvh, 3rem);
+  }
+  .curtain-footer__cta {
+    margin-top: clamp(0.4rem, 1.4dvh, 2.2rem);
+    padding-block: 0.25rem;
+  }
+  .footer-mask-link,
+  .footer-social__label {
+    font-size: 0.78rem;
+    line-height: 1.3;
+  }
+  .footer-mask-link__viewport {
+    height: 1.3em;
+  }
+  .footer-social + .footer-social {
+    margin-top: 0.15rem;
+  }
+  .footer-social__handle,
+  .curtain-footer__meta,
+  .curtain-footer__ribbon {
+    font-size: 0.5rem;
+  }
+  .curtain-footer__identity .footer__brand {
+    font-size: 1rem;
+  }
+  .curtain-footer__identity .footer__brand img {
+    width: 1.6rem;
+  }
+  .curtain-footer__wordmark {
+    font-size: min(18vw, 16dvh);
+  }
+  .curtain-footer__topline,
+  .curtain-footer__ribbon {
+    padding-block: clamp(0.3rem, 1dvh, 1.3rem);
+  }
+  .curtain-footer__intro {
+    padding-block: clamp(0.8rem, 2.8dvh, 4rem) clamp(0.7rem, 2.2dvh, 4.5rem);
+  }
+  .curtain-footer__grid {
+    padding-block: clamp(0.4rem, 1.4dvh, 2.5rem) clamp(0.5rem, 2dvh, 5rem);
+  }
+}
+
+/* Short viewports — landscape phones above all, where 390px of height has to
+   hold the entire floor. The credits collapse to a single four-column row and
+   the rails lose their padding; nothing is hidden, everything stays a real,
+   reachable link. */
+@media (max-height: 560px) {
+  .curtain-footer__intro {
+    padding-block: clamp(0.8rem, 5dvh, 11rem) clamp(0.6rem, 3.5dvh, 8rem);
+  }
+  .curtain-footer__heading {
+    font-size: min(clamp(1.9rem, 11.5vw, 12rem), 8dvh);
+  }
+  .curtain-footer__prose {
+    font-size: 0.72rem;
+  }
+  .curtain-footer__identity .footer__brand {
+    font-size: 1.15rem;
+  }
+  .curtain-footer__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(0.5rem, 1.6dvh, 2.6rem) clamp(1rem, 3vw, 5rem);
+    padding-block: clamp(0.4rem, 1.5dvh, 2.5rem) clamp(0.5rem, 2dvh, 8rem);
+  }
+  .curtain-footer__identity {
+    grid-column: auto;
+    max-width: none;
+  }
+  .curtain-footer__column--signals {
+    grid-column: auto;
+  }
+  .curtain-footer__wordmark {
+    font-size: min(29vw, 14dvh);
+  }
+}
+
+@media (max-height: 560px) and (max-width: 900px) {
+  /* Landscape phones: short *and* narrow, the tightest box this footer is ever
+     asked to fit in. Same content, smallest step of the type scale. */
+  .footer-mask-link,
+  .footer-social__label {
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+  .footer-mask-link__viewport {
+    height: 1.3em;
+  }
+  .footer-social + .footer-social {
+    margin-top: 0.15rem;
+  }
+  .footer-social__handle,
+  .curtain-footer__meta,
+  .curtain-footer__ribbon {
+    font-size: 0.48rem;
+  }
+  .curtain-footer__prose,
+  .curtain-footer__statement p {
+    font-size: 0.68rem;
+  }
+  .curtain-footer__identity .footer__brand {
+    font-size: 0.95rem;
+  }
+  .curtain-footer__identity .footer__brand img {
+    width: 1.5rem;
+  }
+  .curtain-footer__wordmark {
+    font-size: min(29vw, 12dvh);
+  }
+}
+
+@media (max-height: 560px) and (max-width: 640px) {
+  .curtain-footer__intro {
+    display: grid;
+    grid-template-columns: 1fr 0.8fr;
+  }
+  .curtain-footer__statement {
+    margin: 0;
+  }
+  .curtain-footer__topline,
+  .curtain-footer__ribbon {
+    flex-direction: row;
+    align-items: center;
   }
 }
 

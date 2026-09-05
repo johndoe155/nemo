@@ -162,6 +162,14 @@ export default function Footer() {
   return (
     <>
       <ClosingSignoff />
+      {/* .curtain-stage is the reveal rig, and it is the only reason this
+          wrapper exists. It grants the sticky footer inside it exactly one
+          footer-height of upward travel (so the floor can hold still while the
+          void slides off it) and clips its own paint window to the strip below
+          the sign-off's hem (so the bright surface can never be seen anywhere
+          else on the page). Both are driven by --curtain-travel; at 0 the
+          wrapper is inert and the footer is an ordinary block. */}
+      <div className="curtain-stage">
       <footer className="footer curtain-footer" id="connect">
       <div className="curtain-footer__topline" aria-hidden="true">
         <span>THE BASE / 06</span>
@@ -238,6 +246,7 @@ export default function Footer() {
         </Magnetic>
       </div>
       </footer>
+      </div>
     </>
   );
 }
