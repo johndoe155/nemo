@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    /* src/three/blackhole/ is vendored VERBATIM from the upstream zip (see the
+       PROVENANCE.md in that folder) — four plain .js files that must not be
+       touched, not even to satisfy the compiler. allowJs lets tsc resolve and
+       infer them so the glue in components/BlackHoleStage.tsx gets real types;
+       checkJs:false keeps the compiler from reporting inside the vendored
+       files themselves. This is the config-level fix the integration brief
+       asks for instead of editing the shader. */
+    "allowJs": true,
+    "checkJs": false,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}

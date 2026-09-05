@@ -1,0 +1,1131 @@
+/* ============================================================================
+   THE NEMOVERSE — DESIGN SYSTEM
+   Visual identity derived from the pitch:
+   "one canon character × infinite artist universes" → void-black canvas,
+   nebula gradients (iris → cyan → magenta), gold reserved for rarity/luxury,
+   glass surfaces with gradient borders, glow-based elevation (no flat shadows),
+   PP Neue Machina display / PP Neue Montreal body / Space Grotesk accent.
+   Motion: expo-out curves, scroll-bound parallax, marquees, sheen sweeps.
+   ========================================================================== */
+
+:root {
+  /* ---- Palette ---- */
+  --void: #05050a;
+  --abyss: #0a0a16;
+  --panel: rgba(255, 255, 255, 0.032);
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --ink: #f5f3ff;
+  --ink-dim: rgba(245, 243, 255, 0.66);
+  --ink-faint: rgba(245, 243, 255, 0.38);
+  --iris: #8a4dff;
+  --iris-deep: #5b2bd6;
+  --cyan: #3fe8ff;
+  --magenta: #ff3d9a;
+  --gold: #ffc857;
+
+  --grad-primary: linear-gradient(100deg, #8a4dff 0%, #3fe8ff 60%, #ff3d9a 115%);
+  --grad-gold: linear-gradient(95deg, #f6d47c, #ffc857 45%, #c98a2e);
+  --grad-ghost: linear-gradient(180deg, rgba(245, 243, 255, 0.92), rgba(245, 243, 255, 0.35));
+
+  /* ---- Rarity ---- */
+  --r-common: #c8cfe0;
+  --r-rare: #3fe8ff;
+  --r-epic: #8a4dff;
+  --r-legendary: #ffc857;
+  --r-secret: #ff3d9a;
+
+  /* ---- The singularity palette ----
+     Not a new house hue family — these four are read straight off the vendored
+     simulation config (src/three/blackhole/blackhole.config.js, which is the
+     single source of truth for the shader and is never edited):
+       nebula1Color        #071f44   --bh-navy
+       nebula2Color        #010615   --bh-navy-deep
+       legacy diskInner    #a84b23   --bh-amber
+       legacy diskOuter    #7f1b00   --bh-ember
+     They exist because the black hole canvas paints its OWN opaque background,
+     so the host page has to meet it instead of clashing with it. Consumed by
+     styles/blackhole.css (stage mask + seam gradients) and mirrored in
+     lib/scenes.ts (GL ambience districts) and styles/overhaul.css (the
+     no-WebGL ambience wash). */
+  --bh-navy: #071f44;
+  --bh-navy-deep: #010615;
+  --bh-amber: #a84b23;
+  --bh-ember: #7f1b00;
+
+  /* ---- Type ----
+     Art-directed PP Neue Machina / Montreal stack (self-hosted, see
+     assets/fonts/pp-fonts.css). Five semantic roles:
+       --font-display     Inktrap  → hero titles, major H1s, display numbers,
+                                     high-impact interactive titles, callouts
+       --font-heading     Plain    → sub-headings (H2/H3), nav links,
+                                     active badges/pills, UI state indicators
+       --font-body        Montreal → primary body, card copy, forms, modals, UI
+       --font-body-text   Montreal Text → dense reading, micro-copy, legal,
+                                     tooltips, small captions
+       --font-accent      Space Grotesk → tech accents, metadata, dates,
+                                     tracked labels, stat counters, code/data
+     Legacy variable names are retained as aliases so the existing 200+ token
+     references resolve to the new stack without a sweep:
+       --font-mono → --font-accent  (Space Mono is retired; Grotesk replaces it)
+       --font-ui   → --font-body    (Inter is retired; Montreal prose UI)        */
+  --font-display: 'PP Neue Machina Inktrap', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'PP Neue Machina Plain', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'PP Neue Montreal', ui-sans-serif, system-ui, sans-serif;
+  --font-body-text: 'PP Neue Montreal Text', 'PP Neue Montreal',
+    ui-sans-serif, system-ui, sans-serif;
+  --font-accent: 'Space Grotesk Variable', 'Space Grotesk',
+    ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-accent);
+  --font-ui: var(--font-body);
+
+  --fs-h1: clamp(2.7rem, 1rem + 6.6vw, 7.25rem);
+  --fs-h2: clamp(1.9rem, 1rem + 3.6vw, 4.1rem);
+  --fs-h3: clamp(1.25rem, 1rem + 1.1vw, 1.85rem);
+  --fs-lead: clamp(1.05rem, 0.95rem + 0.45vw, 1.35rem);
+  --fs-body: clamp(0.98rem, 0.94rem + 0.18vw, 1.1rem);
+  --fs-mono: clamp(0.7rem, 0.68rem + 0.08vw, 0.8rem);
+  --fs-kicker: clamp(0.68rem, 0.65rem + 0.1vw, 0.78rem);
+
+  /* ---- Layout ---- */
+  --gutter: clamp(1.25rem, 4.2vw, 4.5rem);
+  --max: 1500px;
+  --nav-h: 78px;
+  --r-card: 18px;
+
+  /* ---- Surface radius scale ----
+     One concentric system: outer radii come from the scale, inner (media)
+     radii derive as `calc(var(--r-lg) - 6px)` at the standard 12px inset.
+     Stamp slots keep their tactical 14px + chamfer language (--r-md). */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 22px;
+  --r-pill: 999px;
+
+  /* ---- Elevation ----
+     Static resting treatment — applied directly (never transitioned; a
+     static box-shadow costs one paint, a transitioned one costs one per
+     frame). Hover/raise intensity is crossfaded separately via a
+     pseudo-element bloom (opacity only — see .card::before / .ucard::before).
+     --card-accent propagates the rarity/tier hue into the bloom shadow. */
+  --elev-rest:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 24px 48px -24px rgba(0, 0, 0, 0.62),
+    0 8px 32px -16px color-mix(in srgb, var(--card-accent, #8a4dff) 22%, transparent);
+  --elev-raise:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 34px 64px -28px rgba(0, 0, 0, 0.72),
+    0 14px 48px -18px color-mix(in srgb, var(--card-accent, #8a4dff) 40%, transparent);
+
+  /* ---- Material ----
+     180px monochrome fractal-noise tile: the "obsidian" grain that keeps
+     glass surfaces from reading as flat plastic. Baked faint (~5% perceived
+     under any blend mode) so every consumer can use it as-is. */
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.16'/%3E%3C/svg%3E");
+  --glass-blur: blur(16px) saturate(140%);
+
+  /* ---- Motion ---- */
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1); /* entrances / pointer-in */
+  --ease-swift: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.76, 0, 0.24, 1); /* exits / collapses */
+  --dur-1: 0.5s;
+  --dur-2: 0.9s;
+  --dur-3: 1.4s;
+
+  /* ---- Type floors ----
+     Tracked-uppercase metadata never drops below these; below 10px the
+     Space Grotesk tracking collapses into noise. */
+  --fs-meta-min: 0.625rem;
+  --fs-meta-mobile: 0.6875rem;
+}
+
+/* Visually hidden, still screen-reader available (card action labels etc). */
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* ============================ RESET / BASE ============================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  /* Framer-motion dev check: scroll container must be non-static to compute
+     element offsets against window scroll correctly. */
+  position: relative;
+}
+
+body {
+  background: var(--void);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.65;
+  letter-spacing: 0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* ---- horizontal overflow guard --------------------------------------
+     Slide-in sections start their cards off-axis (±90…120px), which on a
+     phone is wider than the viewport and used to open a horizontal scroll
+     gutter. `hidden` first as the fallback; `clip` wins where supported and
+     is the one we actually want: unlike `hidden` it never turns the element
+     into a scroll container, so the pinned/sticky rigs on this page keep
+     resolving against the viewport. */
+  overflow-x: hidden;
+  overflow-x: clip;
+  max-width: 100%;
+  /* The deep-space nebula wash lives on the fixed .ambience layer (scene-aware
+     WebGL quad with a CSS fallback — see components/Ambience.tsx). The body
+     stays flat void: no background-attachment:fixed, so no full-page repaints
+     on scroll and no broken attachment on iOS Safari. */
+}
+
+/* The app wrapper carries the same guard so nothing inside a section can
+   widen the document. `clip` only (no `hidden` fallback) — `hidden` here
+   would make #root a scroll container and break every sticky rig on the
+   page; body above already covers browsers without `clip`. */
+#root {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: var(--cyan);
+  color: #02121a;
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Scrollbar — thin, cosmic */
+::-webkit-scrollbar {
+  width: 9px;
+}
+::-webkit-scrollbar-track {
+  background: var(--void);
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3d2a77, #1b3a4d);
+  background-size: 100% 300%;
+  animation: gdrift 14s ease-in-out infinite;
+  border-radius: 99px;
+  border: 2px solid var(--void);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5a3bd6, #1f7a93);
+  background-size: 100% 300%;
+}
+
+section[id] {
+  scroll-margin-top: calc(var(--nav-h) + 12px);
+}
+
+/* ============================ LAYOUT HELPERS ============================ */
+
+.shell {
+  width: min(var(--max), 100% - var(--gutter) * 2);
+  margin-inline: auto;
+}
+
+.section {
+  position: relative;
+  padding-block: clamp(5.5rem, 9vw, 10.5rem);
+}
+
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-kicker);
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--cyan);
+}
+.kicker::before {
+  content: '';
+  width: 2.4rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, currentColor);
+  background-size: 260% 100%;
+  animation: gdrift 11s ease-in-out infinite;
+  flex: none;
+}
+.kicker.gold {
+  color: var(--gold);
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 1.04;
+  letter-spacing: -0.015em;
+}
+
+.num {
+  font-family: var(--font-accent);
+  font-size: var(--fs-mono);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Gradient + outline ink treatments */
+.txt-grad {
+  background: var(--grad-primary);
+  background-size: 240% 240%;
+  animation: gdrift 16s ease-in-out infinite; /* living ink — panel/slot chroma sync at 16s */
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.txt-gold {
+  background: var(--grad-gold);
+  background-size: 240% 240%;
+  animation: gdrift 18s ease-in-out infinite; /* rarer rhythm than the primary ink */
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ghost-text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.09);
+  line-height: 0.9;
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ============================ SURFACES ============================ */
+
+/* Glass card: gradient border + blur + inner gradient + obsidian material.
+   The border gradient is STATIC by policy: gdrift (background-position)
+   animation is reserved for small chrome (buttons/pills/avatars ≤64px tall);
+   animating it on card-scale surfaces rasterizes hundreds of thousands of
+   pixels per frame, forever. Card "life" comes from the cursor-tracked sheen
+   and the ::before bloom instead — both opacity-only. */
+.card {
+  position: relative;
+  border-radius: var(--r-card);
+  background:
+    var(--noise) padding-box,
+    linear-gradient(165deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012) 55%)
+      padding-box,
+    linear-gradient(
+        165deg,
+        rgba(255, 255, 255, 0.24),
+        rgba(255, 255, 255, 0.05) 45%,
+        color-mix(in srgb, var(--card-accent, var(--pc, var(--ac, #8a4dff))) 45%, transparent)
+      )
+      border-box;
+  background-size: 180px 180px, 100% 100%, 100% 100%;
+  background-blend-mode: overlay, normal, normal;
+  border: 1px solid transparent;
+  box-shadow: var(--elev-rest);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  overflow: hidden;
+}
+/* Raise bloom — accent-tinted inner light + brighter top specular, faded in
+   with opacity only (compositor-friendly; zero box-shadow transitions). */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  background:
+    radial-gradient(
+      130% 90% at 50% 115%,
+      color-mix(in srgb, var(--card-accent, var(--pc, var(--ac, #8a4dff))) 22%, transparent),
+      transparent 62%
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 18%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  transition: opacity 0.45s var(--ease-expo);
+  pointer-events: none;
+}
+.card:hover::before,
+.card:focus-visible::before,
+.card:focus-within::before {
+  opacity: 1;
+}
+
+/* Holographic glare — was a one-shot linear sweep on a timer; now a soft
+   light anchored to the cursor (--mx/--my fed by useCursorGlow) with an
+   opacity-only fade. Resting fallback: centred at 50%/50%. */
+.sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    340px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(255, 255, 255, 0.13),
+    transparent 62%
+  );
+  opacity: 0;
+  transition: opacity 0.45s var(--ease-expo);
+  pointer-events: none;
+}
+.sheen:hover::after,
+.sheen:focus-visible::after,
+.sheen:focus-within::after {
+  opacity: 1;
+}
+
+/* Corner brackets (precision/hi-tech accent) — constant 26px geometry at a
+   rest scale of 18/26; hover magnifies via transform (was width/height 18→26
+   through `transition: all` — layout property, now composited). */
+.brackets::before,
+.brackets::after {
+  content: '';
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid var(--cyan);
+  opacity: 0.55;
+  pointer-events: none;
+  transform: scale(0.6923);
+  transition: transform 0.4s var(--ease-expo), opacity 0.4s var(--ease-expo);
+}
+.brackets::before {
+  top: 10px;
+  left: 10px;
+  border-right: none;
+  border-bottom: none;
+  transform-origin: top left;
+}
+.brackets::after {
+  bottom: 10px;
+  right: 10px;
+  border-left: none;
+  border-top: none;
+  transform-origin: bottom right;
+}
+.brackets:hover::before,
+.brackets:hover::after {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* ============================ BUTTONS ============================ */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 1.05rem 1.7rem;
+  border-radius: 10px;
+  /* Strictly compositor-friendly channels only. `background` was dropped:
+     the gradients it targeted don't interpolate (dead declaration), and
+     box-shadow is intentionally NOT transitioned (paint) — glow arrives via
+     the pseudo bloom layer (opacity) in styles/motion.css instead. */
+  transition: transform 0.35s var(--ease-expo), filter 0.35s var(--ease-expo),
+    background-color 0.35s var(--ease-expo), border-color 0.35s var(--ease-expo),
+    color 0.35s var(--ease-expo);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* ===== PRIMARY TIER — the living aurora material ==========================
+   The face everyone recognises from the reference frame (Connect Wallet /
+   Explore the Universes): an exact violet → cyan → pink strata drawn on a
+   200% canvas, background-position drifting 0% → 100% → 0% in a slow
+   10s ease-in-out loop. The strata lives on an inset:0 ::after — inside the
+   pill's own overflow clip — so the spark sweep, cursor bloom, magnetic
+   springs, press squash and kinetic labels are all untouched.
+
+   Performance: the loop repaints a single ~220×56px gradient per frame per
+   visible primary CTA (GPU raster thread), zero layout invalidation; the
+   hover backplate uses filter: drop-shadow() — the only glow channel that
+   escapes overflow:hidden and stays on the compositor.
+
+   Reduced motion: the global kill-switch freezes the loop at each button's
+   staggered phase — the static aurora reads as a variant marker, not a bug.
+   ========================================================================== */
+.btn-primary {
+  background: var(--grad-primary); /* boot/fallback face beneath the strata */
+  color: #07030f;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 12px 44px -10px rgba(124, 58, 237, 0.55);
+  filter: drop-shadow(0 6px 18px rgba(124, 58, 237, 0.22));
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0; /* beneath bloom (::before, z1) and labels (z2/z3) */
+  border-radius: inherit;
+  background: linear-gradient(135deg, #7c3aed 0%, #22d3ee 50%, #ec4899 100%);
+  background-size: 200% 200%;
+  /* edge-light hairline carried on the strata (the aurora paints over the
+     button's own inset shadow, so the light line re-asserts itself here) */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  animation: btn-aurora-drift 10s ease-in-out infinite;
+  animation-delay: var(--aurora-phase, 0s);
+  pointer-events: none;
+}
+@keyframes btn-aurora-drift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+/* Negative phase stagger — sections never breathe in unison (a luxury tic). */
+.nav__cta.btn-primary::after {
+  --aurora-phase: -8.5s;
+}
+.footer .btn-primary::after {
+  --aurora-phase: -3.4s;
+}
+.dialog .btn-primary::after {
+  --aurora-phase: -6.8s;
+}
+.store .btn-primary::after {
+  --aurora-phase: -1.7s;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) inset,
+    0 18px 60px -12px rgba(34, 211, 238, 0.5);
+  /* hover: ambient backplate intensifies across the cyan→pink spectrum */
+  filter: drop-shadow(0 10px 30px rgba(34, 211, 238, 0.4))
+    drop-shadow(0 4px 18px rgba(236, 72, 153, 0.42)) brightness(1.08) saturate(1.12);
+}
+/* hover subtly accelerates the drift loop */
+.btn-primary:hover::after {
+  animation-duration: 5s;
+}
+.btn-primary:focus-visible::after {
+  animation-duration: 5s;
+}
+.btn-primary:disabled::after {
+  animation-play-state: paused;
+}
+
+/* GHOST TIER — refractive glass: frosted fill + slowly orbiting conic rim.
+   The rim rotates via the registered --rim custom property (paint confined
+   to a 1px border ring) and never sleeps: a 14s patrol at rest, tightening
+   to a 5s sprint while engaged; beneath it, the cursor-anchored bloom
+   (motion.css) and the morphing GhostArrow carry the interaction. */
+@property --rim {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 205deg;
+}
+.btn-ghost {
+  border: 1px solid transparent;
+  color: var(--ink);
+  background:
+    linear-gradient(180deg, rgba(22, 22, 38, 0.3), rgba(8, 8, 18, 0.42)) padding-box,
+    conic-gradient(
+        from var(--rim) at 50% 50%,
+        rgba(63, 232, 255, 0.02) 0%,
+        rgba(63, 232, 255, 0.42) 12%,
+        rgba(138, 77, 255, 0.48) 30%,
+        rgba(255, 61, 154, 0.26) 52%,
+        rgba(63, 232, 255, 0.02) 74%
+      )
+      border-box;
+  backdrop-filter: blur(10px) saturate(1.4);
+  -webkit-backdrop-filter: blur(10px) saturate(1.4);
+}
+.btn-ghost {
+  /* the rim patrols at rest — engagement only changes cadence */
+  animation: btn-rim-orbit 14s linear infinite;
+}
+.btn-ghost:hover,
+.btn-ghost:focus-visible {
+  color: var(--cyan);
+  box-shadow: 0 10px 34px -14px rgba(63, 232, 255, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  animation-duration: 5s;
+}
+@keyframes btn-rim-orbit {
+  to {
+    --rim: 565deg; /* 205deg + 360deg — one continuous orbit */
+  }
+}
+
+/* GOLD TIER — the living molten strata. Same engine as the primary aurora,
+   luxury palette: luminous yellow-gold #FDE047 → rich amber #FACC15 →
+   #EAB308 → deep liquid bronze #D97706, dark-void ink (#080B11) for max
+   contrast (≈12:1 against amber — AAA). 11s drift (never in step with the
+   10s primary), hover accelerates + fires the amber/bronze backplate, and
+   the wrapper's ambient halo runs a hotter breath cycle while engaged. */
+.btn-gold {
+  background: var(--grad-gold); /* boot/fallback face beneath the strata */
+  color: #080b11;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) inset, 0 12px 44px -10px rgba(255, 200, 87, 0.45);
+  filter: drop-shadow(0 6px 18px rgba(217, 119, 6, 0.22));
+}
+.btn-gold::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #fde047 0%, #facc15 35%, #eab308 62%, #d97706 100%);
+  background-size: 200% 200%;
+  box-shadow: inset 0 0 0 1px rgba(60, 38, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  animation: btn-aurora-drift 11s ease-in-out infinite;
+  animation-delay: var(--aurora-phase, 0s);
+  pointer-events: none;
+}
+/* gold phase stagger — each luxury CTA breathes on its own clock */
+.dialog .btn-gold::after {
+  --aurora-phase: -4.9s;
+}
+.ucard .btn-gold::after {
+  --aurora-phase: -2.2s;
+}
+.btn-gold:hover {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 10px 30px rgba(250, 204, 21, 0.42))
+    drop-shadow(0 4px 18px rgba(217, 119, 6, 0.45)) brightness(1.08);
+}
+.btn-gold:hover::after,
+.btn-gold:focus-visible::after {
+  animation-duration: 5.5s;
+}
+.btn-gold:disabled::after {
+  animation-play-state: paused;
+}
+.btn-gold:disabled {
+  filter: grayscale(0.5);
+}
+/* ambient gold backplate on the magnetic wrapper — breathes hotter on hover */
+.kcta:has(.btn-gold) {
+  position: relative;
+}
+.kcta:has(.btn-gold)::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  z-index: -1; /* inside the wrapper's stacking context, behind the button */
+  border-radius: 16px;
+  background: radial-gradient(62% 90% at 50% 50%, rgba(250, 204, 21, 0.38), transparent 70%);
+  opacity: 0.4;
+  animation: btn-gold-breathe 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+.kcta:has(.btn-gold:hover)::after,
+.kcta:has(.btn-gold:focus-visible)::after {
+  animation: btn-gold-breathe-hot 2.4s ease-in-out infinite;
+}
+@keyframes btn-gold-breathe {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.985);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(1.02);
+  }
+}
+@keyframes btn-gold-breathe-hot {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.07);
+  }
+}
+.kcta:has(.btn-gold:disabled)::after {
+  animation: none;
+  opacity: 0;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+.btn:disabled:hover {
+  transform: none;
+}
+
+.btn .btn-spark {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.45) 50%, transparent 60%);
+  transform: translateX(-130%);
+  transition: transform 0.9s var(--ease-swift);
+  pointer-events: none;
+}
+.btn:hover .btn-spark {
+  transform: translateX(130%);
+}
+
+/* ============================ CHIPS / BADGES ============================ */
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.42rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--ink-dim);
+  background: rgba(255, 255, 255, 0.03);
+  /* was `transition: all` — now an explicit compositable channel list */
+  transition: transform 0.3s var(--ease-expo), opacity 0.3s var(--ease-expo),
+    border-color 0.3s var(--ease-expo), color 0.3s var(--ease-expo),
+    background-color 0.3s var(--ease-expo), box-shadow 0.3s var(--ease-expo);
+  white-space: nowrap;
+}
+.chip:hover {
+  border-color: rgba(63, 232, 255, 0.5);
+  color: var(--ink);
+}
+/* invisible hit-slop: ~24px chip expands past the 44px AAA pointer floor
+   without changing the visual rhythm of the filter rail */
+.chip::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: inherit;
+}
+/* proximity glow bound to the magnetic spring's --pull value (no JS paint) */
+.chip::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: calc(var(--pull, 0) * 0.9);
+  box-shadow: 0 0 22px -6px color-mix(in srgb, var(--c, var(--cyan)) 62%, transparent);
+}
+.chip[aria-pressed='true'],
+.chip.active {
+  border-color: var(--c, var(--cyan));
+  color: var(--c, var(--cyan));
+  background: color-mix(in srgb, var(--c, var(--cyan)) 13%, transparent);
+  box-shadow: 0 0 22px -6px color-mix(in srgb, var(--c, var(--cyan)) 55%, transparent);
+}
+.chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c, var(--cyan));
+  box-shadow: 0 0 8px var(--c, var(--cyan));
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.chip[aria-pressed='true'] .dot,
+.chip.active .dot {
+  transform: scale(1.4); /* elastic overshoot on activation */
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 0.34rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--c, var(--gold)) 55%, transparent);
+  color: var(--c, var(--gold));
+  background: color-mix(in srgb, var(--c, var(--gold)) 12%, transparent);
+  box-shadow: 0 0 18px -8px color-mix(in srgb, var(--c, var(--gold)) 80%, transparent);
+}
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--c, var(--gold));
+  box-shadow: 0 0 8px var(--c, var(--gold));
+}
+
+/* ============================ TICKER / MARQUEE ============================ */
+
+.marquee {
+  position: relative;
+  overflow: hidden;
+  border-block: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.015);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.marquee__track {
+  display: flex;
+  align-items: center;
+  gap: 3.2rem;
+  width: max-content;
+  padding-block: 0.95rem;
+  animation: marquee var(--speed, 36s) linear infinite;
+}
+.marquee:hover .marquee__track {
+  animation-play-state: paused;
+}
+.marquee__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3.2rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+.marquee__item .star {
+  color: var(--cyan);
+  text-shadow: 0 0 10px rgba(63, 232, 255, 0.8);
+}
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ============================ MISC UI ============================ */
+
+.progress {
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.progress > i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--grad-primary);
+  background-size: 240% 240%;
+  animation: gdrift 13s ease-in-out infinite;
+  box-shadow: 0 0 14px rgba(63, 232, 255, 0.6);
+  /* fills are driven with scaleX from JS — transform-only, zero relayout */
+  transform: scaleX(var(--p, 1));
+  transform-origin: left;
+  transition: transform 1.2s var(--ease-expo);
+}
+
+.grain {
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 120;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grainShift 9s steps(10) infinite;
+}
+@keyframes grainShift {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-2%, 1.5%); }
+  40% { transform: translate(1.5%, -2%); }
+  60% { transform: translate(-1%, -1%); }
+  80% { transform: translate(2%, 2%); }
+}
+
+/* Faint engineering grid, masked radially */
+.gridplane {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(245, 243, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 243, 255, 0.05) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(70% 60% at 50% 40%, #000 30%, transparent 78%);
+  mask-image: radial-gradient(70% 60% at 50% 40%, #000 30%, transparent 78%);
+}
+
+/* Orbit ring spinner */
+.orbit {
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  position: relative;
+}
+.orbit::after {
+  content: '';
+  position: absolute;
+  top: -3.5px;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan);
+}
+.orbit.spin {
+  animation: spin 22s linear infinite;
+}
+.orbit.spin-rev {
+  animation: spin 30s linear infinite reverse;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pulse-dot {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 12px var(--gold);
+  flex: none;
+}
+.pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 200, 87, 0.65);
+  animation: pulseRing 1.9s var(--ease-expo) infinite;
+}
+@keyframes pulseRing {
+  0% { transform: scale(0.55); opacity: 1; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-dim);
+  animation: typingBounce 1.2s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* ============================ FORMS ============================ */
+
+.input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  transition: border-color 0.3s var(--ease-expo), box-shadow 0.3s var(--ease-expo);
+}
+.input::placeholder {
+  color: var(--ink-faint);
+}
+.input:focus {
+  outline: none;
+  border-color: rgba(63, 232, 255, 0.65);
+  box-shadow: 0 0 0 3px rgba(63, 232, 255, 0.12);
+}
+
+.sort-dd {
+  position: relative;
+  z-index: 20;
+}
+.sort-dd__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 13.5rem;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.3s var(--ease-expo), box-shadow 0.3s var(--ease-expo),
+    background-color 0.3s var(--ease-expo);
+}
+.sort-dd__trigger:hover,
+.sort-dd.is-open .sort-dd__trigger {
+  border-color: rgba(138, 77, 255, 0.7);
+  background: rgba(138, 77, 255, 0.08);
+  box-shadow: 0 0 22px -8px rgba(138, 77, 255, 0.55);
+}
+.sort-dd__chev {
+  color: var(--iris);
+  flex: none;
+  transition: transform 0.35s var(--ease-expo);
+}
+.sort-dd.is-open .sort-dd__chev {
+  transform: rotate(180deg);
+}
+.sort-dd__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  border-radius: 12px;
+  background:
+    linear-gradient(170deg, rgba(18, 16, 32, 0.96), rgba(8, 8, 16, 0.98)) padding-box,
+    linear-gradient(170deg, rgba(138, 77, 255, 0.55), rgba(63, 232, 255, 0.18) 55%, rgba(255, 61, 154, 0.35))
+      border-box;
+  background-size: 100% 100%, 260% 260%;
+  border: 1px solid transparent;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.85), 0 0 40px -18px rgba(138, 77, 255, 0.45);
+  transform-origin: top right;
+  /* entry pop resolves and yields; the rim keeps drifting while the menu lives */
+  animation: sortDdIn 0.28s var(--ease-expo) both, gdrift 14s ease-in-out infinite;
+}
+@keyframes sortDdIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sort-dd__opt {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  padding: 0.72rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.2s var(--ease-expo), color 0.2s var(--ease-expo),
+    box-shadow 0.2s var(--ease-expo);
+}
+.sort-dd__opt.is-active,
+.sort-dd__opt:hover {
+  background: rgba(138, 77, 255, 0.2);
+  color: var(--ink);
+  /* the keyboard focus cue lives on the compositor-safe inset bar: the
+     programmatically driven .is-active state is equivalent to :focus here */
+  box-shadow: inset 2.5px 0 0 var(--cyan);
+}
+.sort-dd__opt.is-selected {
+  color: var(--cyan);
+  background: rgba(63, 232, 255, 0.08);
+}
+/* menu items cascade in on open — stagger driven by --i set in JSX */
+.sort-dd.is-open .sort-dd__opt {
+  animation: sortOptIn 0.4s var(--ease-expo) both;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+@keyframes sortOptIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================ REDUCED MOTION ============================ */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .grain {
+    animation: none;
+  }
+}

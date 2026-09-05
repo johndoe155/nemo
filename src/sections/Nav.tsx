@@ -1,0 +1,118 @@
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { WalletButton, useMockWallet } from '../components/ui';
+import { Magnetic, RollText } from '../components/motion';
+import { useScrollspy } from '../lib/hooks';
+import { LOGO_SRC } from '../lib/assets';
+
+const LINKS = [
+  { n: '01', label: 'NEMOVERSE', href: '#nemoverse' },
+  { n: '02', label: 'THE ROTUNDA', href: '#rotunda' },
+  { n: '03', label: 'THE PERSONA', href: '#persona' },
+  { n: '04', label: 'HOLDER PERKS', href: '#perks' },
+  { n: '05', label: 'POP PULLS', href: '#pulls' },
+  { n: '06', label: 'STORE', href: '#store' },
+  { n: '07', label: 'ARTISTS', href: '#artists' },
+];
+
+const SECTION_IDS = LINKS.map((l) => l.href.slice(1));
+
+export default function Nav() {
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+  const wallet = useMockWallet();
+  const active = useScrollspy(SECTION_IDS);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
+
+  return (
+    <>
+      <nav className={`nav ${scrolled ? 'nav--scrolled' : ''}`} aria-label="Primary">
+        <div className="shell nav__inner">
+          <a className="nav__brand" href="#top" aria-label="The Nemoverse home">
+            <img className="nav__logo" src={LOGO_SRC} alt="Logo" width={26} height={26} />
+            <span>
+              NEMO<b>VERSE</b>
+            </span>
+          </a>
+
+          <div className="nav__links">
+            {LINKS.map((l) => (
+              <a
+                className={`nav__link ${active === l.href.slice(1) ? 'active' : ''}`}
+                href={l.href}
+                key={l.href}
+                aria-current={active === l.href.slice(1) ? 'true' : undefined}
+              >
+                <span className="num">{l.n}</span>
+                <RollText text={l.label} />
+              </a>
+            ))}
+          </div>
+
+          <div className="nav__cta-desktop">
+            <WalletButton connected={wallet.connected} onConnect={wallet.connect} compact />
+          </div>
+
+          <Magnetic preset="chrome" className="nav__burger-mag">
+            <motion.button
+              className="nav__burger"
+              aria-expanded={open}
+              aria-label={open ? 'Close menu' : 'Open menu'}
+              onClick={() => setOpen((v) => !v)}
+              /* gentle spring squash on press — serves touch too, where
+                 magnetism is disabled; hover brightness stays in CSS so
+                 framer's inline styles never fight the :hover rule */
+              whileTap={{ scale: 0.92, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
+            >
+              <span />
+              <span />
+              <span />
+            </motion.button>
+          </Magnetic>
+        </div>
+      </nav>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="mmenu"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {LINKS.map((l, i) => (
+              <motion.a
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                initial={{ opacity: 0, x: -28 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.06 + i * 0.05, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <span className="num">{l.n}</span> <RollText text={l.label} />
+              </motion.a>
+            ))}
+            <div className="mmenu__foot" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <WalletButton connected={wallet.connected} onConnect={wallet.connect} />
+              <span>ONE CANON · INFINITE VERSIONS</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}

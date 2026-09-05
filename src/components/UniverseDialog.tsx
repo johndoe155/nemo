@@ -1,0 +1,261 @@
+import { useEffect, useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { KineticLink } from './motion';
+import CardImage from './CardImage';
+import type { Universe } from '../lib/data';
+import { RARITY } from '../lib/data';
+
+const EASE = [0.16, 1, 0.3, 1] as const;
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
+export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: () => void }) {
+  const rarity = RARITY[u.rarity];
+  const accent = rarity.color;
+  const soldPct = u.supply ? Math.round((u.minted / u.supply) * 100) : 0;
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const mediaRef = useRef<HTMLDivElement | null>(null);
+  const restoreRef = useRef<HTMLElement | null>(null);
+
+  /* Subtle media parallax tied to the panel's internal scroll: the art
+     drifts ±3% against the copy when the dialog content overflows. The
+     transform is percentage-of-self, so it costs nothing and settles at 0
+     when there is nothing to scroll. */
+  const { scrollYProgress } = useScroll({
+    container: panelRef,
+    target: mediaRef,
+    offset: ['start end', 'end start'],
+  });
+  const mediaY = useTransform(scrollYProgress, [0, 1], ['-3%', '3%']);
+
+  useEffect(() => {
+    restoreRef.current = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    if (panel) {
+      panel.setAttribute('tabindex', '-1');
+      panel.focus();
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'Tab' && panel) {
+        const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+      restoreRef.current?.focus?.();
+    };
+  }, [onClose]);
+
+  return (
+    <motion.div
+      className="dialog-backdrop"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35, ease: EASE }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${u.code} — ${u.name}`}
+    >
+      <motion.div
+        ref={panelRef}
+        className="dialog"
+        style={{ '--card-accent': accent }}
+        initial={{ opacity: 0, y: 44, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 30, scale: 0.97 }}
+        transition={{ duration: 0.5, ease: EASE }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="dialog__close" onClick={onClose} aria-label="Close universe detail">
+          ✕
+        </button>
+
+        <div className="dialog__grid">
+          <div className="dialog__media" ref={mediaRef}>
+            {u.image ? (
+              <motion.div className="dialog__media-parallax" style={{ y: mediaY }}>
+                <CardImage
+                  src={u.image}
+                  alt={`${u.name} — ${u.artist.name}`}
+                  eager
+                  sizes="min(46vw, 470px)"
+                />
+              </motion.div>
+            ) : (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'grid',
+                  placeItems: 'center',
+                  background:
+                    'radial-gradient(60% 50% at 50% 45%, rgba(138,77,255,0.18), transparent 70%)',
+                }}
+              >
+                <div className="ucard__lock" style={{ textAlign: 'center' }}>
+                  <div className="ring orbit spin" style={{ width: 90, height: 90, margin: '0 auto 1.2rem' }} />
+                  <div className="q" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '2rem', color: 'var(--ink-dim)', letterSpacing: '0.3em' }}>
+                    ▚▚▚
+                  </div>
+                  <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.66rem', letterSpacing: '0.26em', color: 'var(--ink-faint)', textTransform: 'uppercase', marginTop: '0.8rem' }}>
+                    ART & LORE SEALED UNTIL DROP
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="dialog__body">
+            <div className="dialog__code">{u.code} · CANON ENTRY</div>
+            <h3 className="dialog__name">{u.name}</h3>
+            <p className="dialog__world">TIMELINE — {u.world}</p>
+
+            <p className="dialog__lore">{u.lore}</p>
+
+            <div className="dialog__specs">
+              <div className="dialog__spec">
+                <span>RARITY</span>
+                <b style={{ color: accent }}>{rarity.label}</b>
+              </div>
+              <div className="dialog__spec">
+                <span>EDITION</span>
+                <b>
+                  {u.minted}/{u.supply}
+                </b>
+              </div>
+              <div className="dialog__spec">
+                <span>MINT PRICE</span>
+                <b className="eth">{u.price > 0 ? `${u.price} ETH · BASE` : '—'}</b>
+              </div>
+              <div className="dialog__spec">
+                <span>RELEASED</span>
+                <b>
+                  {u.status === 'secret'
+                    ? 'UNREGISTERED'
+                    : new Date(u.released).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: '2-digit',
+                        year: 'numeric',
+                      })}
+                </b>
+              </div>
+            </div>
+
+            {u.variant && (
+              <p className="dialog__split">
+                <span className="pill">VARIANT PULLS</span> {u.variant}
+              </p>
+            )}
+
+            <div className="dialog__artist">
+              <span className="ava" style={{ '--a1': u.artist.hue[0], '--a2': u.artist.hue[1] }}>
+                {u.artist.initials}
+              </span>
+              <span className="who">
+                <b>{u.artist.name}</b>
+                <span>{u.artist.handle} · {u.style}</span>
+              </span>
+              <span className="quote">{u.artist.quote}</span>
+            </div>
+
+            <p className="dialog__split">
+              <span className="pill">
+                REVENUE SPLIT <b>60% ARTIST</b>
+              </span>
+              <span className="pill">
+                <b>40% CLIENT</b>
+              </span>
+              <span className="pill">CREDITED IN METADATA</span>
+            </p>
+
+            {u.status === 'live' && (
+              <div>
+                <div className="labels" style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: '0.6rem', letterSpacing: '0.2em', color: 'var(--ink-faint)', textTransform: 'uppercase', marginBottom: 6 }}>
+                  <span>CLAIMED</span>
+                  <span>{soldPct}%</span>
+                </div>
+                <div className="progress">
+                  <i style={{ ['--p' as string]: soldPct / 100 }} />
+                </div>
+              </div>
+            )}
+
+            <div className="dialog__ctas">
+              {u.status === 'live' && (
+                <KineticLink
+                  href="#perks"
+                  className="btn btn-primary"
+                  cursor="CLAIM"
+                  label="CLAIM THIS UNIVERSE"
+                  swap="SECURE THE EDITION"
+                  onClick={onClose}
+                />
+              )}
+              {u.status === 'upcoming' && (
+                <KineticLink
+                  href="#perks"
+                  className="btn btn-primary"
+                  cursor="ENTER"
+                  label="HOLDERS ENTER FIRST"
+                  swap="CROSS THE GATE"
+                  onClick={onClose}
+                />
+              )}
+              {u.status === 'sold-out' && (
+                <span className="btn btn-ghost" style={{ cursor: 'default' }}>
+                  <span className="btn__txt">SOLD OUT — CHECK SECONDARY</span>
+                </span>
+              )}
+              {u.status === 'encrypted' && (
+                <KineticLink
+                  href="#persona"
+                  className="btn btn-gold"
+                  cursor="ASK"
+                  label="ASK THE PERSONA ABOUT #008"
+                  swap="SUMMON NEMO"
+                  onClick={onClose}
+                />
+              )}
+              {u.status === 'secret' && (
+                <KineticLink
+                  href="#pulls"
+                  className="btn btn-gold"
+                  cursor="PULL"
+                  label="NO ONE COMMISSIONED THIS"
+                  swap="UNWRITTEN CANON"
+                  onClick={onClose}
+                />
+              )}
+              <KineticLink
+                href="#pulls"
+                className="btn btn-ghost"
+                cursor="VIEW"
+                label="HOW PULLS WORK"
+                arrow
+                spark={false}
+                onClick={onClose}
+              />
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
