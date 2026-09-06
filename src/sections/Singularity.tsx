@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import BlackHoleStage from '../components/BlackHoleStage';
 
 /* ============================================================================
@@ -18,8 +19,43 @@ import BlackHoleStage from '../components/BlackHoleStage';
    All the interesting machinery lives in components/BlackHoleStage.tsx (the
    React mounting layer) and src/three/blackhole/ (the simulation, vendored
    verbatim — see the PROVENANCE.md in that folder).
+
+   MOBILE REMOVAL — this section is intentionally NOT rendered on mobile.
+   The check is synchronous on first paint (matchMedia) so there is no flash
+   of the heavy WebGPU stage on phones, and a CSS fallback in
+   styles/blackhole.css (display:none at the same breakpoint) guarantees the
+   section never occupies layout even before JS hydrates. Desktop / wide
+   screens are completely untouched.
    ========================================================================== */
+
+const MOBILE_QUERY = '(max-width: 768px)';
+
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(MOBILE_QUERY).matches;
+  });
+
+  useEffect(() => {
+    const mql = window.matchMedia(MOBILE_QUERY);
+    const onChange = () => setIsMobile(mql.matches);
+    // Ensure state is correct after hydration (in case initial check ran
+    // before layout settled or on SSR fallback)
+    onChange();
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+
+  return isMobile;
+}
+
 export default function Singularity() {
+  const isMobile = useIsMobile();
+
+  // On mobile: render nothing — the section must appear as if it was never
+  // implemented. No DOM, no canvas, no observers, no heavy GPU init.
+  if (isMobile) return null;
+
   return (
     <section className="section singularity" id="singularity">
       <h2 className="vh">The singularity — a live black hole simulation</h2>

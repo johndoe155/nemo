@@ -354,3 +354,16 @@
     height: clamp(420px, 70svh, 680px);
   }
 }
+
+/* ============================================================================
+   MOBILE REMOVAL — the singularity section must not exist on mobile.
+   This CSS is the fallback / first-paint guard: even before React hydrates
+   and Singularity.tsx returns null, the section occupies zero layout, paints
+   nothing, and leaves no seam gap. Desktop / wide screens are untouched.
+   Breakpoint matches the JS check in sections/Singularity.tsx.
+   ========================================================================== */
+@media (max-width: 768px) {
+  .singularity {
+    display: none !important;
+  }
+}

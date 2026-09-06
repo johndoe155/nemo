@@ -229,6 +229,8 @@ export function sceneVec(s: Scene): Float32Array {
    section crossing the reading line). Stamps data-scene on <html> and calls
    the optional callback exactly once per scene change. Returns a cleanup fn.
 --------------------------------------------------------------------------- */
+const MOBILE_SCENE_QUERY = '(max-width: 768px)';
+
 export function observeScenes(onScene?: (id: SceneId) => void): () => void {
   const root = document.documentElement;
   let current: SceneId | null = null;
@@ -248,7 +250,14 @@ export function observeScenes(onScene?: (id: SceneId) => void): () => void {
     };
   }
 
+  // On mobile the singularity section does not exist (see Singularity.tsx
+  // and blackhole.css). Exclude it from the observed set so the ambience
+  // never tries to transition to its district on phones.
+  const isMobile =
+    typeof window !== 'undefined' && window.matchMedia(MOBILE_SCENE_QUERY).matches;
+
   const els = Object.keys(SECTION_SCENE)
+    .filter((id) => !(isMobile && id === 'singularity'))
     .map((id) => document.getElementById(id))
     .filter((el): el is HTMLElement => el !== null);
 
