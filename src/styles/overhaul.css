@@ -153,18 +153,14 @@ html[data-scene='constellation'] {
    frame (i.e. toward the seam), and one faint iris thread kept so the district
    still reads as the Nemoverse. Mirrors SCENES.abyss in lib/scenes.ts. */
 html[data-scene='abyss'] {
-  --amb-a: rgba(7, 31, 68, 0.34);
+  --amb-a: rgba(19, 27, 42, 0.34);
   --amb-b: rgba(91, 43, 214, 0.1);
-  --amb-c: rgba(127, 27, 0, 0.13);
+  --amb-c: rgba(74, 39, 28, 0.13);
 }
-/* singularity — the black hole section itself. Navy ingress above the canvas,
-   deep navy at the sides, warm disk-light #a84b23 below it. Mirrors
-   SCENES.singularity in lib/scenes.ts; the raw hexes are the --bh-* tokens in
-   global.css, read off blackhole.config.js. */
 html[data-scene='singularity'] {
-  --amb-a: rgba(7, 31, 68, 0.46);
-  --amb-b: rgba(3, 16, 42, 0.5);
-  --amb-c: rgba(168, 75, 35, 0.18);
+  --amb-a: rgba(19, 27, 42, 0.46);
+  --amb-b: rgba(8, 10, 15, 0.5);
+  --amb-c: rgba(126, 74, 48, 0.18);
 }
 
 .ambience {

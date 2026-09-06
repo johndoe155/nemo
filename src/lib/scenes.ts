@@ -83,10 +83,10 @@ const BLUE: RGB = [0.227, 0.357, 0.85]; //     #3a5bd9
    --bh-* tokens in styles/global.css so the CSS layers read the same values.
    These are not house hues — they belong to the simulation, and their only job
    is to let the page's sky meet the canvas's sky without a seam. */
-const BH_NAVY: RGB = [0.027, 0.122, 0.267]; //       #071f44  nebula layer 1
-const BH_NAVY_DEEP: RGB = [0.004, 0.024, 0.082]; //  #010615  nebula layer 2
-const BH_AMBER: RGB = [0.659, 0.294, 0.137]; //      #a84b23  disk inner
-const BH_EMBER: RGB = [0.498, 0.106, 0.0]; //        #7f1b00  disk outer
+const BH_NAVY: RGB = [0.075, 0.106, 0.165]; //       #131b2a  nebula layer 1
+const BH_NAVY_DEEP: RGB = [0.031, 0.039, 0.059]; //  #080a0f  nebula layer 2
+const BH_AMBER: RGB = [0.494, 0.290, 0.188]; //      #7e4a30  disk inner
+const BH_EMBER: RGB = [0.290, 0.153, 0.110]; //      #4a271c  disk outer
 
 export const SCENES: Record<SceneId, Scene> = {
   arrival: {

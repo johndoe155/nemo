@@ -36,9 +36,34 @@
   position: relative;
   z-index: 1;
   background: transparent;
-  /* .section already supplies the generous padding-block above and below; the
-     seam gradients live inside that padding. */
+  /* The stage is a focal interruption, not a full-height standalone page.
+     Use a slightly tighter rhythm than the generic .section while retaining
+     enough air for the atmosphere to travel in and out of the canvas. */
+  padding-block: clamp(3.5rem, 7vw, 7rem) clamp(2.5rem, 5vw, 5rem);
   --bh-seam: clamp(56px, 10vh, 130px);
+}
+
+/* One continuous host-page field sits behind both the canvas and its seams.
+   This is deliberately broader than the local .bh-frame gradients: the
+   neighboring sections should inherit a trace of the black hole's navy/ember
+   atmosphere before the reader reaches the masked canvas edge. */
+.singularity::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(82% 42% at 50% 8%, color-mix(in srgb, var(--bh-navy) 44%, transparent), transparent 76%),
+    radial-gradient(72% 34% at 50% 94%, color-mix(in srgb, var(--bh-ember) 18%, transparent), transparent 78%),
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in srgb, var(--bh-navy-deep) 22%, transparent) 23%,
+      color-mix(in srgb, var(--bh-navy-deep) 34%, transparent) 67%,
+      transparent 100%
+    );
+  opacity: 0.9;
 }
 
 /* ---------------------------------------------------------------------------
@@ -94,10 +119,10 @@
 --------------------------------------------------------------------------- */
 .bh-stage {
   position: relative;
-  height: clamp(520px, 82vh, 900px);
-  height: clamp(520px, 82svh, 900px); /* small-viewport units where supported */
+  height: clamp(500px, 76vh, 860px);
+  height: clamp(500px, 76svh, 860px); /* small-viewport units where supported */
   overflow: hidden;
-  background: var(--bh-navy-deep);
+  background: transparent;
   contain: layout paint style;
 
   /* The seam. Fading the top/bottom 9% out to transparent lets the ambience
@@ -108,11 +133,54 @@
   -webkit-mask-image: linear-gradient(
     180deg,
     transparent 0,
-    #000 9%,
-    #000 91%,
+    #000 13%,
+    #000 87%,
     transparent 100%
   );
-  mask-image: linear-gradient(180deg, transparent 0, #000 9%, #000 91%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 13%, #000 87%, transparent 100%);
+}
+
+/* The simulation is intentionally opaque, so a mask alone is not a reliable
+   handoff: the first opaque pixels can still read as a straight horizontal
+   cut on mobile. These two overlays are the actual optical dissolve. They sit
+   above the render, begin with the neighboring page tone, and reveal the
+   black-hole sky progressively over a long distance. The outer .bh-frame
+   gradients continue the same ramps outside the stage. */
+.bh-stage::before,
+.bh-stage::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: 24%;
+  pointer-events: none;
+}
+
+.bh-stage::before {
+  top: 0;
+  background:
+    radial-gradient(90% 100% at 50% 0%, color-mix(in srgb, var(--bh-navy) 22%, transparent), transparent 72%),
+    linear-gradient(
+      180deg,
+      var(--void) 0%,
+      color-mix(in srgb, var(--bh-navy-deep) 88%, var(--void)) 28%,
+      color-mix(in srgb, var(--bh-navy-deep) 38%, transparent) 72%,
+      transparent 100%
+    );
+}
+
+.bh-stage::after {
+  bottom: 0;
+  background:
+    radial-gradient(86% 110% at 50% 100%, color-mix(in srgb, var(--bh-ember) 16%, transparent), transparent 70%),
+    linear-gradient(
+      0deg,
+      var(--void) 0%,
+      color-mix(in srgb, var(--bh-ember) 20%, var(--void)) 28%,
+      color-mix(in srgb, var(--bh-navy-deep) 24%, transparent) 72%,
+      transparent 100%
+    );
 }
 
 /* The renderer's canvas is appended into this element by the effect in
@@ -273,5 +341,16 @@
   .bh-stage__retry {
     transition-duration: 0.01ms;
     transition-delay: 0s;
+  }
+}
+
+@media (max-width: 700px) {
+  .singularity {
+    padding-block: 2.5rem 2rem;
+    --bh-seam: 74px;
+  }
+
+  .bh-stage {
+    height: clamp(420px, 70svh, 680px);
   }
 }

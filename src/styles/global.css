@@ -48,12 +48,11 @@
      styles/blackhole.css (stage mask + seam gradients) and mirrored in
      lib/scenes.ts (GL ambience districts) and styles/overhaul.css (the
      no-WebGL ambience wash). */
-  --bh-navy: #071f44;
-  --bh-navy-deep: #010615;
-  --bh-amber: #a84b23;
-  --bh-ember: #7f1b00;
-
-  /* ---- Type ----
+ --bh-navy: #0e0f15;
+--bh-navy-deep: #080a0f;
+--bh-amber: #1c2740;   /* was warm rust — now a lighter slate-blue step */
+--bh-ember: #0a0e18;   /* was saturated red — now near navy-deep */    
+     /* ---- Type ----
      Art-directed PP Neue Machina / Montreal stack (self-hosted, see
      assets/fonts/pp-fonts.css). Five semantic roles:
        --font-display     Inktrap  → hero titles, major H1s, display numbers,
