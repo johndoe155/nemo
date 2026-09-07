@@ -36,10 +36,17 @@ async function open(page: Page, query = '') {
 
 async function scrollProgress(page: Page, progress: number) {
   await page.waitForFunction(() => Boolean(window.horizonFixture.ScrollTrigger.getById('signoff-horizon')));
-  await page.evaluate((p) => {
+  const jump = () => page.evaluate((p) => {
     const trigger = window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!;
     window.scrollTo({ top: trigger.start + (trigger.end - trigger.start) * p, behavior: 'instant' });
   }, progress);
+  await jump();
+  // One instant programmatic fling can leave the scrub tween a re-target
+  // short (velocity-spike prediction races the jump). A second jump,
+  // measured fresh once things settle, arrives near-stationary and lands
+  // the playhead exactly where the assert below demands.
+  await page.waitForTimeout(400);
+  await jump();
   await expect(page.locator(root)).toHaveAttribute('data-horizon-state', 'ready');
   await expect.poll(() => page.locator(root).getAttribute('data-horizon-progress'))
     .toBe(progress.toFixed(4));
@@ -141,7 +148,10 @@ test('one snapshot/texture; measured seam timing; reversible scrub; geometric fu
     const trigger = window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!;
     const spacer = footer.parentElement;
     return {
-      startError: Math.abs(box.top + anchor - (innerHeight - seam)),
+      // Pin start: the WHOLE invitation is on screen (footer top at
+      // viewportHeight - footerHeight - seam, one seam of air below it),
+      // with the Singularity stage still filling the top of the view.
+      startError: Math.abs(box.top + anchor - Math.max(seam * 2, innerHeight - box.height - seam)),
       travel: trigger.end - trigger.start,
       expectedTravel: innerHeight - seam * 2,
       pinIsFooter: trigger.pin === footer,

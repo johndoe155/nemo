@@ -846,7 +846,11 @@ html[data-scene='singularity'] {
   position: relative;
   overflow: hidden;
   text-align: center;
-  padding: clamp(3rem, 6vw, 5rem) 0 clamp(2.5rem, 4.5vw, 4rem);
+  /* Top padding is deliberately tighter than the closing padding: the
+     invitation should read as hanging just below the Singularity's lower
+     seam, not floating in the void (the pinned consumption scene frames
+     both in the same viewport). */
+  padding: clamp(2rem, 4vw, 3.5rem) 0 clamp(2.5rem, 4.5vw, 4rem);
 }
 .signoff__title {
   position: relative;

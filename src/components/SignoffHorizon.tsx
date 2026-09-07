@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { MOTION_QUERY, REDUCED_MOTION_QUERY, useSingularityGate } from '../lib/singularityGate';
@@ -20,7 +20,13 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
   const rootRef = useRef<HTMLElement>(null);
   const { canWarpSignoff, frameRef } = useSingularityGate();
 
-  useEffect(() => {
+  // useLayoutEffect, not useEffect: GSAP's pin re-parents this footer into
+  // its pin-spacer, and a PASSIVE cleanup would only run after React has
+  // already tried (and failed, NotFoundError) to delete the re-parented node
+  // from its recorded parent. Layout cleanups run synchronously before host
+  // deletions, so the trigger kill below has restored the footer to its
+  // original parent by the time React removes it.
+  useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return;
     const restorePaint = () => {
@@ -155,20 +161,23 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           });
         };
 
-        // The fixed anchor crosses the viewport's lower seam band — that is
-        // the activation threshold (viewportHeight - seamHeight) — and the
-        // sign-off PINS there. Pinning is what makes the consumption a scene
-        // instead of a passing scroll effect: the page holds still for one
-        // controlled distance (the exact run the anchor used to travel,
-        // lower seam band → upper seam band = innerHeight - 2 * seam) while
-        // scrolling alone drives playhead 0 → 1. No arbitrary percentage
-        // lines: every bound is still derived from .bh-frame::after's
-        // resolved --bh-seam height and re-invalidated on refresh. Scrub
-        // stays fully reversible and remains the only animation driver. The
-        // early arm trigger still gives capture one seam of offscreen lead.
-        // pinSpacing (GSAP's default, kept explicit) lets the pin-spacer
-        // carry the added distance, so the curtain below never moves; killing
-        // the trigger reverts the pin and removes the spacer in one step.
+        // The sign-off PINS once the reader can actually SEE the invitation:
+        // the anchor crosses into the viewport, the footer keeps scrolling up
+        // normally until the whole thing is on screen (its top at
+        // viewportHeight − footerHeight − seam, i.e. one seam of air below it,
+        // clamped so a short viewport still pins), and THERE the page locks.
+        // The Singularity stage still fills the top of the view, so the pause
+        // reads as the black hole holding the screen while it eats the
+        // sign-off. One controlled distance later (+= innerHeight − 2 × seam,
+        // the anchor's old lower-seam → upper-seam run) the pin releases and
+        // the page continues to the curtain. No arbitrary percentage lines:
+        // every bound is still derived from .bh-frame::after's resolved
+        // --bh-seam height and re-invalidated on refresh. Scrub stays fully
+        // reversible and remains the only animation driver; the early arm
+        // trigger still gives capture one seam of offscreen lead. pinSpacing
+        // (GSAP's default, kept explicit) lets the pin-spacer carry the added
+        // distance, so the curtain below never moves; killing the trigger
+        // reverts the pin and removes the spacer in one step.
         tween = gsap.fromTo(playhead, { progress: 0 }, {
           progress: 1,
           ease: 'none',
@@ -179,7 +188,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             pin: true,
             pinSpacing: true,
             anticipatePin: 1,
-            start: () => `top+=${geometry.anchorY} ${window.innerHeight - geometry.seam}px`,
+            start: () => `top+=${geometry.anchorY} ${Math.max(geometry.seam * 2, window.innerHeight - geometry.height - geometry.seam)}px`,
             end: () => `+=${window.innerHeight - geometry.seam * 2}`,
             scrub: 0.6,
             invalidateOnRefresh: true,

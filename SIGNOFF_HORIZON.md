@@ -62,20 +62,23 @@ motion matchMedia branch's finished state is **plain content**, not eaten conten
 
 ## Scroll timing
 
-The sign-off consumption is now a **pinned scene**. The arm trigger still fires
-when the fixed anchor is one resolved seam below the viewport, so capture
-begins offscreen. Scrub and the pin start together when that anchor crosses
-the activation threshold `viewportHeight − seamHeight`; GSAP then holds the
-sign-off `position: fixed` for one controlled distance — `+= innerHeight −
-2 × seam`, the exact run the anchor used to travel from the lower to the upper
-seam band — while scrolling alone drives the playhead 0 → 1. `pinSpacing`
+The sign-off consumption is now a **pinned scene**, and the pause is meant to
+be *seen*. The arm trigger still fires when the fixed anchor is one resolved
+seam below the viewport, so capture begins offscreen. The footer then keeps
+scrolling up normally until the reader can see the whole invitation — its top
+reaches `viewportHeight - footerHeight - seam` (one seam of air below it,
+clamped so a short viewport still pins) and the Singularity stage still fills
+the top of the view. **There** the pin engages: GSAP holds the sign-off
+`position: fixed` for one controlled distance — `+= innerHeight - 2 x seam`,
+the exact run the anchor used to travel from the lower to the upper seam band
+— while scrolling alone drives the playhead 0 -> 1. When the consumption is
+complete the pin releases and the page continues to the curtain. `pinSpacing`
 (the default, kept explicit) parks the same distance in GSAP's pin-spacer, so
-the curtain below never shifts when the pin engages and the page simply
-continues to it once the consumed sign-off unpins at the end of the range.
-Every bound is still derived from `.bh-frame::after`'s resolved `--bh-seam`
-height and re-invalidated on refresh; while pinned, the anchor Y is measured
-from the pin-spacer's flow position (the element's own rect is frozen at the
-pin position). `anticipatePin: 1` hides the engage on fast flings. There are
+the curtain below never shifts when the pin engages. Every bound is still
+derived from `.bh-frame::after`'s resolved `--bh-seam` height and
+re-invalidated on refresh; while pinned, the anchor Y is measured from the
+pin-spacer's flow position (the element's own rect is frozen at the pin
+position). `anticipatePin: 1` hides the engage on fast flings. There are
 still no guessed percentage lines, layout tweens or new raw scroll listeners.
 Retiring an armed effect kills the pinned ScrollTrigger, which reverts the
 pin, removes the spacer and restores the ordinary in-flow footer in one step.
@@ -118,12 +121,13 @@ therefore uses html2canvas's native SVG/foreignObject path instead:
 The helper corrects html2canvas 1.4's foreignObject origin offset, checks readable
 pixels in the headline, and rejects a blank/tainted result instead of hiding the
 real invitation. It also re-asserts the clone's box placement (`margin`, `inset`)
-after html2canvas's computed-style copy: when the sign-off is captured while
-**pinned** (`position: fixed` mid-viewport), the resolved inset shorthands would
-otherwise serialize after the top/left override and push the fixed clone below
-the isolated SVG viewport, rasterizing nothing. Font, capture, upload, shader or
-context failures restore the ordinary footer and report the reason. No repeated
-automatic capture attempts.
+and clears a transient root transform after html2canvas's computed-style copy:
+captured while **pinned** (`position: fixed` mid-viewport), the resolved inset
+shorthands would otherwise serialize after the top/left override — and GSAP's
+pin release can leave a one-frame pin-translate on the live element — either of
+which pushes the clone below the isolated SVG viewport, rasterizing nothing.
+Font, capture, upload, shader or context failures restore the ordinary footer
+and report the reason. No repeated automatic capture attempts.
 
 Snapshot/render resolution is capped to 1.5 million pixels and a 2048-pixel edge;
 CSS dimensions and hit targets are never scaled. On a width/height reflow **after
@@ -168,20 +172,14 @@ runtime JavaScript errors. GPU checks here used software WebGL2, with a small
 test-only stage resolution.
 
 Verified on 2026-09-07 with the pinning change: production type-check clean and
-**20 of 23 Chromium browser tests pass** under software WebGL2 — including the
+**all 23 Chromium browser tests pass** under software WebGL2 — including the
 pinned geometry (pin target, exact pin-spacer travel, fixed-lock during the
-scrub, release past the end), the previously broken DPR 1/2 snapshot-fidelity
-comparisons (stale `.marquee--credits` lookup removed after the crawl moved
-above the Singularity), focus rescue, gates, and the Float64 CPU texel port.
-Capture now also succeeds while pinned: html2canvas's computed-style copy
-resolves inset shorthands that must be re-asserted on the clone (see above).
-Remaining known issue, documented for follow-up rather than hidden: in the
-software-GL dev-server environment, three tests intermittently observe the
-scrub settle a frame short of its target (`data-horizon-progress` 0.4639 vs
-0.5000) — an isolated instrumented reproduction of the same scroll sequence is
-exact at every step, so this reads as a timing/refresh artifact of the test
-environment, not of the pin math. No hardware-GPU or production-bundle rerun
-was performed for this change yet.
+scrub, release past the end), capture while pinned, unmount of a pinned
+sign-off (React removal requires the pin revert to run in a layout cleanup),
+the previously broken DPR 1/2 snapshot-fidelity comparisons (stale
+`.marquee--credits` lookup removed after the crawl moved above the
+Singularity), focus rescue, gates, and the Float64 CPU texel port. No
+hardware-GPU or production-bundle rerun was performed for this change yet.
 
 The Playwright suite exercises the real Footer/CSS under StrictMode and covers:
 

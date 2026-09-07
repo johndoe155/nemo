@@ -109,6 +109,10 @@ export async function captureSignoff(
       height,
       scrollX: 0,
       scrollY: 0,
+      // The capture now typically runs while the sign-off is PINNED, i.e.
+      // while the stage above is still live. Give slow/software rasterizers
+      // more headroom than html2canvas's 15s default before giving up.
+      imageTimeout: 30_000,
       // html2canvas 1.4's foreignObject inserts a `scale`-pixel origin, then
       // translates x/y twice (once before and once during drawImage). This
       // cancels that offset at ANY capture scale; the identity-render test
@@ -136,6 +140,12 @@ export async function captureSignoff(
           // for an unpinned target this is the same 0/auto it already had.
           margin: '0',
           inset: '0 auto auto 0',
+          // GSAP's pin release can leave a leftover pin-translate transform on
+          // the live sign-off for a frame (translateY by the pin travel) while
+          // it is already back in normal flow. Copying that would rasterize
+          // the clone below the SVG viewport; the foreignObject renderer
+          // positions the root itself, so a root transform is never meaningful.
+          transform: 'none',
         });
         doc.documentElement.style.background = 'transparent';
         doc.body.style.background = 'transparent';
