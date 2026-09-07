@@ -62,12 +62,23 @@ motion matchMedia branch's finished state is **plain content**, not eaten conten
 
 ## Scroll timing
 
-The arm trigger fires when the fixed anchor is one resolved seam below the
-viewport, allowing capture to begin offscreen. Scrub begins when that anchor
-crosses `viewportHeight - seamHeight` and finishes at `seamHeight`. The start/end
-functions invalidate on refresh. The DOM/snapshot paint handoff spans one seam's
-scroll distance. There are no guessed percentage lines, pins, layout tweens or
-new raw scroll listeners.
+The sign-off consumption is now a **pinned scene**. The arm trigger still fires
+when the fixed anchor is one resolved seam below the viewport, so capture
+begins offscreen. Scrub and the pin start together when that anchor crosses
+the activation threshold `viewportHeight − seamHeight`; GSAP then holds the
+sign-off `position: fixed` for one controlled distance — `+= innerHeight −
+2 × seam`, the exact run the anchor used to travel from the lower to the upper
+seam band — while scrolling alone drives the playhead 0 → 1. `pinSpacing`
+(the default, kept explicit) parks the same distance in GSAP's pin-spacer, so
+the curtain below never shifts when the pin engages and the page simply
+continues to it once the consumed sign-off unpins at the end of the range.
+Every bound is still derived from `.bh-frame::after`'s resolved `--bh-seam`
+height and re-invalidated on refresh; while pinned, the anchor Y is measured
+from the pin-spacer's flow position (the element's own rect is frozen at the
+pin position). `anticipatePin: 1` hides the engage on fast flings. There are
+still no guessed percentage lines, layout tweens or new raw scroll listeners.
+Retiring an armed effect kills the pinned ScrollTrigger, which reverts the
+pin, removes the spacer and restores the ordinary in-flow footer in one step.
 
 The playhead is reversible. Returning to zero restores real DOM paint; revisiting
 the effect reuses the original frozen texture, not another DOM walk.
@@ -106,8 +117,13 @@ therefore uses html2canvas's native SVG/foreignObject path instead:
 
 The helper corrects html2canvas 1.4's foreignObject origin offset, checks readable
 pixels in the headline, and rejects a blank/tainted result instead of hiding the
-real invitation. Font, capture, upload, shader or context failures restore the
-ordinary footer and report the reason. No repeated automatic capture attempts.
+real invitation. It also re-asserts the clone's box placement (`margin`, `inset`)
+after html2canvas's computed-style copy: when the sign-off is captured while
+**pinned** (`position: fixed` mid-viewport), the resolved inset shorthands would
+otherwise serialize after the top/left override and push the fixed clone below
+the isolated SVG viewport, rasterizing nothing. Font, capture, upload, shader or
+context failures restore the ordinary footer and report the reason. No repeated
+automatic capture attempts.
 
 Snapshot/render resolution is capped to 1.5 million pixels and a 2048-pixel edge;
 CSS dimensions and hit targets are never scaled. On a width/height reflow **after
@@ -118,8 +134,9 @@ stage after a mobile hop, or successful Retry) may arm a fresh one-shot capture.
 
 ## Lifecycle
 
-Cleanup aborts pending font fetches, kills both ScrollTriggers and the scrub tween,
-disconnects ResizeObserver, cancels scheduled refresh work, restores paint, deletes
+Cleanup aborts pending font fetches, kills both ScrollTriggers (which reverts
+the pin and removes its spacer) and the scrub tween, disconnects
+ResizeObserver, cancels scheduled refresh work, restores paint, deletes
 the texture/shaders/program/VAO, loses the WebGL2 context and removes the canvas.
 Every activation gets a fresh canvas, never a reused lost context.
 
@@ -143,11 +160,28 @@ An existing Chromium can be supplied with
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium`. Browser artifacts are
 ignored; no snapshots, installed browsers or generated dependencies belong in Git.
 
-Verified on 2026-09-06: production build, vendored-hash verification, and all
-**23 Chromium browser tests pass**. A production-bundle smoke test of the complete
-App also reached a live stage and ready overlay with the existing curtain active,
-restored live CTA paint on focus, and reported no runtime JavaScript errors. GPU
-checks here used software WebGL2, with a small test-only stage resolution.
+Verified on 2026-09-06 (pre-pinning): production build, vendored-hash
+verification, and all **23 Chromium browser tests pass**. A production-bundle
+smoke test of the complete App also reached a live stage and ready overlay with
+the existing curtain active, restored live CTA paint on focus, and reported no
+runtime JavaScript errors. GPU checks here used software WebGL2, with a small
+test-only stage resolution.
+
+Verified on 2026-09-07 with the pinning change: production type-check clean and
+**20 of 23 Chromium browser tests pass** under software WebGL2 — including the
+pinned geometry (pin target, exact pin-spacer travel, fixed-lock during the
+scrub, release past the end), the previously broken DPR 1/2 snapshot-fidelity
+comparisons (stale `.marquee--credits` lookup removed after the crawl moved
+above the Singularity), focus rescue, gates, and the Float64 CPU texel port.
+Capture now also succeeds while pinned: html2canvas's computed-style copy
+resolves inset shorthands that must be re-asserted on the clone (see above).
+Remaining known issue, documented for follow-up rather than hidden: in the
+software-GL dev-server environment, three tests intermittently observe the
+scrub settle a frame short of its target (`data-horizon-progress` 0.4639 vs
+0.5000) — an isolated instrumented reproduction of the same scroll sequence is
+exact at every step, so this reads as a timing/refresh artifact of the test
+environment, not of the pin math. No hardware-GPU or production-bundle rerun
+was performed for this change yet.
 
 The Playwright suite exercises the real Footer/CSS under StrictMode and covers:
 

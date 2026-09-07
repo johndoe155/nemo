@@ -123,8 +123,19 @@ export async function captureSignoff(
         // target at zero in the isolated document instead of retaining its
         // page scroll offset, which may be thousands of pixels below the fold.
         Object.assign(clone.style, {
-          position: 'fixed', top: '0', left: '0', margin: '0',
-          width: `${width}px`, height: `${height}px`, background: 'transparent',
+          position: 'fixed',
+          width: `${width}px`,
+          height: `${height}px`,
+          background: 'transparent',
+          // The cloner copies COMPUTED styles, which resolve the physical and
+          // logical inset shorthands (inset / inset-block / inset-inline).
+          // When the target is fixed mid-viewport at capture time — the pinned
+          // sign-off — those resolved values serialize after the intended
+          // top/left override and push the fixed clone back below the SVG
+          // viewport, rasterizing nothing. Re-assert the box placement last;
+          // for an unpinned target this is the same 0/auto it already had.
+          margin: '0',
+          inset: '0 auto auto 0',
         });
         doc.documentElement.style.background = 'transparent';
         doc.body.style.background = 'transparent';

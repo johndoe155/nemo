@@ -74,11 +74,28 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           else console.info(`[signoff-horizon] ${reason} Keeping the real footer.`);
         };
         const measure = () => {
-          const next = measureSignoffHorizon(root, frame);
+          // While the pin is engaged the sign-off is position:fixed and its
+          // rect top is the frozen pin position. The flow position it was
+          // pinned AT lives in GSAP's pin-spacer (the footer sits at the
+          // spacer's border-box top, with its margins moved onto the spacer),
+          // so anchor measurements read from there. Rect width/height stay
+          // authoritative from the element itself: they are what the
+          // post-capture reflow retirement checks.
+          const spacer = root.style.position === 'fixed' &&
+            root.parentElement?.classList.contains('pin-spacer')
+            ? root.parentElement
+            : null;
+          const next = measureSignoffHorizon(
+            root,
+            frame,
+            spacer?.getBoundingClientRect().top,
+          );
           if (!next || (capturedGeometry && !sameSize(next, capturedGeometry))) {
             // A frozen raster cannot reflow with the hit targets. Deliberate
             // degradation: retire it for this activation, rather than stretch
             // misregistered text or secretly take another snapshot on resize.
+            // ScrollTrigger.kill() reverts the pin, so retirement also
+            // restores the ordinary in-flow footer and its curtain spacing.
             fallBack('Layout changed after arming; the one-shot raster was retired.');
             return;
           }
@@ -138,11 +155,20 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           });
         };
 
-        // The fixed anchor crosses the viewport's lower seam band, then its
-        // upper seam band. No arbitrary percentage trigger lines: both margins
-        // come from .bh-frame::after's resolved --bh-seam height. Scrub is fully
-        // reversible; it is the only animation driver (no scroll listener/RAF
-        // render loop). The early arm gives capture one seam of offscreen lead.
+        // The fixed anchor crosses the viewport's lower seam band — that is
+        // the activation threshold (viewportHeight - seamHeight) — and the
+        // sign-off PINS there. Pinning is what makes the consumption a scene
+        // instead of a passing scroll effect: the page holds still for one
+        // controlled distance (the exact run the anchor used to travel,
+        // lower seam band → upper seam band = innerHeight - 2 * seam) while
+        // scrolling alone drives playhead 0 → 1. No arbitrary percentage
+        // lines: every bound is still derived from .bh-frame::after's
+        // resolved --bh-seam height and re-invalidated on refresh. Scrub
+        // stays fully reversible and remains the only animation driver. The
+        // early arm trigger still gives capture one seam of offscreen lead.
+        // pinSpacing (GSAP's default, kept explicit) lets the pin-spacer
+        // carry the added distance, so the curtain below never moves; killing
+        // the trigger reverts the pin and removes the spacer in one step.
         tween = gsap.fromTo(playhead, { progress: 0 }, {
           progress: 1,
           ease: 'none',
@@ -150,8 +176,11 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           scrollTrigger: {
             id: 'signoff-horizon',
             trigger: root,
+            pin: true,
+            pinSpacing: true,
+            anticipatePin: 1,
             start: () => `top+=${geometry.anchorY} ${window.innerHeight - geometry.seam}px`,
-            end: () => `top+=${geometry.anchorY} ${geometry.seam}px`,
+            end: () => `+=${window.innerHeight - geometry.seam * 2}`,
             scrub: 0.6,
             invalidateOnRefresh: true,
             onRefreshInit: measure,

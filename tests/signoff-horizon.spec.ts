@@ -49,6 +49,9 @@ async function expectPlain(page: Page) {
   await expect(page.locator(overlay)).toHaveCount(0);
   await expect(page.locator(root)).not.toHaveAttribute('data-horizon-paint');
   await expect(page.locator('.signoff__anchor')).toHaveCSS('opacity', '1');
+  // A killed pinned ScrollTrigger must also revert its pin: the spacer is
+  // gone and the footer is an ordinary in-flow child again.
+  await expect(page.locator('.pin-spacer')).toHaveCount(0);
   expect(await page.evaluate(() => window.horizonFixture.ScrollTrigger.getAll()
     .filter((trigger) => String(trigger.vars.id).startsWith('signoff-horizon')).length)).toBe(0);
 }
@@ -130,21 +133,51 @@ test('one snapshot/texture; measured seam timing; reversible scrub; geometric fu
   expect(await page.evaluate(() => window.horizonStats.captures)).toBe(0);
   await scrollProgress(page, 0);
   const alignment = await page.evaluate(() => {
-    const footer = document.querySelector('.signoff')!.getBoundingClientRect();
+    const footer = document.querySelector('.signoff')!;
+    const box = footer.getBoundingClientRect();
     const frame = document.querySelector('.bh-frame')!;
     const seam = parseFloat(getComputedStyle(frame, '::after').height);
-    const anchor = Math.max(0, frame.getBoundingClientRect().bottom + seam - footer.top);
+    const anchor = Math.max(0, frame.getBoundingClientRect().bottom + seam - box.top);
     const trigger = window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!;
-    return { startError: Math.abs(footer.top + anchor - (innerHeight - seam)), travel: trigger.end - trigger.start, expectedTravel: innerHeight - seam * 2 };
+    const spacer = footer.parentElement;
+    return {
+      startError: Math.abs(box.top + anchor - (innerHeight - seam)),
+      travel: trigger.end - trigger.start,
+      expectedTravel: innerHeight - seam * 2,
+      pinIsFooter: trigger.pin === footer,
+      footerInSpacer: Boolean(spacer?.classList.contains('pin-spacer')),
+      // pinSpacing must grant the spacer EXACTLY the pinned distance, so the
+      // curtain below the sign-off never shifts when the pin engages.
+      pinnedPadding: (spacer?.getBoundingClientRect().height ?? 0) - box.height,
+    };
   });
   expect(alignment.startError).toBeLessThan(1);
   expect(alignment.travel).toBe(alignment.expectedTravel);
+  expect(alignment.pinIsFooter).toBe(true);
+  expect(alignment.footerInSpacer).toBe(true);
+  expect(alignment.pinnedPadding).toBeCloseTo(alignment.travel, 0);
   await expect(page.locator('.signoff__anchor')).toHaveCSS('opacity', '1');
   await scrollProgress(page, 0.5);
   await expect(page.locator('.signoff__anchor')).toHaveCSS('opacity', '0');
   await expect(page.locator(overlay)).toHaveCSS('pointer-events', 'none');
   const canvasBox = await page.locator(overlay).boundingBox();
   expect(canvasBox).toEqual(await page.locator(root).boundingBox());
+  // THE PIN: the section is locked in place — position:fixed, and the exact
+  // same viewport box while scroll (and the playhead) keep advancing.
+  const locked = await page.evaluate(() => ({
+    position: getComputedStyle(document.querySelector('.signoff')!).position,
+    top: document.querySelector('.signoff')!.getBoundingClientRect().top,
+    scrollY,
+  }));
+  expect(locked.position).toBe('fixed');
+  await scrollProgress(page, 0.75);
+  const stillLocked = await page.evaluate(() => ({
+    top: document.querySelector('.signoff')!.getBoundingClientRect().top,
+    scrollY,
+  }));
+  expect(stillLocked.top).toBeCloseTo(locked.top, 6);
+  expect(stillLocked.scrollY).toBeGreaterThan(locked.scrollY);
+  await scrollProgress(page, 0.5);
 
   const pixels = () => page.evaluate(() => {
     // A preserveDrawingBuffer:false canvas must be read in the SAME task as
@@ -170,6 +203,14 @@ test('one snapshot/texture; measured seam timing; reversible scrub; geometric fu
   expect(await pixels()).toEqual(middle);
   await scrollProgress(page, 0);
   await expect(page.locator('.signoff__anchor')).toHaveCSS('opacity', '1');
+  // Scrolling past the pinned distance releases the pin: the footer returns
+  // to normal flow and continues to the curtain, fully consumed.
+  await page.evaluate(() => {
+    const trigger = window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!;
+    window.scrollTo({ top: trigger.end + 600, behavior: 'instant' });
+  });
+  await expect.poll(() => page.evaluate(() =>
+    getComputedStyle(document.querySelector('.signoff')!).position)).not.toBe('fixed');
   expect(await page.evaluate(() => ({
     captures: window.horizonStats.captures,
     uploads: window.horizonStats.uploads,
@@ -186,7 +227,10 @@ test('the SAME real CTA accepts Tab, Shift-Tab, Enter and pointer clicks at 0/50
   await page.evaluate(() => {
     // Freeze only the scroll driver to test each paint state with the CTA on
     // screen. Actual reversible scrolling is exercised in the previous test.
-    window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!.disable(false);
+    // disable(true) also reverts the pin, returning the pinned sign-off from
+    // its fixed position to natural flow — the CTA sits below the fold for
+    // the whole pin, so the interaction checks need the un-pinned layout.
+    window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!.disable(true);
     const footer = document.querySelector('.signoff')!;
     window.scrollTo({ top: footer.getBoundingClientRect().top + scrollY - 80, behavior: 'instant' });
     window.horizonClicks = 0;
@@ -417,19 +461,18 @@ test('WebGL2 pixels agree with an independent CPU port of the vendored ODE', asy
 
 for (const dpr of [1, 2]) test.describe(`snapshot fidelity at DPR ${dpr}`, () => {
   test.use({ deviceScaleFactor: dpr });
-  test('unwarped snapshot retains the headline font/gradient, glass tint and CTA paint', async ({ page }, testInfo) => {
+  test('unwarped snapshot retains the headline font/gradient and CTA paint', async ({ page }, testInfo) => {
     await open(page, '?status=unsupported');
     await page.evaluate(() => {
       const footer = document.querySelector<HTMLElement>('.signoff')!;
       // Freeze decorative clocks ONLY in the test so the comparison isn't
-      // measuring the moving marquee / button phase between two screenshots.
+      // measuring a moving phase between two screenshots.
       window.horizonFixture.gsap.globalTimeline.pause();
       footer.getAnimations({ subtree: true }).forEach((animation) => animation.pause());
       Object.assign(footer.style, { position: 'fixed', top: '0', left: '0', width: `${innerWidth}px`, zIndex: '999', margin: '0' });
-      // Compare like-for-like with the documented snapshot-only blur omission.
-      const glass = footer.querySelector<HTMLElement>('.marquee--credits')!;
-      glass.style.backdropFilter = 'none';
-      glass.style.setProperty('-webkit-backdrop-filter', 'none');
+      // The credit crawl moved above the Singularity, so nothing in the
+      // sign-off backdrop-filters the live page anymore: the frozen frame can
+      // be compared to the live footer like-for-like with no omissions.
     });
     const original = await page.locator(root).screenshot();
     await page.evaluate(async () => {
