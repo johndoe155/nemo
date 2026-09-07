@@ -7,6 +7,7 @@ import { BlackHoleSimulation } from '../three/blackhole/blackhole.js';
 import { CameraAnimation } from '../three/blackhole/camera-animation.js';
 import { flatSimulationConfig as config } from '../three/blackhole/blackhole.config.js';
 import BlackHoleStill from './BlackHoleStill';
+import type { BlackHoleStageStatus } from '../lib/singularityGate';
 
 /* ============================================================================
    BlackHoleStage — the React mounting layer for the WebGPU black hole.
@@ -129,7 +130,7 @@ type Probe =
   | { ok: false; reason: 'adapter-null' }
   | { ok: false; reason: 'probe-threw'; error: unknown };
 
-type StageStatus = 'booting' | 'live' | 'unsupported' | 'error';
+type StageStatus = BlackHoleStageStatus;
 /** Which of three's backends actually came up. Reported, never rendered. */
 type BackendKind = 'webgpu' | 'webgl2';
 type Note = { label: string; hint?: string };
@@ -318,7 +319,11 @@ async function acquireDevice(adapter: GPUAdapterLike): Promise<GPUDeviceLike | n
   }
 }
 
-export default function BlackHoleStage() {
+export default function BlackHoleStage({
+  onStatusChange,
+}: {
+  onStatusChange?: (status: BlackHoleStageStatus) => void;
+}) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<StageStatus>('booting');
   const [note, setNote] = useState<Note | null>(null);
@@ -329,6 +334,14 @@ export default function BlackHoleStage() {
   /* Retry re-runs the whole effect from scratch: teardown is already complete
      by then, so this is a clean cold start rather than a resumed one. */
   const [attempt, setAttempt] = useState(0);
+
+  // Share the actual state machine, including Retry/failure. Clearing it on
+  // unmount prevents a desktop → mobile → desktop hop from briefly arming the
+  // footer against the previous mount's 'live' status. No GPU lifecycle change.
+  useEffect(() => {
+    onStatusChange?.(status);
+  }, [status, onStatusChange]);
+  useEffect(() => () => onStatusChange?.('booting'), [onStatusChange]);
 
   useEffect(() => {
     const host = hostRef.current;

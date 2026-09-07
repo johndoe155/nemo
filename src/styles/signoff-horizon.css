@@ -1,0 +1,43 @@
+/* Sign-off horizon — paint-only snapshot overlay. Separate from blackhole.css,
+   whose three jobs remain box / seam / still. No layout, hit-target, curtain
+   background, tab order or accessibility-tree changes belong to this layer. */
+
+.signoff-horizon__canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  opacity: var(--horizon-mix, 0);
+}
+
+.footer.signoff[data-horizon-paint='snapshot'] > :not(.signoff-horizon__canvas) {
+  /* Opacity affects ONLY paint. Never use autoAlpha, visibility, display,
+     aria-hidden, inert, pointer-events or a transform on the real anchor. */
+  opacity: calc(1 - var(--horizon-mix, 0));
+}
+
+/* Keyboard rescue at ANY progress, including fully consumed: the original
+   invitation and its ordinary focus ring reappear while focus is within it.
+   No clone link and no intercepted events; Tab, Shift-Tab, Enter and clicks
+   all continue to target the same real DOM. The scrub playhead is untouched. */
+.footer.signoff[data-horizon-paint='snapshot']:focus-within > :not(.signoff-horizon__canvas) {
+  opacity: 1;
+}
+.footer.signoff:focus-within > .signoff-horizon__canvas {
+  opacity: 0;
+}
+
+/* Synchronous paint guard while the shared matchMedia hook tears down an
+   active capture/scrub after a device-policy change. Only the CANVAS is hidden;
+   real links never are. Breakpoint is the existing singularity CSS fallback. */
+@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+  .footer.signoff[data-horizon-paint='snapshot'] > :not(.signoff-horizon__canvas) {
+    opacity: 1;
+  }
+  .signoff-horizon__canvas {
+    display: none;
+  }
+}

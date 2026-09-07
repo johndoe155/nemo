@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import BlackHoleStage from '../components/BlackHoleStage';
+import { useSingularityGate } from '../lib/singularityGate';
 
 /* ============================================================================
    THE SINGULARITY — the live WebGPU black hole
@@ -28,29 +28,8 @@ import BlackHoleStage from '../components/BlackHoleStage';
    screens are completely untouched.
    ========================================================================== */
 
-const MOBILE_QUERY = '(max-width: 768px)';
-
-function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(MOBILE_QUERY).matches;
-  });
-
-  useEffect(() => {
-    const mql = window.matchMedia(MOBILE_QUERY);
-    const onChange = () => setIsMobile(mql.matches);
-    // Ensure state is correct after hydration (in case initial check ran
-    // before layout settled or on SSR fallback)
-    onChange();
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
-  }, []);
-
-  return isMobile;
-}
-
 export default function Singularity() {
-  const isMobile = useIsMobile();
+  const { isMobile, frameRef, reportStatus } = useSingularityGate();
 
   // On mobile: render nothing — the section must appear as if it was never
   // implemented. No DOM, no canvas, no observers, no heavy GPU init.
@@ -62,8 +41,8 @@ export default function Singularity() {
 
       {/* .bh-frame carries the seam gradients above and below the stage
           (styles/blackhole.css); .bh-stage inside it owns the canvas box. */}
-      <div className="bh-frame">
-        <BlackHoleStage />
+      <div className="bh-frame" ref={frameRef}>
+        <BlackHoleStage onStatusChange={reportStatus} />
       </div>
     </section>
   );

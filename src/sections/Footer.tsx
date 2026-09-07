@@ -5,6 +5,7 @@ import { Magnetic } from '../components/motion/Magnetic';
 import { KineticLabel } from '../components/motion/KineticLabel';
 import { ARTISTS, FOOTER_NAV, SOCIALS, UNIVERSES } from '../lib/data';
 import { LOGO_SRC } from '../lib/assets';
+import SignoffHorizon from '../components/SignoffHorizon';
 
 const EASE_EXPO = [0.16, 1, 0.3, 1] as const;
 const prefersReduced =
@@ -130,7 +131,7 @@ function SocialLink({ label, href, handle }: { label: string; href: string; hand
 
 function ClosingSignoff() {
   return (
-    <footer className="footer signoff" aria-label="Closing invitation">
+    <SignoffHorizon>
       <div className="signoff__crawl">
         <Marquee items={CRAWL_ITEMS} speed="110s" variant="credits" />
       </div>
@@ -148,13 +149,13 @@ function ClosingSignoff() {
           </span>
         </h2>
         <div className="signoff__actions">
-          <a href="#nemoverse" className="btn btn-primary" data-cursor="ENTER">
+          <a href="#nemoverse" className="btn btn-primary" data-cursor="ENTER" aria-label="Explore the universes">
             <span className="btn-spark" aria-hidden="true" />
             <KineticLabel label="EXPLORE THE UNIVERSES" swap="ENTER THE VOID" open={false} />
           </a>
         </div>
       </div>
-    </footer>
+    </SignoffHorizon>
   );
 }
 

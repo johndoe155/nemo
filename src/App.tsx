@@ -27,6 +27,7 @@ import SoundToggle from './components/SoundToggle';
 import VelocityFX from './components/VelocityFX';
 import { CustomCursor } from './components/Cursor';
 import { KineticButton, useCursorGlow } from './components/motion';
+import { SingularityProvider } from './lib/singularityGate';
 
 /* ---------------------------------------------------------------------------
    SectionBoundary — guarantees a section can never blank itself out. If the
@@ -81,7 +82,7 @@ export default function App() {
   useCursorGlow();
 
   return (
-    <>
+    <SingularityProvider>
       <a className="skip-link" href="#nemoverse" style={skipStyle}>
         Skip to the Nemoverse
       </a>
@@ -137,7 +138,7 @@ export default function App() {
       </main>
       <Footer />
       <ToastHost />
-    </>
+    </SingularityProvider>
   );
 }
 

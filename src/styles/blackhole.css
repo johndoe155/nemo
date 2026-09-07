@@ -360,7 +360,7 @@
    This CSS is the fallback / first-paint guard: even before React hydrates
    and Singularity.tsx returns null, the section occupies zero layout, paints
    nothing, and leaves no seam gap. Desktop / wide screens are untouched.
-   Breakpoint matches the JS check in sections/Singularity.tsx.
+   Breakpoint matches the shared JS gate in lib/singularityGate.tsx.
    ========================================================================== */
 @media (max-width: 768px) {
   .singularity {
