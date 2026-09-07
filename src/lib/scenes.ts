@@ -18,7 +18,7 @@
      arsenal        perks             — iris-led, charged
      vault          pulls + store     — gold ingress; rarity is the story here
      constellation  artists           — magenta-led, celebratory
-     abyss          lore + footer     — near-black, vignette closing in
+     abyss          lore + credit crawl — near-black, vignette closing in (the crawl is now above the singularity)
      singularity    the black hole    — the canvas's own palette, so the page
                                         and the simulation read as one sky
 
@@ -145,8 +145,8 @@ export const SCENES: Record<SceneId, Scene> = {
   },
   /* Retuned for the black hole seam. `abyss` is the district BOTH neighbours of
      the singularity live in — lore (the canon timeline, immediately above) and
-     connect (the closing credit crawl, immediately below) — and nothing else on
-     the page maps to it, so tuning it here eases both sides of the canvas at
+     the closing credit crawl (now above the singularity) — and nothing else
+     on the page maps to it, so tuning it here eases both sides of the canvas at
      once. It was iris-led; it is now nebula-navy-led, with the ember sitting
      low in the frame (toward the seam) and a faint iris thread kept on the
      right so the district still reads as the Nemoverse rather than as a
@@ -166,9 +166,9 @@ export const SCENES: Record<SceneId, Scene> = {
      continuous to dissolve into. The stage is full-bleed and the simulation
      paints opaquely, so what is actually visible of this district is the
      ~9% band the stage mask fades out at the top and the bottom: navy above
-     (meeting the timeline), warm disk-light below (meeting the credit crawl),
-     deep void at the core. Vignette is the strongest on the page — the frame
-     closes in as the hole opens. */
+     (meeting the crawl now placed above), warm disk-light below (meeting
+     the sign-off footer), deep void at the core. Vignette is the strongest
+     on the page — the frame closes in as the hole opens. */
   singularity: {
     fields: [
       { color: BH_NAVY, gain: 0.24, pos: [0.5, -0.04], rad: 0.78 },

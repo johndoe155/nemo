@@ -28,6 +28,7 @@ import VelocityFX from './components/VelocityFX';
 import { CustomCursor } from './components/Cursor';
 import { KineticButton, useCursorGlow } from './components/motion';
 import { SingularityProvider } from './lib/singularityGate';
+import { UNIVERSES, ARTISTS } from './lib/data';
 
 /* ---------------------------------------------------------------------------
    SectionBoundary — guarantees a section can never blank itself out. If the
@@ -122,18 +123,33 @@ export default function App() {
         <Store />
         <Artists />
         <Lore />
+        {/* The closing credit crawl — moved above the Singularity so it is
+            completely unaffected by the black hole warping effect. */}
+        <div className="signoff__crawl">
+          <Marquee
+            items={[
+              `${UNIVERSES.length} UNIVERSES REGISTERED`,
+              `${ARTISTS.length} ARTISTS CREDITED FOREVER`,
+              'HOLDERS WALK IN FIRST',
+              'EVERY MINT PULLS A PIECE',
+              'ONE CANON · INFINITE VERSIONS',
+              'NEMOVERSE PROTOCOL v0.1.0',
+            ]}
+            speed="110s"
+            variant="credits"
+          />
+        </div>
         {/* THE SINGULARITY — the live WebGPU black hole. Placed in the exact
             gap between the canon timeline above (Lore, whose drilling rod ends
-            on the "U-007 — THE LAST AURORA" node) and the closing credit crawl
-            below (the first thing Footer renders is the Marquee carrying
-            "HOLDERS WALK IN FIRST ✳ EVERY MINT PULLS A PIECE"). It is the last
-            child of <main> because <Footer /> is a sibling of <main>, so this
-            is the seam itself — nothing else sits between them.
-            Statically imported like every other section (see the Pulls note
-            above): a section this deep in the page must always mount. Its own
-            graceful degradation — WebGPU feature detection, a static SVG/CSS
-            frame, off-screen pausing — lives in components/BlackHoleStage.tsx,
-            and the simulation in src/three/blackhole/ is vendored verbatim. */}
+            on the "U-007 — THE LAST AURORA" node) and the sign-off below.
+            It is the last child of <main> because <Footer /> is a sibling
+            of <main>, so this is the seam itself — nothing else sits between
+            them. Statically imported like every other section (see the Pulls
+            note above): a section this deep in the page must always mount.
+            Its own graceful degradation — WebGPU feature detection, a static
+            SVG/CSS frame, off-screen pausing — lives in
+            components/BlackHoleStage.tsx, and the simulation in
+            src/three/blackhole/ is vendored verbatim. */}
         <Singularity />
       </main>
       <Footer />

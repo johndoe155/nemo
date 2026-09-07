@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Marquee, toast } from '../components/ui';
+import { toast } from '../components/ui';
 import { Magnetic } from '../components/motion/Magnetic';
 import { KineticLabel } from '../components/motion/KineticLabel';
 import { ARTISTS, FOOTER_NAV, SOCIALS, UNIVERSES } from '../lib/data';
@@ -10,15 +10,6 @@ import SignoffHorizon from '../components/SignoffHorizon';
 const EASE_EXPO = [0.16, 1, 0.3, 1] as const;
 const prefersReduced =
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-const CRAWL_ITEMS = [
-  `${UNIVERSES.length} UNIVERSES REGISTERED`,
-  `${ARTISTS.length} ARTISTS CREDITED FOREVER`,
-  'HOLDERS WALK IN FIRST',
-  'EVERY MINT PULLS A PIECE',
-  'ONE CANON · INFINITE VERSIONS',
-  'NEMOVERSE PROTOCOL v0.1.0',
-];
 
 function MaskedLink({ href, children }: { href: string; children: string }) {
   return (
@@ -132,9 +123,6 @@ function SocialLink({ label, href, handle }: { label: string; href: string; hand
 function ClosingSignoff() {
   return (
     <SignoffHorizon>
-      <div className="signoff__crawl">
-        <Marquee items={CRAWL_ITEMS} speed="110s" variant="credits" />
-      </div>
       <div className="signoff__anchor">
         <h2 className="signoff__title">
           <span className="signoff__line">

@@ -102,7 +102,7 @@
 }
 
 /* Below the stage: nebula navy → a hint of the disk's ember → void. The warm
-   note sits exactly at the seam with the closing credit crawl. */
+   note sits exactly at the seam with the sign-off footer below. */
 .bh-frame::after {
   top: 100%;
   background: linear-gradient(

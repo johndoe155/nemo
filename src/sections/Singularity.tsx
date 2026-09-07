@@ -6,8 +6,9 @@ import { useSingularityGate } from '../lib/singularityGate';
 
    Placement is the whole point: this sits in the seam between the canon
    timeline (Lore, whose drilling rod ends on the "U-007 — THE LAST AURORA"
-   node) and the closing credit crawl in the Footer. The last thing read before
-   the sign-off is the thing U-007 is falling into.
+   node) and the closing credit crawl above it. The crawl has been moved
+   above the black hole so it is completely unaffected by the event-horizon
+   warping effect.
 
    Bare stage by design — no kicker, no headline, no body copy. The simulation
    is the statement. A visually-hidden <h2> carries the section for assistive
