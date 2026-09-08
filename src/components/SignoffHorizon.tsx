@@ -118,6 +118,24 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
       delete sheet.dataset.horizonScene;
       delete sheet.dataset.horizonRun;
     };
+    // Frame fitting is a pure layout solve and must not wait for the
+    // WebGPU/WebGL status or motion-preference gate. Pinning and consumption
+    // remain opt-in below.
+    const frame = frameRef.current;
+    const anchor = sheet.firstElementChild as HTMLElement | null;
+    if (frame && anchor) {
+      const flyerEls = {} as Record<FlyerId, HTMLElement>;
+      let complete = true;
+      for (const id of FLYER_IDS) {
+        const el = sheet.querySelector<HTMLElement>(FLYER_SELECTOR[id]);
+        if (!el) {
+          complete = false;
+          break;
+        }
+        flyerEls[id] = el;
+      }
+      if (complete) measureSignoffScene({ sheet, frame, anchor, flyers: flyerEls });
+    }
     const mm = gsap.matchMedia();
     const ctx = gsap.context(() => {
       // The finished reduced-motion state is the PLAIN footer, not a consumed
@@ -126,9 +144,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
         restorePaint();
       });
       mm.add(MOTION_QUERY, () => {
-        const frame = frameRef.current;
-        const anchor = sheet.firstElementChild as HTMLElement | null;
-        if (!canWarpSignoff || !frame || !anchor) return;
+        if (!frame || !anchor) return;
         const flyerEls = {} as Record<FlyerId, HTMLElement>;
         for (const id of FLYER_IDS) {
           const el = sheet.querySelector<HTMLElement>(FLYER_SELECTOR[id]);
@@ -136,6 +152,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           if (!el) return;
           flyerEls[id] = el;
         }
+        if (!canWarpSignoff) return;
 
         let scene: SignoffScene | null = null;
         let capturedScene: SignoffScene | null = null;
