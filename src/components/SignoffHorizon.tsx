@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { MOTION_QUERY, REDUCED_MOTION_QUERY, useSingularityGate } from '../lib/singularityGate';
 import {
+  analyticPinnedTop,
   curtainElements,
   measurePinnedTop,
   measureSignoffScene,
@@ -34,6 +35,13 @@ const FLYER_SELECTOR: Record<FlyerId, string> = {
 const sameSize = (a: SignoffScene, b: SignoffScene) =>
   Math.abs(a.width - b.width) < 1 && Math.abs(a.height - b.height) < 1;
 
+/** GSAP reads `bottom bottom-=X` as "the trigger's bottom edge X px above the
+ * bottom of the viewport". A negative inset — the degraded, hole-first framing,
+ * where the headline has not arrived yet — has to flip the operator instead of
+ * being written as the unparseable `bottom-=-X`. */
+const triggerLine = (inset: number): string =>
+  `bottom bottom${inset >= 0 ? '-=' : '+='}${Math.abs(Math.round(inset))}`;
+
 /** GSAP keeps the pin-spacer on the trigger instance but not on its public
  * type. The spacer is the only element that can pay the curtain back for the
  * height the consumption removes, so the effect needs it. */
@@ -48,16 +56,22 @@ const spacerOf = (trigger: ScrollTrigger | null | undefined): HTMLElement | null
  *
  * THE PIN BELONGS TO THE BLACK HOLE. Two ScrollTriggers, one scene:
  *
- *   · `signoff-horizon-hole` pins `.bh-frame` from the moment the hole is fully
- *     in view — its bottom edge one seam above the bottom of the viewport — and
- *     does not let go until the consumption is complete. This is the anchor of
- *     the whole sequence: the hole holds the screen while it eats.
- *   · `signoff-horizon` pins the sheet for the last leg of that same hold, and
- *     scrubs the playhead. It is pinned because the fall needs the singularity
- *     to be a fixed point in the sheet's own coordinate space, and because a
- *     sheet left in flow would slide past the hole and drag the curtain with
- *     it. Its start is exactly the hole's handoff line (`hem − frame bottom`),
- *     so the two pins are one continuous hold: no gap, no double-pin, no jump.
+ *   · `signoff-horizon-hole` pins `.bh-frame` on the REFERENCE FRAMING: the
+ *     first scroll position where the viewport holds the whole "ENTER THE
+ *     NEMOVERSE" headline with the black hole above it — the headline's bottom
+ *     edge `titleAir` px above the bottom of the viewport, the CTA still below
+ *     the fold. It does not let go until the consumption is complete, and the
+ *     frame does not move by one pixel in between: this is the anchor of the
+ *     whole sequence, the still point the invitation falls into.
+ *   · `signoff-horizon` pins the sheet on the SAME line for the SAME distance,
+ *     and scrubs the playhead. It is pinned because the fall needs the
+ *     singularity to be a fixed point in the sheet's own coordinate space, and
+ *     because a sheet left in flow would slide past the hole and drag the
+ *     curtain with it. Its start is offset by the pin distance the hole's
+ *     spacer reserves above the sheet (`sheetStartOffset`), which is what makes
+ *     the two pins coextensive rather than sequential: one continuous hold, no
+ *     gap, no double-pin, no jump — and no moment where the sheet climbs while
+ *     the hole is supposed to be standing still.
  *
  * Layout is touched in exactly one direction. The sheet's own height collapses
  * as it is consumed and its pin-spacer returns that height to the document at
@@ -201,7 +215,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
 
         const syncPin = () => {
           if (!scene) return;
-          scene.pinnedTop = measurePinnedTop(sheet, scene.viewport - scene.seam - scene.height);
+          scene.pinnedTop = measurePinnedTop(sheet, analyticPinnedTop(scene));
         };
 
         /** The sheet's own pin progress straight off the scroll, unsmoothed.
@@ -376,24 +390,33 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
         prepareMeasure();
         if (released || !scene) return;
 
-        // 1 · THE BLACK HOLE — the anchor of the sequence. It pins when it is
-        // fully in view and stays pinned for the handoff plus the whole
-        // consumption, so the reader watches the hole hold the screen while the
-        // sheet slides up into its lower half and then falls in.
+        // 1 · THE BLACK HOLE — the anchor of the sequence. It pins on the
+        // REFERENCE FRAMING: the headline's bottom edge one resolved `titleAir`
+        // above the bottom of the viewport, which is the first scroll position
+        // where the whole "ENTER THE NEMOVERSE" invitation is on screen with the
+        // hole above it. The trigger is therefore the headline, not the frame —
+        // the frame is what gets PINNED (`pin: element`), and it stays exactly
+        // where that line parked it until the consumption is complete: not one
+        // pixel of drift, for the whole fall.
+        //
+        // Created FIRST on purpose. GSAP refreshes in creation order and each
+        // pin reserves its distance in the document as it goes, so this spacer
+        // is already in place when the sheet's trigger below is measured — which
+        // is exactly what `sheetStartOffset` compensates for.
         holeTrigger = ScrollTrigger.create({
           id: 'signoff-horizon-hole',
-          trigger: frame,
-          pin: true,
+          trigger: flyerEls.invite,
+          pin: frame,
           pinSpacing: true,
           anticipatePin: 1,
-          start: () => `bottom bottom-=${scene?.seam ?? 0}`,
+          start: () => triggerLine(scene?.triggerInset ?? 0),
           end: () => `+=${Math.max(1, scene?.holePinDistance ?? 1)}`,
           invalidateOnRefresh: true,
           onRefreshInit: prepareMeasure,
           onRefresh: resync,
         });
 
-        // 2 · THE SHEET, for the last leg of the same hold, and the scrub.
+        // 2 · THE SHEET, on the same line for the same distance, and the scrub.
         // `pinType: 'fixed'` (not GSAP's default transform pin) because the
         // sheet is the containing block of the overlay canvas and of both
         // flyers: a transform there would reparent every absolute child.
@@ -403,12 +426,16 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           onUpdate: () => applyFrame(playhead.progress),
           scrollTrigger: {
             id: 'signoff-horizon',
-            trigger: sheet,
-            pin: true,
+            // The SAME trigger element and the SAME screen line as the hole's
+            // pin, offset by the pin distance the hole's spacer reserved above
+            // the sheet. Two pins, one hold: they engage together, they let go
+            // together, and nothing between them is left to time.
+            trigger: flyerEls.invite,
+            pin: sheet,
             pinType: 'fixed',
             pinSpacing: true,
             anticipatePin: 1,
-            start: () => `bottom bottom-=${scene?.seam ?? 0}`,
+            start: () => triggerLine(scene?.sheetStartOffset ?? 0),
             end: () => `+=${Math.max(1, scene?.sheetPinDistance ?? 1)}`,
             scrub: 0.6,
             invalidateOnRefresh: true,
@@ -428,8 +455,8 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
         // The capture is armed well before it is needed: html2canvas plus the
         // font embedding is hundreds of milliseconds of work, and the sheet must
         // be frozen at rest for all of it. Arming at four seams below the fold
-        // buys roughly a viewport of scroll on top of the hole's handoff, so a
-        // fast fling still arrives after the frozen frame is ready instead of
+        // buys roughly a viewport of scroll on top of the hole's first leg, so
+        // a fast fling still arrives after the frozen frame is ready instead of
         // catching the fall mid-capture.
         armTrigger = ScrollTrigger.create({
           id: 'signoff-horizon-arm',
@@ -461,7 +488,11 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             previous.frameHeight !== scene.frameHeight ||
             previous.tail !== scene.tail ||
             previous.collapsible !== scene.collapsible ||
-            previous.handoff !== scene.handoff ||
+            previous.rise !== scene.rise ||
+            previous.belowTitle !== scene.belowTitle ||
+            previous.triggerInset !== scene.triggerInset ||
+            previous.degraded !== scene.degraded ||
+            previous.sheetStartOffset !== scene.sheetStartOffset ||
             previous.sheetPinDistance !== scene.sheetPinDistance;
           if (moved) {
             cancelAnimationFrame(refreshFrame);

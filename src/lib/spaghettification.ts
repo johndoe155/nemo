@@ -38,6 +38,109 @@ export const phase = (p: number, a: number, b: number): number =>
   b <= a ? (p >= b ? 1 : 0) : clamp01((p - a) / (b - a));
 
 /* ---------------------------------------------------------------------------
+   WHERE THE HOLD BEGINS — one art-directed composition.
+
+   The pin is not triggered by the black hole's own box but by the frame the
+   reader is meant to be looking at when the screen locks: the hole at the top
+   of the viewport and the WHOLE "ENTER THE NEMOVERSE" headline at the bottom,
+   with the CTA still below the fold. The line that produces that composition is
+   the headline's own bottom edge, parked `titleAir` px above the bottom of the
+   viewport; where the hole lands is then a consequence of the document, not a
+   second condition to negotiate.
+
+   Everything here is a pure function of measured document distances, because
+   the composition is scroll-invariant: three boxes in a column, one viewport.
+
+     frameBottom ──`rise`──▶ titleBottom ──`belowTitle`──▶ sheet hem
+
+   `rise + belowTitle` is the whole distance from the hole to the hem, kept
+   split in two because only the second half belongs to the sheet.
+--------------------------------------------------------------------------- */
+
+/** Air left under the headline when the hold begins, as a fraction of the
+ * viewport: 40px on the 720px-tall reference framing ≈ 5.5%. */
+export const TITLE_AIR_RATIO = 0.055;
+
+/** Never so tight that the headline kisses the fold on a short viewport. */
+export const TITLE_AIR_MIN = 24;
+
+/** Never so loose that the CTA climbs into view: 42px is the invitation's own
+ * top margin (`.signoff__actions { margin-top: 2.6rem }`), so at this cap the
+ * button's top edge sits exactly on the fold — still below it, as the reference
+ * framing shows. */
+export const TITLE_AIR_MAX = 42;
+
+/** The resolved air under the headline for a given viewport height. */
+export function titleAir(viewport: number): number {
+  if (!Number.isFinite(viewport) || viewport <= 0) return TITLE_AIR_MIN;
+  const air = viewport * TITLE_AIR_RATIO;
+  return Math.round(Math.min(TITLE_AIR_MAX, Math.max(TITLE_AIR_MIN, air)));
+}
+
+/** Whether the reference framing can hold the hole on screen at all. `rise` is
+ * the document distance from the frame's bottom edge to the headline's bottom
+ * edge: if that alone eats the viewport, the hole has already scrolled off the
+ * top by the time the headline arrives, and there is nothing to pin in view. */
+export function framingHolds(viewport: number, air: number, rise: number): boolean {
+  return Number.isFinite(viewport) && Number.isFinite(air) && Number.isFinite(rise)
+    && rise > 0 && rise < viewport - air;
+}
+
+/** How far above the bottom of the viewport the trigger line sits: the
+ * headline's bottom edge in the reference framing, or the frame's bottom edge
+ * one seam up in the degraded one — expressed on the same element (the
+ * headline), so both pins share one trigger and one screen line. Negative means
+ * the headline is still below the fold when the hold begins, which is exactly
+ * what hole-first looks like. */
+export function triggerInset(input: {
+  degraded: boolean;
+  air: number;
+  seam: number;
+  rise: number;
+}): number {
+  const { degraded, air, seam, rise } = input;
+  return degraded ? seam - rise : air;
+}
+
+/** The pinned frame's top edge in viewport px, for as long as the hold lasts.
+ * Scroll-invariant, which is why the scene can be measured before either pin
+ * engages: the trigger line parks the headline's bottom `inset` above the fold,
+ * so the frame hangs exactly one composition (`frameHeight + rise`) above that
+ * line. It is normally NEGATIVE — the stage is 76vh tall and the invitation
+ * block below it is a third of a viewport, so the hole's masked crown is above
+ * the fold and its disc sits in the upper third of the screen: the reference
+ * framing, to the pixel. */
+export function parkedFrameTop(
+  viewport: number,
+  inset: number,
+  frameHeight: number,
+  rise: number,
+): number {
+  return viewport - inset - frameHeight - rise;
+}
+
+/** Where the sheet's hem parks: `belowTitle` below the trigger line, which in
+ * the reference framing is below the fold — the CTA is still off-screen when
+ * the hold begins, as the reference framing shows it. */
+export function parkedHem(viewport: number, inset: number, belowTitle: number): number {
+  return viewport - inset + belowTitle;
+}
+
+/** The sheet pin's start offset on the shared trigger element.
+ *
+ * The hole's pin reserves its whole pin distance in the document above the
+ * sheet — that is what `pinSpacing` does, and it is what makes the hole's
+ * release seamless — so by the time GSAP measures the sheet's trigger, every
+ * box below the hole (the headline included) already sits that much lower.
+ * Asking for the trigger line plainly would land the sheet's pin one whole pin
+ * distance late: the hole would let go at the exact moment the sheet took hold,
+ * and the reader would watch it drift for the entire fall. Subtracting the
+ * reservation puts both pins back on the one screen line they share. */
+export function sheetStartOffset(inset: number, reservedPin: number): number {
+  return inset - reservedPin;
+}
+
+/* ---------------------------------------------------------------------------
    The infall — the global pull toward the singularity.
 
    The frozen frame implements this as a radial remap: a fragment at radius `r`
@@ -168,15 +271,19 @@ export const SPACER_PAD = 1;
 export const MIN_RELEASE_SLACK = 24;
 
 /** Scroll left at the end of the consumption, before the compensation spends
- * any of it: the curtain's own height, minus the seam of air the sheet's hem is
- * parked above the bottom of the viewport. */
-export function curtainSlack(tail: number, seam: number): number {
-  return tail - seam + SPACER_PAD;
+ * any of it: the curtain's own height, adjusted for where the sheet's hem parks.
+ *
+ * `hemInset` is the hem's distance above the bottom of the viewport for as long
+ * as the pin holds — positive when it parks above the fold, NEGATIVE when the
+ * reference framing leaves it below it (the CTA still off-screen at the
+ * trigger), which is scroll the curtain gets to rise into for free. */
+export function curtainSlack(tail: number, hemInset: number): number {
+  return tail - hemInset + SPACER_PAD;
 }
 
 /** How much of the sheet's rest height the document can afford to lose. */
-export function collapsibleHeight(restHeight: number, tail: number, seam: number): number {
-  return Math.max(0, Math.min(restHeight, curtainSlack(tail, seam) - MIN_RELEASE_SLACK));
+export function collapsibleHeight(restHeight: number, tail: number, hemInset: number): number {
+  return Math.max(0, Math.min(restHeight, curtainSlack(tail, hemInset) - MIN_RELEASE_SLACK));
 }
 
 /** The spacer's box at `progress` (the smoothed playhead, which owns everything

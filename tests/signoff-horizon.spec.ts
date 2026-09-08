@@ -88,6 +88,7 @@ const readScene = (page: Page) => page.evaluate(() => {
   };
   const holeTrigger = byId('signoff-horizon-hole');
   const sheetTrigger = byId('signoff-horizon');
+  const inviteEl = document.querySelector('[data-horizon-item="invite"]');
   return {
     viewport: window.innerHeight,
     scrollY: window.scrollY,
@@ -125,12 +126,17 @@ const readScene = (page: Page) => page.evaluate(() => {
       arm: byId('signoff-horizon-arm') ? { start: byId('signoff-horizon-arm')!.start } : null,
       pinIsFrame: holeTrigger?.pin === frame,
       pinIsSheet: sheetTrigger?.pin === sheet,
+      // Both pins are driven by the headline's bottom edge: one screen line, one
+      // composition, no handover to time between them.
+      triggerIsInvite: holeTrigger?.trigger === inviteEl && sheetTrigger?.trigger === inviteEl,
     },
     flyers: (['[data-horizon-item="invite"]', '[data-horizon-item="cta"]'] as const).map((selector) => {
       const el = document.querySelector<HTMLElement>(selector)!;
       const box = el.getBoundingClientRect();
       return {
         selector,
+        top: box.top,
+        bottom: box.bottom,
         centre: { x: box.left + box.width / 2, y: box.top + box.height / 2 },
         width: box.width,
         height: box.height,
@@ -261,56 +267,82 @@ for (const status of ['booting', 'unsupported', 'error']) {
    Requirement 1 — the black hole is the pinned subject.
    ======================================================================== */
 
-test('the pin belongs to the black hole: fully in view, held through the whole consumption', async ({ page }) => {
+test('the pin belongs to the black hole: the reference framing, held through the whole consumption', async ({ page }) => {
   await open(page);
   await page.waitForFunction(() => Boolean(window.horizonFixture.ScrollTrigger.getById('signoff-horizon-hole')));
 
-  // The hole's pin starts when the hole is FULLY in view: its bottom edge one
-  // resolved seam above the bottom of the viewport, its top edge on screen.
+  // The hold begins on the REFERENCE FRAMING: the first scroll position where
+  // the viewport has the black hole AND the whole "ENTER THE NEMOVERSE"
+  // headline in it at once. Jump to the hole trigger's own start line.
   await page.evaluate(() => {
     const trigger = window.horizonFixture.ScrollTrigger.getById('signoff-horizon-hole')!;
     window.scrollTo({ top: trigger.start, behavior: 'instant' });
   });
   await page.waitForTimeout(200);
-  const atHoleStart = await readScene(page);
-  expect(atHoleStart.pins.pinIsFrame).toBe(true);
-  expect(atHoleStart.pins.pinIsSheet).toBe(true);
-  expect(atHoleStart.pins.hole!.active).toBe(true);
-  expect(Math.abs(atHoleStart.frame.bottom - (atHoleStart.viewport - atHoleStart.seam))).toBeLessThan(1.5);
-  expect(atHoleStart.frame.top).toBeGreaterThanOrEqual(-0.5);
-  expect(atHoleStart.frame.height).toBeGreaterThan(0);
-  // The sheet has not reached its own pin line yet: its pin starts one handoff
-  // (frame bottom → sheet hem) later, and the hole is already holding.
-  expect(atHoleStart.sheet.bottom).toBeGreaterThan(atHoleStart.viewport - atHoleStart.seam - 1.5);
-  expect(atHoleStart.pins.sheet!.active).toBe(false);
-  expect(atHoleStart.pins.arm!.start).toBeLessThan(atHoleStart.pins.hole!.start);
+  const atStart = await readScene(page);
+  const air = await page.evaluate(async () => {
+    const field = await import('/src/lib/spaghettification.ts');
+    return field.titleAir(window.innerHeight);
+  });
+  const inviteBox = atStart.flyers.find((f) => f.selector === invite)!;
+  const ctaBox = atStart.flyers.find((f) => f.selector === cta)!;
 
-  // The handoff: the sheet's pin starts on the SAME screen line the hole has
-  // been holding, so the two pins are one continuous hold.
-  await scrollProgress(page, 0);
-  const atSheetStart = await readScene(page);
-  expect(Math.abs(atSheetStart.sheet.bottom - (atSheetStart.viewport - atSheetStart.seam))).toBeLessThan(1.5);
-  expect(Math.abs(atSheetStart.frame.bottom - (atSheetStart.viewport - atSheetStart.seam))).toBeLessThan(1.5);
-  expect(Math.abs(atSheetStart.frame.bottom - atHoleStart.frame.bottom)).toBeLessThan(0.5);
-  expect(atSheetStart.pins.hole!.active).toBe(true);
-  expect(atSheetStart.pins.sheet!.active).toBe(true);
-  expect(atSheetStart.pins.hole!.end).toBe(atSheetStart.pins.sheet!.end);
-  expect(atSheetStart.pins.sheet!.start).toBeGreaterThan(atSheetStart.pins.hole!.start);
+  // Requirement 1: the black hole — not the text, not the button — is the
+  // pinned subject, and both pins are driven by the headline's bottom edge.
+  expect(atStart.pins.pinIsFrame).toBe(true);
+  expect(atStart.pins.pinIsSheet).toBe(true);
+  expect(atStart.pins.triggerIsInvite).toBe(true);
+  expect(atStart.pins.hole!.active).toBe(true);
+  expect(atStart.frame.height).toBeGreaterThan(0);
 
-  // The hole does not move for the whole fall, while the scroll does.
-  const frameTops: number[] = [atSheetStart.frame.top];
-  const scrolls: number[] = [atSheetStart.scrollY];
-  for (const progress of [0.25, 0.5, 0.75, 1]) {
+  // The composition on screen at the trigger: the headline's bottom edge `air`
+  // px above the fold and its top edge on screen (the WHOLE headline, which is
+  // what the framing is specified on); the CTA still below the fold; the hole
+  // above the headline with the seam gradient — not the sheet — between them.
+  expect(Math.abs(inviteBox.bottom - (atStart.viewport - air))).toBeLessThan(1.5);
+  expect(inviteBox.top).toBeGreaterThanOrEqual(-0.5);
+  expect(inviteBox.height).toBeGreaterThan(0);
+  // The CTA's own top margin is 2.6rem and `air` is capped at 42px, so the
+  // button's top edge lands on the fold, never above it.
+  expect(ctaBox.top).toBeGreaterThanOrEqual(atStart.viewport - 2);
+  expect(atStart.sheet.bottom).toBeGreaterThan(atStart.viewport);
+  expect(atStart.frame.bottom).toBeLessThanOrEqual(inviteBox.top);
+  expect(atStart.frame.bottom).toBeGreaterThan(0);
+  // The warp has not begun: this is the frame the reader is meant to see.
+  await expect(page.locator(root)).toHaveAttribute('data-horizon-progress', '0.0000');
+
+  // Both pins engage on that one line and let go on one scroll pixel, so the
+  // hold is continuous: no gap, no double-pin, no handover to time.
+  expect(atStart.pins.sheet!.active).toBe(true);
+  expect(Math.abs(atStart.pins.sheet!.start - atStart.pins.hole!.start)).toBeLessThan(0.5);
+  expect(Math.abs(atStart.pins.sheet!.end - atStart.pins.hole!.end)).toBeLessThan(0.5);
+  expect(atStart.pins.arm!.start).toBeLessThan(atStart.pins.hole!.start);
+
+  // Requirements 2 and 3: the hole does not move by one pixel for the whole
+  // fall, while the scroll does — and the sheet holds the screen with it, so
+  // the only thing that changes is the warp.
+  const frameTops: number[] = [atStart.frame.top];
+  const frameBottoms: number[] = [atStart.frame.bottom];
+  const sheetTops: number[] = [atStart.sheet.top];
+  const scrolls: number[] = [atStart.scrollY];
+  for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
     await scrollProgress(page, progress);
     const scene = await readScene(page);
     frameTops.push(scene.frame.top);
+    frameBottoms.push(scene.frame.bottom);
+    sheetTops.push(scene.sheet.top);
     scrolls.push(scene.scrollY);
     expect(scene.pins.hole!.active).toBe(true);
-    expect(Math.abs(scene.frame.bottom - (scene.viewport - scene.seam))).toBeLessThan(1.5);
+    expect(scene.pins.sheet!.active).toBe(true);
+    // The singularity the invitation falls into is the parked hole's centre,
+    // above the sheet: the pull is upward, into the hole, for the whole fall.
+    expect(scene.frame.centre.y).toBeLessThan(scene.sheet.top);
   }
-  const run = atSheetStart.pins.sheet!.end - atSheetStart.pins.sheet!.start;
+  const run = atStart.pins.sheet!.end - atStart.pins.sheet!.start;
   expect(scrolls.at(-1)! - scrolls[0]).toBeCloseTo(run, 0);
   for (const top of frameTops) expect(Math.abs(top - frameTops[0])).toBeLessThan(1.5);
+  for (const bottom of frameBottoms) expect(Math.abs(bottom - frameBottoms[0])).toBeLessThan(1.5);
+  for (const top of sheetTops) expect(Math.abs(top - sheetTops[0])).toBeLessThan(1.5);
 
   // Only when the consumption is complete do BOTH pins let go, and the reader
   // can scroll on into the curtain footer.
@@ -324,6 +356,41 @@ test('the pin belongs to the black hole: fully in view, held through the whole c
   expect(released.pins.hole!.active).toBe(false);
   expect(released.pins.sheet!.active).toBe(false);
   expect(released.scrollY).toBeGreaterThan(scrolls.at(-1)!);
+});
+
+test('the pin lets go where it was holding: no jump at the release', async ({ page }) => {
+  await open(page);
+  await scrollProgress(page, 1);
+  const held = await readScene(page);
+  expect(held.pins.hole!.active).toBe(true);
+  const parkedTop = held.frame.top;
+
+  // pinSpacing reserves the pin distance below the frame, and GSAP pushes the
+  // released frame down into that reservation by exactly the same distance, so
+  // the hole's flow position at the release IS the position it was parked at.
+  // Crossing the end has to read as ordinary scrolling — one pixel of motion per
+  // pixel of scroll — and not as a teleport of the whole pin distance.
+  const jump = await page.evaluate(async () => {
+    const trigger = window.horizonFixture.ScrollTrigger.getById('signoff-horizon-hole')!;
+    const frame = document.querySelector<HTMLElement>('.bh-frame')!;
+    const read = () => ({ top: frame.getBoundingClientRect().top, scroll: window.scrollY });
+    window.scrollTo({ top: trigger.end - 1, behavior: 'instant' });
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const before = read();
+    window.scrollTo({ top: trigger.end + 60, behavior: 'instant' });
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const after = read();
+    return {
+      scrolled: after.scroll - before.scroll,
+      moved: before.top - after.top,
+      active: trigger.isActive,
+    };
+  });
+  expect(jump.active).toBe(false);
+  expect(Math.abs(jump.scrolled - 61)).toBeLessThan(2);
+  expect(Math.abs(jump.moved - jump.scrolled)).toBeLessThan(3);
+  // And it left from where the hold put it: high on screen, above the sheet.
+  expect(parkedTop).toBeLessThan(held.sheet.top);
 });
 
 test('one snapshot/texture; reversible scrub; geometric full consumption', async ({ page }) => {
@@ -348,7 +415,7 @@ test('one snapshot/texture; reversible scrub; geometric full consumption', async
     expect(parseMatrix(flyer.transform)).toEqual([1, 0, 0, 1, 0, 0]);
   }
 
-  // The overlay covers the sheet plus the measured veil of seam above it, so a
+  // The overlay covers the sheet plus the measured veil of headroom above it,
   // strand pulled past the sheet's top edge is not clipped mid-fall.
   const canvasBox = await page.locator(overlay).boundingBox();
   const sheetBox = await page.locator(root).boundingBox();
@@ -532,18 +599,23 @@ test('the gap from the sheet hem to the end of the document never shrinks', asyn
   // uses, fed the scene as measured in this browser. The assertions below are
   // therefore a check that the DOM implements the closed form — not a second,
   // independently guessed set of numbers.
-  const model = await page.evaluate(async ({ heights, restHeight, tail, seam }) => {
+  // Where the hem parks, measured off the pinned sheet: the reference framing
+  // leaves it BELOW the fold (the CTA still off-screen at the trigger), so this
+  // is negative — and it is scroll the curtain gets to rise into for free.
+  const hemInset = rest.viewport - rest.sheet.bottom;
+  expect(hemInset).toBeLessThan(0);
+  const model = await page.evaluate(async ({ heights, restHeight, tail, hemInset }) => {
     const field = await import('/src/lib/spaghettification.ts');
-    const collapsible = field.collapsibleHeight(restHeight, tail, seam);
+    const collapsible = field.collapsibleHeight(restHeight, tail, hemInset);
     return {
       collapsible,
       pad: field.SPACER_PAD,
       minSlack: field.MIN_RELEASE_SLACK,
       heights: heights.map((p: number) => field.sheetHeightAt(p, restHeight, collapsible)),
       slack: heights.map((p: number) =>
-        field.SPACER_PAD + tail - seam - collapsible * field.collapseAt(p)),
+        field.SPACER_PAD + tail - hemInset - collapsible * field.collapseAt(p)),
     };
-  }, { heights: progressSamples, restHeight: rest.sheet.height, tail: rest.tail, seam: rest.seam });
+  }, { heights: progressSamples, restHeight: rest.sheet.height, tail: rest.tail, hemInset });
 
   const samples: Array<{
     hemToDocEnd: number;
@@ -648,11 +720,15 @@ test('a short curtain caps the collapse instead of borrowing scroll', async ({ p
   expect(Math.abs(hemToCurtainWindow(end) - 1)).toBeLessThan(2.5);
   // The sheet keeps a stub of exactly the unaffordable remainder: the allowance
   // was capped, the physics were not fudged.
-  const capped = await page.evaluate(async ({ restHeight, tail, seam }) => {
+  const capped = await page.evaluate(async ({ restHeight, tail, hemInset }) => {
     const field = await import('/src/lib/spaghettification.ts');
-    const collapsible = field.collapsibleHeight(restHeight, tail, seam);
+    const collapsible = field.collapsibleHeight(restHeight, tail, hemInset);
     return { collapsible, height: field.sheetHeightAt(1, restHeight, collapsible) };
-  }, { restHeight: rest.sheet.height, tail: end.tail, seam: end.seam });
+  }, {
+    restHeight: rest.sheet.height,
+    tail: end.tail,
+    hemInset: rest.viewport - rest.sheet.bottom,
+  });
   expect(capped.collapsible).toBeLessThan(rest.sheet.height);
   expect(capped.collapsible).toBeGreaterThan(0);
   expect(Math.abs(end.sheet.height - capped.height)).toBeLessThan(1.5);
@@ -961,7 +1037,7 @@ test('WebGL2 pixels agree with an independent CPU port of both shader stages', a
 
     const warp = createEventHorizonWarp(source, () => {});
     const gl = warp.canvas.getContext('webgl2')!;
-    // Two overlay boxes: one flush with the sheet, one with a veil of seam above
+    // Two overlay boxes: one flush with the sheet, one with a veil of headroom
     // it, so the snapshot's sub-rectangle offset is exercised too.
     for (const geometry of [
       { width: 512, height: 320, anchorX: 256, anchorY: 20, seam: 60, veil: 0 },

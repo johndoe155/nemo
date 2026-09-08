@@ -24,15 +24,23 @@ import {
   fallAt,
   flyerFrameAt,
   flyerTransform,
+  framingHolds,
   horizonRadiusAtProgress,
   infallAt,
   overlayMixAt,
   phase,
+  parkedFrameTop,
+  parkedHem,
   sheetHeightAt,
+  sheetStartOffset,
   spacerBoxAt,
   swirlAt,
   tidalAt,
   tidalGainAt,
+  titleAir,
+  triggerInset,
+  TITLE_AIR_MAX,
+  TITLE_AIR_MIN,
   type FlyerId,
   type Point,
 } from '../../src/lib/spaghettification.ts';
@@ -62,31 +70,41 @@ const assertNonIncreasing = (xs: number[], f: (x: number) => number, what: strin
 
 const distance = (a: Point, b: Point): number => Math.hypot(a.x - b.x, a.y - b.y);
 
-/* A pinned scene at 1512×900: a 475px sheet whose singularity lands 133px
- * below the sheet's own top edge, i.e. inside it. Flyer rest positions are in
- * the same space — the field is translation-invariant, so it does not matter
- * whether that space is the viewport or the sheet. */
+/* A pinned scene at 1280×900, exactly as the reference framing builds it: a
+ * 383px sheet whose hem parks 102px BELOW the fold (the CTA still off-screen at
+ * the trigger), and whose singularity — the parked black hole's centre — lands
+ * 430px ABOVE the sheet's own top edge. The fall is therefore upward, out of the
+ * sheet and into the hole, and the veil is the headroom that buys. Flyer rest
+ * positions are in the same space — the field is translation-invariant, so it
+ * does not matter whether that space is the viewport or the sheet. */
 const SCENE = {
-  restHeight: 475,
-  width: 1512,
+  restHeight: 383,
+  width: 1280,
   seam: 90,
   tail: 700,
-  pinDistance: 499,
-  veil: 28,
+  pinDistance: 440,
+  /** The headline's inset above the fold at the trigger… */
+  inset: 42,
+  /** …and how far the sheet's hem sits below the headline's bottom edge. */
+  belowTitle: 144,
+  /** The hem's own inset: negative, i.e. parked below the fold. */
+  hemInset: 42 - 144,
+  anchorY: -430,
+  veil: 430 + VEIL_MARGIN,
 };
 const EXTENT = {
   width: SCENE.width,
   height: SCENE.restHeight,
   anchorX: SCENE.width / 2,
-  anchorY: 133,
+  anchorY: SCENE.anchorY,
   veil: SCENE.veil,
   seam: SCENE.seam,
 };
 const SINGULARITY: Point = { x: EXTENT.anchorX, y: EXTENT.anchorY };
 const FLYERS: Record<FlyerId | 'offAxis', Point> = {
-  invite: { x: 756, y: 200 }, // on the pull axis, nearest the singularity
-  cta: { x: 756, y: 380 }, // on the axis, the far side of it
-  offAxis: { x: 400, y: 300 }, // off axis: exercises the swirl and the anisotropy
+  invite: { x: 640, y: 145 }, // on the pull axis, nearest the singularity
+  cta: { x: 640, y: 300 }, // on the axis, the far side of it
+  offAxis: { x: 400, y: 220 }, // off axis: exercises the swirl and the anisotropy
 };
 const IDS = [...FLYER_IDS, 'offAxis'] as const;
 
@@ -401,9 +419,11 @@ test('the horizon grows from a seed to every corner of the overlay', () => {
   );
   assert.ok(cover >= SCENE.width / 2, 'a sheet-wide sheet needs a sheet-wide horizon');
   // The veil is headroom above the sheet for a strand that overshoots its top
-  // edge: nothing while the singularity is inside the sheet, and the margin on
-  // top of whatever sticks out above it.
-  assert.equal(SCENE.veil, VEIL_MARGIN, 'a singularity inside the sheet needs only the margin');
+  // edge: the margin alone while the singularity is inside the sheet, and the
+  // margin plus however far the singularity sits above it otherwise — which is
+  // the reference framing's case, and why the fall has room to travel upward.
+  assert.equal(SCENE.veil, Math.max(0, -SCENE.anchorY) + VEIL_MARGIN);
+  assert.ok(SCENE.veil > SCENE.restHeight * 0.5, 'the strands need room above the sheet');
   assert.ok(MIN_SHEET_RUN > 0, 'the fall needs a minimum run to read as a fall');
   // Every flyer's own radius is covered once the horizon has finished growing.
   for (const id of IDS) {
@@ -424,48 +444,70 @@ const VIEWPORT = 900;
 const slackAt = (
   p: number,
   raw: number,
-  scene: { restHeight: number; tail: number; seam: number; pinDistance: number; collapsible: number },
+  scene: {
+    restHeight: number;
+    tail: number;
+    inset: number;
+    belowTitle: number;
+    pinDistance: number;
+    collapsible: number;
+  },
 ): number => {
   const spacer = spacerBoxAt(p, raw, scene.restHeight, scene.pinDistance, scene.collapsible);
   const docHeight = ABOVE + spacer.height + scene.tail;
-  const start = ABOVE + scene.restHeight - VIEWPORT + scene.seam;
+  // The pin engages on the shared trigger line: the headline's bottom edge
+  // `inset` above the fold, i.e. `belowTitle` above the sheet's hem.
+  const start = ABOVE + scene.restHeight - scene.belowTitle - (VIEWPORT - scene.inset);
   return docHeight - VIEWPORT - (start + scene.pinDistance * raw);
 };
 
-test('the curtain slack is the tail minus the seam, plus a pixel of pad', () => {
+test('the curtain slack is the tail, adjusted for where the hem parks, plus a pixel of pad', () => {
   assert.equal(SPACER_PAD, 1);
-  assert.equal(curtainSlack(SCENE.tail, SCENE.seam), SCENE.tail - SCENE.seam + SPACER_PAD);
+  assert.equal(curtainSlack(SCENE.tail, SCENE.hemInset), SCENE.tail - SCENE.hemInset + SPACER_PAD);
+  // The reference framing parks the hem BELOW the fold (the CTA still
+  // off-screen at the trigger), which is scroll the curtain gets for free.
+  assert.ok(SCENE.hemInset < 0);
+  assert.ok(curtainSlack(SCENE.tail, SCENE.hemInset) > SCENE.tail + SPACER_PAD);
   assert.ok(MIN_RELEASE_SLACK > 0);
 });
 
 test('the collapse allowance never exceeds what the document can pay back', () => {
   assert.equal(
-    collapsibleHeight(SCENE.restHeight, SCENE.tail, SCENE.seam),
+    collapsibleHeight(SCENE.restHeight, SCENE.tail, SCENE.hemInset),
     SCENE.restHeight,
-    'a tall curtain pays for the whole fall',
+    'a hem below the fold pays for the whole fall',
   );
-  const capped = collapsibleHeight(SCENE.restHeight, SCENE.seam + MIN_RELEASE_SLACK + 200, SCENE.seam);
+  // A hem parked ABOVE the fold spends scroll instead, and the allowance has to
+  // shrink with it — all the way down to refusing the effect outright.
+  const aboveFold = 120;
+  const capped = collapsibleHeight(
+    SCENE.restHeight,
+    aboveFold + MIN_RELEASE_SLACK + 200,
+    aboveFold,
+  );
   assert.ok(capped > 0 && capped < SCENE.restHeight, `expected a capped allowance, got ${capped}`);
   assert.equal(
-    collapsibleHeight(SCENE.restHeight, SCENE.seam + MIN_RELEASE_SLACK - 1, SCENE.seam),
+    collapsibleHeight(SCENE.restHeight, aboveFold + MIN_RELEASE_SLACK - 1, aboveFold),
     0,
     'an unaffordable curtain must refuse the effect entirely',
   );
-  for (const tail of grid(SCENE.seam, 2000, 60)) {
-    const collapsible = collapsibleHeight(SCENE.restHeight, tail, SCENE.seam);
-    assert.ok(collapsible >= 0 && collapsible <= SCENE.restHeight);
-    // Zero means the effect is refused outright (nothing is removed, nothing has
-    // to be paid back). Anything else must leave the release slack intact.
-    assert.ok(
-      collapsible === 0 ||
-        curtainSlack(tail, SCENE.seam) - collapsible >= MIN_RELEASE_SLACK - 1e-9,
-      `tail ${tail}: only ${curtainSlack(tail, SCENE.seam) - collapsible}px of scroll would survive`,
-    );
+  for (const hemInset of [aboveFold, SCENE.seam, 0, SCENE.hemInset]) {
+    for (const tail of grid(0, 2000, 60)) {
+      const collapsible = collapsibleHeight(SCENE.restHeight, tail, hemInset);
+      assert.ok(collapsible >= 0 && collapsible <= SCENE.restHeight);
+      // Zero means the effect is refused outright (nothing is removed, nothing
+      // has to be paid back). Anything else must leave the release slack intact.
+      assert.ok(
+        collapsible === 0 ||
+          curtainSlack(tail, hemInset) - collapsible >= MIN_RELEASE_SLACK - 1e-9,
+        `tail ${tail} hemInset ${hemInset}: only ${curtainSlack(tail, hemInset) - collapsible}px of scroll would survive`,
+      );
+    }
   }
 });
 
 test('the clip window tracks the sheet hem by exactly one pixel, at any scrub lag', () => {
-  const collapsible = collapsibleHeight(SCENE.restHeight, SCENE.tail, SCENE.seam);
+  const collapsible = collapsibleHeight(SCENE.restHeight, SCENE.tail, SCENE.hemInset);
   for (const raw of [0, 0.2, 0.5, 0.999, 1]) {
     for (const p of grid(0, 1, 80)) {
       const spacer = spacerBoxAt(p, raw, SCENE.restHeight, SCENE.pinDistance, collapsible);
@@ -489,8 +531,8 @@ test('the clip window tracks the sheet hem by exactly one pixel, at any scrub la
 });
 
 test('the document never runs short while the sheet is consumed', () => {
-  for (const tail of [SCENE.tail, 620, SCENE.seam + MIN_RELEASE_SLACK + 40]) {
-    const collapsible = collapsibleHeight(SCENE.restHeight, tail, SCENE.seam);
+  for (const tail of [SCENE.tail, 620, MIN_RELEASE_SLACK + 40]) {
+    const collapsible = collapsibleHeight(SCENE.restHeight, tail, SCENE.hemInset);
     const scene = { ...SCENE, tail, collapsible };
     let worst = Infinity;
     let worstAt = '';
@@ -500,7 +542,7 @@ test('the document never runs short while the sheet is consumed', () => {
       for (const lag of [-0.4, -0.1, 0, 0.1, 0.4]) {
         const p = clamp01(raw + lag);
         const slack = slackAt(p, raw, scene);
-        const closed = SPACER_PAD + tail - SCENE.seam - collapsible * collapseAt(p);
+        const closed = SPACER_PAD + tail - SCENE.hemInset - collapsible * collapseAt(p);
         assert.ok(
           Math.abs(slack - closed) < 1e-6,
           `tail=${tail} p=${p.toFixed(3)} raw=${raw.toFixed(3)}: slack ${slack} != ${closed}`,
@@ -519,7 +561,7 @@ test('the document never runs short while the sheet is consumed', () => {
 });
 
 test('after the fall the spacer parks only the pin distance', () => {
-  const collapsible = collapsibleHeight(SCENE.restHeight, SCENE.tail, SCENE.seam);
+  const collapsible = collapsibleHeight(SCENE.restHeight, SCENE.tail, SCENE.hemInset);
   const spacer = spacerBoxAt(1, 1, SCENE.restHeight, SCENE.pinDistance, collapsible);
   assert.ok(
     Math.abs(spacer.height - (SCENE.pinDistance + SPACER_PAD)) < 1e-6,
@@ -527,6 +569,117 @@ test('after the fall the spacer parks only the pin distance', () => {
   );
   assert.equal(spacer.padding, SCENE.pinDistance);
   const atRelease = slackAt(1, 1, { ...SCENE, collapsible });
-  assert.equal(atRelease, SPACER_PAD + SCENE.tail - SCENE.seam - collapsible);
+  assert.equal(atRelease, SPACER_PAD + SCENE.tail - SCENE.hemInset - collapsible);
   assert.ok(atRelease > 0, 'the pin must not end on a clamped document');
+});
+
+/* ==========================================================================
+   The reference framing — where the hold begins, and what it puts on screen.
+
+   The pin is art-directed off one composition: the black hole at the top of the
+   viewport, the whole "ENTER THE NEMOVERSE" headline at the bottom, the CTA
+   still below the fold. These are the numbers that composition is made of.
+   ======================================================================== */
+
+test('the air under the headline is the reference 40px, and never lifts the CTA into view', () => {
+  assert.equal(titleAir(720), 40); // the reference framing, measured off a 720px viewport
+  assert.equal(titleAir(900), TITLE_AIR_MAX);
+  assert.equal(titleAir(2160), TITLE_AIR_MAX);
+  assert.equal(titleAir(320), TITLE_AIR_MIN);
+  assert.equal(titleAir(NaN), TITLE_AIR_MIN);
+  assert.equal(titleAir(0), TITLE_AIR_MIN);
+  for (const viewport of grid(120, 2400, 300)) {
+    const air = titleAir(viewport);
+    assert.ok(air >= TITLE_AIR_MIN && air <= TITLE_AIR_MAX, `air out of range at ${viewport}`);
+    assert.ok(Number.isInteger(air), `air is not a whole pixel at ${viewport}`);
+    // The invitation's top margin is 2.6rem = 41.6px, so at the cap the CTA's
+    // top edge lands on the fold or below it — never in view at the trigger.
+    assert.ok(air <= 42, 'the CTA would be on screen when the hold begins');
+  }
+  assertNonDecreasing(grid(120, 2400, 300), titleAir, 'titleAir');
+});
+
+test('the framing degrades to hole-first only when the hole cannot be shown at all', () => {
+  assert.ok(framingHolds(900, 42, 327)); // the fixture's real composition
+  assert.ok(framingHolds(720, 40, 312)); // the reference framing's own viewport
+  assert.ok(framingHolds(667, 37, 176)); // a phone
+  assert.ok(!framingHolds(420, 24, 420), 'the invitation block alone eats the viewport');
+  assert.ok(!framingHolds(900, 42, 858), 'the hole is off the top before the headline arrives');
+  assert.ok(!framingHolds(900, 42, 0), 'nothing between the hole and the headline to measure');
+  assert.ok(!framingHolds(NaN, 42, 327));
+
+  // The inset is expressed on the headline in BOTH framings, so one trigger
+  // element and one screen line drive both pins.
+  assert.equal(triggerInset({ degraded: false, air: 42, seam: 90, rise: 327 }), 42);
+  assert.equal(triggerInset({ degraded: true, air: 42, seam: 90, rise: 327 }), 90 - 327);
+  // Hole-first puts the frame's bottom one seam above the fold, which is the
+  // same line stated on the headline: negative, because the headline has not
+  // arrived yet.
+  const degraded = triggerInset({ degraded: true, air: 42, seam: 90, rise: 327 });
+  assert.ok(degraded < 0);
+});
+
+test('the parked composition is the reference framing: hole above, whole headline below', () => {
+  const viewport = 900;
+  const rise = 327;
+  const frameHeight = 684;
+  const belowTitle = 144;
+  const sheetHeight = 383;
+  const seam = 90;
+  const air = titleAir(viewport);
+  const inset = triggerInset({ degraded: false, air, seam, rise });
+  const frameTop = parkedFrameTop(viewport, inset, frameHeight, rise);
+  const hem = parkedHem(viewport, inset, belowTitle);
+
+  // The trigger line: the headline's bottom edge exactly `air` above the fold.
+  assert.equal(hem - belowTitle, viewport - inset);
+  // The frame hangs one composition above that line, so the hole and the
+  // headline are on screen together and the hole's centre is in the upper third.
+  assert.equal(frameTop + frameHeight + rise, viewport - inset);
+  assert.ok(frameTop + frameHeight / 2 < viewport / 2, 'the singularity is not above the middle');
+  // The hole never overlaps the sheet: the seam gradient between them is the
+  // only thing painted in the gap.
+  const sheetTop = hem - sheetHeight;
+  assert.ok(sheetTop > frameTop + frameHeight, 'the frame overlaps the pinned sheet');
+  assert.ok(sheetTop - (frameTop + frameHeight) <= seam + 24, 'the gap is wider than the seam can cover');
+  // The hem parks below the fold, so the CTA is still off-screen at the trigger.
+  assert.ok(hem > viewport);
+  // And the fall goes UP into the hole: the singularity is above the sheet.
+  assert.ok(frameTop + frameHeight / 2 < sheetTop);
+});
+
+test('the degraded framing parks the hole fully in view instead', () => {
+  const viewport = 420;
+  const rise = 400;
+  const frameHeight = 500;
+  const seam = 56;
+  const air = titleAir(viewport);
+  assert.ok(!framingHolds(viewport, air, rise));
+  const inset = triggerInset({ degraded: true, air, seam, rise });
+  const frameTop = parkedFrameTop(viewport, inset, frameHeight, rise);
+  // Hole-first: the frame's bottom edge one seam above the fold.
+  assert.equal(frameTop + frameHeight, viewport - seam);
+});
+
+test('the two pins are one hold: the same line, the same distance, the same release', () => {
+  const viewport = 900;
+  const inset = 42;
+  const reserved = 440; // the hole's pin distance, reserved above the sheet
+  const inviteBottomRest = 5000;
+  const offset = sheetStartOffset(inset, reserved);
+  assert.equal(offset, inset - reserved);
+  assert.ok(offset < 0, 'the compensation must pull the sheet\'s line earlier');
+
+  // Modelled exactly as GSAP measures it: the hole's trigger is read on the
+  // reverted (rest) document, the sheet's is read after the hole's spacer has
+  // reserved `reserved` px above it.
+  const holeStart = inviteBottomRest - (viewport - inset);
+  const sheetStart = inviteBottomRest + reserved - (viewport - offset);
+  assert.equal(sheetStart, holeStart, 'the pins do not engage on the same scroll pixel');
+  assert.equal(holeStart + reserved, sheetStart + reserved, 'the pins do not let go together');
+
+  // Without the compensation the sheet would pin one whole reservation late —
+  // the hole letting go at the exact moment the sheet took hold.
+  const uncompensated = inviteBottomRest + reserved - (viewport - inset);
+  assert.equal(uncompensated - holeStart, reserved);
 });

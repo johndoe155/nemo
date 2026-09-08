@@ -52,7 +52,7 @@ void main() {
        straight flight to the flat sampling plane.
 
    Coordinates are CSS pixels of the overlay box (y down), which covers the
-   sheet plus `veil` px of the seam above it; the snapshot itself occupies the
+   sheet plus `veil` px of headroom above it; the snapshot itself occupies the
    `uSheetOffset`/`uSheetSize` sub-rectangle of that box.
 ---------------------------------------------------------------------------- */
 const FRAGMENT = `#version 300 es
@@ -174,7 +174,7 @@ export interface EventHorizonWarp {
   dispose(): void;
 }
 
-/** The overlay box, in CSS px: the sheet plus the veil of seam above it that
+/** The overlay box, in CSS px: the sheet plus the veil of headroom above it
  * the falling glyphs are allowed to strand across. */
 export function overlayBox(geometry: SignoffHorizonGeometry): { width: number; height: number; veil: number } {
   return { width: geometry.width, height: geometry.height + geometry.veil, veil: geometry.veil };

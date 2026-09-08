@@ -72,22 +72,67 @@ farthest measured corner of the overlay, so progress = 1 consumes every texel at
 every footer size. Full consumption is horizon capture, not a final opacity fade
 over an otherwise unwarped image.
 
-## The two pins
+## The reference framing, and the two pins
 
-The pinned subject is **the black hole**, not the sign-off. Two ScrollTriggers,
-one continuous hold:
+The pinned subject is **the black hole**, not the sign-off — and the moment it
+takes hold is art-directed off one composition: the hole at the top of the
+viewport, the whole `ENTER THE NEMOVERSE` headline at the bottom, and the CTA
+still below the fold. The line that produces it is the headline's own bottom
+edge, parked `titleAir` px above the bottom of the viewport (5.5% of the
+viewport, clamped to 24–42px — and 42px is the invitation's own `2.6rem` top
+margin, which is what keeps the button off-screen at the trigger).
 
-| trigger | pins | start | distance |
-| --- | --- | --- | --- |
-| `signoff-horizon-hole` | `.bh-frame` | `bottom bottom-={seam}` — the hole fully in view, its bottom edge one resolved seam above the bottom of the viewport | `handoff + sheetPinDistance` |
-| `signoff-horizon` | `.footer.signoff` (`pinType: 'fixed'`) | the same screen line | `max(300, sheetHeight × 1.15)` |
-| `signoff-horizon-arm` | — | `bottom bottom+={seam × 4}` | one-shot capture |
+Two ScrollTriggers, one screen line, one continuous hold:
 
-`handoff` is a document-space measurement: frame bottom → sheet hem. It is how far
-the sheet has to travel to be seen at all while the hole holds still, and it is
-exactly the gap between the two pins' start lines — so the hole's pin spans both
-legs and there is no frame where neither pin holds, and none where both re-measure
-the same line. The hole does not move for the whole fall; only the sheet does.
+| trigger | trigger element | pins | start | distance |
+| --- | --- | --- | --- | --- |
+| `signoff-horizon-hole` | the headline, `[data-horizon-item="invite"]` | `.bh-frame` | `bottom bottom-={titleAir}` | `sheetPinDistance` |
+| `signoff-horizon` | the same headline | `.footer.signoff` (`pinType: 'fixed'`) | the same line, minus the hole's reservation | `max(300, sheetHeight × 1.15)` |
+| `signoff-horizon-arm` | `.bh-frame` | — | `bottom bottom+={seam × 4}` | one-shot capture |
+
+Both pins engage on the same scroll pixel and let go on the same one, so the
+viewport is completely static for the whole consumption: the hole does not drift,
+the sheet does not climb, and the only thing that moves is the warp. The
+singularity the invitation falls into is the parked frame's centre, which lands
+*above* the pinned sheet — the pull is upward, out of the sheet and into the
+hole, and the overlay's veil is the headroom that buys.
+
+**Why the sheet's start is offset.** `pinSpacing` reserves the hole's whole pin
+distance in the document above the sheet. That is what makes the hole's release
+seamless — GSAP pushes the released frame down into its own reservation by
+exactly the pin distance, so its flow position at the release is the position it
+was parked at — but it also means that by the time GSAP measures the sheet's
+trigger, every box below the hole (the headline included) already sits
+`sheetPinDistance` px lower. Asking for the reference line plainly would land the
+sheet's pin one whole pin distance late: the hole would let go at the exact
+moment the sheet took hold, and the reader would watch it drift for the entire
+fall. `sheetStartOffset` subtracts the reservation and puts both pins back on the
+one line they share. Two pins on two independently measured lines is not a
+continuous hold; it is a gap with extra steps.
+
+The same reservation is why the composition has to be measured with care: `rise`
+(frame bottom → headline bottom) crosses the spacer, so `measureSignoffScene`
+reads the reservation back off the spacer — minus the `top` offset GSAP gives the
+frame once the pin has let go, which cancels it — and subtracts it. GSAP reverts
+every pin before a refresh and re-applies them in creation order, so the hole's
+trigger, created first, always measures the rest document and the sheet's trigger
+always measures the reserved one. A `refreshPriority` on either would break that;
+neither has one.
+
+**What fits where.** The stage is `clamp(500px, 76svh, 860px)` and the invitation
+block below it is about a third of a viewport, so the composition (frame top →
+headline bottom) is taller than the viewport below roughly 1375px of height.
+Above that the hole is fully in view with air over it and the framing is exact.
+Below it the headline is still captured whole — that is the trigger, and it is
+the half of the composition the requirement is specified on — and what gives way
+is the stage's own masked crown: the top 13% of `.bh-stage` is faded to
+transparent by its mask, and at 900px the crop is ~153px against a disc that
+starts ~150px down the stage, so the disc reads whole and the crop lands at the
+top edge of the screen, which is a frame, not a cut. Only when the invitation
+block alone would eat the viewport (`rise ≥ viewport − titleAir`, i.e. the hole
+would be off-screen entirely at the trigger) does the scene degrade to hole-first
+— the frame's bottom one seam above the fold, still stated on the headline so the
+two pins share one line — and it reports that in the geometry as `degraded`.
 
 `pinType: 'fixed'` (not GSAP's default transform pin) because the sheet is the
 containing block of the overlay canvas and of both flyers: a transform there would
@@ -96,14 +141,6 @@ with a translate on a box that is also being collapsed. Both pins keep
 `pinSpacing`, `anticipatePin: 1` and `invalidateOnRefresh`, and both re-measure
 with the layout at rest (`onRefreshInit`), because the sheet's own height drives
 its pin-spacer and a collapsed sheet would park the wrong distance.
-
-The scrub is reversible and the playhead is a plain object: returning to zero
-restores real DOM paint, and revisiting the effect reuses the original frozen
-texture rather than walking the DOM again. GSAP applies its recorded pin state
-*after* the scrub tween renders for a given scroll, so the trigger's own `onUpdate`
-re-applies the frame last — otherwise the engage frame (and every re-engage on the
-way back up) would restore the sheet's rest height and leave it there until the
-next playhead change.
 
 ## The curtain compensation (the layout invariant)
 
@@ -292,14 +329,18 @@ curtain budget — including the clip-window/hem identity at arbitrary scrub lag
 the "never short" slack across a grid of fling lags. No browser, no GPU, no timing
 luck.
 
-The Playwright suite (`tests/signoff-horizon.spec.ts`, 28 tests) exercises the real
+The Playwright suite (`tests/signoff-horizon.spec.ts`, 29 tests) exercises the real
 Footer/CSS under StrictMode and covers, on top of the gates and disposal paths:
 
-- **The pin belongs to the black hole**: the hole is the pinned element, it is
-  fully in view with its bottom edge one seam above the fold when its pin starts,
-  the sheet's pin starts on that same screen line, the hole does not move while the
-  scroll travels the whole pin distance, `hole.end === sheet.end`, and both pins
-  let go only past the end.
+- **The pin belongs to the black hole**: the hole is the pinned element, both pins
+  are driven by the headline's bottom edge, and at the trigger the composition is
+  the reference framing — the headline's bottom `titleAir` px above the fold, its
+  top on screen, the CTA still below the fold, the hole above the headline with
+  the seam gradient between them, and the playhead at zero. `hole.start ===
+  sheet.start` and `hole.end === sheet.end`, the hole does not move by one pixel
+  while the scroll travels the whole pin distance, the sheet's top does not move
+  either, both pins let go only past the end, and the release itself is one pixel
+  of motion per pixel of scroll rather than a teleport of the pin distance.
 - **The consumption**: the overlay covers the sheet plus the measured veil; the
   flyers' computed matrices equal `flyerFrameAt` (translation, eigenvalues and
   stretched eigenvector) at four playheads; they converge into the point and their
@@ -331,7 +372,7 @@ Footer/CSS under StrictMode and covers, on top of the gates and disposal paths:
   all 23 Chromium browser tests of the then-current single-pin effect.
 - **2026-09-07** (sheet-only pin): production type-check clean and all 23 Chromium
   browser tests of that architecture under software WebGL2.
-- **2026-09-08** (this overhaul — black hole as the pinned subject, two-stage
+- **2026-09-08** (the overhaul — black hole as the pinned subject, two-stage
   shader, curtain compensation): `tsc -b` clean, `vite build` clean,
   `verify:blackhole` passing, and **19/19 unit tests passing**. The Playwright
   suite was rewritten for the two-pin architecture in the same pass but **could not
@@ -339,6 +380,19 @@ Footer/CSS under StrictMode and covers, on top of the gates and disposal paths:
   (`cdn.playwright.dev` is unreachable) and no system browser is installed. It is
   therefore unverified-by-execution, and the browser-side claims above describe
   what the suite asserts, not what it has been seen to pass.
+
+- **2026-09-08** (reference framing — the hold art-directed off the screenshot
+  composition, two pins on one line): `tsc -b` clean, `vite build` clean,
+  `verify:blackhole` passing, and **24/24 unit tests passing** (5 added: the air
+  schedule, the framing predicate, the trigger-line helper, the parked positions,
+  and the reservation-aware start offset, all cross-checked against the measured
+  383px sheet at 1280×900 — `hemInset −102`, `pinDistance 440`,
+  `parkedTop −153`, `anchorY −430`). The curtain budget was generalised from
+  "hem one seam above the fold" to a signed `hemInset` in the same pass, and the
+  Playwright suite was rewritten for the new geometry (29 tests, including the
+  framing assertions and the seamless-release check). It **still could not be
+  executed in this environment** for the same reason as above: no Chromium can be
+  downloaded here and no system browser is installed.
 
 Remaining manual coverage: a first browser run of the rewritten suite, native
 NVDA/VoiceOver speech output, Safari/Firefox foreignObject rendering, and a

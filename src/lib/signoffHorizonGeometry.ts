@@ -1,5 +1,11 @@
 import {
   collapsibleHeight,
+  framingHolds,
+  parkedFrameTop,
+  parkedHem,
+  sheetStartOffset,
+  titleAir,
+  triggerInset,
   type FlyerId,
   type Point,
 } from './spaghettification';
@@ -10,20 +16,22 @@ import {
 
    Two coordinate spaces matter, and they are kept apart on purpose:
 
-   · DOCUMENT space decides the two pin distances. The black hole holds the
-     screen from the moment its frame is fully in view — its bottom edge one
-     resolved seam above the bottom of the viewport — and does not let go until
-     the consumption is over. The sheet's own pin begins `handoff` pixels later,
-     which is exactly the distance from the frame's bottom to the sheet's hem:
-     how far the sheet has to travel to be seen at all while the hole holds
-     still. The hole's pin therefore spans both legs, and the handoff between
-     the two pins is one continuous hold with no gap and no double-pin.
+   · DOCUMENT space decides where the hold begins and how long it runs. Both
+     pins engage on ONE screen line — the reference framing, with the headline's
+     bottom edge parked `titleAir` px above the bottom of the viewport, the
+     whole headline in view and the black hole above it — and both let go on the
+     scroll pixel where the consumption reaches 100%. Between those two pixels
+     nothing on screen moves at all: the hole is anchored, the invitation is
+     anchored, and the only thing that changes is the warp. The pins are
+     coextensive, so there is no gap, no double-pin and no handover to time.
 
-   · VIEWPORT space decides the warp. Once both pins are engaged nothing on
-     screen moves, so the singularity's position relative to the sheet is one
-     constant for the whole fall — and it is NOT where the hole sits in the
-     document: the pinned sheet slides up over the hole's lower half, so the
-     singularity lands inside the sheet's own box.
+   · VIEWPORT space decides the warp. Once the pins are engaged nothing on screen
+     moves, so the singularity's position relative to the sheet is one constant
+     for the whole fall — and it is NOT where the hole sits in the document: the
+     pinned frame hangs high (normally with its masked crown above the fold) and
+     the pinned sheet's hem hangs BELOW the fold, with the CTA still off-screen,
+     so the singularity lands far above the sheet's own box and the overlay's
+     veil is what gives the strands room to fall upward into it.
 
    The third number is the one requirement 4 lives or dies on: `tail`, the
    curtain's own height in the flow. The consumption takes the sheet's height
@@ -69,11 +77,26 @@ export interface SignoffScene extends SignoffHorizonGeometry {
   pinnedTop: number;
   /** The flyers' rest centres, sheet-local. */
   flyers: Record<FlyerId, Point>;
-  /** Frame bottom → sheet hem: the hole's pin, up to the sheet's pin. */
-  handoff: number;
+  /** Frame bottom → headline bottom: how much document sits between the hole
+   * and the line that triggers the hold. */
+  rise: number;
+  /** Headline bottom → sheet hem: the sheet's own share of the composition. */
+  belowTitle: number;
+  /** The air parked under the headline when the hold begins. */
+  titleAir: number;
+  /** The shared trigger line, as the headline's inset above the bottom of the
+   * viewport. Negative in the degraded framing, where the headline has not
+   * arrived yet when the hole takes hold. */
+  triggerInset: number;
+  /** True when the composition is too tall for the reference framing to show
+   * the hole at all, so the hold starts on the frame's bottom edge instead. */
+  degraded: boolean;
+  /** The sheet pin's start offset on that same line, minus the pin distance the
+   * hole's spacer reserves above it (see `sheetStartOffset`). */
+  sheetStartOffset: number;
   /** How far the sheet holds the screen while it is consumed. */
   sheetPinDistance: number;
-  /** The hole's whole pin: the handoff plus the consumption. */
+  /** The hole's pin: the same span, on the same line, ending on the same pixel. */
   holePinDistance: number;
   /** The curtain's own height in the flow. */
   tail: number;
@@ -82,6 +105,10 @@ export interface SignoffScene extends SignoffHorizonGeometry {
    * a resize that re-publishes the travel has to be pushed back onto the spacer
    * by hand or the floor drifts from the sheet's hem. */
   travel: number;
+  /** The sheet's hem, as its inset above the bottom of the viewport while the
+   * pin holds. Negative in the reference framing: the hem parks below the fold,
+   * with the CTA still off-screen. */
+  hemInset: number;
   /** How much of the sheet the document can afford to lose. */
   collapsible: number;
 }
@@ -92,9 +119,10 @@ export const VEIL_MARGIN = 28;
 /** The consumption needs a minimum run to read as a fall rather than a cut. */
 export const MIN_SHEET_RUN = 300;
 
-/** Below this the two pins would be one pin: the sheet has to travel a visible
- * distance while the hole holds still, or there is no handoff to speak of. */
-export const MIN_HANDOFF = 24;
+/** The floor on `rise`: a headline sitting on top of the hole's bottom edge is
+ * not a composition anyone can read, and there would be nothing between the two
+ * pins to measure the scene from. */
+export const MIN_RISE = 24;
 
 /** The fall's length as a multiple of the sheet's own height. */
 export const SHEET_RUN_RATIO = 1.15;
@@ -109,15 +137,38 @@ export function curtainElements(): { floor: HTMLElement | null; stage: HTMLEleme
   };
 }
 
-/** GSAP re-parents a pin into its `.pin-spacer` for as long as the pin exists,
- * so this is the reliable "is this box currently held out of flow" test — and a
- * held box's rect is its PINNED position, which says nothing about the document. */
-const inFlow = (el: HTMLElement): boolean => !el.parentElement?.classList.contains('pin-spacer');
+/** A PARKED box's rect is its pinned position, which says nothing about the
+ * document. Parentage is not the test — GSAP re-parents a pin into its
+ * `.pin-spacer` for as long as the pin exists, and the spacer stays in flow the
+ * whole time, so an element can be inside a spacer and still be measurable. The
+ * resolved `position` is the honest signal: `fixed` means held on screen. */
+const parked = (el: HTMLElement): boolean => getComputedStyle(el).position === 'fixed';
+
+/** GSAP reserves the hole's whole pin distance inside its `.pin-spacer` for as
+ * long as the pin exists, and that reservation sits in the document BETWEEN the
+ * frame and the sheet. Any distance measured across it is therefore inflated by
+ * exactly that much — but the composition the hold is framed on is a REST
+ * relationship, so the reservation has to come back out. It is read off the
+ * spacer rather than remembered, because a resize can have re-published a
+ * different pin distance since the last measurement and the two have to agree
+ * or the trigger line drifts by the difference.
+ *
+ * Once the pin has let go, GSAP pushes the frame down into its own reservation
+ * (an inline `top` of exactly the pin distance) so the release is seamless; the
+ * two cancel, and this reads zero again. Zero also before the pin exists, which
+ * is when the scene is first measured. */
+function reservedPin(frame: HTMLElement, frameHeight: number): number {
+  const spacer = frame.parentElement;
+  if (!spacer || !spacer.classList.contains('pin-spacer')) return 0;
+  const pushedDown = parseFloat(getComputedStyle(frame).top) || 0;
+  const reserved = spacer.getBoundingClientRect().height - frameHeight - pushedDown;
+  return Number.isFinite(reserved) && reserved > 0 ? reserved : 0;
+}
 
 /** `previous` supplies the document-space numbers when the scene is re-measured
- * while a pin is holding: the flow relationship between the frame's bottom and
- * the sheet's hem cannot be read off two boxes that are both parked on screen,
- * and it has not changed. Everything else is re-measured for real. */
+ * while a pin is holding the screen: the flow relationship between the frame's
+ * bottom and the headline cannot be read off a box that is parked, and it has
+ * not changed. Everything else is re-measured for real. */
 export function measureSignoffScene(input: {
   sheet: HTMLElement;
   frame: HTMLElement;
@@ -139,19 +190,38 @@ export function measureSignoffScene(input: {
   const scrollY = window.scrollY;
   const hemDoc = box.bottom + scrollY;
 
-  // Both pins start on the same screen line — the frame's bottom and the sheet's
-  // hem, one seam above the bottom of the viewport — so the distance between
-  // them is a pure document-space measurement, and only readable while both
-  // boxes are actually in the document.
-  let handoff: number;
-  if (inFlow(sheet) && inFlow(frame)) {
-    handoff = hemDoc - (frameBox.bottom + scrollY);
-    if (!Number.isFinite(handoff) || handoff < MIN_HANDOFF) return null;
+  // The reference framing is read off the headline's own box: it is the flyer
+  // that has to be entirely in view when the screen locks. prepareMeasure() has
+  // already restored the rest state, so this is the un-warped box.
+  const inviteBox = flyers.invite.getBoundingClientRect();
+  if (!inviteBox.width || !inviteBox.height) return null;
+  // Headline bottom → sheet hem. Both boxes belong to the sheet, so this reads
+  // the same whether the sheet is in flow or parked on screen.
+  const belowTitle = box.bottom - inviteBox.bottom;
+  if (!Number.isFinite(belowTitle) || belowTitle <= 0) return null;
+
+  // Frame bottom → headline bottom crosses from the hole's box to the sheet's,
+  // so it is only readable while neither box is parked on screen — and only
+  // once the hole's reserved pin distance is taken back out of it.
+  let rise: number;
+  if (!parked(sheet) && !parked(frame)) {
+    rise = inviteBox.bottom - frameBox.bottom - reservedPin(frame, frameBox.height);
+    if (!Number.isFinite(rise) || rise < MIN_RISE) return null;
   } else if (previous) {
-    handoff = previous.handoff;
+    rise = previous.rise;
   } else {
-    return null; // pinned with nothing measured yet: no honest number exists
+    return null; // parked with nothing measured yet: no honest number exists
   }
+
+  // The one screen line both pins share: the headline's bottom edge, `air` px
+  // above the fold. Only a composition too tall to show the hole at all falls
+  // back to hole-first, and says so.
+  const air = titleAir(viewport);
+  const degraded = !framingHolds(viewport, air, rise);
+  // Rounded once, here: both pins are driven off this one number, and rounding
+  // each of their start strings separately would let the two lines disagree by
+  // a sub-pixel — which is a sub-pixel of drift in an otherwise exact hold.
+  const inset = Math.round(triggerInset({ degraded, air, seam, rise }));
 
   const { floor, stage } = curtainElements();
   const travel = parseFloat(
@@ -164,20 +234,28 @@ export function measureSignoffScene(input: {
       : Math.max(0, document.documentElement.scrollHeight - hemDoc);
   if (!Number.isFinite(tail) || tail <= 0) return null;
 
-  const collapsible = collapsibleHeight(box.height, tail, seam);
+  // Where the hem parks, as its inset above the bottom of the viewport: below
+  // the fold in the reference framing, which is scroll the curtain gets for
+  // free, and the number the collapse budget is capped by.
+  const hemInset = inset - belowTitle;
+  const collapsible = collapsibleHeight(box.height, tail, hemInset);
   if (collapsible <= 0) return null; // nothing can be paid back: keep the real footer
   const sheetPinDistance = Math.max(MIN_SHEET_RUN, Math.round(box.height * SHEET_RUN_RATIO));
 
-  // While pinned, the singularity sits at the frame's centre: the frame's bottom
-  // is one seam above the bottom of the viewport, so its centre is half a frame
-  // above that line, and the sheet's pinned top is its hem on the same line.
-  // Both are scroll-invariant, which is why the scene can be measured before
-  // either pin engages.
+  // While pinned, the singularity sits at the frame's centre, and the frame's
+  // top edge hangs one composition above the trigger line. Both are
+  // scroll-invariant, which is why the scene can be measured before either pin
+  // engages — and the frame top is normally negative, so the singularity lands
+  // ABOVE the pinned sheet and the veil pays for the upward fall.
+  const frameTop = parkedFrameTop(viewport, inset, frameBox.height, rise);
   const singularity: Point = {
     x: frameBox.left + frameBox.width / 2,
-    y: viewport - seam - frameBox.height / 2,
+    y: frameTop + frameBox.height / 2,
   };
-  const pinnedTop = viewport - seam - box.height;
+  // The sheet's hem parks `belowTitle` below the trigger line, i.e. below the
+  // fold in the reference framing: the CTA is still off-screen when the hold
+  // begins, and the whole invitation block is what the fall consumes.
+  const pinnedTop = parkedHem(viewport, inset, belowTitle) - box.height;
   const anchorX = singularity.x - box.left;
   const anchorY = singularity.y - pinnedTop;
 
@@ -206,13 +284,31 @@ export function measureSignoffScene(input: {
     singularity,
     pinnedTop,
     flyers: local,
-    handoff: Math.round(handoff),
+    rise: Math.round(rise),
+    belowTitle: Math.round(belowTitle),
+    titleAir: air,
+    triggerInset: inset,
+    degraded,
+    sheetStartOffset: sheetStartOffset(inset, sheetPinDistance),
     sheetPinDistance,
-    holePinDistance: Math.round(handoff) + sheetPinDistance,
+    // Both pins span exactly the consumption: they engage on the same screen
+    // line and let go on the same scroll pixel, so the hold is one continuous
+    // frame from the reference composition to 100% warped.
+    holePinDistance: sheetPinDistance,
     tail,
     travel,
+    hemInset,
     collapsible,
   };
+}
+
+/** The sheet's viewport top while pinned, analytically: its hem parks
+ * `belowTitle` below the shared trigger line. `measurePinnedTop` prefers the
+ * real rect once the pin has engaged; this is the value the scene — and with it
+ * the singularity, the anchor and the veil — was built on, so the two have to
+ * agree or the fall would move mid-flight. */
+export function analyticPinnedTop(scene: SignoffScene): number {
+  return parkedHem(scene.viewport, scene.triggerInset, scene.belowTitle) - scene.height;
 }
 
 /** The subset the frozen frame's shader needs. */
