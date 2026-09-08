@@ -124,7 +124,16 @@ function ClosingSignoff() {
   return (
     <SignoffHorizon>
       <div className="signoff__anchor">
-        <h2 className="signoff__title">
+        {/* data-horizon-item marks the two bodies the black hole eats. They are
+            the flyers of the pinned consumption scene (see
+            components/SignoffHorizon.tsx): each one is translated toward the
+            singularity, stretched along the pull axis, squeezed across it and
+            scaled into a point, and each one is the element the frozen frame
+            takes the paint from. Marking them here — rather than by class in
+            the effect — keeps the contract next to the markup it refers to, and
+            means the effect fails closed (no flyers, no consumption, the real
+            footer stays) if this block is ever restructured. */}
+        <h2 className="signoff__title" data-horizon-item="invite">
           <span className="signoff__line">
             <span className="signoff__line-in signoff__line-in--dim">ENTER THE</span>
           </span>
@@ -136,7 +145,7 @@ function ClosingSignoff() {
             </span>
           </span>
         </h2>
-        <div className="signoff__actions">
+        <div className="signoff__actions" data-horizon-item="cta">
           <a href="#nemoverse" className="btn btn-primary" data-cursor="ENTER" aria-label="Explore the universes">
             <span className="btn-spark" aria-hidden="true" />
             <KineticLabel label="EXPLORE THE UNIVERSES" swap="ENTER THE VOID" open={false} />

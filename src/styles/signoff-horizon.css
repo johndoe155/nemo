@@ -1,43 +1,100 @@
-/* Sign-off horizon — paint-only snapshot overlay. Separate from blackhole.css,
-   whose three jobs remain box / seam / still. No layout, hit-target, curtain
-   background, tab order or accessibility-tree changes belong to this layer. */
+/* ============================================================================
+   Sign-off horizon — the pinned consumption scene's paint layer.
 
+   Separate from blackhole.css, whose three jobs remain box / seam / still.
+   Nothing here changes the tab order, the accessible name of the CTA, or the
+   curtain's layout: the sheet keeps its own margin, stacking context and
+   background, and the only element this file adds paint for is the overlay
+   canvas (pointer-inert, aria-hidden) plus the two flyers the effect writes
+   transforms to.
+   ========================================================================== */
+
+/* The frozen frame. JS owns `top`/`width`/`height`: the canvas covers the
+   sheet plus the measured veil of seam above it, so a strand pulled past the
+   sheet's top edge is not clipped mid-fall. Its opacity is the paint exchange
+   with the live DOM, written as --horizon-mix by the effect. */
 .signoff-horizon__canvas {
   position: absolute;
-  inset: 0;
+  left: 0;
+  top: 0;
   z-index: 3;
-  width: 100%;
-  height: 100%;
   display: block;
   pointer-events: none;
   opacity: var(--horizon-mix, 0);
 }
 
-.footer.signoff[data-horizon-paint='snapshot'] > :not(.signoff-horizon__canvas) {
-  /* Opacity affects ONLY paint. Never use autoAlpha, visibility, display,
-     aria-hidden, inert, pointer-events or a transform on the real anchor. */
-  opacity: calc(1 - var(--horizon-mix, 0));
+/* The flyers — the headline and the CTA. Both are already positioned in
+   overhaul.css; this only guarantees it, and lifts them above the sheet's own
+   background (but below the frozen frame, which takes the paint over). */
+.footer.signoff [data-horizon-item] {
+  position: relative;
+  z-index: 2;
+  transform-origin: 50% 50%;
 }
 
-/* Keyboard rescue at ANY progress, including fully consumed: the original
-   invitation and its ordinary focus ring reappear while focus is within it.
-   No clone link and no intercepted events; Tab, Shift-Tab, Enter and clicks
-   all continue to target the same real DOM. The scrub playhead is untouched. */
-.footer.signoff[data-horizon-paint='snapshot']:focus-within > :not(.signoff-horizon__canvas) {
-  opacity: 1;
+/* Promotion only while an activation exists: the fall is transform+opacity
+   only, so the whole sequence stays on the compositor. */
+.footer.signoff[data-horizon-state='capturing'] [data-horizon-item],
+.footer.signoff[data-horizon-state='ready'] [data-horizon-item] {
+  will-change: transform, opacity;
+}
+
+/* While the scene holds, the sheet must not clip what it is eating with its own
+   `overflow: hidden`: the headline and the CTA leave the box on their way to the
+   singularity, and the overlay paints the strand across the seam above it.
+
+   What it MUST still clip is the hem. The sheet's border box collapses as the
+   void is paid back to the curtain, but the frozen frame and the live flyers
+   keep their rest-size boxes, so without this they would paint over the bright
+   floor below the hem (the sheet's stacking context sits above the stage's).
+   `clip-path` is the tool: it follows the collapsing border box exactly, and the
+   negative top inset re-grants the measured veil of seam above it. The value is
+   published by the effect as --horizon-veil. */
+.footer.signoff[data-horizon-scene='pinned'],
+.footer.signoff[data-horizon-scene='pinned'] .signoff__anchor {
+  overflow: visible;
+}
+.footer.signoff[data-horizon-scene='pinned'] {
+  clip-path: inset(calc(-1 * var(--horizon-veil, 0px)) 0 0 0);
+}
+
+/* ---- keyboard rescue -------------------------------------------------------
+   At ANY progress, including a fully consumed sheet: focus inside the
+   invitation restores the real paint, the real focus ring and the real hit
+   target, in place, and suppresses the frozen frame. A consumed flyer keeps its
+   tab stop — only its pointer is retired, so no invisible link is left sitting
+   over the hole. This is a rescue, not a
+   reset — the playhead, the collapse and the curtain stay exactly where the
+   scroll put them. `!important` is load-bearing: the effect writes these three
+   as inline styles, and a stylesheet rule cannot beat an inline declaration
+   without it. */
+.footer.signoff:focus-within [data-horizon-item] {
+  transform: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 .footer.signoff:focus-within > .signoff-horizon__canvas {
   opacity: 0;
 }
 
-/* Synchronous paint guard while the shared matchMedia hook tears down an
-   active capture/scrub after a device-policy change. Only the CANVAS is hidden;
-   real links never are. Breakpoint is the existing singularity CSS fallback. */
+/* ---- synchronous paint guard ----------------------------------------------
+   The shared matchMedia hook tears an active capture/scrub down asynchronously
+   after a device-policy change, and a ScrollTrigger refresh is not the same
+   tick as the media query that invalidated it. These rules make the fallback
+   state correct on the first painted frame after the change: the real
+   invitation is back in place and only the CANVAS is hidden — real links are
+   never hidden by a media query. The breakpoint is the existing singularity
+   CSS fallback, so both halves of the gate agree without a second source. */
 @media (max-width: 768px), (prefers-reduced-motion: reduce) {
-  .footer.signoff[data-horizon-paint='snapshot'] > :not(.signoff-horizon__canvas) {
-    opacity: 1;
-  }
   .signoff-horizon__canvas {
     display: none;
+  }
+  .footer.signoff[data-horizon-scene='pinned'] {
+    clip-path: none;
+  }
+  .footer.signoff [data-horizon-item] {
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 }

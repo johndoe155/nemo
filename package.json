@@ -3,12 +3,14 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "The Nemoverse — Hub frontend. One canon, infinite versions.",
+  "description": "The Nemoverse \u2014 Hub frontend. One canon, infinite versions.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "verify:blackhole": "node scripts/verify-blackhole.mjs",
+    "test:unit": "node --import ./tests/unit/register-ts.mjs --test \"tests/unit/**/*.test.ts\"",
+    "test": "npm run test:unit",
     "test:signoff-horizon": "playwright test"
   },
   "dependencies": {

@@ -2,15 +2,32 @@
 
 ## What this is (and is not)
 
-A **single frozen raster of ClosingSignoff**, warped by a small WebGL2 shader.
-It is not live DOM-to-GPU streaming, not 3D reprojection, and does not follow the
-cinematic camera in the black-hole stage.
+A **pinned consumption scene**: the black hole holds the screen while the
+sign-off is spaghettified into it, and a **single frozen raster** of the two
+sign-off bodies — the invitation and the CTA — carries the plunge, warped by a
+small two-stage WebGL2 shader. It is not live DOM-to-GPU streaming, not 3D
+reprojection, and it does not follow the cinematic camera in the black-hole
+stage.
 
-The fixed 2D anchor is horizontally centered. Its Y position is the measured
-lower edge of `.bh-frame::after` in footer coordinates, clamped to the top of the
-footer when the section's padding is taller than the seam. This is the deliberate
-artistic simplification. The deflection equation itself is ported unchanged from
-Daniel Greenheck's MIT-licensed `blackhole-shader.js`, using `vec2` ray state:
+The singularity is not an artistic guess any more. Because the black hole's frame
+is itself pinned for the whole sequence, its centre is a **fixed point on screen**
+(`viewport − seam − frameHeight/2`), and because the sign-off sheet is pinned too,
+that point is a fixed point *in the sheet's own coordinate space* — normally
+inside the sheet, a little below its top edge, since the pinned sheet slides up
+over the hole's lower half. `anchorX`/`anchorY` are that point measured, not
+derived from a seam edge.
+
+The shader runs two stages, in the order light would meet them:
+
+1. **The tidal remap.** A fragment at radius `r` from the singularity does not
+   sample the snapshot at `r`: it samples the source it fell in from,
+   `r · (1 + infall(p) + tidal(r))`, rotated by the frame dragging. `infall` is
+   the global contraction; `tidal` is the gradient of the pull, which falls off
+   with radius, so its derivative is *negative* — the radial axis magnifies while
+   the tangential one squeezes. That minus sign is the spaghettification.
+2. **The lensing.** The remapped source is traced through the vendored
+   inverse-square deflection ODE, ported unchanged from Daniel Greenheck's
+   MIT-licensed `blackhole-shader.js` with `vec2` ray state:
 
 ```glsl
 float rs = uBlackHoleMass * 2.0;
@@ -31,11 +48,104 @@ The 2D launch is explicit: parallel rays approach from below the flat DOM plane.
 Their unbent paths land on the original texels. Escaped rays finish the remaining
 straight flight to that plane; captured rays never sample the texture. There
 are 32 integration steps, no swirl/pinch/barrel formula and no per-frame snapshot.
+When the field is closed (`uHorizonPx == 0`) the shader takes an exact identity
+path — same texels, same alpha, no resample — so arming the overlay cannot move
+the type by a fraction of a pixel.
+
+**The same field, two ways.** `lib/spaghettification.ts` is the single place the
+art direction is written down: pure functions of one playhead, imported by the
+shader glue *and* evaluated per element for the live flyers. The headline and the
+CTA are translated toward the singularity, stretched along the pull axis by the
+remap's radial magnification `1/f′(r)`, squeezed across it by its tangential
+magnification `r/f(r)`, and rotated by the same frame dragging — so when the live
+paint is exchanged for the frozen frame part-way through the fall, nothing jumps.
+The unit suite checks that equality numerically (the DOM scales *are* the
+derivative of the shader's remap), which is why a stagger was rejected: a shader
+cannot stagger per element, and a stagger would show as a jump at the handoff.
+Differentiation comes from geometry instead — each flyer sits at its own radius,
+so the tidal gradient bites each one at its own moment, and they cross the horizon
+in order of their distance from the singularity.
 
 **Art-direction knob:** `EFFECTIVE_HORIZON_RADIUS_PX` in
-`src/three/eventHorizonWarp.ts`. A fixed scroll curve expands this seed to the
-farthest measured footer corner. Full consumption is horizon capture, not a final
-opacity fade over an otherwise unwarped image.
+`lib/spaghettification.ts`. A quartic scroll curve expands this seed radius to the
+farthest measured corner of the overlay, so progress = 1 consumes every texel at
+every footer size. Full consumption is horizon capture, not a final opacity fade
+over an otherwise unwarped image.
+
+## The two pins
+
+The pinned subject is **the black hole**, not the sign-off. Two ScrollTriggers,
+one continuous hold:
+
+| trigger | pins | start | distance |
+| --- | --- | --- | --- |
+| `signoff-horizon-hole` | `.bh-frame` | `bottom bottom-={seam}` — the hole fully in view, its bottom edge one resolved seam above the bottom of the viewport | `handoff + sheetPinDistance` |
+| `signoff-horizon` | `.footer.signoff` (`pinType: 'fixed'`) | the same screen line | `max(300, sheetHeight × 1.15)` |
+| `signoff-horizon-arm` | — | `bottom bottom+={seam × 4}` | one-shot capture |
+
+`handoff` is a document-space measurement: frame bottom → sheet hem. It is how far
+the sheet has to travel to be seen at all while the hole holds still, and it is
+exactly the gap between the two pins' start lines — so the hole's pin spans both
+legs and there is no frame where neither pin holds, and none where both re-measure
+the same line. The hole does not move for the whole fall; only the sheet does.
+
+`pinType: 'fixed'` (not GSAP's default transform pin) because the sheet is the
+containing block of the overlay canvas and of both flyers: a transform there would
+reparent every absolute child, and GSAP would then have to compensate the release
+with a translate on a box that is also being collapsed. Both pins keep
+`pinSpacing`, `anticipatePin: 1` and `invalidateOnRefresh`, and both re-measure
+with the layout at rest (`onRefreshInit`), because the sheet's own height drives
+its pin-spacer and a collapsed sheet would park the wrong distance.
+
+The scrub is reversible and the playhead is a plain object: returning to zero
+restores real DOM paint, and revisiting the effect reuses the original frozen
+texture rather than walking the DOM again. GSAP applies its recorded pin state
+*after* the scrub tween renders for a given scroll, so the trigger's own `onUpdate`
+re-applies the frame last — otherwise the engage frame (and every re-engage on the
+way back up) would restore the sheet's rest height and leave it there until the
+next playhead change.
+
+## The curtain compensation (the layout invariant)
+
+Consuming the sheet removes height from the layout. The distance from the sheet's
+hem to the end of the document must not change while that happens, or the curtain
+footer lurches. The pin-spacer is the only element that can pay for it — it owns
+the sheet's flow box for as long as the pin exists — so the effect writes its box
+every frame, from a closed form in `lib/spaghettification.ts`:
+
+```
+spacer.height   = sheetHeight(p) + pinDistance × rawProgress + SPACER_PAD
+spacer.padding  = min(pinDistance, pinDistance × rawProgress + SPACER_PAD)
+sheetHeight(p)  = restHeight − collapsible × collapseAt(p)
+collapsible     = min(restHeight, tail − seam + SPACER_PAD − MIN_RELEASE_SLACK)
+```
+
+Three properties, each of which the unit suite proves and the browser suite
+measures:
+
+* **Tracked.** The stage hangs off the spacer's bottom edge (the sheet's negative
+  margin is copied onto it) and clips its paint window inset by
+  `--curtain-travel`, so the bright floor meets the hem — one pixel below it — at
+  every playhead. `spacer.height − (parked + sheetHeight) === SPACER_PAD` holds
+  for *any* pair of playhead and scroll, which is what makes the reveal a handoff
+  instead of a jump.
+* **Never short.** The parked term is read from the **raw scroll**, not the
+  smoothed playhead, so the document grows one pixel per scrolled pixel and a
+  fling cannot arrive at a page shorter than its own scroll position. Everything
+  visible still follows the scrub.
+* **Affordable.** Paying the curtain back spends scroll. What is left at the end of
+  the pin is `SPACER_PAD + tail − seam − consumed`, so a curtain too short to pay
+  for the whole fall **caps the collapse** (`collapsible`) and the sheet keeps a
+  stub; a curtain that cannot pay at all refuses the effect and the real footer
+  stays. Degrading the fall is honest. Borrowing scroll from the reader is not —
+  a release onto a clamped document snaps the playhead back and un-collapses the
+  sheet in one frame.
+
+While the sheet is pinned it also clips itself to its collapsing border box plus
+the measured veil above it (`clip-path: inset(-var(--horizon-veil) 0 0 0)`): the
+frozen frame and the live flyers keep their rest-size boxes, and without the clip
+they would paint over the bright floor below the hem, since the sheet's stacking
+context sits above the stage's.
 
 ## Ownership and gates
 
@@ -45,57 +155,46 @@ opacity fade over an otherwise unwarped image.
   **BlackHoleStage's actual status**, including failures, Retry and unmount.
   It has no DOM wrapper and does not alter the stage's GPU backend selection.
 - `src/components/SignoffHorizon.tsx`: owns ClosingSignoff's original `<footer>`
-  root/ref, the GSAP context/matchMedia branches, arm trigger, reversible scrub,
-  async cancellation and cleanup. Footer's curtain relationship is unchanged.
-- `src/lib/signoffHorizonGeometry.ts`: resolves the actual pseudo-element height
-  (the `--bh-seam` token is a `clamp()`, not a parseable pixel number).
+  root/ref, the GSAP context/matchMedia branches, both pins, the arm trigger, the
+  per-frame layout compensation, reversible scrub, async cancellation and
+  cleanup. Footer's curtain relationship is unchanged.
+- `src/lib/spaghettification.ts`: the field and the curves — infall, tidal
+  gradient, frame dragging, collapse, paint crossfade, horizon growth, the flyer
+  frame, and the curtain's compensation closed form. No DOM, no GSAP, no WebGL.
+- `src/lib/signoffHorizonGeometry.ts`: one measurement pass over the scene (sheet,
+  frame, flyers, curtain), in both document and viewport space. Resolves the
+  actual pseudo-element height (the `--bh-seam` token is a `clamp()`, not a
+  parseable pixel number) and the curtain's own height, which is the budget the
+  compensation spends.
 - `src/lib/captureSignoff.ts`: lazily loaded html2canvas capture, used once per
   eligible activation. No other page sections or GPU canvases are cloned.
 - `src/three/eventHorizonWarp.ts`: raw WebGL2, one texture, one full-cover
-  triangle, no three/WebGPURenderer, no extra WebGPU device, no render loop.
-- `src/styles/signoff-horizon.css`: paint-only overlay rules. `blackhole.css`
-  retains its documented three jobs: box / seam / still.
+  triangle, no three/WebGPURenderer, no extra WebGPU device, no render loop. It
+  imports the field constants from `lib/spaghettification.ts` rather than
+  restating them in GLSL defaults.
+- `src/styles/signoff-horizon.css`: paint-only overlay rules, the pinned hem
+  clip and the keyboard rescue. `blackhole.css` retains its documented three
+  jobs: box / seam / still.
 
 Mobile, reduced motion, and any stage status other than `live` get the ordinary
 footer: no capture module load, snapshot, overlay context or scrub. The reduced
 motion matchMedia branch's finished state is **plain content**, not eaten content.
 
-## Scroll timing
-
-The sign-off consumption is now a **pinned scene**, and the pause is meant to
-be *seen*. The arm trigger still fires when the fixed anchor is one resolved
-seam below the viewport, so capture begins offscreen. The footer then keeps
-scrolling up normally until the reader can see the whole invitation — its top
-reaches `viewportHeight - footerHeight - seam` (one seam of air below it,
-clamped so a short viewport still pins) and the Singularity stage still fills
-the top of the view. **There** the pin engages: GSAP holds the sign-off
-`position: fixed` for one controlled distance — `+= innerHeight - 2 x seam`,
-the exact run the anchor used to travel from the lower to the upper seam band
-— while scrolling alone drives the playhead 0 -> 1. When the consumption is
-complete the pin releases and the page continues to the curtain. `pinSpacing`
-(the default, kept explicit) parks the same distance in GSAP's pin-spacer, so
-the curtain below never shifts when the pin engages. Every bound is still
-derived from `.bh-frame::after`'s resolved `--bh-seam` height and
-re-invalidated on refresh; while pinned, the anchor Y is measured from the
-pin-spacer's flow position (the element's own rect is frozen at the pin
-position). `anticipatePin: 1` hides the engage on fast flings. There are
-still no guessed percentage lines, layout tweens or new raw scroll listeners.
-Retiring an armed effect kills the pinned ScrollTrigger, which reverts the
-pin, removes the spacer and restores the ordinary in-flow footer in one step.
-
-The playhead is reversible. Returning to zero restores real DOM paint; revisiting
-the effect reuses the original frozen texture, not another DOM walk.
-
 ## Interaction and accessibility
 
-The real CTA and all sign-off text remain mounted. Only the children's **opacity**
-is exchanged with the overlay. No `display:none`, `visibility:hidden`, `inert`,
-`aria-hidden`, transforms or pointer suppression are applied to the real link.
-The canvas alone is `aria-hidden` and `pointer-events:none`.
+The real CTA and all sign-off text remain mounted, in the accessibility tree and
+in the tab order at every playhead. Only two things are ever written to them: the
+field's `transform`/`opacity`, and — once a flyer has crossed the horizon —
+`pointer-events: none`, so no invisible link is left sitting over the hole.
+`visibility` is deliberately *not* used: a hidden element loses its tab stop, and
+losing the CTA's tab stop at the end of the fall would be a worse regression than
+the stray hit target. The canvas alone is `aria-hidden` and `pointer-events:none`.
 
-While focus is anywhere inside the invitation, CSS immediately restores its live
-paint and ordinary focus ring and suppresses the overlay, even at full
-consumption. This is an intentional keyboard rescue, not a reset of the scrub.
+While focus is anywhere inside the invitation, CSS immediately restores the real
+paint, the real focus ring and the real pointer, in place, and suppresses the
+overlay — even at full consumption. This is an intentional keyboard rescue, not a
+reset of the scrub: the playhead, the collapse and the curtain stay exactly where
+the scroll put them.
 The CTA has an explicit readable accessible name so its kinetic per-character
 spans aren't announced as individual letters. Its original `#nemoverse` href,
 native click/Enter behavior and tab order are unchanged.
@@ -111,12 +210,17 @@ therefore uses html2canvas's native SVG/foreignObject path instead:
   them, SVG images silently substitute a system font and lose the Machina inktraps.
 - `.btn-spark` / cursor bloom / button strata: their current computed paint is
   frozen, as intended. Native hover/focus and the real hit target still work.
-- `.marquee--credits`: the frozen band retains its tilt, edge mask, translucent
-  tint and text. **Backdrop blur is intentionally omitted in the clone only**:
-  an isolated SVG cannot blur the live page behind it. No live CSS is simplified.
+- The credit crawl (`.signoff__crawl` / `.marquee--credits`) moved above the
+  Singularity, so it is no longer part of the captured sheet: nothing inside the
+  sign-off backdrop-filters the live page any more, which is what makes the
+  frozen frame comparable to the live footer like-for-like. (An isolated SVG
+  cannot blur the live page behind it; no live CSS is simplified to suit it.)
 - The footer's background gradient stays in the real DOM rather than being
-  painted twice. This preserves its opaque curtain hem and the existing floor
-  reveal; captured texels reveal this backing, not unwarped letters.
+  painted twice (`backgroundColor: null`, and the clone's own background forced
+  transparent). This preserves its opaque curtain hem and the existing floor
+  reveal; captured texels reveal this backing, not unwarped letters. It also
+  means the collapsing hem is a real edge: the sheet's own box shrinks, and the
+  frozen frame contributes glyphs only.
 
 The helper corrects html2canvas 1.4's foreignObject origin offset, checks readable
 pixels in the headline, and rejects a blank/tainted result instead of hiding the
@@ -129,20 +233,32 @@ which pushes the clone below the isolated SVG viewport, rasterizing nothing.
 Font, capture, upload, shader or context failures restore the ordinary footer
 and report the reason. No repeated automatic capture attempts.
 
+The capture is armed four seams below the fold, well before the hole's pin, and
+the sheet is held at playhead 0 for the whole of it: `captureSignoff` awaits font
+embedding before html2canvas clones, and a half-collapsed box with half-warped
+glyphs is not a usable frozen frame. Rendering playhead 0 rather than skipping
+frames matters — the spacer keeps tracking the raw scroll, so no gap opens under
+the sheet while the reader waits.
+
 Snapshot/render resolution is capped to 1.5 million pixels and a 2048-pixel edge;
 CSS dimensions and hit targets are never scaled. On a width/height reflow **after
 capture**, the effect is retired for that activation and real paint returns.
 This is deliberate: a frozen raster cannot reflow with the CTA. Resize does not
-secretly trigger another capture. A new eligible lifecycle (e.g. a fresh desktop
+secretly trigger another capture. Retirement kills both pins, which reverts them
+and removes both spacers, so the black hole and the footer come back as ordinary
+in-flow boxes with the curtain's normal spacing. A new eligible lifecycle (e.g. a fresh desktop
 stage after a mobile hop, or successful Retry) may arm a fresh one-shot capture.
 
 ## Lifecycle
 
-Cleanup aborts pending font fetches, kills both ScrollTriggers (which reverts
-the pin and removes its spacer) and the scrub tween, disconnects
-ResizeObserver, cancels scheduled refresh work, restores paint, deletes
-the texture/shaders/program/VAO, loses the WebGL2 context and removes the canvas.
-Every activation gets a fresh canvas, never a reused lost context.
+Cleanup aborts pending font fetches, kills all three ScrollTriggers (which reverts
+both pins and removes both spacers) and the scrub tween, clears the compensation it
+wrote onto the sheet's spacer, disconnects ResizeObserver, cancels scheduled refresh
+work, restores paint, deletes the texture/shaders/program/VAO, loses the WebGL2
+context and removes the canvas. Every activation gets a fresh canvas, never a reused
+lost context. The ResizeObserver watches the black hole's frame and the curtain
+floor — the two boxes the scene is measured from — and never the sheet itself,
+which would watch its own collapse and feed itself.
 
 html2canvas has no cancellation API. A capture already underway is allowed to
 settle; its invocation-specific clone iframe is removed even on failure, and a
@@ -154,8 +270,9 @@ changes, reduced-motion changes and unmount.
 
 ```sh
 npm ci
-npm run build
+npm run build           # tsc -b + vite build
 npm run verify:blackhole
+npm run test:unit       # node --test, no browser: the field and the compensation
 npx playwright install --with-deps chromium
 npm run test:signoff-horizon
 ```
@@ -164,38 +281,43 @@ An existing Chromium can be supplied with
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium`. Browser artifacts are
 ignored; no snapshots, installed browsers or generated dependencies belong in Git.
 
-Verified on 2026-09-06 (pre-pinning): production build, vendored-hash
-verification, and all **23 Chromium browser tests pass**. A production-bundle
-smoke test of the complete App also reached a live stage and ready overlay with
-the existing curtain active, restored live CTA paint on focus, and reported no
-runtime JavaScript errors. GPU checks here used software WebGL2, with a small
-test-only stage resolution.
+**What is verified where.** The curves and the compensation are pure functions, so
+they are tested as pure functions: `tests/unit/spaghettification.test.ts` runs
+under Node's own type stripping (a small resolver hook in `tests/unit/` lets it
+import the app's extensionless relative modules) and covers the field's
+monotonicity and bounds, the identity at rest, the DOM magnifications against a
+numerically differentiated copy of the shader's remap, the transform string's
+composition and eigenvectors, the crossing order, the horizon's coverage, and the
+curtain budget — including the clip-window/hem identity at arbitrary scrub lag and
+the "never short" slack across a grid of fling lags. No browser, no GPU, no timing
+luck.
 
-Verified on 2026-09-07 with the pinning change: production type-check clean and
-**all 23 Chromium browser tests pass** under software WebGL2 — including the
-pinned geometry (pin target, exact pin-spacer travel, fixed-lock during the
-scrub, release past the end), capture while pinned, unmount of a pinned
-sign-off (React removal requires the pin revert to run in a layout cleanup),
-the previously broken DPR 1/2 snapshot-fidelity comparisons (stale
-`.marquee--credits` lookup removed after the crawl moved above the
-Singularity), focus rescue, gates, and the Float64 CPU texel port. No
-hardware-GPU or production-bundle rerun was performed for this change yet.
+The Playwright suite (`tests/signoff-horizon.spec.ts`, 28 tests) exercises the real
+Footer/CSS under StrictMode and covers, on top of the gates and disposal paths:
 
-The Playwright suite exercises the real Footer/CSS under StrictMode and covers:
-
-- Mobile at 375/768px, desktop at 769px, a mobile round trip, reduced motion,
-  booting/unsupported/error gates.
-- Measured seam start/end, one capture/upload/context, no overlay WebGPU request.
-- Reversible scroll and identical frozen mid-progress pixels on the return trip.
-- Fully transparent captured output at completion.
-- Native click, Tab, Shift-Tab and Enter at 0/50/100%, visible focus rescue,
-  and an exposed link in Chromium's accessibility tree at all three states.
-- Status loss, remount, context loss, failed WebGL2 creation, resize and late
-  capture completion after unmount/reduced motion/status change.
-- The actual BlackHoleStage status → gate connection using its live WebGL2
-  fallback in the software-GL test environment (small test-only stage resolution).
-- More than a thousand GPU texel checks against an independent Float64 CPU port
-  using the same imported config, including capture and escape.
+- **The pin belongs to the black hole**: the hole is the pinned element, it is
+  fully in view with its bottom edge one seam above the fold when its pin starts,
+  the sheet's pin starts on that same screen line, the hole does not move while the
+  scroll travels the whole pin distance, `hole.end === sheet.end`, and both pins
+  let go only past the end.
+- **The consumption**: the overlay covers the sheet plus the measured veil; the
+  flyers' computed matrices equal `flyerFrameAt` (translation, eigenvalues and
+  stretched eigenvector) at four playheads; they converge into the point and their
+  pointer is retired at the end; the frozen frame paints nothing at progress 1 and
+  byte-identical pixels on the return trip.
+- **The layout invariant**: hem → document end measured at six playheads against
+  the closed form imported in-page, the curtain's clip window one pad pixel below
+  the hem, the sheet's height equal to `sheetHeightAt`, the spacer's growth equal
+  to the pin distance minus what the sheet gave up, the scroll slack never below
+  `MIN_RELEASE_SLACK`, no hem movement across the release, and a short-curtain
+  variant that must cap the collapse rather than borrow scroll.
+- **The same real CTA** at 0/50/100%: accessible name, Chromium accessibility-tree
+  exposure, no `aria-hidden`/`inert`/`hidden` ancestor, native click and Enter,
+  Tab and Shift-Tab, the focus rescue (paint, ring, pointer, overlay suppressed,
+  playhead untouched), and no stray hit target once consumed.
+- More than a thousand GPU texel checks against an independent Float64 CPU port of
+  **both** stages, using the imported config and field constants, over two overlay
+  boxes (flush and veiled) and six playheads, including capture and escape.
 - Native-vs-unwarped snapshot comparisons at DPR 1 and 2, including the headline
   font/gradient and CTA. These allow minor AA/downsampling differences, not a
   lost headline or fallback typeface.
@@ -203,8 +325,24 @@ The Playwright suite exercises the real Footer/CSS under StrictMode and covers:
 `verify:blackhole` checks all four vendored files against the SHA-256 hashes in
 `PROVENANCE.md`. No file in `src/three/blackhole/` was edited.
 
-Remaining manual coverage: native NVDA/VoiceOver speech output, Safari/Firefox
-foreignObject rendering and a visual/performance pass on hardware GPUs. Chromium
-accessibility-tree testing is not a claim that a human screen-reader session was
-performed. If another engine cannot rasterize the essential headline, the safe
-fallback is already the unchanged real footer, not a degraded frozen title.
+### Verification history
+
+- **2026-09-06** (pre-pinning): production build, vendored-hash verification, and
+  all 23 Chromium browser tests of the then-current single-pin effect.
+- **2026-09-07** (sheet-only pin): production type-check clean and all 23 Chromium
+  browser tests of that architecture under software WebGL2.
+- **2026-09-08** (this overhaul — black hole as the pinned subject, two-stage
+  shader, curtain compensation): `tsc -b` clean, `vite build` clean,
+  `verify:blackhole` passing, and **19/19 unit tests passing**. The Playwright
+  suite was rewritten for the two-pin architecture in the same pass but **could not
+  be executed in this environment**: Chromium cannot be downloaded here
+  (`cdn.playwright.dev` is unreachable) and no system browser is installed. It is
+  therefore unverified-by-execution, and the browser-side claims above describe
+  what the suite asserts, not what it has been seen to pass.
+
+Remaining manual coverage: a first browser run of the rewritten suite, native
+NVDA/VoiceOver speech output, Safari/Firefox foreignObject rendering, and a
+visual/performance pass on hardware GPUs. Chromium accessibility-tree testing is
+not a claim that a human screen-reader session was performed. If another engine
+cannot rasterize the essential headline, the safe fallback is already the unchanged
+real footer, not a degraded frozen title.
