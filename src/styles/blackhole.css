@@ -120,7 +120,27 @@
 .bh-stage {
   position: relative;
   height: clamp(500px, 76vh, 860px);
+  height: min(clamp(500px, 76vh, 860px), var(--bh-frame-fit, 860px));
   height: clamp(500px, 76svh, 860px); /* small-viewport units where supported */
+  /* THE COMPOSITION BUDGET. The pinned consumption scene is art-directed on one
+     framing — the whole black hole at the top of the viewport and the whole
+     "ENTER THE NEMOVERSE" headline at the bottom of it, on the same scroll
+     pixel — and those two boxes plus the document between them have to FIT that
+     pixel. They do not at this height: the stage alone is 76svh and the
+     invitation block below it is about a third of a viewport, so the hole's
+     crown would be off the top of the screen at the exact moment the hold
+     begins, which is a crop of the reference framing rather than the framing.
+
+     The distance below the stage does not depend on the stage's height, so the
+     stage's height is the free variable and `lib/spaghettification.ts`
+     (`solveFraming`) spends it: `--bh-frame-fit` is the height the composition
+     leaves, published by `components/SignoffHorizon.tsx` once it has measured
+     the scene. Unset — no consumption scene (mobile, reduced motion, a stage
+     that never went live) — the fallback is the clamp's own ceiling, so the
+     declaration is exactly the two above it and this section is unchanged.
+     When it does bind, the stage's top edge lands on the top of the viewport at
+     the trigger, which is the framing the hold is specified on. */
+  height: min(clamp(500px, 76svh, 860px), var(--bh-frame-fit, 860px));
   overflow: hidden;
   background: transparent;
   contain: layout paint style;

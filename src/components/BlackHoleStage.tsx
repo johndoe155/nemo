@@ -321,8 +321,17 @@ async function acquireDevice(adapter: GPUAdapterLike): Promise<GPUDeviceLike | n
 
 export default function BlackHoleStage({
   onStatusChange,
+  cameraHoldRef,
 }: {
   onStatusChange?: (status: BlackHoleStageStatus) => void;
+  /** Held true by the pinned consumption scene (see `lib/singularityGate.tsx`)
+   * for as long as the sign-off is falling into this stage. The requirement on
+   * that sequence is that the black hole stays rigidly anchored and static on
+   * screen: pinning the container fixes its BOX, and this fixes the framing
+   * inside it. The cinematic camera holds; the simulation does not — the disk
+   * keeps turning and the lensing keeps resolving, so the hole reads as a live
+   * body that has stopped moving, not as a paused video. */
+  cameraHoldRef?: { readonly current: boolean };
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<StageStatus>('booting');
@@ -402,7 +411,11 @@ export default function BlackHoleStage({
       const dt = Math.min((now - last) / 1000, 0.033);
       last = now;
       try {
-        camAnim?.update(dt);
+        // Held still by the pinned consumption scene: the camera stops
+        // advancing, everything else in the loop keeps running. Reading the ref
+        // per frame (rather than subscribing) is the point — the hold can start
+        // and end between two renders without this effect ever re-running.
+        if (!cameraHoldRef?.current) camAnim?.update(dt);
         controls?.update();
         if (sim && camera) sim.update(dt, camera);
         draw();
@@ -769,7 +782,9 @@ export default function BlackHoleStage({
     void boot();
 
     return release;
-  }, [attempt]);
+    // `cameraHoldRef` is a stable ref object: listing it keeps the closure
+    // honest without ever re-running the boot sequence.
+  }, [attempt, cameraHoldRef]);
 
   const retry = () => {
     setNote(null);

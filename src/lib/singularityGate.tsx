@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MutableRefObject,
   type ReactNode,
   type RefObject,
 } from 'react';
@@ -38,6 +39,16 @@ interface SingularityGate {
   canWarpSignoff: boolean;
   frameRef: RefObject<HTMLDivElement>;
   reportStatus: (status: BlackHoleStageStatus) => void;
+  /** True for exactly as long as the pinned consumption scene is holding the
+   * screen. The black hole has to be rigidly static while the invitation falls
+   * into it, and "static" is not only a scroll question: the container is
+   * pinned, but the stage's own cinematic camera would still fly the disc
+   * around inside it. `BlackHoleStage` therefore holds the camera — not the
+   * simulation, which stays live — for as long as this is set.
+   *
+   * A ref rather than state on purpose: the render loop reads it once per frame
+   * and nothing anywhere needs to re-render because of it. */
+  cameraHoldRef: MutableRefObject<boolean>;
 }
 
 const GateContext = createContext<SingularityGate | null>(null);
@@ -50,12 +61,14 @@ export function SingularityProvider({ children }: { children: ReactNode }) {
   const reduced = useMediaQuery(REDUCED_MOTION_QUERY);
   const [status, reportStatus] = useState<BlackHoleStageStatus>('booting');
   const frameRef = useRef<HTMLDivElement>(null);
+  const cameraHoldRef = useRef(false);
   const value = useMemo(
     () => ({
       isMobile,
       canWarpSignoff: !isMobile && !reduced && status === 'live',
       frameRef,
       reportStatus,
+      cameraHoldRef,
     }),
     [isMobile, reduced, status],
   );

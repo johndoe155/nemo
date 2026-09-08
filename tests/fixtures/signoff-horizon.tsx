@@ -42,9 +42,18 @@ function Fixture() {
     (new URLSearchParams(location.search).get('status') as BlackHoleStageStatus) ?? 'live',
   );
   const [mounted, setMounted] = useState(true);
+  // Exposed so the suite can assert the other half of "the black hole stays
+  // rigidly anchored and static": the pin holds the container's box, and this
+  // ref is what holds the stage's cinematic camera inside it for exactly as long
+  // as the screen is locked. `ControlledStage` has no camera of its own — the
+  // ref is driven by the pinned frame, not by the stage — and `?real-stage`
+  // hands the same ref to the actual BlackHoleStage.
+  const { cameraHoldRef } = useSingularityGate();
   useEffect(() => {
-    Object.assign(window, { horizonFixture: { setStatus, setMounted, ScrollTrigger, gsap } });
-  }, []);
+    Object.assign(window, {
+      horizonFixture: { setStatus, setMounted, ScrollTrigger, gsap, cameraHoldRef },
+    });
+  }, [cameraHoldRef]);
   return (
     <SingularityProvider>
       <main>

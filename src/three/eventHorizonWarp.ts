@@ -4,7 +4,7 @@ import {
   TIDAL_CAP,
   TIDAL_FALLOFF,
   horizonRadiusAtProgress,
-  infallAt,
+  shaderInfallAt,
   swirlAt,
   tidalGainAt,
 } from '../lib/spaghettification';
@@ -37,8 +37,12 @@ void main() {
    1 · THE TIDAL REMAP. A fragment at radius r from the singularity does not
        sample the snapshot at r: it samples the source it fell in from,
        `r · (1 + infall + tidal)`, rotated by the frame dragging. `infall` is
-       the global contraction (everything falls the same fraction of its own
-       distance) and `tidal` is the gradient of the pull — local, diverging at
+       the global contraction — `1/contraction − 1`, where `contraction` is the
+       fraction of its rest distance a fragment keeps: 1 at rest and exactly 0
+       at the horizon, so everything falls the same fraction of its own distance
+       and the last frame samples from infinity. The GPU is handed that term
+       floored (`shaderInfallAt`), so no driver multiplies 0 by inf at the
+       anchor fragment. `tidal` is the gradient of the pull: local, diverging at
        the horizon. Because the tidal term falls off with radius, its derivative
        is NEGATIVE, which is the whole effect: the radial axis magnifies while
        the tangential one squeezes, i.e. the image strands. This is the same
@@ -332,7 +336,14 @@ export function createEventHorizonWarp(
         gl.uniform2f(anchor, geometry.anchorX, geometry.anchorY + geometry.veil);
         gl.uniform1f(horizon, radius);
         gl.uniform1f(capture, radius * CAPTURE_THRESHOLD);
-        gl.uniform1f(infall, infallAt(progress));
+        // `infallAt` diverges at exactly p = 1, which is honest on the CPU (no
+        // consumer divides by it) and unacceptable in a shader that multiplies
+        // it by a fragment offset that can be zero at the anchor. The floor is
+        // MAX_GL_INFALL — 1e-6 of a contraction, two ten-thousandths of a pixel
+        // on a 200px headline — and at p = 1 the capture radius has already
+        // swallowed every texel of the overlay, so the floored branch is never
+        // the one that paints.
+        gl.uniform1f(infall, shaderInfallAt(progress));
         // The gain the shader multiplies by (R/r)^falloff; tidalAt() is the same
         // expression, evaluated on the CPU for the live flyers.
         gl.uniform1f(tidalGain, tidalGainAt(progress));

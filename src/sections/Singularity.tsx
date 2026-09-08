@@ -30,7 +30,7 @@ import { useSingularityGate } from '../lib/singularityGate';
    ========================================================================== */
 
 export default function Singularity() {
-  const { isMobile, frameRef, reportStatus } = useSingularityGate();
+  const { isMobile, frameRef, reportStatus, cameraHoldRef } = useSingularityGate();
 
   // On mobile: render nothing — the section must appear as if it was never
   // implemented. No DOM, no canvas, no observers, no heavy GPU init.
@@ -41,9 +41,15 @@ export default function Singularity() {
       <h2 className="vh">The singularity — a live black hole simulation</h2>
 
       {/* .bh-frame carries the seam gradients above and below the stage
-          (styles/blackhole.css); .bh-stage inside it owns the canvas box. */}
+          (styles/blackhole.css); .bh-stage inside it owns the canvas box. It is
+          also the element the pinned consumption scene pins — the CONTAINER of
+          the black hole, so that the hole itself stays rigidly anchored and
+          static on screen while the sign-off falls into it (see
+          components/SignoffHorizon.tsx). `cameraHoldRef` is the other half of
+          "static": the box is held by the pin, the framing inside it by the
+          stage. */}
       <div className="bh-frame" ref={frameRef}>
-        <BlackHoleStage onStatusChange={reportStatus} />
+        <BlackHoleStage onStatusChange={reportStatus} cameraHoldRef={cameraHoldRef} />
       </div>
     </section>
   );

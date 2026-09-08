@@ -10,6 +10,7 @@ declare global {
       setMounted(mounted: boolean): void;
       ScrollTrigger: typeof ScrollTrigger;
       gsap: typeof gsap;
+      cameraHoldRef: { readonly current: boolean };
     };
     horizonStats: {
       captures: number;
@@ -45,24 +46,40 @@ async function open(page: Page, query = '') {
   await page.evaluate(() => document.fonts.ready);
 }
 
-/** Jump the scrub to `progress` and wait for the playhead to settle on it. */
-async function scrollProgress(page: Page, progress: number) {
+/** Whether the stage's cinematic camera is being held. The pin fixes the black
+ * hole's box; this is what fixes the framing inside it, so the singularity the
+ * invitation falls into is static in both senses for the whole hold. */
+const cameraHeld = (page: Page) => page.evaluate(() => window.horizonFixture.cameraHoldRef.current);
+
+/** The consumption's own scroll distance, as the effect publishes it. The pins
+ * span `run + settle`; the fall occupies the first `run` px and the screen stays
+ * locked for `settle` px after it. */
+const consumptionRun = (page: Page) =>
+  page.evaluate(() => Number(document.querySelector<HTMLElement>('.footer.signoff')!.dataset.horizonRun));
+
+/** Jump the scroll to the position that asks for `consumption` of the fall, and
+ * wait for the playhead to land on it.
+ *
+ * The playhead is a scroll-domain quantity: `start + run · consumption` is the
+ * pixel that asks for it, and because `run` is longer than the playhead's
+ * smoothing distance ONE instant jump lands it exactly (see `followPlayhead`).
+ * An earlier version scrubbed a tween in TIME, which needed a second jump and a
+ * 400ms wait to dodge a velocity-spike re-target race; there is no tween now, so
+ * there is no race and nothing to wait for.
+ */
+async function scrollProgress(page: Page, consumption: number) {
   await page.waitForFunction(() => Boolean(window.horizonFixture.ScrollTrigger.getById('signoff-horizon')));
-  const jump = () => page.evaluate((p) => {
+  await page.evaluate((c) => {
     const trigger = window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!;
-    window.scrollTo({ top: trigger.start + (trigger.end - trigger.start) * p, behavior: 'instant' });
-  }, progress);
-  await jump();
-  // One instant programmatic fling can leave the scrub tween a re-target
-  // short (velocity-spike prediction races the jump). A second jump,
-  // measured fresh once things settle, arrives near-stationary and lands
-  // the playhead exactly where the assert below demands.
-  await page.waitForTimeout(400);
-  await jump();
+    const run = Number(document.querySelector<HTMLElement>('.footer.signoff')!.dataset.horizonRun);
+    window.scrollTo({ top: trigger.start + run * c, behavior: 'instant' });
+  }, consumption);
   await expect(page.locator(root)).toHaveAttribute('data-horizon-state', 'ready');
   await expect.poll(() => page.locator(root).getAttribute('data-horizon-progress'))
-    .toBe(progress.toFixed(4));
+    .toBe(consumption.toFixed(4));
 }
+
+
 
 /** Everything the layout assertions need, read in one task so the numbers agree. */
 const readScene = (page: Page) => page.evaluate(() => {
@@ -143,8 +160,22 @@ const readScene = (page: Page) => page.evaluate(() => {
         opacity: parseFloat(getComputedStyle(el).opacity),
         transform: getComputedStyle(el).transform,
         pointerEvents: getComputedStyle(el).pointerEvents,
+        // The LAYOUT box, which a transform does not touch: `offset*` is what
+        // the lift out of document flow writes, and what must not move while the
+        // warp runs or the sheet's own box collapses around it.
+        position: getComputedStyle(el).position,
+        offsetLeft: el.offsetLeft,
+        offsetTop: el.offsetTop,
+        offsetWidth: el.offsetWidth,
+        offsetHeight: el.offsetHeight,
       };
     }),
+    // The anchor is the flyers' offset parent, and its height is pinned for as
+    // long as they are lifted, so nothing below them jumps when they leave flow.
+    anchor: (() => {
+      const el = document.querySelector<HTMLElement>('.signoff__anchor')!;
+      return { height: el.getBoundingClientRect().height, inlineHeight: el.style.height };
+    })(),
   };
 });
 
@@ -294,6 +325,10 @@ test('the pin belongs to the black hole: the reference framing, held through the
   expect(atStart.pins.triggerIsInvite).toBe(true);
   expect(atStart.pins.hole!.active).toBe(true);
   expect(atStart.frame.height).toBeGreaterThan(0);
+  // "Rigidly anchored and static" is two claims: the container is pinned, and
+  // the stage's own cinematic camera is held for as long as the screen is
+  // locked, so the disc does not fly around inside a box that is not moving.
+  expect(await cameraHeld(page)).toBe(true);
 
   // The composition on screen at the trigger: the headline's bottom edge `air`
   // px above the fold and its top edge on screen (the WHOLE headline, which is
@@ -308,6 +343,21 @@ test('the pin belongs to the black hole: the reference framing, held through the
   expect(atStart.sheet.bottom).toBeGreaterThan(atStart.viewport);
   expect(atStart.frame.bottom).toBeLessThanOrEqual(inviteBox.top);
   expect(atStart.frame.bottom).toBeGreaterThan(0);
+  // …and the CONTAINMENT that makes it the reference framing rather than a crop
+  // of it: ONE scroll position holds both boxes whole. The container's top edge
+  // is at or below the top of the viewport, and the whole headline is above the
+  // fold. Specifying the trigger on the headline alone — as an earlier version
+  // did — guaranteed only the second half, and left the hole's crown off the top
+  // of the screen at the exact moment the hold began.
+  const rise = inviteBox.bottom - atStart.frame.bottom;
+  expect(rise).toBeGreaterThan(0);
+  expect(atStart.frame.top).toBeGreaterThanOrEqual(-0.5);
+  expect(atStart.frame.height + rise).toBeLessThanOrEqual(atStart.viewport - air + 1.5);
+  // The container's height is the composition's one free variable: the stage
+  // publishes what it was budgeted to, and the box on screen is that number.
+  const fit = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue('--bh-frame-fit').trim());
+  if (fit) expect(Math.abs(parseFloat(fit) - atStart.frame.height)).toBeLessThan(1.5);
   // The warp has not begun: this is the frame the reader is meant to see.
   await expect(page.locator(root)).toHaveAttribute('data-horizon-progress', '0.0000');
 
@@ -325,8 +375,8 @@ test('the pin belongs to the black hole: the reference framing, held through the
   const frameBottoms: number[] = [atStart.frame.bottom];
   const sheetTops: number[] = [atStart.sheet.top];
   const scrolls: number[] = [atStart.scrollY];
-  for (const progress of [0, 0.25, 0.5, 0.75, 1]) {
-    await scrollProgress(page, progress);
+  for (const consumption of [0, 0.25, 0.5, 0.75, 1]) {
+    await scrollProgress(page, consumption);
     const scene = await readScene(page);
     frameTops.push(scene.frame.top);
     frameBottoms.push(scene.frame.bottom);
@@ -337,8 +387,23 @@ test('the pin belongs to the black hole: the reference framing, held through the
     // The singularity the invitation falls into is the parked hole's centre,
     // above the sheet: the pull is upward, into the hole, for the whole fall.
     expect(scene.frame.centre.y).toBeLessThan(scene.sheet.top);
+    if (consumption === 1) {
+      // Requirement 2, on the frame it is actually about: the consumption has
+      // reached 100% and BOTH pins are still holding the screen. The trigger's
+      // own progress is short of 1 by the settle margin, which is what makes
+      // "the pin outlasts the timeline" a property of the geometry rather than
+      // of how fast the reader arrived.
+      expect(scene.pins.sheet!.progress).toBeLessThan(1);
+      expect(await page.locator(root).getAttribute('data-horizon-progress')).toBe('1.0000');
+      expect(scene.sheet.position).toBe('fixed');
+    }
   }
-  const run = atStart.pins.sheet!.end - atStart.pins.sheet!.start;
+  // The pins span the consumption's run PLUS the release margin, and the scroll
+  // it took to finish the fall is exactly the run.
+  const span = atStart.pins.sheet!.end - atStart.pins.sheet!.start;
+  const run = await consumptionRun(page);
+  expect(run).toBeGreaterThan(0);
+  expect(span - run).toBeGreaterThan(0);
   expect(scrolls.at(-1)! - scrolls[0]).toBeCloseTo(run, 0);
   for (const top of frameTops) expect(Math.abs(top - frameTops[0])).toBeLessThan(1.5);
   for (const bottom of frameBottoms) expect(Math.abs(bottom - frameBottoms[0])).toBeLessThan(1.5);
@@ -356,6 +421,10 @@ test('the pin belongs to the black hole: the reference framing, held through the
   expect(released.pins.hole!.active).toBe(false);
   expect(released.pins.sheet!.active).toBe(false);
   expect(released.scrollY).toBeGreaterThan(scrolls.at(-1)!);
+  // …and the camera hold is over with the pin, not with the playhead: a hold
+  // that outlived the release would freeze the stage's establishing move for
+  // the rest of the session.
+  expect(await cameraHeld(page)).toBe(false);
 });
 
 test('the pin lets go where it was holding: no jump at the release', async ({ page }) => {
@@ -393,7 +462,49 @@ test('the pin lets go where it was holding: no jump at the release', async ({ pa
   expect(parkedTop).toBeLessThan(held.sheet.top);
 });
 
-test('one snapshot/texture; reversible scrub; geometric full consumption', async ({ page }) => {
+test('the playhead is a function of the scroll: one jump lands it, and nothing moves after', async ({ page }) => {
+  await open(page);
+  // A single instant jump to the end of the fall lands the playhead exactly.
+  // There is no scrub tween to wait for and no residual to converge: `run` is
+  // longer than the smoothing distance, so the follower cannot trail the scroll.
+  await scrollProgress(page, 1);
+  const landed = await readScene(page);
+  // Several frames with the scroll stopped. The scene is deterministic, so
+  // nothing may keep moving — and the pins may not let go early either, which
+  // is exactly what a time-domain scrub could not promise.
+  await page.waitForTimeout(400);
+  const settled = await readScene(page);
+  expect(settled.scrollY).toBe(landed.scrollY);
+  await expect(page.locator(root)).toHaveAttribute('data-horizon-progress', '1.0000');
+  expect(Math.abs(settled.sheet.height - landed.sheet.height)).toBeLessThan(0.01);
+  expect(Math.abs(settled.spacers.sheet!.height - landed.spacers.sheet!.height)).toBeLessThan(0.01);
+  expect(settled.pins.hole!.active).toBe(true);
+  expect(settled.pins.sheet!.active).toBe(true);
+  expect(settled.pins.sheet!.progress).toBeLessThan(1);
+  for (const flyer of settled.flyers) {
+    expect(flyer.width).toBeLessThan(0.5);
+    expect(flyer.pointerEvents).toBe('none');
+  }
+
+  // A fling straight past the whole span: the playhead still lands on 1 in the
+  // same frame, the pins are released, and nothing is left half-applied on the
+  // layout the reader has scrolled on into.
+  await page.evaluate(() => {
+    const trigger = window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!;
+    window.scrollTo({ top: trigger.end + 600, behavior: 'instant' });
+  });
+  await expect.poll(() => page.evaluate(() =>
+    getComputedStyle(document.querySelector('.footer.signoff')!).position)).not.toBe('fixed');
+  await expect(page.locator(root)).toHaveAttribute('data-horizon-progress', '1.0000');
+  const flung = await readScene(page);
+  expect(flung.pins.hole!.active).toBe(false);
+  expect(flung.pins.sheet!.active).toBe(false);
+  expect(Math.abs(flung.sheet.height - settled.sheet.height)).toBeLessThan(0.01);
+  expect(Math.abs(flung.spacers.sheet!.height - settled.spacers.sheet!.height)).toBeLessThan(2.5);
+  expect(Math.abs(hemToDocumentEnd(flung) - hemToDocumentEnd(settled))).toBeLessThan(2.5);
+});
+
+test('one snapshot/texture; reversible playhead; geometric full consumption', async ({ page }) => {
   await open(page);
   expect(await page.evaluate(() => window.horizonStats.captures)).toBe(0);
   await scrollProgress(page, 0);
@@ -435,12 +546,23 @@ test('one snapshot/texture; reversible scrub; geometric full consumption', async
   expect(mid.sheet.height).toBeGreaterThan(0);
 
   const pixels = () => page.evaluate(() => {
-    // A preserveDrawingBuffer:false canvas must be read in the SAME task as
-    // draw. Force a reversible tiny playhead change then restore it.
-    const animation = window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!.animation!;
-    const p = animation.progress();
-    animation.progress(p === 1 ? p - 0.001 : p + 0.001);
-    animation.progress(p);
+    // A preserveDrawingBuffer:false canvas must be read in the SAME task as the
+    // draw. GSAP updates synchronously from a `scroll` event, so nudging the
+    // scroll away and back drives two real draws and lands the playhead exactly
+    // where it was — `run` is far longer than the playhead's smoothing distance,
+    // so a 1% nudge cannot leave a residual behind.
+    const trigger = window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!;
+    const sheet = document.querySelector<HTMLElement>('.footer.signoff')!;
+    const run = Number(sheet.dataset.horizonRun);
+    const here = trigger.scroll();
+    const step = Math.max(2, run * 0.01);
+    const away = here - step < trigger.start ? here + step : here - step;
+    const jump = (top: number) => {
+      window.scrollTo({ top, behavior: 'instant' });
+      document.dispatchEvent(new Event('scroll'));
+    };
+    jump(away);
+    jump(here);
     const canvas = document.querySelector<HTMLCanvasElement>('.signoff-horizon__canvas')!;
     const gl = canvas.getContext('webgl2')!;
     const data = new Uint8Array(canvas.width * canvas.height * 4);
@@ -448,7 +570,7 @@ test('one snapshot/texture; reversible scrub; geometric full consumption', async
     let hash = 0, painted = 0;
     for (let i = 0; i < data.length; i++) hash = ((hash << 5) - hash + data[i]) | 0;
     for (let i = 3; i < data.length; i += 4) if (data[i]) painted++;
-    return { hash, painted };
+    return { hash, painted, progress: sheet.dataset.horizonProgress, scroll: here };
   });
   const middle = await pixels();
   expect(middle.painted).toBeGreaterThan(1000);
@@ -505,7 +627,6 @@ test('the DOM warp is the same field the shader integrates, per flyer', async ({
           anchorX: point.x - box.left,
           anchorY: point.y - box.top,
           veil: margin,
-          seam: 0,
         };
         const radius = field.horizonRadiusAtProgress(p, extent);
         return rests.map((body: { selector: string; x: number; y: number }) => {
@@ -567,18 +688,27 @@ test('the DOM warp is the same field the shader integrates, per flyer', async ({
     }
   }
 
-  // At the end of the fall every flyer has contracted into the point: a small
-  // fraction of its rest distance from the singularity, and of its rest size.
+  // At the end of the fall every flyer has crossed the event horizon: its
+  // centre is ON the singularity's coordinates and its scale is exactly zero —
+  // not "a small fraction of its rest size" and not an opacity fade over an
+  // unwarped box. Requirement 3's last clause, read off the real DOM.
   await scrollProgress(page, 1);
   const end = await readScene(page);
   for (const index of [0, 1]) {
     const flyer = end.flyers[index];
     const at = rest.flyers[index];
-    const restRadius = Math.hypot(singularity.x - at.centre.x, singularity.y - at.centre.y);
     const left = Math.hypot(singularity.x - flyer.centre.x, singularity.y - flyer.centre.y);
-    expect(left).toBeLessThan(restRadius * 0.12);
-    expect(flyer.width).toBeLessThan(at.width * 0.6);
-    expect(flyer.height).toBeLessThan(at.height * 0.6);
+    expect(left).toBeLessThan(0.5);
+    expect(flyer.width).toBeLessThan(0.5);
+    expect(flyer.height).toBeLessThan(0.5);
+    // The written transform is the degenerate matrix: a zero scale, and a
+    // translation that is exactly the pull vector.
+    const matrix = parseMatrix(flyer.transform);
+    expect(matrix).not.toBeNull();
+    const [a, b, c, d, e, f] = matrix!;
+    expect(Math.abs(a) + Math.abs(b) + Math.abs(c) + Math.abs(d)).toBeLessThan(1e-6);
+    expect(Math.abs(e - (singularity.x - at.centre.x))).toBeLessThan(0.5);
+    expect(Math.abs(f - (singularity.y - at.centre.y))).toBeLessThan(0.5);
     // Consumed: no invisible hit target left over the hole, but still focusable.
     expect(flyer.pointerEvents).toBe('none');
     expect(flyer.opacity).toBe(0);
@@ -588,6 +718,73 @@ test('the DOM warp is the same field the shader integrates, per flyer', async ({
 /* ==========================================================================
    Requirement 4 — the curtain pays for exactly what the void vacates.
    ======================================================================== */
+
+test('the flyers leave document flow for the duration, and their layout box never moves', async ({ page }) => {
+  await open(page);
+  // At rest, before either pin engages: both bodies are in flow, the effect has
+  // written no box of its own, and the anchor is as tall as its content.
+  const before = await readScene(page);
+  expect(before.sheet.position).not.toBe('fixed');
+  expect(before.anchor.inlineHeight).toBe('');
+  expect(await cameraHeld(page)).toBe(false);
+  for (const flyer of before.flyers) {
+    expect(flyer.position).toBe('relative');
+    expect(parseMatrix(flyer.transform)).toEqual([1, 0, 0, 1, 0, 0]);
+  }
+  const rest = before.flyers.map((flyer) => ({
+    left: flyer.offsetLeft,
+    top: flyer.offsetTop,
+    width: flyer.offsetWidth,
+    height: flyer.offsetHeight,
+  }));
+
+  // Requirement 3's "detach from document flow" is literal. For the whole hold
+  // both bodies are absolutely positioned at the exact boxes they already
+  // occupied, so the lift itself paints nothing — and because the layout can no
+  // longer move them, the sheet's collapsing border box cannot perturb a rest
+  // position by a sub-pixel while the field is evaluated from it.
+  for (const consumption of [0, 0.3, 0.6, 1]) {
+    await scrollProgress(page, consumption);
+    const scene = await readScene(page);
+    expect(scene.sheet.position).toBe('fixed');
+    expect(scene.anchor.inlineHeight).not.toBe('');
+    // Lifting the anchor's only two children would empty it, so its height is
+    // written back: nothing below the invitation moves when they leave flow.
+    expect(Math.abs(scene.anchor.height - before.anchor.height)).toBeLessThan(0.5);
+    scene.flyers.forEach((flyer, index) => {
+      expect(flyer.position).toBe('absolute');
+      // `offset*` is the LAYOUT box: a transform does not touch it. It is the
+      // rest box at every playhead, resolved against the anchor — the offset
+      // parent — and not against the sheet.
+      expect(flyer.offsetLeft).toBe(rest[index].left);
+      expect(flyer.offsetTop).toBe(rest[index].top);
+      expect(flyer.offsetWidth).toBe(rest[index].width);
+      expect(flyer.offsetHeight).toBe(rest[index].height);
+    });
+  }
+
+  // Scrolling back UP out of the hold settles the playhead on 0 — the tail
+  // converges with the scroll stopped, so the scene is never left half-applied
+  // on an unpinned layout — and both bodies are back in document flow.
+  await page.evaluate(() => {
+    const trigger = window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!;
+    window.scrollTo({ top: Math.max(0, trigger.start - 400), behavior: 'instant' });
+  });
+  await expect.poll(() => page.locator(root).getAttribute('data-horizon-progress')).toBe('0.0000');
+  const after = await readScene(page);
+  expect(after.sheet.position).not.toBe('fixed');
+  expect(after.anchor.inlineHeight).toBe('');
+  expect(Math.abs(after.anchor.height - before.anchor.height)).toBeLessThan(0.5);
+  after.flyers.forEach((flyer, index) => {
+    expect(flyer.position).toBe('relative');
+    expect(parseMatrix(flyer.transform)).toEqual([1, 0, 0, 1, 0, 0]);
+    expect(flyer.offsetLeft).toBe(rest[index].left);
+    expect(flyer.offsetTop).toBe(rest[index].top);
+  });
+  // And the real footer is whole again: the curtain sits one tail below the hem,
+  // with nothing parked and nothing consumed.
+  expect(Math.abs(hemToDocumentEnd(after) - after.tail)).toBeLessThan(2.5);
+});
 
 test('the gap from the sheet hem to the end of the document never shrinks', async ({ page }) => {
   await open(page);
@@ -745,15 +942,12 @@ test('the SAME real CTA keeps its tab stop, name and click at 0/50/100%', async 
   await scrollProgress(page, 0.5);
   const link = page.locator('.signoff a');
   await page.evaluate(() => {
-    // Revert BOTH pins so the interaction checks run on a static layout: with
-    // the hole pinned the sheet sits mid-viewport and a Tab that scrolls would
-    // move the playhead underneath the assertions. The playhead is then driven
-    // by hand, which is the same reversible scrub the scroll drives.
-    for (const id of ['signoff-horizon-hole', 'signoff-horizon']) {
-      window.horizonFixture.ScrollTrigger.getById(id)!.disable(true);
-    }
+    // The pins stay ENGAGED: this is the scene a reader actually interacts
+    // with, and with the screen locked the playhead only moves where the scroll
+    // puts it. An earlier version reverted both pins and turned a scrub tween by
+    // hand; there is no tween to turn now, and there is nothing to gain from
+    // testing the interaction on a layout the effect never produces.
     const footer = document.querySelector('.signoff')!;
-    window.scrollTo({ top: footer.getBoundingClientRect().top + scrollY - 120, behavior: 'instant' });
     window.horizonClicks = 0;
     footer.querySelector('a')!.addEventListener('click', (event) => {
       if (event.isTrusted) window.horizonClicks++;
@@ -763,17 +957,15 @@ test('the SAME real CTA keeps its tab stop, name and click at 0/50/100%', async 
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Accessibility.enable');
   let clicks = 0;
-  for (const progress of [0, 0.5, 1]) {
-    await page.evaluate((p) => {
-      (document.activeElement as HTMLElement | null)?.blur();
-      const animation = window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!.animation!;
-      animation.pause().progress(p === 0 ? 0.001 : 0);
-      animation.progress(p);
-    }, progress);
-    await expect(page.locator(root)).toHaveAttribute('data-horizon-progress', progress.toFixed(4));
+  for (const consumption of [0, 0.5, 1]) {
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await scrollProgress(page, consumption);
     await expect(link).toHaveAttribute('href', '#nemoverse');
     await expect(link).toHaveAccessibleName('Explore the universes');
-    // The link is never removed from the accessibility tree, at any playhead.
+    // The link is never removed from the accessibility tree, at any playhead —
+    // not at the horizon, where its own box has contracted into a point. A
+    // transform is not a layout property, and neither opacity nor
+    // pointer-events takes a node out of the tree.
     const ax = await cdp.send('Accessibility.getFullAXTree');
     expect(ax.nodes.some((node) => !node.ignored && node.role?.value === 'link' &&
       node.name?.value === 'Explore the universes')).toBe(true);
@@ -796,14 +988,30 @@ test('the SAME real CTA keeps its tab stop, name and click at 0/50/100%', async 
     const rescued = await readScene(page);
     expect(Math.abs(rescued.sheet.height - before.sheet.height)).toBeLessThan(0.5);
     expect(rescued.pins.sheet!.progress).toBe(before.pins.sheet!.progress);
+    expect(await page.locator(root).getAttribute('data-horizon-progress')).toBe(consumption.toFixed(4));
 
-    await link.click();
-    await expect.poll(() => page.evaluate(() => window.horizonClicks)).toBe(++clicks);
-    await page.keyboard.press('Enter');
-    await expect.poll(() => page.evaluate(() => window.horizonClicks)).toBe(++clicks);
+    if (consumption < 1) {
+      // A real click on a real link, while the sheet is :focus-within — which is
+      // also what puts the pointer back on a flyer the horizon has retired.
+      await link.click();
+      await expect.poll(() => page.evaluate(() => window.horizonClicks)).toBe(++clicks);
+      await page.keyboard.press('Enter');
+      await expect.poll(() => page.evaluate(() => window.horizonClicks)).toBe(++clicks);
+    } else {
+      // At 100% the CTA has crossed the event horizon: requirement 3's scale to
+      // zero means there is no area left to click, and that is the point — no
+      // invisible hit target is left sitting over the hole. What survives is the
+      // tab stop and the accessible name, asserted above, plus the rescue's
+      // pointer-events, which a zero-area box simply has nothing to apply to.
+      const flyer = rescued.flyers.find((f) => f.selector === cta)!;
+      expect(flyer.width).toBeLessThan(0.5);
+      expect(flyer.height).toBeLessThan(0.5);
+      expect(flyer.pointerEvents).toBe('auto');
+    }
 
     // The tab stop is real in both directions, and the CTA is the only one the
-    // effect ever touches.
+    // effect ever touches. Last, because a Tab that scrolls moves the playhead —
+    // and the next iteration puts it back where it belongs.
     await page.locator('#nemoverse a').evaluate((el: HTMLAnchorElement) => el.focus({ preventScroll: true }));
     await page.keyboard.press('Tab');
     await expect(link).toBeFocused();
@@ -811,21 +1019,35 @@ test('the SAME real CTA keeps its tab stop, name and click at 0/50/100%', async 
     await expect(page.locator('#nemoverse a')).toBeFocused();
   }
 
-  // A consumed flyer must not leave an invisible click target over the hole, and
-  // focus must put the pointer back.
-  await page.evaluate(() => {
-    (document.activeElement as HTMLElement | null)?.blur();
-    const animation = window.horizonFixture.ScrollTrigger.getById('signoff-horizon')!.animation!;
-    animation.progress(1);
-  });
-  const stray = await page.locator(cta).evaluate((el) => {
-    const box = el.getBoundingClientRect();
-    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-    return el.contains(hit) || hit === el;
-  });
-  expect(stray).toBe(false);
+  // A consumed flyer must not leave an invisible click target over the hole.
+  // Sampled just before the scale reaches zero, where both flyers are past the
+  // horizon but still have an area to hit-test, and both are up by the
+  // singularity — inside the veil the hem clip re-grants, so nothing about this
+  // probe depends on the collapsing hem.
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await scrollProgress(page, 0.85);
+  const consumed = await readScene(page);
+  expect(consumed.flyers.every((flyer) => flyer.pointerEvents === 'none')).toBe(true);
+  expect(consumed.flyers.every((flyer) => flyer.width > 0.5 && flyer.height > 0.5)).toBe(true);
+  for (const selector of FLYERS) {
+    const stray = await page.locator(selector).evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return el.contains(hit) || hit === el;
+    });
+    expect(stray, `${selector}: an invisible hit target is left over the hole`).toBe(false);
+  }
+
+  // …and focus puts the pointer back. Probed on the HEADLINE at the halfway
+  // playhead, which is where the geometry allows the probe to mean something:
+  // the rescue restores a flyer to its REST box, and the sheet's hem clip cuts
+  // that box off once the collapse has run past it (at 85% the sheet is a stub).
+  // The pointer itself is restored at every playhead — asserted as a computed
+  // style in the loop above — and so are the paint, the ring and the tab stop.
+  await scrollProgress(page, 0.5);
   await link.evaluate((el: HTMLAnchorElement) => el.focus({ preventScroll: true }));
-  const rescuedHit = await page.locator(cta).evaluate((el) => {
+  await expect(page.locator(cta)).toHaveCSS('pointer-events', 'auto');
+  const rescuedHit = await page.locator(invite).evaluate((el) => {
     const box = el.getBoundingClientRect();
     const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
     return el.contains(hit) || hit === el;
@@ -957,7 +1179,7 @@ test('WebGL2 pixels agree with an independent CPU port of both shader stages', a
       createEventHorizonWarp, horizonRadiusAtProgress, HORIZON_STEPS, CAPTURE_THRESHOLD,
     } = await import('/src/three/eventHorizonWarp.ts');
     const {
-      infallAt, tidalAt, swirlAt,
+      shaderInfallAt, tidalAt, swirlAt,
     } = await import('/src/lib/spaghettification.ts');
     const { flatSimulationConfig: physics } = await import('/src/three/blackhole/blackhole.config.js');
     const source = document.createElement('canvas');
@@ -999,7 +1221,10 @@ test('WebGL2 pixels agree with an independent CPU port of both shader stages', a
         const tidal = tidalAt(r, R, p);
         if (tidal > 0) tidalChecks++;
         const drag = tidal * swirlAt(p) * TAU;
-        const stretch = 1 + infallAt(p) + tidal;
+        // The GPU is handed the FLOORED infall term (`shaderInfallAt`), so the
+        // port has to use the same value: at p = 1 the pull diverges, and the
+        // floor is what keeps a driver from multiplying 0 x inf at the anchor.
+        const stretch = 1 + shaderInfallAt(p) + tidal;
         const stretchedX = dx * stretch;
         const stretchedY = dy * stretch;
         sx = anchor.x + stretchedX * Math.cos(drag) - stretchedY * Math.sin(drag);

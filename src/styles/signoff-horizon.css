@@ -25,7 +25,17 @@
 
 /* The flyers — the headline and the CTA. Both are already positioned in
    overhaul.css; this only guarantees it, and lifts them above the sheet's own
-   background (but below the frozen frame, which takes the paint over). */
+   background (but below the frozen frame, which takes the paint over).
+
+   While the scene holds, the effect takes them OUT OF DOCUMENT FLOW: it writes
+   their measured rest boxes back as `position: absolute` + `left/top/width/
+   height` (resolved against `.signoff__anchor`, which is `position: relative`)
+   and pins the anchor's own height, which lifting its only two children would
+   otherwise empty. From that frame on, the fall is a transform on a box the
+   layout can no longer move, and the sheet's collapsing border box cannot
+   perturb a flyer's rest position by a sub-pixel — which matters, because the
+   rest position is one of the three numbers the whole field is evaluated from.
+   The inline box is the rest box exactly, so the lift itself paints nothing. */
 .footer.signoff [data-horizon-item] {
   position: relative;
   z-index: 2;
@@ -78,7 +88,7 @@
 }
 
 /* ---- synchronous paint guard ----------------------------------------------
-   The shared matchMedia hook tears an active capture/scrub down asynchronously
+   The shared matchMedia hook tears an active capture/playhead down asynchronously
    after a device-policy change, and a ScrollTrigger refresh is not the same
    tick as the media query that invalidated it. These rules make the fallback
    state correct on the first painted frame after the change: the real
@@ -96,5 +106,16 @@
     transform: none !important;
     opacity: 1 !important;
     pointer-events: auto !important;
+    /* …and the lift out of document flow is undone with it. The effect drops
+       the box itself on teardown; these are the same frame's guarantee, for a
+       policy change that lands before the matchMedia revert does. */
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: auto !important;
+    height: auto !important;
+  }
+  .footer.signoff .signoff__anchor {
+    height: auto !important;
   }
 }
