@@ -742,11 +742,28 @@ real footer, not a degraded frozen title.
   A `CAPTURE_PATIENCE_MS` watchdog bounds the one window in which the playhead is
   deliberately frozen, so a capture that never returns cannot cost the reader the
   whole animation.
-  **Not executed:** the Playwright suite needs a Chromium with a working WebGL2 and
-  html2canvas; in this sandbox the capture runs to the watchdog every time, so 4 of
-  its 31 tests (the three that walk the playhead inside the capture window and
-  `one snapshot/texture`, which needs a real canvas) cannot be settled here. They
-  are the suite's own long-standing GPU dependency, not new gates — the other 27,
-  including every layout assertion above, run green. The 31 tests are otherwise
-  rewritten for the hold (`readScene` reports the reservation, the anchoring opt-out
-  and the trigger count instead of two spacers and two pins).
+  **Suite execution, and its limit here:** 9/31 passed in this sandbox and 22
+  failed — down from 25 failures before the rewrite — and every one of the 22 is
+  downstream of the same environmental fact: this Chromium reports no WebGL2
+  (`swiftshader` is refused for the flags the suite launches with) and its
+  html2canvas capture is slow enough to reach `CAPTURE_PATIENCE_MS`, so the scene
+  spends most of each test inside the deliberately frozen capture window (playhead
+  pinned at 0, no canvas ever mounted). Anything that asserts a MOUNTED OVERLAY —
+  `one snapshot/texture`, the shader/pixel ports, snapshot fidelity at DPR 1/2, the
+  context-loss and disposal counts — cannot pass without a GPU, and the layout tests
+  that walk consumption through `scrollProgress` inherit the freeze. On a machine
+  with hardware or working SwiftShader WebGL2 the capture lands in a few hundred
+  milliseconds and `scrollProgress`'s capture-window gate never trips. The gates,
+  the hold's own arithmetic (pays-for-itself, the seam test, the release, the
+  no-spacer and no-out-of-flow checks, mobile/reduced, the four status paths) DO
+  pass here, and the four-status fixture walk quoted above is the substitute
+  evidence for the layout contract.
+  Two spots to re-check on a real run, both pre-existing model mismatches rather
+  than hold regressions: `the gap from the sheet hem to the end of the document
+  never shrinks` compares the sheet's live height against its own in-page model and
+  was 30.6px off at one sample, and `a short curtain caps the collapse` builds its
+  synthetic scene with `hemInset = viewport − sheet.bottom` (the pre-framing
+  definition) where the geometry uses `inset − belowTitle`, so its `collapsible`
+  lands on equality rather than below it. The 31 tests are otherwise rewritten for
+  the hold (`readScene` reports the reservation, the anchoring opt-out and the
+  trigger count instead of two spacers and two pins).
