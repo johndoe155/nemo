@@ -30,27 +30,52 @@ import { useSingularityGate } from '../lib/singularityGate';
    ========================================================================== */
 
 export default function Singularity() {
-  const { isMobile, frameRef, reportStatus, cameraHoldRef } = useSingularityGate();
+  const { isMobile, frameRef, holdRef, reportStatus, cameraHoldRef } = useSingularityGate();
 
   // On mobile: render nothing — the section must appear as if it was never
-  // implemented. No DOM, no canvas, no observers, no heavy GPU init.
+  // implemented. No DOM, no canvas, no observers, no heavy GPU init, and no
+  // reservation: `.bh-hold` is returned with the section, so the box the hold
+  // would spend does not exist either. styles/blackhole.css hides `.bh-hold` at
+  // the same breakpoint, which is the pre-hydration window where the section's
+  // own `display: none` has not taken effect yet but a stale height could.
   if (isMobile) return null;
 
   return (
-    <section className="section singularity" id="singularity">
-      <h2 className="vh">The singularity — a live black hole simulation</h2>
+    <>
+      {/* THE HOLD. An empty box whose only job is to be tall at the right time:
+          components/SignoffHorizon.tsx writes `holdDistanceAt(scroll, start, span)`
+          onto it for the span of the sign-off's consumption, which pushes the
+          section below — and the sign-off below that — down one pixel per scrolled
+          pixel, so the whole composition keeps one fixed viewport position while
+          the hole eats the invitation. It is the pin's replacement, and it sits HERE,
+          immediately above the section and outside it, for three reasons:
+            · the cost lands in the void between the crawl and the black hole, not in
+              the seam between the hole and the sign-off (a reservation spent INSIDE
+              the picture is the wide gap this section used to have);
+            · `#singularity`'s own box never changes size, so `.singularity::before`
+              — the atmosphere that bleeds into the sections around it — cannot be
+              stretched over a box that grows and shrinks with the scroll;
+            · the section keeps its exact geometry for `measureSignoffScene`, which
+              solves the composition's framing from distances measured across it.
+          It is `aria-hidden` and inert: a layout reserve, not content. */}
+      <div className="bh-hold" ref={holdRef} aria-hidden="true" />
 
-      {/* .bh-frame carries the seam gradients above and below the stage
-          (styles/blackhole.css); .bh-stage inside it owns the canvas box. It is
-          also the element the pinned consumption scene pins — the CONTAINER of
-          the black hole, so that the hole itself stays rigidly anchored and
-          static on screen while the sign-off falls into it (see
-          components/SignoffHorizon.tsx). `cameraHoldRef` is the other half of
-          "static": the box is held by the pin, the framing inside it by the
-          stage. */}
-      <div className="bh-frame" ref={frameRef}>
-        <BlackHoleStage onStatusChange={reportStatus} cameraHoldRef={cameraHoldRef} />
-      </div>
-    </section>
+      <section className="section singularity" id="singularity">
+        <h2 className="vh">The singularity — a live black hole simulation</h2>
+
+        {/* .bh-frame carries the seam gradients above and below the stage
+            (styles/blackhole.css); .bh-stage inside it owns the canvas box. It is
+            the CONTAINER the composition is framed on — no longer "pinned" in the
+            GSAP sense, since the reservation above holds the section and therefore
+            this box rigidly in the viewport, but every number the consumption scene
+            solves is still measured from it, which is why the ref stays with the
+            section and not with the footer that reads it. `cameraHoldRef` is the
+            other half of "static": the box is held by the reservation, the framing
+            inside it by the stage (see components/SignoffHorizon.tsx). */}
+        <div className="bh-frame" ref={frameRef}>
+          <BlackHoleStage onStatusChange={reportStatus} cameraHoldRef={cameraHoldRef} />
+        </div>
+      </section>
+    </>
   );
 }

@@ -376,6 +376,39 @@
 }
 
 /* ============================================================================
+   THE HOLD — the box the sign-off's consumption scene pays for.
+
+   `components/SignoffHorizon.tsx` writes one inline `height` onto this empty
+   element per scroll frame (see `holdDistanceAt` in lib/spaghettification.ts):
+   it is zero before the composition is framed, one pixel per scrolled pixel
+   through the hold, and frozen at the span's length afterwards. Everything below
+   it — this section, the sign-off, the curtain — is pushed down at exactly the
+   rate the reader scrolls, which is what holds the black hole and the invitation
+   rigidly on screen together without `position: fixed`, without a pin-spacer and
+   without a box of the picture being re-parented.
+
+   It therefore has to be: inside `<main>`, immediately above `#singularity`, and
+   NOTHING ELSE. No background (the void above the section is the page's own
+   atmosphere, and a painted band there would be a visible seam), no margin (the
+   reservation is measured as a height, and margins would collapse with it), no
+   content, no stacking context, and no `display` change on a breakpoint where
+   the effect still runs — a `display: none` element still reports a height to
+   its own inline style but contributes nothing to the document, which would
+   silently cost the reader the hold. Mobile is the one place that is safe, and
+   it is safe because the scene is gated off there as well.
+   ========================================================================== */
+.bh-hold {
+  /* Zero at rest: the reservation exists only while the hold runs, and the
+     effect writes an INLINE height on top of this rule — which is why the
+     declaration must stay unimportant. */
+  height: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  pointer-events: none;
+}
+
+/* ============================================================================
    MOBILE REMOVAL — the singularity section must not exist on mobile.
    This CSS is the fallback / first-paint guard: even before React hydrates
    and Singularity.tsx returns null, the section occupies zero layout, paints
@@ -385,5 +418,13 @@
 @media (max-width: 768px) {
   .singularity {
     display: none !important;
+  }
+
+  /* The reservation goes with the section it reserves space for: the consumption
+     scene never mounts at this width, so an inline `height` would be stranded by
+     a viewport that was resized down mid-hold. `display: none` cannot strand a
+     hold the page is not running. */
+  .bh-hold {
+    display: none;
   }
 }

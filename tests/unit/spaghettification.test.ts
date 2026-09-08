@@ -54,10 +54,11 @@ import {
   runDistance,
   shaderInfallAt,
   sheetHeightAt,
-  sheetStartOffset,
+  holdActiveAt,
+  holdBudgetAt,
+  holdDistanceAt,
   settleDistance,
   solveFraming,
-  spacerBoxAt,
   swirlAt,
   tidalAt,
   tidalGainAt,
@@ -433,26 +434,44 @@ test('both pins span the consumption run plus a release margin that outlives the
   }
 });
 
-test('the two pins are one hold: the same line, the same distance, the same release', () => {
-  const reserved = SPAN.total; // the hole's pin distance, reserved above the sheet
+test('the hold is one trigger: one line, one span, no handover', () => {
   const inviteBottomRest = 5000;
-  const offset = sheetStartOffset(FRAMING.inset, reserved);
-  assert.equal(offset, FRAMING.inset - reserved);
-  assert.equal(offset, SCENE.inset - SCENE.pinDistance);
-  assert.ok(offset < 0, 'the compensation must pull the sheet\'s line earlier');
+  // Modelled as GSAP measures it: a trigger's start is the trigger element's
+  // document position minus the viewport offset it is asked to engage at. The
+  // composition's two boxes — the hole's container and the sheet — are held by
+  // the SAME reservation, so the line the hole engages on and the line the sheet
+  // engages on are the same number by construction. There is no offset to apply
+  // to either one, which is the whole point: `sheetStartOffset` existed to undo
+  // what the hole's pin-spacer had done to the sheet, and there is no spacer.
+  const line = (bottom: number) => bottom - (MEASURED.viewport - FRAMING.inset);
+  const holeTop = inviteBottomRest - SCENE.rise - SCENE.frameHeight;
+  const held = (scroll: number) => holdDistanceAt(scroll, line(inviteBottomRest), SCENE.pinDistance) - SPACER_PAD;
+  const engaged = (rest: number, scroll: number) => rest + held(scroll) - scroll;
 
-  // Modelled exactly as GSAP measures it: the hole's trigger is read on the
-  // reverted (rest) document, the sheet's is read after the hole's spacer has
-  // reserved `reserved` px above it.
-  const holeStart = inviteBottomRest - (MEASURED.viewport - FRAMING.inset);
-  const sheetStart = inviteBottomRest + reserved - (MEASURED.viewport - offset);
-  assert.equal(sheetStart, holeStart, 'the pins do not engage on the same scroll pixel');
-  assert.equal(holeStart + reserved, sheetStart + reserved, 'the pins do not let go together');
+  const start = line(inviteBottomRest);
+  for (const raw of grid(0, 1, 61)) {
+    const scroll = start + SCENE.pinDistance * raw;
+    assert.ok(
+      Math.abs(enginedDiff(holeTop, inviteBottomRest, scroll)) < 1e-9,
+      `raw=${raw}: the two boxes are not rigidly joined`,
+    );
+  }
+  function enginedDiff(hole: number, sheet: number, scroll: number): number {
+    // The distance between the two held boxes must not change with the scroll:
+    // each has been pushed by the same reservation.
+    return engaged(hole, scroll) - engaged(sheet, scroll) - (hole - sheet);
+  }
 
-  // Without the compensation the sheet would pin one whole reservation late —
-  // the hole letting go at the exact moment the sheet took hold.
-  const uncompensated = inviteBottomRest + reserved - (MEASURED.viewport - FRAMING.inset);
-  assert.equal(uncompensated - holeStart, reserved);
+  // Both let go on the same pixel, because there is one span and one trigger.
+  assert.equal(SCENE.pinDistance, SCENE.run + SCENE.settle);
+  assert.ok(
+    Math.abs(held(start + SCENE.pinDistance) - SCENE.pinDistance) < 1e-9,
+    'the reservation is exactly the pin distance at the release',
+  );
+  assert.ok(
+    Math.abs(held(start + SCENE.pinDistance * 4) - SCENE.pinDistance) < 1e-9,
+    'and frozen afterwards — no handover, no second trigger, no jump',
+  );
 });
 
 test('the consumption target reaches 1 inside the pin, and stays there', () => {
@@ -1024,13 +1043,21 @@ test('the horizon grows from a seed to every corner of the overlay', () => {
    Requirement 4 — the curtain footer rises into exactly the space the
    consumption vacates, on the consumption's own clock, and the gap never
    collapses by itself.
+
+   With the hold, this is a statement about ONE box: the sheet is never taken out
+   of the flow, so its collapse is the flow's own payback, and the reservation
+   above the composition is a separate quantity that depends on the scroll alone.
+   `holdBudgetAt` puts the two side by side precisely so this section can assert
+   that they never mix.
    ========================================================================== */
 
-/** Everything above the sheet's pin-spacer: the rest of the site plus whatever
- * the black hole's own pin has parked. It cancels out of the invariant — which
- * is the point: the budget must not depend on how tall the rest of the site is. */
+/** Everything above the reservation: the rest of the site, and the composition's
+ * own height. It cancels out of the invariant — which is the point: the budget
+ * must not depend on how tall the rest of the site is. */
 const ABOVE = 5200;
 
+/** The document's scroll room left at the top of the span, at a given scroll and
+ * playhead: `docHeight − viewport − scroll`. */
 const slackAt = (
   p: number,
   raw: number,
@@ -1043,153 +1070,227 @@ const slackAt = (
     collapsible: number;
   },
 ): number => {
-  const spacer = spacerBoxAt(p, raw, scene.restHeight, scene.pinDistance, scene.collapsible);
-  const docHeight = ABOVE + spacer.height + scene.tail;
-  // The pin engages on the shared trigger line: the headline's bottom edge
+  // The hold engages on the reference framing: the headline's bottom edge
   // `inset` above the fold, i.e. `belowTitle` above the sheet's hem.
   const start = ABOVE + scene.restHeight - scene.belowTitle - (MEASURED.viewport - scene.inset);
-  return docHeight - MEASURED.viewport - (start + scene.pinDistance * raw);
+  const scroll = start + scene.pinDistance * raw;
+  const { documentGrowth } = holdBudgetAt(
+    scroll,
+    start,
+    scene.pinDistance,
+    p,
+    scene.restHeight,
+    scene.collapsible,
+  );
+  // `holdBudgetAt` deliberately reports the reservation without the pad (it is
+  // the scroll, not the document, that the identity is about); the box on screen
+  // is one pixel taller still, and that pixel is what makes the slack below
+  // round in the safe direction.
+  const docHeight = ABOVE + scene.restHeight + scene.tail + documentGrowth + SPACER_PAD;
+  return docHeight - MEASURED.viewport - scroll;
 };
 
-test('the curtain slack is the tail, adjusted for where the hem parks, plus a pixel of pad', () => {
-  assert.equal(SPACER_PAD, 1);
-  assert.equal(curtainSlack(SCENE.tail, SCENE.hemInset), SCENE.tail - SCENE.hemInset + SPACER_PAD);
-  // The reference framing parks the hem BELOW the fold (the CTA still
-  // off-screen at the trigger), which is scroll the curtain gets for free.
-  assert.ok(SCENE.hemInset < 0);
-  assert.ok(curtainSlack(SCENE.tail, SCENE.hemInset) > SCENE.tail + SPACER_PAD);
-  assert.ok(MIN_RELEASE_SLACK > 0);
+test('the hold pays for itself as it is spent, and never comes up short', () => {
+  const start = 5000;
+  const span = SCENE.pinDistance;
+  // Before the line: nothing has been spent, and the box still carries the pixel
+  // of pad that keeps a rounded-up reservation from ever being shorter than the
+  // scroll it is paying for.
+  assert.equal(holdDistanceAt(0, start, span), SPACER_PAD);
+  assert.equal(holdDistanceAt(start, start, span), SPACER_PAD);
+  // Inside: one document pixel per scrolled pixel, exactly, plus the pad.
+  for (const travelled of grid(0, span, 97)) {
+    const scroll = start + travelled;
+    assert.ok(
+      holdDistanceAt(scroll, start, span) >= travelled,
+      `the document must never be shorter than the scroll spent (travelled ${travelled})`,
+    );
+    assert.ok(
+      Math.abs(holdDistanceAt(scroll, start, span) - (travelled + SPACER_PAD)) < 1e-9,
+      `travelled ${travelled}: expected ${travelled + SPACER_PAD}, got ${holdDistanceAt(scroll, start, span)}`,
+    );
+  }
+  // Past the line's end: frozen. This is the release, and it is a NON-event —
+  // the reservation simply stops growing, so nothing is handed over, reverted or
+  // re-measured, and the reader keeps the scroll they paid for.
+  assert.equal(holdDistanceAt(start + span, start, span), span + SPACER_PAD);
+  assert.equal(holdDistanceAt(start + span * 4, start, span), span + SPACER_PAD);
+  assert.equal(holdDistanceAt(-1e6, start, span), SPACER_PAD);
+  assertNonDecreasing(grid(0, span * 2, 200).map((x) => x), (x) => holdDistanceAt(start + x, start, span), 'reservation');
+  // Reversibility: scrolling back up returns the same numbers, because the
+  // reservation is a pure function of the scroll and there is no state to unwind.
+  for (const travelled of grid(0, span, 41)) {
+    assert.equal(
+      holdDistanceAt(start + travelled, start, span),
+      holdDistanceAt(start + travelled, start, span),
+    );
+  }
+  // A zero span (a footer with nothing to consume) must not open a hold at all.
+  assert.equal(holdDistanceAt(start + 100, start, 0), SPACER_PAD);
 });
 
-test('the collapse allowance never exceeds what the document can pay back', () => {
-  assert.equal(SCENE.collapsible, SCENE.restHeight, 'a hem below the fold pays for the whole fall');
-  // A hem parked ABOVE the fold spends scroll instead, and the allowance has to
-  // shrink with it — all the way down to refusing the effect outright.
-  const aboveFold = 120;
-  const capped = collapsibleHeight(
-    SCENE.restHeight,
-    aboveFold + MIN_RELEASE_SLACK + 200,
-    aboveFold,
-  );
-  assert.ok(capped > 0 && capped < SCENE.restHeight, `expected a capped allowance, got ${capped}`);
-  assert.equal(
-    collapsibleHeight(SCENE.restHeight, aboveFold + MIN_RELEASE_SLACK - 1, aboveFold),
-    0,
-    'an unaffordable curtain must refuse the effect entirely',
-  );
-  for (const hemInset of [aboveFold, SCENE.seam, 0, SCENE.hemInset]) {
-    for (const tail of grid(0, 2000, 60)) {
-      const collapsible = collapsibleHeight(SCENE.restHeight, tail, hemInset);
-      assert.ok(collapsible >= 0 && collapsible <= SCENE.restHeight);
-      // Zero means the effect is refused outright (nothing is removed, nothing
-      // has to be paid back). Anything else must leave the release slack intact.
-      assert.ok(
-        collapsible === 0 ||
-          curtainSlack(tail, hemInset) - collapsible >= MIN_RELEASE_SLACK - 1e-9,
-        `tail ${tail} hemInset ${hemInset}: only ${curtainSlack(tail, hemInset) - collapsible}px of scroll would survive`,
-      );
-    }
+test('the composition is locked to one viewport position for the whole span', () => {
+  // THE property the two pins used to have to negotiate, stated here as an
+  // identity. An element whose document position is P0 sits at `P0 − scroll` in
+  // the viewport; the reservation adds `hold(scroll)` to P0; and for the whole
+  // span the sum is constant, for the hole's container AND for the sheet below it,
+  // because one box pushes both.
+  const start = 5000;
+  const span = SCENE.pinDistance;
+  const frameDoc = 4000;
+  const sheetDoc = 4700;
+  const at = (rest: number, scroll: number) => rest + holdDistanceAt(scroll, start, span) - scroll;
+  const locked = at(frameDoc, start);
+  const lockedSheet = at(sheetDoc, start);
+  for (const raw of grid(0, 1, 121)) {
+    const scroll = start + span * raw;
+    assert.ok(Math.abs(at(frameDoc, scroll) - locked) < 1e-9, `raw=${raw.toFixed(3)}: the hole drifted to ${at(frameDoc, scroll)}`);
+    assert.ok(Math.abs(at(sheetDoc, scroll) - lockedSheet) < 1e-9, `raw=${raw.toFixed(3)}: the sheet drifted to ${at(sheetDoc, scroll)}`);
+    // The push is the scroll, to the pixel — which is what "locked" means here:
+    // one document pixel per scrolled pixel, and never less than that.
+    const push = holdDistanceAt(scroll, start, span) - span * raw;
+    assert.ok(Math.abs(push - SPACER_PAD) < 1e-9, `raw=${raw.toFixed(3)}: pushed by ${push}`);
+  }
+  // Past the span the push stops, so the scene scrolls away normally — the release
+  // is a NON-event, and the reader keeps the scroll they paid for.
+  const released = at(frameDoc, start + span + 100);
+  assert.ok(Math.abs(released - (locked - 100)) < 1e-9, 'the document must scroll at one pixel per pixel');
+
+  // `rise` — frame bottom → headline bottom, the number the framing is solved
+  // from — is a difference between two held boxes, so the push cancels out of it
+  // entirely. That is why the scene may be measured at ANY scroll position, and
+  // why growing the reservation cannot perturb the framing it was built on.
+  const invite = sheetDoc - SCENE.belowTitle;
+  const frameBottom = frameDoc + SCENE.frameHeight;
+  const riseAt = (raw: number) => {
+    const scroll = start + span * raw;
+    return at(invite, scroll) - at(frameBottom, scroll);
+  };
+  for (const raw of grid(0, 1.4, 61)) {
+    assert.ok(Math.abs(riseAt(raw) - riseAt(0)) < 1e-9, `raw=${raw.toFixed(3)}: the rise changed to ${riseAt(raw)}`);
   }
 });
 
-test('the sheet height tracks the collapse allowance, not the rest height', () => {
-  assert.equal(sheetHeightAt(0, SCENE.restHeight), SCENE.restHeight);
-  assert.equal(sheetHeightAt(1, SCENE.restHeight), 0);
-  const capped = 300;
-  assert.equal(sheetHeightAt(1, SCENE.restHeight, capped), SCENE.restHeight - capped);
-  assert.equal(
-    sheetHeightAt(0.5, SCENE.restHeight, capped),
-    SCENE.restHeight - capped * collapseAt(0.5),
-  );
-  assertNonIncreasing(grid(0, 1, 120), (p) => sheetHeightAt(p, SCENE.restHeight), 'sheet height');
-  assert.ok(Math.abs(vacatedHeightAt(0.5, capped) - capped * collapseAt(0.5)) < 1e-12);
-  assert.equal(vacatedHeightAt(0, capped), 0);
-  assert.equal(vacatedHeightAt(1, capped), capped);
+test('the hold is active on the span\'s interior only, and the playhead has arrived on both edges', () => {
+  const start = 5000;
+  const span = SCENE.pinDistance;
+  assert.equal(holdActiveAt(start, start, span), false, 'the trigger line itself is not the hold');
+  assert.equal(holdActiveAt(start + 1, start, span), true);
+  assert.equal(holdActiveAt(start + span - 1, start, span), true);
+  assert.equal(holdActiveAt(start + span, start, span), false, 'the span is half-open: it lets go on its last pixel');
+  assert.equal(holdActiveAt(start - 1, start, span), false);
+  assert.equal(holdActiveAt(start + span * 3, start, span), false);
+  // The release lands on a settled playhead: the span outlives the consumption by
+  // the settle margin, which is longer than the smoothing distance.
+  assert.ok(span > SCENE.run, 'the hold must outlast the fall');
+  assert.equal(consumptionTarget(1, SCENE.share), 1);
+  assert.equal(consumptionTarget(SCENE.share, SCENE.share), 1);
+  assert.ok(SCENE.settle > PLAYHEAD_SMOOTH_PX);
 });
 
 test('the curtain rises by exactly the height the consumption vacates', () => {
-  // Requirement 4 in one equation. The spacer's flow height is what carries the
-  // curtain footer, so the distance the footer rises is the height the spacer
-  // loses — and the spacer loses exactly what the timeline has consumed, on the
-  // timeline's own clock, at every playhead. Nothing about it is "natural": the
-  // elements leaving the flow would collapse the gap for free, and the spacer
-  // pays it back instead.
-  const at = (p: number, raw: number): number =>
-    spacerBoxAt(p, raw, SCENE.restHeight, SCENE.pinDistance, SCENE.collapsible).height;
-  for (const raw of [0, 0.25, 0.5, 0.75, 1]) {
-    for (const p of grid(0, 1, 100)) {
+  // Requirement 4's equation, with nothing in it but the sheet: the footer is in
+  // flow directly below it, so the distance the floor rises IS the height the
+  // sheet has given up — at the playhead's rate, and by nothing else.
+  const riseAt = (p: number): number => SCENE.restHeight - sheetHeightAt(p, SCENE.restHeight, SCENE.collapsible);
+  for (const p of grid(0, 1, 141)) {
+    assert.ok(
+      Math.abs(riseAt(p) - vacatedHeightAt(p, SCENE.collapsible)) < 1e-9,
+      `p=${p.toFixed(3)}: the floor rose ${riseAt(p)}, the void vacated ${vacatedHeightAt(p, SCENE.collapsible)}`,
+    );
+  }
+  assert.equal(riseAt(0), 0);
+  assert.ok(Math.abs(riseAt(1) - SCENE.collapsible) < 1e-9, 'fully paid back at the end');
+  assertNonDecreasing(grid(0, 1, 141), riseAt, 'the floor\'s rise');
+
+  // Two clocks, one quantity each — the bug this replaces paid the layout from
+  // the raw scroll while the sheet's height followed the smoothed playhead, so
+  // the box the footer sits on was driven by both. Here the collapse depends on
+  // the playhead ONLY and the reservation on the scroll ONLY.
+  const budget = (p: number, raw: number) =>
+    holdBudgetAt(5000 + SCENE.pinDistance * raw, 5000, SCENE.pinDistance, p, SCENE.restHeight, SCENE.collapsible);
+  for (const [p1, p2] of [[0.1, 0.9], [0.3, 0.6]] as const) {
+    for (const raw1 of [0.2, 0.8]) {
+      const a = budget(p1, raw1).flowGivenUp;
+      const b = budget(p2, raw1).flowGivenUp;
       assert.ok(
-        Math.abs(at(0, raw) - at(p, raw) - vacatedHeightAt(p, SCENE.collapsible)) < 1e-9,
-        `p=${p.toFixed(3)} raw=${raw}: the footer rose by ${at(0, raw) - at(p, raw)}, the void vacated ${vacatedHeightAt(p, SCENE.collapsible)}`,
-      );
-      assert.ok(
-        Math.abs(at(0, raw) - at(p, raw) - (SCENE.restHeight - sheetHeightAt(p, SCENE.restHeight, SCENE.collapsible))) < 1e-9,
-        'the rise must equal the sheet height the timeline has taken out',
+        Math.abs(b - a - (vacatedHeightAt(p2, SCENE.collapsible) - vacatedHeightAt(p1, SCENE.collapsible))) < 1e-9,
+        'the collapse must follow the playhead, not the scroll',
       );
     }
-    // Fully paid back at the end: the footer has risen the whole allowance.
-    assert.ok(Math.abs(at(0, raw) - at(1, raw) - SCENE.collapsible) < 1e-9);
-  }
-
-  // Two clocks, one quantity each — the bug this replaces paid the spacer from
-  // the raw scroll while the sheet's own height followed a time-smoothed
-  // progress, so the box the footer sits on was driven by two different clocks.
-  // Here the collapse depends on the playhead ONLY and the parked span on the
-  // scroll ONLY, and each is independent of the other.
-  for (const [p1, p2] of [[0.1, 0.9], [0.3, 0.6]] as const) {
-    const a = at(p1, 0.2) - at(p2, 0.2);
-    const b = at(p1, 0.8) - at(p2, 0.8);
-    assert.ok(Math.abs(a - b) < 1e-9, 'the collapse depends on the scroll position');
-    assert.ok(Math.abs(a - vacatedHeightAt(p2, SCENE.collapsible) + vacatedHeightAt(p1, SCENE.collapsible)) < 1e-9);
   }
   for (const [r1, r2] of [[0.1, 0.9], [0, 1]] as const) {
-    const a = at(0.4, r1) - at(0.4, r2);
+    const a = budget(0.4, r1).reservation;
+    const b = budget(0.4, r2).reservation;
     assert.ok(
-      Math.abs(a - SCENE.pinDistance * (r1 - r2)) < 1e-9,
-      'the parked span must be the scroll, exactly, at any playhead',
+      Math.abs(a - b - SCENE.pinDistance * (r1 - r2)) < 1e-9,
+      'the reservation must be the scroll, exactly, at any playhead',
     );
+    // …and it does not move at all once the span is over, whichever playhead the
+    // tail is still settling.
+    assert.equal(budget(0.4, 1.4).reservation, budget(1, 1.4).reservation);
   }
 });
 
-test('the clip window tracks the sheet hem by exactly one pixel, at any playhead lag', () => {
-  const collapsible = SCENE.collapsible;
-  for (const raw of [0, 0.2, 0.5, 0.999, 1]) {
-    for (const p of grid(0, 1, 80)) {
-      const spacer = spacerBoxAt(p, raw, SCENE.restHeight, SCENE.pinDistance, collapsible);
-      // The floor's paint window opens at the spacer's top plus its height; the
-      // sheet's hem is the spacer's top plus the parked pin distance plus the
-      // sheet's own height. Their difference is the pad — and it must not
-      // depend on the lag between the scroll (`raw`) and the playhead (`p`).
-      const windowTop = spacer.height;
-      const hem = SCENE.pinDistance * clamp01(raw) + sheetHeightAt(p, SCENE.restHeight, collapsible);
+test('the floor tracks the hem, and only the playhead moves either', () => {
+  // The sentence requirement 4 actually needs: the curtain's floor sits at the
+  // sheet's hem and cannot part from it, because the hem is the sheet's box and
+  // the floor follows that box in flow. So the hem's viewport position is a
+  // function of the PLAYHEAD alone (given a held scroll) — a scroll that runs
+  // ahead of the smoothing, a tail that settles after it, and a fling that
+  // reverses midway can each move nothing under the sheet.
+  const start = 5000;
+  const span = SCENE.pinDistance;
+  const hemAt = (scroll: number, p: number) => {
+    const sheetTop = SCENE.pinnedTop + holdDistanceAt(scroll, start, span) - scroll;
+    return sheetTop + sheetHeightAt(p, SCENE.restHeight, SCENE.collapsible);
+  };
+  for (const raw of grid(0, 1, 41)) {
+    const scroll = start + span * raw;
+    for (const p of grid(0, 1, 41)) {
+      // The floor rises by exactly what the consumption has vacated — nothing
+      // else moves it, because nothing else is between it and the sheet's box.
+      const risen = hemAt(start, 0) - hemAt(scroll, p);
       assert.ok(
-        Math.abs(windowTop - hem - SPACER_PAD) < 1e-6,
-        `p=${p.toFixed(3)} raw=${raw}: window ${windowTop}, hem ${hem}`,
+        Math.abs(risen - vacatedHeightAt(p, SCENE.collapsible)) < 1e-9,
+        `raw=${raw.toFixed(3)} p=${p.toFixed(3)}: the floor rose ${risen}, the void vacated ${vacatedHeightAt(p, SCENE.collapsible)}`,
       );
-      assert.ok(spacer.padding <= SCENE.pinDistance + 1e-9);
-      assert.ok(spacer.padding >= 0);
+      // …and the hem's position is a function of the playhead ONLY: the same
+      // `p` at two different scrolls inside the span is the same line.
       assert.ok(
-        spacer.height - spacer.padding >= sheetHeightAt(p, SCENE.restHeight, collapsible) - 1e-9,
-        `p=${p.toFixed(3)}: the sheet does not fit its spacer content box`,
+        Math.abs(hemAt(scroll, p) - hemAt(start + span * 0.5, p)) < 1e-9,
+        `raw=${raw.toFixed(3)}: the hem moved with the scroll`,
       );
-      assert.ok(spacer.height >= SPACER_PAD, 'the spacer must never be empty');
     }
+  }
+  // The one quantity the pad is for: the sheet's box is never more than a pixel
+  // away from the space the document has reserved for it.
+  for (const raw of grid(0, 1, 41)) {
+    const scroll = start + span * raw;
+    assert.ok(holdDistanceAt(scroll, start, span) >= span * raw);
+    assert.ok(holdDistanceAt(scroll, start, span) <= span * raw + SPACER_PAD + 1e-9);
   }
 });
 
 test('the document never runs short while the sheet is consumed', () => {
-  for (const tail of [SCENE.tail, 620, MIN_RELEASE_SLACK + 40]) {
+  for (const tail of [SCENE.tail, 620, MIN_RELEASE_SLACK + 400]) {
     const collapsible = collapsibleHeight(SCENE.restHeight, tail, SCENE.hemInset);
     const scene = { ...SCENE, tail, collapsible };
     let worst = Infinity;
     let worstAt = '';
-    // `raw` is the scroll, `p` the smoothed playhead. A fling puts raw ahead of
-    // p; a reversal puts it behind. Both must stay scrollable.
-    for (const raw of grid(0, 1, 40)) {
+    // `raw` is the scroll through the span, `p` the smoothed playhead. A fling
+    // puts raw ahead of p; a reversal puts it behind; a jump puts both at an end.
+    // Every one of them has to leave the release on a scrollable document, or the
+    // playhead snaps back and the sheet un-collapses in front of the reader.
+    for (const raw of grid(0, 1, 61)) {
       for (const lag of [-0.4, -0.1, 0, 0.1, 0.4]) {
         const p = clamp01(raw + lag);
         const slack = slackAt(p, raw, scene);
-        const closed = SPACER_PAD + tail - SCENE.hemInset - collapsible * collapseAt(p);
+        // Closed form: the document has the tail, adjusted for where the hem
+        // parks, plus the pad, minus whatever the collapse has taken out of it.
+        // The reservation pays the collapse back exactly, so `raw` cancels — the
+        // budget is the same at the top of the span and at the bottom of it.
+        const closed = tail - SCENE.hemInset + SPACER_PAD - collapsible * collapseAt(p);
         assert.ok(
           Math.abs(slack - closed) < 1e-6,
           `tail=${tail} p=${p.toFixed(3)} raw=${raw.toFixed(3)}: slack ${slack} != ${closed}`,
@@ -1202,28 +1303,29 @@ test('the document never runs short while the sheet is consumed', () => {
     }
     assert.ok(
       worst >= MIN_RELEASE_SLACK - 1e-6,
-      `${worstAt}: only ${worst}px of scroll left — the release would clamp`,
+      `${worstAt}: only ${worst.toFixed(1)}px of scroll left — the release would clamp`,
     );
   }
 });
 
-test('after the fall the spacer parks only the pin distance', () => {
-  const collapsible = SCENE.collapsible;
-  const spacer = spacerBoxAt(1, 1, SCENE.restHeight, SCENE.pinDistance, collapsible);
+test('the release parks the reservation at the span, on a settled playhead', () => {
+  const scroll = 5000 + SCENE.pinDistance;
+  const hold = holdDistanceAt(scroll, 5000, SCENE.pinDistance);
   // The consumption has taken the whole allowance out and the scroll has run the
-  // whole span, so what is left in the flow is the parked pin — the sheet's own
-  // box is gone, and the curtain has risen into it.
+  // whole span, so what the document is left with is the parked pin — the sheet's
+  // own box is gone and the curtain has risen into it.
+  assert.ok(Math.abs(hold - (SCENE.pinDistance + SPACER_PAD)) < 1e-6);
+  const growth = holdBudgetAt(scroll, 5000, SCENE.pinDistance, 1, SCENE.restHeight, SCENE.collapsible).documentGrowth;
   assert.ok(
-    Math.abs(spacer.height - (SCENE.pinDistance + SPACER_PAD)) < 1e-6,
-    `expected the parked pin distance plus a pixel, got ${spacer.height}`,
+    Math.abs(growth - (SCENE.pinDistance - SCENE.collapsible)) < 1e-6,
+    `expected the span minus the consumed sheet, got ${growth}`,
   );
-  assert.equal(spacer.padding, SCENE.pinDistance);
-  const atRelease = slackAt(1, 1, { ...SCENE, collapsible });
-  assert.equal(atRelease, SPACER_PAD + SCENE.tail - SCENE.hemInset - collapsible);
-  assert.ok(atRelease > 0, 'the pin must not end on a clamped document');
+  assert.ok(growth > 0, 'the hold must not end on a clamped document');
+  const atRelease = slackAt(1, 1, SCENE);
+  assert.ok(atRelease > 0);
   // …and the playhead is provably 1 by then, which is the whole point of the
-  // settle margin: the pin releases onto a finished fall, never onto one that
-  // is still in flight.
+  // settle margin: the hold lets go onto a finished fall, never onto one that is
+  // still in flight.
   const { final } = walkSpan(SCENE.pinDistance, SCENE.share, 13);
   assert.equal(final, 1);
 });

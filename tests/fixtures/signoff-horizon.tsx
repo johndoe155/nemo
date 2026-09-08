@@ -22,26 +22,47 @@ import '../../src/styles/typography.css';
 import '../../src/styles/blackhole.css';
 
 function ControlledStage({ status }: { status: BlackHoleStageStatus }) {
-  const { frameRef, reportStatus, isMobile } = useSingularityGate();
+  const { frameRef, holdRef, reportStatus, isMobile } = useSingularityGate();
   useEffect(() => {
     reportStatus(isMobile ? 'booting' : status);
     return () => reportStatus('booting');
   }, [reportStatus, status, isMobile]);
   if (isMobile) return null;
+  // The rig has to reproduce the section's structure EXACTLY, including the
+  // `.bh-hold` reservation the consumption scene pays for: `holdRef` is what the
+  // effect reads to find the box it grows, and a fixture without it silently has
+  // no hold at all (the scene stands down, the footer stays plain, and every
+  // pinned-scene assertion in the suite would be proving nothing).
   return (
-    <section className="section singularity" id="singularity">
-      <div className="bh-frame" ref={frameRef}>
-        <div className="bh-stage" data-status={status} />
-      </div>
-    </section>
+    <>
+      <div className="bh-hold" ref={holdRef} aria-hidden="true" />
+      <section className="section singularity" id="singularity">
+        <div className="bh-frame" ref={frameRef}>
+          <div className="bh-stage" data-status={status} />
+        </div>
+      </section>
+    </>
   );
 }
 
-function Fixture() {
-  const [status, setStatus] = useState<BlackHoleStageStatus>(() =>
-    (new URLSearchParams(location.search).get('status') as BlackHoleStageStatus) ?? 'live',
-  );
-  const [mounted, setMounted] = useState(true);
+/* The rig has to be a CHILD of `SingularityProvider`: `useSingularityGate()`
+ * throws when it is called above the provider it reads (the context is null at
+ * that point in the tree), which is exactly how this fixture came to render
+ * nothing at all — every Playwright test in `tests/signoff-horizon.spec.ts`
+ * died on `waitForFunction(() => window.horizonFixture)` before a single
+ * assertion ran, and the whole pinning architecture therefore went unverified.
+ * State lives in `Fixture`, the context is consumed here. */
+function Rig({
+  status,
+  mounted,
+  setStatus,
+  setMounted,
+}: {
+  status: BlackHoleStageStatus;
+  mounted: boolean;
+  setStatus(s: BlackHoleStageStatus): void;
+  setMounted(m: boolean): void;
+}) {
   // Exposed so the suite can assert the other half of "the black hole stays
   // rigidly anchored and static": the pin holds the container's box, and this
   // ref is what holds the stage's cinematic camera inside it for exactly as long
@@ -53,9 +74,9 @@ function Fixture() {
     Object.assign(window, {
       horizonFixture: { setStatus, setMounted, ScrollTrigger, gsap, cameraHoldRef },
     });
-  }, [cameraHoldRef]);
+  }, [cameraHoldRef, setStatus, setMounted]);
   return (
-    <SingularityProvider>
+    <>
       <main>
         <div style={{ height: '110vh' }} id="nemoverse"><a href="#connect">Before the sign-off</a></div>
         {new URLSearchParams(location.search).has('real-stage')
@@ -63,6 +84,23 @@ function Fixture() {
           : <ControlledStage status={status} />}
       </main>
       {mounted && <Footer />}
+    </>
+  );
+}
+
+function Fixture() {
+  const [status, setStatus] = useState<BlackHoleStageStatus>(() =>
+    (new URLSearchParams(location.search).get('status') as BlackHoleStageStatus) ?? 'live',
+  );
+  const [mounted, setMounted] = useState(true);
+  return (
+    <SingularityProvider>
+      <Rig
+        status={status}
+        mounted={mounted}
+        setStatus={setStatus}
+        setMounted={setMounted}
+      />
     </SingularityProvider>
   );
 }

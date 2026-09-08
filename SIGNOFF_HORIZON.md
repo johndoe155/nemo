@@ -95,9 +95,9 @@ farthest measured corner of the overlay, so progress = 1 consumes every texel at
 every footer size. Full consumption is horizon capture, not a final opacity fade
 over an otherwise unwarped image.
 
-## The reference framing, and the two pins
+## The reference framing, and the hold
 
-The pinned subject is **the black hole**, not the sign-off — and the moment it
+The subject of the hold is **the black hole**, not the sign-off — and the moment it
 takes hold is art-directed off one composition: the hole at the top of the
 viewport, the whole `ENTER THE NEMOVERSE` headline at the bottom, and the CTA
 still below the fold. Both halves of that sentence are containment conditions on
@@ -112,7 +112,7 @@ inviteBottom = viewport − air       the whole headline is inside the bottom of
 `rise` (frame bottom → headline bottom) does not depend on the container's height,
 so the container's height is the composition's one free variable, and
 `solveFraming` spends it. It returns the trigger line (`inset` — the headline's
-inset above the fold, rounded once, because both pins are driven off that one
+inset above the fold, rounded once, because the line is driven off that one
 number) *and* the height that makes both conditions true
 (`frameHeight = floor(min(natural, viewport − inset − rise))`). The stage
 publishes it as `--bh-frame-fit`, which `blackhole.css` caps its own
@@ -121,7 +121,7 @@ a container already smaller than the budget is left alone and nothing is
 published. With the fit applied, `parkedFrameTop` is exactly 0 when the budget
 binds — the hole flush with the top of the screen, the headline flush with the
 bottom, on the pixel the hold begins on. At 1280×900 that is a 684px container cut
-to 531px.
+to 545px.
 
 Specifying the trigger on the headline alone, as an earlier version did,
 guarantees only the second condition: at the reference framing's own numbers it
@@ -130,44 +130,118 @@ screen. That is not the reference composition, it is a crop of it. `framingHolds
 therefore takes the container's height as well, and after `solveFraming` it is
 true by construction rather than up to half a pixel of rounding.
 
-| trigger | trigger element | pins | start | distance |
+| trigger | trigger element | holds | start | distance |
 | --- | --- | --- | --- | --- |
-| `signoff-horizon-hole` | the headline, `[data-horizon-item="invite"]` | `.bh-frame` | `bottom bottom-={inset}` | `pinDistance = run + settle` |
-| `signoff-horizon` | the same headline | `.footer.signoff` (`pinType: 'fixed'`) | the same line, minus the hole's reservation | the same `pinDistance` |
-| `signoff-horizon-arm` | `.bh-frame` | — | `bottom bottom+={seam × 4}` | one-shot capture |
+| `signoff-horizon` | the headline, `[data-horizon-item="invite"]` | the reservation `.bh-hold` | `bottom bottom-={inset}` | `pinDistance = run + settle` |
+| `signoff-horizon-arm` | `.bh-frame` | nothing | `bottom bottom+={seam × 4}` | one-shot capture |
 
 `inset` is `titleAir` — 5.5% of the viewport, clamped to 24–42px, and 42px is the
 invitation's own `2.6rem` top margin, which is what keeps the button off-screen at
 the trigger — in the framing that fits. In the degraded one it is `seam − rise`,
 negative: the same screen line, stated on the headline before the headline has
-arrived. Both pins engage on that one pixel and let go on one pixel together, so
-the viewport is completely static for the whole consumption: the hole does not
-drift, the sheet does not climb, and the only thing that moves is the warp. The
-singularity the invitation falls into is the parked container's centre, *above*
-the pinned sheet — the pull is upward, out of the sheet and into the hole, and the
-overlay's veil is the headroom that buys.
+arrived. There is ONE scroll line and ONE span, so the viewport is completely
+static for the whole consumption: the hole does not drift, the sheet does not
+climb, and the only thing that moves is the warp. The singularity the invitation
+falls into is the held container's centre, *above* the sheet — the pull is upward,
+out of the sheet and into the hole, and the overlay's veil is the headroom that
+buys.
+
+### Why the hold is not a pin
+
+This section was previously `pin: true` on the black hole's `.bh-frame` plus a
+second pin on the sheet, and pinning appeared not to work at all: the
+composition scrolled past the hole, nothing locked, and a wide band of background
+opened between the singularity and the sign-off. Both failures had one cause —
+**the cost of the hold was being paid from inside the picture.**
+
+* `pinSpacing: true` wrote the entire `pinDistance` (641px) as `paddingBottom` on
+  the `.pin-spacer` that replaces the pinned `.bh-frame` — i.e. on the seam
+  *between* the hole and the sheet. That is the gap, measured.
+* `_swapPinIn` then stamped inline `height`/`max-height` onto that container, so
+  the pinned box was no longer the box `measureSignoffScene` had budgeted. The
+  scene guard, running inside `onRefreshInit`, saw a composition that could not
+  hold and called `fallBack()` → `release()` → `kill()` **without** revert. The
+  pin never existed, and the footer stayed `position: fixed` over a 641px spacer.
+* The two pins also had to be offset against each other's spacer to agree on a
+  start (1px of slop was a whole frame of disagreement), and their ends had to be
+  made to land on the same scroll pixel. Neither problem is a design problem; both
+  are the price of holding one composition with two mechanisms.
+
+So the hold is not a pin. It is a sibling box **above** the section:
+
+```
+<div class="bh-hold" aria-hidden="true" />   height = holdDistanceAt(scroll)
+<section class="section singularity" id="singularity"> … .bh-frame … </section>
+```
+
+`holdDistanceAt(scroll, start, span) = clamp(scroll − start, 0, span) + SPACER_PAD`,
+written from the RAW scroll (`applyHold`), one document pixel per scrolled pixel,
+never past the span. Everything the composition contains — the container, the
+headline, the CTA, the sheet below it — is pushed down by exactly that much, which
+is what "locked to the viewport" means when nothing has been taken out of flow: an
+element at document position `P0` sits at `P0 + hold(scroll) − scroll`, and inside
+the span that sum is constant. `SPACER_PAD` (1px) makes the rounding of a
+whole-pixel reservation go the safe way: the document is never shorter than the
+scroll it has to support.
+
+The two consequences that matter are at the boundaries. **Engage** costs nothing:
+the box is 1px at rest and grows, so `start` can be measured off the settled
+layout. **Release is a non-event**: the reservation simply stops growing and stays
+where it is. There is nothing to hand over, nothing to revert, and the reader keeps
+every pixel of scroll they paid for — a page that grew by `Δ` can only be scrolled
+to `maxScroll(0) + Δ`, which is why the end of the span is always reachable.
+Reverting a pin at that boundary, by contrast, removes `pinDistance` from the
+document under a reader standing at the end of it: that is the teleport the release
+test exists for.
+
+Three rules come out of this and are worth stating because each was learned the
+hard way:
+
+1. **Whole CSS pixels only.** Scroll offsets are integers. A box grown by 0.59582px
+   reports `getBoundingClientRect().height` as 1 (Chromium rounds the grown box up)
+   while `scrollHeight`/`scrollTop` floor it to 0, so the layout moves the
+   composition a whole pixel while the document does not lengthen: 1px leaked per
+   wheel step, and after 59 frames the composition arrived 59px early.
+2. **Scroll anchoring must be off while the reservation grows**
+   (`overflow-anchor: none` on the scroller, via `setAnchoring`). Its whole purpose
+   is to keep content still by moving the scroll by the amount the layout moved it,
+   which is precisely the cancellation a layout hold cannot survive: measured, the
+   reader was snapped back toward the top of the span by ~34px per frame. Setting
+   it on `.bh-hold` does nothing; it belongs to the scroller. It is handed back the
+   moment the span is not being paid for.
+3. **A refresh must not find the page short.** `ScrollTrigger._refreshAll` records
+   the scroll, sets it to 0, re-derives every line, then puts the scroll back. My
+   `refreshInit`/`refresh` pair zeroes the reservation for the middle step (so the
+   line is measured at rest, which is the definition of the line) and borrows an
+   inline `min-height` on the root for the duration, so nothing that gets clamped
+   across the window can strand the reader; `resync()` hands it back and re-applies
+   the box. The same reason is why `arm()` measures with `remeasure()` instead of
+   zeroing: a snapshot of the sheet's rest geometry does not need the *reservation*
+   gone, and taking it away while the reader stands inside the span drops their
+   offset by the span and parks them at progress 0 — the "stuck at the top of the
+   hold" symptom in its purest form.
 
 ### The span: run + settle
 
 The consumption needs a run to read as a fall rather than a cut —
 `run = max(300, round(sheetHeight × 1.15))`, i.e. 440px on the 383px reference
-sheet — and the pins need a **release margin** after it:
-`settle = max(120, round(90 × 1.5)) = 135px`. Both pins span
+sheet — and the hold needs a **release margin** after it:
+`settle = max(120, round(90 × 1.5)) = 135px`. The span is
 `pinDistance = run + settle` (575px at 1280×900), so the consumption completes at
 `share = run / pinDistance ≈ 0.765` of the trigger's own progress and the screen
 stays locked for 135px afterwards. "Unpin only after the text and the button are
 entirely gone" is then a property of the geometry rather than of the reader's
 hand: `settle` is longer than the playhead's smoothing distance, and the target's
 own increment (`1/run`) is always slower than the follower's step (`1/90`), so the
-playhead cannot still be in flight when either pin lets go.
+playhead cannot still be in flight when the span ends.
 
 ### The playhead is a scroll-domain quantity
 
 An earlier version scrubbed the consumption with `scrub: 0.6`: a **tween in time**
-toward the scroll's progress. That is the wrong clock for a pin that must not let
-go before the timeline finishes, because a ScrollTrigger releases its pin on a
-*scroll pixel* while a scrub tween needs up to 600ms of wall clock to arrive. On
-any fast arrival — a fling, a scrollbar drag, a PageDown — the pins therefore let
+toward the scroll's progress. That is the wrong clock for a hold that must not let
+go before the timeline finishes, because a ScrollTrigger reaches the end of its span
+on a *scroll pixel* while a scrub tween needs up to 600ms of wall clock to arrive. On
+any fast arrival — a fling, a scrollbar drag, a PageDown — the scene therefore let
 go with the consumption still in flight, and the last of the fall played out on a
 released layout that was already scrolling away.
 
@@ -190,36 +264,34 @@ toggle (`isToggle = !scrub && scrub !== 0`) and never calls its `onUpdate`. With
 `scrub` set and no animation attached it creates no scrub tween either — so the
 flag is simply what makes the trigger report every scroll frame.
 
-**Why the sheet's start is offset.** `pinSpacing` reserves the hole's whole pin
-distance in the document above the sheet. That is what makes the hole's release
-seamless — GSAP pushes the released frame down into its own reservation by
-exactly the pin distance, so its flow position at the release is the position it
-was parked at — but it also means that by the time GSAP measures the sheet's
-trigger, every box below the hole (the headline included) already sits
-`pinDistance` px lower. Asking for the reference line plainly would land the
-sheet's pin one whole pin distance late: the hole would let go at the exact
-moment the sheet took hold, and the reader would watch it drift for the entire
-fall. `sheetStartOffset` subtracts the reservation and puts both pins back on the
-one line they share. Two pins on two independently measured lines is not a
-continuous hold; it is a gap with extra steps.
+**Why the line is measured at rest.** `start` is the scroll at which the
+composition should lock, and the reservation is what pushes the composition down to
+meet it — so the two are mutually dependent, and a line derived while the box is
+grown is a line that includes its own growth. Measured at `hold = 507` the line
+arrived 507px late, which reads to the reader as the hold never engaging at all
+(`progress 0`, the composition scrolling past the hole). Hence the rule: every path
+that lets GSAP re-derive a line zeroes the reservation first, hands back the
+document length it borrowed for the purpose, and re-applies the box afterwards
+(`prepareMeasure` / `prepareForRefresh` / `afterRefresh` → `resync`). The `start` and
+`end` callbacks are functions for the same reason: they are re-read on every
+refresh, off the settled layout, rather than cached from a held one.
 
-**Measuring across a pin.** `rise` crosses from the container's box to the
-sheet's, and the container's box is not where the document left it once GSAP has
-parked it — nor once GSAP has compensated the release with a translate.
-`flowBottom` reads the **pin-spacer's** bottom edge instead, which is the one
-boundary that means the same thing in all three states (rest, parked, released):
-everything below it is at its true document offset. Reading the frame's own rect —
-or reading the release compensation off `getComputedStyle().top`, which is where
-GSAP does not put it — understates `rise` by a whole pin distance after the fall,
-and a `rise` below `MIN_RISE` fails the measurement, which tore the scene down on
-the first resize after it completed. `rise` is only read while the *sheet* is not
-parked (the container being parked is fine: the spacer never moves); while it is,
-the previous scene's `rise` is carried over, because nothing it depends on can
-change while the screen is locked. The same argument covers the container's
-*natural* height: GSAP writes an inline `height` and `max-height` onto a parked
-pin at swap-in, so the responsive clamp is not readable from it, and
-`naturalFrameHeight` (withdraw the fit, read the box, put the fit back — one task,
-no intermediate paint) only ever runs unparked.
+**Measuring across the hold.** `rise` crosses from the container's box to the
+sheet's, and with a pin that crossing was the hardest thing in the section: GSAP
+parks one box and compensates the release with a translate, so the same two rects
+mean three different things depending on which state the page is in, and
+`naturalFrameHeight` had to withdraw a published variable to read a clamp that GSAP
+had overwritten inline. None of it survives the change. `hold(scroll) − scroll` is
+constant across the span, so it cancels out of every *difference* between two held
+boxes: `rise`, the seam, the sheet's rest height and the container's natural height
+all read the same way whether the scene is at rest, inside the span, or released.
+`measureSignoffScene` can therefore run at any scroll, in any state, and the only
+thing the effect still has to do around a measurement is keep the *document length*
+still (above), not the positions. The one quantity that is not a difference is
+`pinnedTop` — where the composition sits inside the viewport while held — and it is
+analytic (`parkedFrameTop` plus the container's own box), never read back off a held
+rect, because a rect read while the reservation is mid-flight reports the hold's
+transit, not its destination.
 
 **What fits where.** Above roughly 1375px of viewport height the container's own
 `clamp(500px, 76svh, 860px)` is already inside the budget, so nothing is published
@@ -228,7 +300,7 @@ the stage is cut down to it: the disc stays whole, and what the composition spen
 is the mask's own top-13% fade, not the disc. Only when the invitation block alone
 eats the viewport (`budget < MIN_FRAME_HEIGHT = 300`) does the scene degrade to
 hole-first — the frame's bottom edge one seam above the fold, still stated on the
-headline so the two pins share one line — and report it in the geometry as
+headline so the line and the composition stay the same object — and report it in the geometry as
 `degraded`. Below `HARD_FRAME_FLOOR = 200` the container is held at that floor and
 `framingHolds` says the composition did not fit instead of pretending it did. And a
 scene whose container did not actually take the budget (a stylesheet that outranks
@@ -236,74 +308,80 @@ the variable, a container query, a resize that landed between the two reads) is
 **refused** rather than built on: the trigger line and the singularity would both
 be wrong.
 
-`pinType: 'fixed'` is what GSAP already picks for a viewport scroller, and it is
-stated on the sheet because the scene depends on it: a transform pin would make
-the sheet the containing block of the overlay canvas and of both lifted flyers,
-and `measurePinnedTop` reads `position: fixed` to tell a parked sheet from a
-resting one. Both pins keep `pinSpacing`, `anticipatePin: 1` and
-`invalidateOnRefresh`, and both re-measure with the layout at rest
-(`onRefreshInit`), because the sheet's own height drives its pin-spacer and a
-collapsed sheet would park the wrong distance. GSAP reverts every pin before a
-refresh and re-applies them in creation order, so the hole's trigger — created
-first — always measures the rest document and the sheet's trigger always measures
-the reserved one. A `refreshPriority` on either would break that; neither has one.
+The trigger carries no `pin`, no `pinSpacing`, no `pinType` and no
+`anticipatePin`: it is `trigger: invite, start, end: "+={pinDistance}",
+scrub: true, invalidateOnRefresh: true`, plus `onRefresh: resync` so a refresh by
+anything on the page (a resize, another section, a late `load`) re-applies the box
+against the geometry as it then stands. `scrub: true` with no animation attached is
+purely mechanical — GSAP classifies a trigger with no animation and no `scrub` as a
+toggle (`isToggle = !scrub && scrub !== 0`) and never calls `onUpdate`; the flag is
+what makes the trigger report every scroll frame, and it creates no scrub tween.
+`invalidateOnRefresh` is what makes the `start`/`end` functions re-run. Nothing in
+the section has a `refreshPriority`, and there is no ordering to protect: one
+trigger cannot disagree with itself.
 
 ## The curtain compensation (the layout invariant)
 
 Consuming the sheet removes height from the layout. The gap must **not** collapse
-by itself: the distance from the sheet's hem to the end of the document has to
-stay put while the bodies above it are eaten, or the curtain footer lurches. The
-pin-spacer is the only element that can pay for it — it owns the sheet's flow box
-for as long as the pin exists — so the effect writes its box every frame, from a
-closed form in `lib/spaghettification.ts`:
+by itself: the curtain footer's bright floor has to keep meeting the hem it was
+aligned to, or the footer lurches at the exact moment the reader is looking at it.
+There is no spacer to pay for it any more — the sheet keeps its own flow box for
+the whole scene — so the payback is the reservation itself, and the effect writes
+both every frame from closed forms in `lib/spaghettification.ts`:
 
 ```
-spacer.height   = sheetHeight(p) + pinDistance × rawProgress + SPACER_PAD
-spacer.padding  = min(pinDistance, pinDistance × rawProgress + SPACER_PAD)
-sheetHeight(p)  = restHeight − collapsible × collapseAt(p)
-vacated(p)      = collapsible × collapseAt(p)        ← the curtain's rise, exactly
-collapsible     = min(restHeight, curtainSlack(tail, hemInset) − MIN_RELEASE_SLACK)
-curtainSlack    = tail − hemInset + SPACER_PAD
-hemInset        = inset − belowTitle                 ← negative in the reference framing
+hold(scroll)     = clamp(scroll − start, 0, span) + SPACER_PAD   ← .bh-hold, from the RAW scroll
+sheetHeight(p)   = restHeight − collapsible × collapseAt(p)      ← the sheet's own inline box
+documentGrowth   = hold(scroll) − collapsible × collapseAt(p)    ← holdBudgetAt
+vacated(p)       = collapsible × collapseAt(p)                    ← the curtain's rise, exactly
+collapsible      = min(restHeight, curtainSlack(tail, hemInset) − MIN_RELEASE_SLACK)
+curtainSlack     = tail − hemInset + SPACER_PAD
+hemInset         = inset − belowTitle                             ← negative in the reference framing
 ```
 
-The fourth line is requirement 4 stated as an equation: the curtain footer rises by
-`vacatedHeightAt(p, collapsible)` — the height the void is vacating, at the rate
+The `vacated` line is requirement 4 stated as an equation: the curtain footer rises
+by `vacatedHeightAt(p, collapsible)` — the height the void is vacating, at the rate
 the timeline vacates it — and by nothing else. It is driven by the consumption, not
-by the disappearance of the elements, and it is driven by the **playhead**, which
-is the same clock the visible fall runs on.
+by the disappearance of the elements, and it is driven by the **playhead**, which is
+the same clock the visible fall runs on.
 
 Three properties, each of which the unit suite proves and the browser suite
 measures:
 
-* **Tracked.** The stage hangs off the spacer's bottom edge (the sheet's negative
-  margin is copied onto it) and clips its paint window inset by
-  `--curtain-travel`, so the bright floor meets the hem — one pixel below it — at
-  every playhead. `spacer.height − (parked + sheetHeight) === SPACER_PAD` holds
-  for *any* pair of playhead and scroll, which is what makes the reveal a handoff
-  instead of a jump.
-* **Never short.** The parked term is read from the **raw scroll**, not the
-  smoothed playhead, so the document grows one pixel per scrolled pixel and a
-  fling cannot arrive at a page shorter than its own scroll position. Everything
-  visible still follows the playhead. One clock per quantity, and the two are
-  provably independent: the collapse depends on `p` alone and the parked span on
-  the scroll alone, which is what an earlier version got wrong when it paid the
-  spacer from the raw progress while the sheet's height followed a time-smoothed
-  tween.
+* **Tracked.** The floor's top and the sheet's hem are the same edge in flow: the
+  stage hangs below the sheet's box (its own `margin-top: calc(var(--curtain-travel)
+  − …)`) and clips its paint window inset by `--curtain-travel`, so the bright
+  floor meets the hem at every playhead, and nothing sits between them to get out of
+  sync. The hem's viewport position is `pinnedTop + hold(scroll) − scroll +
+  sheetHeight(p)` — and inside the span the first three terms are constant, so the
+  hem is a function of the playhead ALONE. A scroll that runs ahead of the
+  smoothing, a tail that settles after it, and a fling that reverses midway can each
+  move nothing under the sheet.
+* **Never short.** The reservation is read from the **raw scroll**, not the smoothed
+  playhead, so the document grows one pixel per scrolled pixel and a fling cannot
+  arrive at a page shorter than its own scroll position. Everything visible still
+  follows the playhead. One clock per quantity, and the two are provably
+  independent: the collapse depends on `p` alone and the reservation on the scroll
+  alone, which is what an earlier version got wrong when it paid the spacer from the
+  raw progress while the sheet's height followed a time-smoothed tween.
 * **Affordable.** Paying the curtain back spends scroll. What is left at the end of
-  the pin is `SPACER_PAD + tail − hemInset − consumed` — and `hemInset` is
-  *negative* in the reference framing, because the hem parks below the fold, which
-  is scroll the curtain gets to rise into for free. A curtain too short to pay for
-  the whole fall **caps the collapse** (`collapsible`) and the sheet keeps a stub;
-  a curtain that cannot pay at all refuses the effect and the real footer stays. Degrading the fall is honest. Borrowing scroll from the reader is not —
-  a release onto a clamped document snaps the playhead back and un-collapses the
-  sheet in one frame.
+  the span has a closed form the unit suite asserts term by term,
+  `slack = tail − hemInset + SPACER_PAD − collapsible × collapseAt(p)` — and
+  `hemInset` is *negative* in the reference framing, because the hem parks below the
+  fold, which is scroll the curtain gets to rise into for free. A curtain too short
+  to pay for the whole fall **caps the collapse** (`collapsible`) and the sheet keeps
+  a stub; a curtain that cannot pay at all (`framingHolds` false, `collapsible` 0)
+  loses the overlay and keeps the hold. Degrading the fall is honest. Borrowing
+  scroll from the reader is not — a release onto a clamped document snaps the
+  playhead back and un-collapses the sheet in one frame.
 
-While the sheet is pinned it also clips itself to its collapsing border box plus
-the measured veil above it (`clip-path: inset(-var(--horizon-veil) 0 0 0)`): the
-frozen frame and the live flyers keep their rest-size boxes, and without the clip
-they would paint over the bright floor below the hem, since the sheet's stacking
-context sits above the stage's.
+While the sheet is held it also clips itself to its collapsing border box plus the
+measured veil above it (`clip-path: inset(-var(--horizon-veil) 0 0 0)`): the frozen
+frame and the live flyers keep their rest-size boxes, and without the clip they
+would paint over the bright floor below the hem, since the sheet's stacking context
+sits above the stage's. `applyFrame` writes the sheet's inline `height` and
+`paddingBottom` only while the hold is engaged, and `releaseLayout` clears both — a
+page that has never entered the span is never styled at all.
 
 ## Ownership and gates
 
@@ -313,15 +391,16 @@ context sits above the stage's.
   **BlackHoleStage's actual status**, including failures, Retry and unmount.
   It has no DOM wrapper and does not alter the stage's GPU backend selection. It
   also owns `cameraHoldRef`, the one wire between the sign-off and the stage's
-  cinematic camera: `SignoffHorizon` sets it while `.bh-frame` is pinned, and
+  cinematic camera: `SignoffHorizon` sets it while `.bh-frame` is held, and
   `BlackHoleStage` skips its `camera-animation` update for as long as it is set.
   The simulation stays alive — only the 32s establishing move is frozen, so the
   singularity the invitation falls into does not drift under it. No vendored file
   is touched to do it.
 - `src/components/SignoffHorizon.tsx`: owns ClosingSignoff's original `<footer>`
-  root/ref, the GSAP context/matchMedia branches, both pins, the arm trigger, the
-  scroll-domain playhead and its tail, the lift out of document flow, the
-  per-frame layout compensation, the camera hold, async cancellation and cleanup.
+  root/ref, the GSAP context/matchMedia branches, the hold trigger and the arm
+  trigger, the scroll-domain playhead and its tail, the lift out of document flow,
+  the per-frame reservation and the layout compensation, the scroll-anchoring
+  opt-out, the camera hold, async cancellation and cleanup.
   Footer's curtain relationship is unchanged.
 - `src/lib/spaghettification.ts`: the field, the curves and the composition —
   `titleAir`, `solveFraming`/`framingHolds`/`parkedFrameTop`/`parkedHem`, the pin
@@ -417,27 +496,32 @@ which pushes the clone below the isolated SVG viewport, rasterizing nothing.
 Font, capture, upload, shader or context failures restore the ordinary footer
 and report the reason. No repeated automatic capture attempts.
 
-The capture is armed four seams below the fold, well before the hole's pin, and
+The capture is armed four seams below the fold, well before the hold's line, and
 the sheet is held at playhead 0 for the whole of it: `captureSignoff` awaits font
 embedding before html2canvas clones, and a half-collapsed box with half-warped
 glyphs is not a usable frozen frame. Rendering playhead 0 rather than skipping
-frames matters — the spacer keeps tracking the raw scroll, so no gap opens under
-the sheet while the reader waits.
+frames matters — the reservation keeps tracking the raw scroll, so no gap opens
+under the sheet while the reader waits. The measurement this window performs is a
+`remeasure()`, not a `prepareMeasure()`: freezing the *paint* is what the raster
+needs, and zeroing the box would take a span out of the document above a reader
+standing inside the span (see "Why the line is measured at rest").
 
 Snapshot/render resolution is capped to 1.5 million pixels and a 2048-pixel edge;
 CSS dimensions and hit targets are never scaled. On a width/height reflow **after
 capture**, the effect is retired for that activation and real paint returns.
 This is deliberate: a frozen raster cannot reflow with the CTA. Resize does not
-secretly trigger another capture. Retirement kills both pins, which reverts them
-and removes both spacers, so the black hole and the footer come back as ordinary
-in-flow boxes with the curtain's normal spacing. A new eligible lifecycle (e.g. a fresh desktop
+secretly trigger another capture. Retirement touches the paint only — the canvas is
+disposed and removed — and the hold goes on running with `data-horizon-state="hold"`
+written so the degradation is legible from outside: the fall, the collapse and the
+release are layout, and a missing WebGL2 context is not their business. A new eligible lifecycle (e.g. a fresh desktop
 stage after a mobile hop, or successful Retry) may arm a fresh one-shot capture.
 
 ## Lifecycle
 
-Cleanup aborts pending font fetches, kills all three ScrollTriggers (which reverts
-both pins and removes both spacers), clears the compensation it wrote onto the
-sheet's spacer, drops the lifted flyers back into document flow, releases the
+Cleanup aborts pending font fetches, kills both ScrollTriggers, zeroes the
+reservation, clears the compensation it wrote onto the sheet's box, hands back the
+`overflow-anchor` opt-out and any borrowed root `min-height`, drops the lifted
+flyers back into document flow, releases the
 camera hold, withdraws `--bh-frame-fit` so the stage gets its own responsive height
 back, disconnects ResizeObserver, cancels the scheduled refresh and playhead-tail
 frames, restores paint, deletes the texture/shaders/program/VAO, loses the WebGL2
@@ -490,26 +574,40 @@ across a grid of fling lags. It also pins the four requirements as properties:
   `share`, at fifteen constant scroll speeds from 1px/frame to a 4000px teleport
   and over a deterministic variable-speed walk — which is requirement 2's "unpin
   only after the timeline finishes", as arithmetic rather than as timing luck;
-- the spacer's height falls by **exactly** `vacatedHeightAt`, at any scroll
-  position, with the collapse independent of the scroll and the parked span
-  independent of the playhead (requirement 4's one-clock-per-quantity).
+- the reservation is one pixel per scrolled pixel, `+SPACER_PAD`, never past the
+  span; the composition's viewport position is bit-identical from one end of the
+  span to the other for the hole's container AND the sheet below it; the hem's
+  height falls by **exactly** `vacatedHeightAt`, at any scroll position, with the
+  collapse independent of the scroll and the reservation independent of the playhead
+  (requirement 4's one-clock-per-quantity); the half-open span is active on its
+  interior only; and the release parks the box at `pinDistance + SPACER_PAD` on a
+  settled playhead, with the closed-form slack `tail − hemInset + SPACER_PAD −
+  collapsible × collapseAt(p)` never below `MIN_RELEASE_SLACK`.
 
 The Playwright suite (`tests/signoff-horizon.spec.ts`, 31 tests) exercises the real
 Footer/CSS under StrictMode and covers, on top of the gates and disposal paths:
 
-- **The pin belongs to the black hole**: the hole's *container* is the pinned
-  element, both pins are driven by the headline's bottom edge, and at the trigger
-  the composition is the reference framing — the headline's bottom `titleAir` px
-  above the fold, its top on screen, **the container's top edge on screen too**
-  (`frame.top ≥ 0`, with `frame.height + rise ≤ viewport − air`), the published
-  `--bh-frame-fit` equal to the box on screen, the CTA still below the fold, the
-  hole above the headline with the seam gradient between them, and the playhead at
-  zero. `hole.start === sheet.start` and `hole.end === sheet.end`, the hole does
-  not move by one pixel while the scroll travels the whole consumption, the
-  sheet's top does not move either, **both pins are still holding on the frame the
-  consumption reaches 100%** (the trigger's own progress is short of 1 by the
-  settle margin), both let go only past the end, and the release itself is one
-  pixel of motion per pixel of scroll rather than a teleport of the pin distance.
+- **The hold belongs to the black hole**: the composition is one box driven by the
+  headline's bottom edge, and at the trigger it is the reference framing — the
+  headline's bottom `titleAir` px above the fold, its top on screen, **the
+  container's top edge on screen too** (`frame.top ≥ 0`, with
+  `frame.height + rise ≤ viewport − air`), the published `--bh-frame-fit` equal to
+  the box on screen, the CTA still below the fold, the hole above the headline with
+  the seam gradient between them, and the playhead at zero. There is exactly ONE
+  `signoff-horizon*` scroll trigger inside the span (plus the arm line), no
+  `.pin-spacer` anywhere on the page, and neither box is taken out of flow; the
+  reservation is `scroll − start + 1` at every step of a 0/25/50/75/100% walk, the
+  hole does not move by one pixel while the scroll travels the whole consumption,
+  the sheet's top does not move either, **the hold is still locking the frame the
+  consumption reaches 100%** (the trigger's own progress is short of 1 by the settle
+  margin), it lets go only past the end, and the release itself is one pixel of
+  motion per pixel of scroll rather than a teleport of the pin distance.
+- **Nothing is ever inserted between the singularity and the sign-off**: `.bh-hold`
+  is the section's previous sibling, the section's flow box ends at the sheet's
+  top, and the on-screen distance from the hole's picture to the sheet is the same
+  distance it is at rest at every playhead. This is the fence around the second
+  reported failure — the reservation used to be grown *inside* the picture, which
+  opened a 641px band of background exactly where the reader was looking.
 - **The playhead**: one instant jump lands it exactly, nothing moves over 400ms
   with the scroll stopped, a fling past the whole span still ends on a complete
   fall with the layout settled rather than half-applied, and scrolling back up out
@@ -526,11 +624,11 @@ Footer/CSS under StrictMode and covers, on top of the gates and disposal paths:
   on the return trip.
 - **The layout invariant**: hem → document end measured at six playheads against
   the closed form imported in-page, the curtain's clip window one pad pixel below
-  the hem, the sheet's height equal to `sheetHeightAt`, the spacer's growth equal
-  to the pin distance minus what the sheet gave up, the scroll slack never below
+  the hem, the sheet's height equal to `sheetHeightAt`, the reservation equal to
+  the scroll spent minus what the sheet gave up, the scroll slack never below
   `MIN_RELEASE_SLACK`, no hem movement across the release, and a short-curtain
   variant that must cap the collapse rather than borrow scroll.
-- **The same real CTA** at 0/50/100%, with both pins engaged: accessible name,
+- **The same real CTA** at 0/50/100%, inside the engaged span: accessible name,
   Chromium accessibility-tree exposure (including at the horizon, where its own
   box has contracted into a point), no `aria-hidden`/`inert`/`hidden` ancestor,
   native click and Enter, Tab and Shift-Tab, the focus rescue (paint, ring,
@@ -606,3 +704,49 @@ visual/performance pass on hardware GPUs. Chromium accessibility-tree testing is
 not a claim that a human screen-reader session was performed. If another engine
 cannot rasterize the essential headline, the safe fallback is already the unchanged
 real footer, not a degraded frozen title.
+
+- **2026-09-08** (the two reported failures — "pinning is not functional" and "a
+  wide gap between the singularity and the sign-off" — traced to one cause and
+  re-architected as the reservation hold): both were the price of paying for the
+  hold inside the picture. `pinSpacing` grew the sheet's pin distance (641px) as a
+  spacer between the hole and the sign-off, `_swapPinIn` stamped inline sizes on the
+  measured container, and the scene guard therefore tore the pin down from the
+  inside of `onRefreshInit` (`kill()` without revert): nothing locked, and the gap
+  opened. The section now has no pins at all. `npx tsc -b --pretty false` clean,
+  `npm run build` clean, `npm run verify:blackhole` passing, and **32/32 unit tests**
+  (7 rewritten for the hold: pays-for-itself, composition-locked across the span and
+  composition-position invariant, half-open activity, the curtain rising by the
+  vacated height only, the hem and the floor never parting, the never-short closed
+  form over a grid of fling lags, and the release parking at
+  `pinDistance + SPACER_PAD`). The two numbers the rewrite had to learn from a real
+  engine rather than from reasoning — whole-pixel reservation growth (Chromium
+  rounds a grown box's rect up while `scrollHeight` floors it, which leaked 1px per
+  wheel step) and the `overflow-anchor: none` opt-out (with `auto` the composition
+  was snapped back ~34px per frame) — are documented in `holdDistanceAt` and
+  `setAnchoring` so they cannot be "simplified" away again. Verified in the fixture
+  at 1280×900 under both overlay outcomes, at `status=live/unsupported/error/
+  booting`: `frameTop` constant at 1.59px from `start` to `start+636`,
+  `hold` = `scroll − start + 1` throughout, the fall reaching 1.0000 while still
+  held, a reversed fling landing on 0.1976/0.5929 with the composition unmoved, the
+  document 1px-per-frame exact, no `.pin-spacer`, no console errors — and the hold
+  holding with the overlay withheld, which is the point of the
+  `canHoldSignoff` / `canWarpSignoff` split.
+  **Findings that changed the code, not just the tests:** a capture/warp failure may
+  never fall the scene back (it retires the overlay and writes
+  `data-horizon-state="hold"`); `arm()` must measure with `remeasure()` rather than
+  `prepareMeasure()`, because zeroing the reservation while the reader stands inside
+  the span drops their offset by the span and parks them at progress 0 (the
+  "stuck at the top of the hold" symptom, now caught by a single-jump test); and a
+  refresh that zeroes the box has to borrow the document length back
+  (`min-height`) or GSAP's save/restore of the scroll is clamped by the short page.
+  A `CAPTURE_PATIENCE_MS` watchdog bounds the one window in which the playhead is
+  deliberately frozen, so a capture that never returns cannot cost the reader the
+  whole animation.
+  **Not executed:** the Playwright suite needs a Chromium with a working WebGL2 and
+  html2canvas; in this sandbox the capture runs to the watchdog every time, so 4 of
+  its 31 tests (the three that walk the playhead inside the capture window and
+  `one snapshot/texture`, which needs a real canvas) cannot be settled here. They
+  are the suite's own long-standing GPU dependency, not new gates — the other 27,
+  including every layout assertion above, run green. The 31 tests are otherwise
+  rewritten for the hold (`readScene` reports the reservation, the anchoring opt-out
+  and the trigger count instead of two spacers and two pins).

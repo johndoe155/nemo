@@ -1,15 +1,14 @@
 /* ============================================================================
    SPAGHETTIFICATION — the pure math of the sign-off's consumption.
 
-   One playhead `p ∈ [0, 1]` — owned by the two pinned ScrollTriggers in
+   One playhead `p ∈ [0, 1]` — owned by the hold's single ScrollTrigger in
    `components/SignoffHorizon.tsx` — drives four things that must agree:
 
      1 · the sheet's layout collapse (`collapseAt`) — how much of the sign-off's
-        own height has been eaten. Its pin-spacer gives that height back to the
-        document at the same rate, so the distance from the sheet's hem to the
-        end of the site never changes and the curtain footer rises exactly as
-        fast as the void is vacating (`vacatedHeightAt` is that rate, written
-        down once).
+        own height has been eaten. The sheet stays in flow while the hold runs, so
+        that is precisely how far the curtain below it rises: the distance from
+        the sheet's hem to the end of the site never changes, and the floor tracks
+        the void (`vacatedHeightAt` is that rate, written down once).
 
      2 · the live flyers' trajectory (`flyerFrameAt`) — the headline and the CTA
         are lifted out of document flow, translated onto the singularity's exact
@@ -100,7 +99,7 @@ export function titleAir(viewport: number): number {
 
 /** The floor on `rise`: a headline sitting on top of the hole's bottom edge is
  * not a composition anyone can read, and there would be nothing between the two
- * pins to measure the scene from. */
+ * boxes to measure the scene from. */
 export const MIN_RISE = 24;
 
 /** Below this the black hole is not a black hole any more, it is a smudge. A
@@ -149,7 +148,7 @@ export interface FramingInput {
 export interface Framing {
   /** The shared trigger line, as the headline's inset above the bottom of the
    * viewport. Negative in the degraded framing, where the headline has not
-   * arrived yet when the hole takes hold. Rounded ONCE, here: both pins are
+   * arrived yet when the hole takes hold. Rounded ONCE, here: the hold's line and
    * driven off this one number, and rounding each of their start strings
    * separately would let the two lines disagree by a sub-pixel of drift. */
   inset: number;
@@ -172,7 +171,7 @@ export function solveFraming({ viewport, air, seam, rise, natural }: FramingInpu
     return { inset: Math.round(air), frameHeight: natural, degraded: true };
   }
   // The inset is rounded ONCE, here, and the budget is spent from the ROUNDED
-  // number: both pins are driven off `inset`, and the height is then floored
+  // number: the hold's line is driven off it, and the height is then floored
   // against what that line leaves, so `framingHolds` is true by construction
   // rather than up to half a pixel of rounding.
   const inset = Math.round(air);
@@ -185,7 +184,7 @@ export function solveFraming({ viewport, air, seam, rise, natural }: FramingInpu
   }
   // The invitation block alone eats the screen: hole-first, with the frame's
   // bottom edge one seam above the fold — the same line stated on the headline,
-  // so both pins still share one trigger element and one screen line. Negative,
+  // so the hold still has one trigger element and one screen line. Negative,
   // because the headline has not arrived yet when the hold begins. The container
   // is still fitted, to whatever the viewport can hold of it.
   return {
@@ -195,8 +194,8 @@ export function solveFraming({ viewport, air, seam, rise, natural }: FramingInpu
   };
 }
 
-/** The pinned frame's top edge in viewport px, for as long as the hold lasts.
- * Scroll-invariant, which is why the scene can be measured before either pin
+/** The held frame's top edge in viewport px, for as long as the hold lasts.
+ * Scroll-invariant, which is why the scene can be measured before the hold
  * engages: the trigger line parks the headline's bottom `inset` above the fold,
  * so the frame hangs exactly one composition (`frameHeight + rise`) above that
  * line. With the fitted frame height it is ≥ 0 in the reference framing — 0
@@ -218,23 +217,84 @@ export function parkedHem(viewport: number, inset: number, belowTitle: number): 
   return viewport - inset + belowTitle;
 }
 
-/** The sheet pin's start offset on the shared trigger element.
+/* ---------------------------------------------------------------------------
+   THE HOLD — how the composition is locked to the viewport.
+
+   Nothing here is `position: fixed` and there is no pin-spacer. A pinned box has
+   to be paid for twice: once by the document (the scroll a hold consumes has to
+   exist somewhere) and once by the layout (a box lifted out of flow leaves a hole
+   where it used to sit). Every previous attempt paid both from INSIDE the
+   picture — GSAP's `pinSpacing` writes the reservation as the padding of a spacer
+   that replaces the black hole in the flow, i.e. in the seam between the hole and
+   the sign-off — which produced three separate failures from one cause:
+
+     · the reservation was itself the wide gap in the seam, and it was spent on
+       the wrong side of the composition;
+     · the two pins had to be offset against each other's reservation to share one
+       screen line (`sheetStartOffset`), which is a handover, not a hold;
+     · the pinned container carries an inline `height`/`max-height` that GSAP
+       writes at swap-in, so the scene's own re-measurement of that container
+       (its composition budget) disagreed with the box on screen, and the honest
+       response — refuse the scene — tore the pin down before it could engage.
+
+   The hold pays from OUTSIDE the picture instead. One element (`.bh-hold`, the
+   last child of `<main>`, immediately above the singularity section) grows by
+   exactly as many pixels as the reader has scrolled past the trigger line:
+
+     · everything at or below it — the hole's container AND the sign-off sheet —
+       is pushed down one pixel per scrolled pixel, which cancels the scroll
+       exactly. The composition therefore has ONE constant viewport position for
+       the whole hold: both boxes rigidly locked, and the distance between them
+       (`rise`) untouched because they move together. That is "the parent
+       container pinned to the viewport", realised without a pin.
+     · nothing leaves the flow, so no box collapses, no element is re-parented
+       (React owns its own tree throughout), and no library can write a size onto
+       a box the scene measures.
+     · the reservation is a pure function of the scroll and simply stops growing
+       at the end of the span, so releasing is not a handover at all: the document
+       is left `pinDistance` px longer — the same price `pinSpacing` charges — and
+       the reader scrolls on from there. Scrolling back up spends it again in
+       reverse, so the whole sequence is reversible with no state to unwind.
+
+   `SPACER_PAD` (below, in the curtain compensation) rides on the reservation, so
+   the curtain's bright floor is left one pixel below the sheet's hem for the whole
+   fall rather than butting against it.
+--------------------------------------------------------------------------- */
+
+/** The px the hold has taken out of the document at `scroll`: `SPACER_PAD`
+ * before the trigger line and `span` + `SPACER_PAD` past it, one pixel per
+ * scrolled pixel in between. Read from the RAW scroll, never from the smoothed
+ * playhead: the document then grows by exactly one pixel per scrolled pixel and a
+ * fling can never arrive at a page shorter than its own scroll position.
  *
- * The hole's pin reserves its whole pin span in the document above the sheet —
- * that is what `pinSpacing` does (GSAP writes it as the spacer's
- * `paddingBottom`), and it is what makes the hole's release seamless — so by the
- * time GSAP measures the sheet's trigger, every box below the hole (the headline
- * included) already sits that much lower. Asking for the trigger line plainly
- * would land the sheet's pin one whole reservation late: the hole would let go
- * at the exact moment the sheet took hold, and the reader would watch it drift
- * for the entire fall. Subtracting the reservation puts both pins back on the
- * one screen line they share.
+ * Two floor effects the caller has to respect, both measured in Chromium rather
+ * than assumed:
  *
- * GSAP will not do this for us: its own cross-trigger compensation only fires
- * when the earlier trigger's PIN is the later trigger's TRIGGER element, and
- * here the pin is the frame while the trigger is the headline inside the sheet. */
-export function sheetStartOffset(inset: number, reservedPin: number): number {
-  return inset - reservedPin;
+ *  · A document's scroll offsets are integers. A box grown by a FRACTION of a
+ *    pixel (0.59582px, the honest number for the 0.6px of scroll a wheel step
+ *    moves) reports its `getBoundingClientRect().height` as 1, while
+ *    `scrollHeight`/`scrollTop` floor to 0 — so the layout moves the composition
+ *    by a whole pixel while the document's length does not, and the reader's
+ *    scroll gets clamped back by 1px per frame: a hold that grows slower than the
+ *    reader scrolls, i.e. one that leaks. Rounding to whole CSS pixels is what
+ *    keeps layout and scroll offset in the same unit.
+ *  · Scroll anchoring must be off while the reservation is growing. It exists to
+ *    keep content still by moving the scroll by the same amount the layout moved
+ *    it, which is precisely the cancellation a hold made of layout cannot
+ *    survive: measured, the page snapped back to the top of the span on the frame
+ *    after the first push. See `setAnchoring` in components/SignoffHorizon.tsx. */
+export function holdDistanceAt(scroll: number, start: number, span: number): number {
+  return Math.min(Math.max(scroll - start, 0), Math.max(0, span)) + SPACER_PAD;
+}
+
+/** Whether the composition is locked at `scroll`. Past the end of the span the
+ * reservation stays spent and the page scrolls on, so the release is the frame
+ * where this stops being true — and the playhead has been held at 1 for the whole
+ * `settle` margin before it, which is what makes "let go only once the hole has
+ * finished eating" a property of the geometry rather than of scroll speed. */
+export function holdActiveAt(scroll: number, start: number, span: number): boolean {
+  const travelled = Math.min(Math.max(scroll - start, 0), Math.max(0, span));
+  return travelled > 0 && travelled < span;
 }
 
 /* ---------------------------------------------------------------------------
@@ -242,29 +302,29 @@ export function sheetStartOffset(inset: number, reservedPin: number): number {
 
    An earlier version scrubbed the consumption with `gsap`'s `scrub: 0.6`, i.e.
    a TWEEN IN TIME toward the scroll's progress. That is the wrong clock for a
-   sequence whose pins must not let go before the timeline finishes: a scrub
-   tween needs up to 600ms of wall clock to arrive, while a ScrollTrigger
-   releases its pin on the scroll pixel where `progress === 1`. On any fast
-   arrival (a fling, a scrollbar drag, a PageDown) the pins therefore let go
-   with the consumption still in flight, and the last of the fall played out on
-   a released layout that was already scrolling away.
+   sequence whose hold must not let go before the timeline finishes: a scrub tween
+   needs up to 600ms of wall clock to arrive, while a ScrollTrigger releases on
+   the scroll pixel where `progress === 1`. On any fast arrival (a fling, a
+   scrollbar drag, a PageDown) the hold therefore let go with the consumption still
+   in flight, and the last of the fall played out on a released layout that was
+   already scrolling away.
 
    The playhead here is instead a pure function of the scroll position, with
    smoothing expressed in SCROLLED PIXELS:
 
-     · `consumptionTarget` maps the pin's own progress onto the consumption. The
-       pins span `run + settle`; the consumption occupies the first `run`, so the
+     · `consumptionTarget` maps the hold's own progress onto the consumption. The
+       span is `run + settle`; the consumption occupies the first `run`, so the
        target reaches 1 while the screen is still locked.
      · `followPlayhead` rate-limits the written playhead toward that target. It
        is exact at both ends: a jump bigger than the smoothing distance lands on
        the target in one step, and the settle margin is by construction longer
-       than the smoothing distance, so the playhead is provably 1 before either
-       pin releases.
+       than the smoothing distance, so the playhead is provably 1 before the hold
+       lets go.
 
    Two consequences worth keeping: the scene is deterministic (the same scroll
    position always paints the same frame, which is what makes it testable), and
    nothing continues to move after the scroll stops, so no state can be left
-   half-applied when a pin lets go.
+   half-applied when the hold lets go.
 --------------------------------------------------------------------------- */
 
 /** Smoothing, in scrolled pixels: how far the written playhead may trail the
@@ -289,8 +349,8 @@ export function runDistance(sheetHeight: number): number {
 }
 
 /** The release margin: scroll distance past the end of the consumption during
- * which both pins still hold the screen. It exists for ONE reason — to make
- * "the pins let go after the timeline finishes" a property of the geometry
+ * which the composition is still locked to the viewport. It exists for ONE
+ * reason — to make "let go after the timeline finishes" a property of the geometry
  * rather than of the reader's scroll speed — and it must therefore be at least
  * the smoothing distance. */
 export const SETTLE_MIN = 120;
@@ -305,9 +365,9 @@ export interface PinSpan {
   run: number;
   /** The release margin after it. */
   settle: number;
-  /** The span BOTH pins share: they engage on one line and let go on one pixel. */
+  /** The span of the whole hold: one line in, one pixel out, nothing between. */
   total: number;
-  /** The pin progress at which the consumption is complete. */
+  /** The hold progress at which the consumption is complete. */
   share: number;
 }
 
@@ -317,7 +377,7 @@ export function pinSpan(sheetHeight: number): PinSpan {
   return { run, settle, total: run + settle, share: run / (run + settle) };
 }
 
-/** The consumption playhead a pin progress asks for. Exact: 0 at the trigger's
+/** The consumption playhead a hold progress asks for. Exact: 0 at the trigger's
  * start, 1 at `share`, and held at 1 across the settle margin. */
 export function consumptionTarget(triggerProgress: number, share: number): number {
   if (!(share > 0)) return clamp01(triggerProgress);
@@ -446,7 +506,7 @@ export function swirlAt(progress: number): number {
 
    It leads the playhead slightly and finishes slightly early: the void is gone
    (and the curtain fully paid back) before the last of the light falls in, so
-   the pin releases onto a settled layout instead of a moving one.
+   the hold releases onto a settled layout instead of a moving one.
 --------------------------------------------------------------------------- */
 export const COLLAPSE_LEAD = 0.06;
 export const COLLAPSE_TAIL = 0.94;
@@ -475,48 +535,50 @@ export function sheetHeightAt(progress: number, restHeight: number, collapsible 
 /* ---------------------------------------------------------------------------
    The curtain's compensation — requirement 4, as a closed form.
 
-   The gap must NOT collapse naturally: the consumed flyers are lifted out of
-   flow and moved by transforms, which cost the layout nothing, and the sheet's
-   own box is written every frame from `sheetHeightAt`. The sheet's pin-spacer
-   owns its flow box for as long as the pin exists, so the spacer is the only
-   place the removed height can be paid back from. Three things have to hold at
-   once, and together they pin the formula down exactly:
+   The void the sign-off leaves must NOT collapse on its own: the consumed flyers
+   are lifted out of flow and moved by transforms, which cost the layout nothing,
+   and the sheet's own box is written every frame from `sheetHeightAt`. Under the
+   hold (see `holdDistanceAt`) the sheet stays in flow, so the curtain below it
+   moves by exactly what the sheet gives up — nothing else has to be paid back,
+   and nothing has to be taken from the reader. Three things still have to hold at
+   once, and together they pin the behaviour down exactly:
 
    · TRACKED. The curtain's paint window opens at the stage's top inset by
-     `--curtain-travel`, and the stage hangs off the spacer's bottom edge. So
-     the bright floor meets the sheet's hem — one pixel below it — at every
-     playhead only if the spacer's height is `sheet height + parked + PAD`,
-     where `parked` is the pin span the scroll has already consumed. The floor's
-     on-screen rise is then `d(vacatedHeightAt)/d(scroll)` and nothing else: the
-     parked term cancels the scroll exactly, which is what "linked strictly to
-     the consumption timeline" means in a pinned scene.
+     `--curtain-travel`, and the stage follows the sheet in flow. The sheet's
+     on-screen top is constant for the whole hold (that is what the reservation
+     buys) and its box is `sheetHeightAt(p)`, so the hem — and with it the floor,
+     `SPACER_PAD` below it — rises by exactly `vacatedHeightAt(p)`: the height the
+     consumption has vacated, at the rate the consumption vacates it, and by
+     nothing else. That is "linked strictly to the consumption timeline".
 
-   · NEVER SHORT. The parked term is read from the RAW scroll, not from the
-     smoothed playhead: the document then grows by exactly one pixel per scrolled
-     pixel, and a fling can never arrive at a page shorter than its own scroll
-     position. The visible collapse still follows the playhead, and because
-     `sheetHeightAt` appears in BOTH terms the hem/window invariant above holds
-     at any lag between the two — the lag can never open a gap under the sheet.
+   · NEVER SHORT. The reservation is read from the RAW scroll, not from the
+     smoothed playhead, so the document grows by exactly one pixel per scrolled
+     pixel and a fling can never arrive at a page shorter than its own scroll
+     position. The visible collapse follows the playhead, and because the
+     reservation cancels the scroll for EVERY box below it, the hem/window identity
+     above holds at any lag between the two clocks — a lag can never open a gap
+     under the sheet, and can never pinch the floor into it either.
 
-   · AFFORDABLE. Paying the curtain back removes height from the document, and
-     what is left must still be scrollable after the pin releases, or the
-     release lands on a clamped document, the playhead snaps back and the sheet
-     un-collapses in one frame. With `slack = tail − hemInset + PAD − consumed`,
-     the allowance is `collapsibleHeight` — the whole sheet on any layout whose
-     curtain is tall enough, and the last few percent of the collapse on one
-     that is not. Degrading the collapse is the honest fallback: borrowing
-     scroll from the reader is not.
+   · AFFORDABLE. Emptying the sheet removes height from the document while the
+     hold adds only `pinDistance` back, and what is left must still be scrollable
+     when the hold lets go, or the release lands on a clamped document, the
+     playhead snaps back and the sheet un-collapses in one frame. With
+     `slack = tail − hemInset + PAD − consumed`, the allowance is
+     `collapsibleHeight` — the whole sheet on any layout whose curtain is tall
+     enough, and the last few percent of the collapse on one that is not.
+     Degrading the collapse is the honest fallback: borrowing scroll from the
+     reader is not.
 --------------------------------------------------------------------------- */
 export const SPACER_PAD = 1;
 
-/** Scroll that must still exist once the pin releases. */
+/** Scroll that must still exist once the hold releases. */
 export const MIN_RELEASE_SLACK = 24;
 
 /** Scroll left at the end of the consumption, before the compensation spends
  * any of it: the curtain's own height, adjusted for where the sheet's hem parks.
  *
  * `hemInset` is the hem's distance above the bottom of the viewport for as long
- * as the pin holds — positive when it parks above the fold, NEGATIVE when the
+ * as the hold runs — positive when it parks above the fold, NEGATIVE when the
  * reference framing leaves it below it (the CTA still off-screen at the
  * trigger), which is scroll the curtain gets to rise into for free. */
 export function curtainSlack(tail: number, hemInset: number): number {
@@ -528,25 +590,26 @@ export function collapsibleHeight(restHeight: number, tail: number, hemInset: nu
   return Math.max(0, Math.min(restHeight, curtainSlack(tail, hemInset) - MIN_RELEASE_SLACK));
 }
 
-/** The spacer's box at `progress` (the playhead, which owns everything visible)
- * and `rawProgress` (the scroll itself, which owns the document's length).
- * `pinDistance` is the WHOLE pin span — the consumption run plus the settle
- * margin — because that is what GSAP reserved and what it will push the released
- * sheet down by. `padding` is that parked span, which the sheet's flow box sits
- * on top of once the pin lets go. */
-export function spacerBoxAt(
-  progress: number,
-  rawProgress: number,
-  restHeight: number,
+/** The hold's two clocks, side by side, as document px. The reservation is what
+ * the document GAINS while the hold runs (raw scroll, via `holdDistanceAt`) and
+ * `flowGivenUp` is what the composition GIVES UP over the same span (playhead,
+ * via `vacatedHeightAt`). The difference is the document's net change, and the
+ * one property that has to hold for the release to land on a scrollable page is
+ * that it is never negative — with `run + settle` always longer than the sheet is
+ * tall, it cannot be. Everything visible is on the other side of that difference:
+ * the hem, the floor and the flyers all move by `flowGivenUp` alone, which is
+ * why a playhead that lags the scroll cannot open or pinch a seam. */
+export function holdBudgetAt(
+  scroll: number,
+  start: number,
   pinDistance: number,
+  progress: number,
+  restHeight: number,
   collapsible: number,
-): { height: number; padding: number } {
-  const height = sheetHeightAt(progress, restHeight, collapsible);
-  const parked = Math.max(0, pinDistance) * clamp01(rawProgress);
-  return {
-    height: Math.max(0, height) + parked + SPACER_PAD,
-    padding: Math.min(Math.max(0, pinDistance), parked + SPACER_PAD),
-  };
+): { reservation: number; flowGivenUp: number; documentGrowth: number } {
+  const reservation = holdDistanceAt(scroll, start, pinDistance) - SPACER_PAD;
+  const flowGivenUp = Math.max(0, restHeight) - sheetHeightAt(progress, restHeight, collapsible);
+  return { reservation, flowGivenUp, documentGrowth: reservation - flowGivenUp };
 }
 
 /* ---------------------------------------------------------------------------
@@ -679,7 +742,7 @@ export interface Point {
   y: number;
 }
 
-/** `rest` is the flyer's centre in viewport px, measured with the sheet pinned;
+/** `rest` is the flyer's centre in viewport px, measured while the hold runs;
  * `singularity` is the hole's centre in the same coordinates; `horizonRadius` is
  * the current effective horizon in px. Everything else is a pure function of the
  * playhead and of those three numbers. */

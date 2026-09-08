@@ -43,8 +43,15 @@
 }
 
 /* Promotion only while an activation exists: the fall is transform+opacity
-   only, so the whole sequence stays on the compositor. */
+   only, so the whole sequence stays on the compositor.
+
+   'hold' is on the list deliberately: it is the state where the overlay was
+   withheld — no WebGL2, a stage that never came up, a capture that timed out — and
+   the DOM still runs the entire consumption under it. The lift, the collapse and
+   the curtain are layout and transforms, none of which need a GPU, so the
+   compositor hint is exactly as applicable as it is with the paint. */
 .footer.signoff[data-horizon-state='capturing'] [data-horizon-item],
+.footer.signoff[data-horizon-state='hold'] [data-horizon-item],
 .footer.signoff[data-horizon-state='ready'] [data-horizon-item] {
   will-change: transform, opacity;
 }
