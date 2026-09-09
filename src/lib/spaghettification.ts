@@ -473,8 +473,8 @@ export function fallAt(progress: number): number {
    with the playhead, so one function serves both the shader's per-fragment
    remap and the flyer's per-element stretch.
 --------------------------------------------------------------------------- */
-export const TIDAL_GAIN = 1.4;
-export const TIDAL_FALLOFF = 1.6;
+export const TIDAL_GAIN = 2.4;
+export const TIDAL_FALLOFF = 1.5;
 export const TIDAL_CAP = 0.96; // a fragment is never remapped past the singularity
 
 /** The playhead-scaled tidal gain, i.e. the shader's `uTidal`: the value that
@@ -632,7 +632,7 @@ export function holdBudgetAt(
    the accessibility tree or the tab order — only their paint is exchanged, and
    focus restores it at any progress.
 --------------------------------------------------------------------------- */
-export const MIX_START = 0.12;
+export const MIX_START = 0.14;
 export const MIX_END = 0.38;
 
 export function overlayMixAt(progress: number): number {
@@ -657,20 +657,30 @@ export function overlayMixAt(progress: number): number {
    ~120px from the singularity — spent their whole visible, still-opaque phase
    far outside the tidal gradient and contracted nearly isotropically: the
    texture warped late, after the live paint had already handed over, and the
-   sequence read as shrink-and-fade. Cubic growth (`p³`) reaches the same
-   overlay in the same distance but arrives at the flyers about half a playhead
-   earlier, so the tidal term bites them (and the frozen frame) while they are
-   still recognisably a headline and a button. The capture threshold still
-   swallows every texel at progress = 1; only the *timing* of the field's
-   arrival changes.
+   sequence read as shrink-and-fade. Cubic growth (`p³`) arrived earlier but
+   still not early enough: the anisotropy peaked after the live layer had faded.
+   The current exponent (≈ quadratic, tuned with `TIDAL_GAIN` / `TIDAL_FALLOFF`)
+   brings the field to the near flyer while the live glyph is still half-visible,
+   so the stretch reads as a live event instead of a postcard. The capture
+   threshold still swallows every texel at progress = 1; only the *timing* of
+   the field's arrival changes.
 --------------------------------------------------------------------------- */
 export const EFFECTIVE_HORIZON_RADIUS_PX = 26;
 
-/** The exponent of the horizon's growth curve: 3 (cubic) is the tuned value that
- * lets the tidal gradient reach the flyers while they are still opaque, instead
- * of waiting until the infall has already contracted the image. See the note on
- * `EFFECTIVE_HORIZON_RADIUS_PX` above. */
-export const HORIZON_GROWTH_EXPONENT = 3;
+/** The exponent of the horizon's growth curve. The one knob that decides whether
+ * the flyers read as a *drop then snap* (a late, quartic close) or as a real
+ * spaghettification (a field that reaches them while they are still large enough
+ * to strand). It is tuned together with `TIDAL_GAIN` / `TIDAL_FALLOFF` so the
+ * dramatic anisotropy lands INSIDE the still-opaque window: the paint crossfade
+ * hands the live text to the frozen frame at `MIX_END`, and the ratio
+ * `along / across` has to reach ~1.3 while the live layer is still half-visible
+ * (opacity ≥ 0.5), not after it has faded out. The earlier cubic growth (`p³`)
+ * arrived at the nearest flyer too late — the interesting stretch happened after
+ * the reader stopped watching the live glyphs. The tuned value (≈ quadratic)
+ * reaches the ~34px CTA by the time the crossfade is a third through, so the
+ * stretch is a live, readable event. The capture threshold still swallows every
+ * texel at progress = 1; only the *timing* of the field's arrival changes. */
+export const HORIZON_GROWTH_EXPONENT = 2.4;
 
 /** The overlay covers the sheet plus `veil` px of the seam above it, so the
  * horizon has to reach the farthest corner of THAT box, not of the sheet. */
@@ -734,8 +744,8 @@ export function horizonRadiusAtProgress(progress: number, extent: HorizonExtent)
 --------------------------------------------------------------------------- */
 
 /** The playhead values of the two crossings, nearest flyer first. Measured off
- * the reference scene with the cubic horizon growth, where the CTA (nearest,
- * ~34px) crosses at p≈0.391 and the headline (~120px) at p≈0.525. The bite is
+ * the reference scene with the current horizon growth, where the CTA (nearest,
+ * ~34px) crosses at p≈0.383 and the headline (~120px) at p≈0.525. The bite is
  * centred a hair past its crossing, so the reaction lands as the body goes in
  * rather than just before it. Art direction, not a constant from the shader. */
 export const BITE_CENTRES = [0.39, 0.53];
@@ -804,14 +814,14 @@ export const FLYER_IDS: FlyerId[] = ['invite', 'cta'];
  *
  * This is a fraction of the CURRENT (contracted) radius, not a fixed pixel
  * distance, so it is the one crossing knob that is safe to tune alongside the
- * horizon's growth exponent: with cubic growth the horizon arrives at the
- * flyers earlier, and a flyer with the old 0.98 threshold crossed before the
- * paint handoff (`MIX_END`). Lowering the threshold to 0.70 keeps a flyer's
- * hit target alive until it is genuinely inside the horizon — farther in than
- * `0.98 · R` — so the geometry-only consumption still retires it in order of
- * distance and *after* the paint exchange, which is the property the crossing
- * test pins. */
-export const CROSSING = 0.7;
+ * horizon's growth exponent: with the earlier horizon growth (2.4) the field
+ * swallows the nearest flyer geometrically well before the paint handoff, and a
+ * flyer with the old 0.70 threshold would have its hit target retired while it
+ * was still painted. Lowering the threshold to 0.50 keeps a flyer's hit target
+ * alive until it is genuinely inside the horizon — farther in than `0.70 · R`
+ * — so the geometry-only consumption still retires it in order of distance and
+ * *after* the paint exchange, which is the property the crossing test pins. */
+export const CROSSING = 0.5;
 
 /** The most a flyer may be stretched along the pull axis. A strand, not a
  * balloon: with the field as written the slope never gets small enough for this
