@@ -17,7 +17,7 @@
    Everything degrades cleanly under prefers-reduced-motion.
 --------------------------------------------------------------------------- */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   animate,
   motion,
@@ -364,7 +364,7 @@ export default function NemoChat() {
         <motion.form
           className="nchat__composer"
           variants={rowVariants}
-          onSubmit={(e) => {
+          onSubmit={(e: FormEvent<HTMLFormElement>) => {
             e.preventDefault();
             send(input);
           }}

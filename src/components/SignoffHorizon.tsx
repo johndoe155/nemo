@@ -66,32 +66,6 @@ const wrapGlyphs = (root: HTMLElement) => {
   }
 };
 
-/** Vertical slices of the CTA: clones of the painted button, each clipped to
- * a strip, so the pill tears into a thread instead of scaling as one box.
- * The real <a> stays in the tree (tabbable, named); the clones are aria-hidden. */
-const sliceCta = (el: HTMLElement) => {
-  if (el.dataset.horizonSliced === '1') return;
-  el.dataset.horizonSliced = '1';
-  const source = el.querySelector<HTMLElement>('a, button, .btn');
-  if (!source) return;
-  const host = document.createElement('div');
-  host.className = 'horizon-strand-host';
-  host.setAttribute('aria-hidden', 'true');
-  const n = CTA_STRANDS;
-  for (let i = 0; i < n; i += 1) {
-    const slice = document.createElement('div');
-    slice.className = 'horizon-strand horizon-strand--slice';
-    slice.dataset.horizonStrand = 'slice';
-    const left = (i / n) * 100;
-    const right = 100 - ((i + 1) / n) * 100;
-    slice.style.clipPath = `inset(0 ${right}% 0 ${left}%)`;
-    slice.appendChild(source.cloneNode(true));
-    host.appendChild(slice);
-  }
-  el.appendChild(host);
-  source.classList.add('horizon-strand-source');
-};
-
 const clearStrandTransforms = (el: HTMLElement) => {
   el.querySelectorAll<HTMLElement>(STRAND_SEL).forEach((piece) => {
     piece.style.transform = '';

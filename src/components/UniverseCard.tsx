@@ -59,7 +59,7 @@ export default function UniverseCard({
       aria-haspopup="dialog"
       data-cursor="OPEN"
       aria-labelledby={`${nameId} ${actId}`}
-      onKeyDown={(e) => {
+      onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onClick(u);

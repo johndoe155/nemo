@@ -118,7 +118,7 @@ function CreditPlate({ a, i, n }: { a: (typeof ARTISTS)[number]; i: number; n: n
             y: reduce ? 0 : y,
           } as React.ComponentProps<typeof motion.article>['style']}
           onClick={bob}
-          onKeyDown={(e) => {
+          onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
               bob();

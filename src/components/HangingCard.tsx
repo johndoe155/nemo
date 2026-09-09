@@ -258,7 +258,9 @@ export default function HangingCard({
            tearing/stutter this rig showed on phones. Prefixing translateZ(0)
            (the CSS equivalent of `transform-gpu`, and the same thing GSAP's
            force3D does) guarantees a 3D matrix on every frame. */
-        transformTemplate={(_, generated) => `translateZ(0) ${generated}`}
+        transformTemplate={(_transform: Record<string, unknown>, generated: string) =>
+          `translateZ(0) ${generated}`
+        }
         onPointerDown={onPointerDown}
         onPointerEnter={onPointerEnter}
       >

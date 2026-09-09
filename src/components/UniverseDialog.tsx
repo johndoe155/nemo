@@ -81,7 +81,7 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 30, scale: 0.97 }}
         transition={{ duration: 0.5, ease: EASE }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
       >
         <button className="dialog__close" onClick={onClose} aria-label="Close universe detail">
           ✕
