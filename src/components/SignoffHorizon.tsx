@@ -50,7 +50,10 @@ const wrapGlyphs = (root: HTMLElement) => {
   for (const node of nodes) {
     const text = node.nodeValue ?? '';
     if (!text.length) continue;
-    if (node.parentElement?.closest('[data-horizon-strand]')) continue;
+    const parent = node.parentElement;
+    if (!parent) continue;
+    if (parent.closest('[data-horizon-strand]')) continue;
+    if (parent.closest('.chroma, .txt-grad')) continue;
     const frag = document.createDocumentFragment();
     for (const ch of text) {
       const span = document.createElement('span');
@@ -746,21 +749,11 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
                 y: current.pinnedTop + current.flyers[id].y,
               };
               const flyer = flyerFrameAt(p, rest, singularity, radius);
-              // The parent flyer is NOT warped as a rigid box — that is the
-              // failure mode of the last two passes. Opacity / hit-target still
-              // live on the envelope so the CTA stays one named control.
-              el.style.transform = '';
+              el.style.transform = flyerTransform(flyer);
               el.style.opacity = warp ? flyer.opacity.toFixed(4) : '';
               el.style.pointerEvents = flyer.consumed ? 'none' : '';
 
               const pieces = el.querySelectorAll<HTMLElement>(STRAND_SEL);
-              if (pieces.length === 0) {
-                // Fail closed: no pieces yet (pre-lift) — keep the envelope
-                // transform so the sequence still consumes something.
-                el.style.transform = flyerTransform(flyer);
-                continue;
-              }
-              const parentBox = el.getBoundingClientRect();
               pieces.forEach((piece) => {
                 let pieceRest = {
                   x: Number(piece.dataset.strandRestX),
@@ -769,26 +762,15 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
                 if (!Number.isFinite(pieceRest.x) || !Number.isFinite(pieceRest.y)) {
                   piece.style.transform = 'none';
                   const fresh = piece.getBoundingClientRect();
-                  if (piece.dataset.horizonStrand === 'slice') {
-                    const i = Number(piece.dataset.strandIndex);
-                    const n = Number(piece.dataset.strandCount) || pieces.length;
-                    const w = current.flyers[id].width;
-                    pieceRest = {
-                      x: rest.x + ((i + 0.5) / n - 0.5) * w,
-                      y: rest.y,
-                    };
-                  } else {
-                    pieceRest = {
-                      x: fresh.left + fresh.width / 2,
-                      y: fresh.top + fresh.height / 2,
-                    };
-                  }
+                  pieceRest = {
+                    x: fresh.left + fresh.width / 2,
+                    y: fresh.top + fresh.height / 2,
+                  };
                   piece.dataset.strandRestX = String(pieceRest.x);
                   piece.dataset.strandRestY = String(pieceRest.y);
-                  void parentBox;
                 }
                 const frame = strandPieceAt(p, pieceRest, rest, singularity, radius);
-                piece.style.transform = flyerTransform(frame);
+                piece.style.transform = strandDeltaTransform(frame, flyer);
               });
             }
 

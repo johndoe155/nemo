@@ -137,12 +137,6 @@
   .footer.signoff [data-horizon-strand] {
     transform: none !important;
   }
-  .footer.signoff .horizon-strand-host {
-    display: none !important;
-  }
-  .footer.signoff .horizon-strand-source {
-    opacity: 1 !important;
-  }
   .footer.signoff .signoff__anchor {
     height: auto !important;
   }
