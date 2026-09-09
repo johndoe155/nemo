@@ -76,6 +76,7 @@ import {
   strandPieceAt,
   strandRests,
   strandFramesAt,
+  strandDeltaTransform,
   CTA_STRANDS,
   INVITE_STRANDS,
   type FlyerId,
@@ -1468,4 +1469,10 @@ test('strand pieces lag by rest radius so a flyer opens into a thread', () => {
   const xspread = Math.max(...positions.map((pt) => pt.x)) - Math.min(...positions.map((pt) => pt.x));
   const yspread = Math.max(...positions.map((pt) => pt.y)) - Math.min(...positions.map((pt) => pt.y));
   assert.ok(xspread > 40 || yspread > 4, `piece cloud collapsed (Δx=${xspread}, Δy=${yspread})`);
+  const delta = strandDeltaTransform(frames[0], envelope);
+  assert.ok(/translate3d\(/.test(delta), 'child delta is a CSS transform');
+  const restEnv = flyerFrameAt(0, flyer, SINGULARITY, 0);
+  const restPiece = strandPieceAt(0, rests[0], flyer, SINGULARITY, 0);
+  const restDelta = strandDeltaTransform(restPiece, restEnv);
+  assert.ok(/translate3d\(0\.000px, 0\.000px, 0\)/.test(restDelta), `rest delta moved: ${restDelta}`);
 });

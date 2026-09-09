@@ -10,7 +10,6 @@ import {
   type SignoffScene,
 } from '../lib/signoffHorizonGeometry';
 import {
-  CTA_STRANDS,
   FLYER_IDS,
   PLAYHEAD_SMOOTH_PX,
   clamp01,
@@ -24,6 +23,7 @@ import {
   horizonRadiusAtProgress,
   overlayMixAt,
   sheetHeightAt,
+  strandDeltaTransform,
   strandPieceAt,
   type FlyerId,
 } from '../lib/spaghettification';
@@ -407,7 +407,6 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           if (lifted || !scene) return;
           lifted = true;
           wrapGlyphs(flyerEls.invite);
-          sliceCta(flyerEls.cta);
           anchor.style.height = `${scene.anchorHeight}px`;
           for (const id of FLYER_IDS) {
             const el = flyerEls[id];

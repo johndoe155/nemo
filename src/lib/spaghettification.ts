@@ -632,8 +632,8 @@ export function holdBudgetAt(
    the accessibility tree or the tab order — only their paint is exchanged, and
    focus restores it at any progress.
 --------------------------------------------------------------------------- */
-export const MIX_START = 0.28;
-export const MIX_END = 0.48;
+export const MIX_START = 0.14;
+export const MIX_END = 0.38;
 
 export function overlayMixAt(progress: number): number {
   const t = phase(progress, MIX_START, MIX_END);
@@ -1033,5 +1033,23 @@ export function strandFramesAt(
 ): FlyerFrame[] {
   return strandRests(flyerRest, singularity, size, count).map((piece) =>
     strandPieceAt(progress, piece, flyerRest, singularity, horizonRadius),
+  );
+}
+
+/** Child-local transform once the PARENT already carries `envelope`.
+ * Only the lag (extra translation) and the residual scale/rotation live here,
+ * so the flyer still flies into the hole as one body — the property the live
+ * scene needs — while pieces open into a thread. */
+export function strandDeltaTransform(piece: FlyerFrame, envelope: FlyerFrame): string {
+  const x = piece.x - envelope.x;
+  const y = piece.y - envelope.y;
+  const along = envelope.along > 1e-6 ? piece.along / envelope.along : piece.along;
+  const across = envelope.across > 1e-6 ? piece.across / envelope.across : piece.across;
+  const rotation = piece.rotation - envelope.rotation;
+  return (
+    `translate3d(${x.toFixed(3)}px, ${y.toFixed(3)}px, 0) ` +
+    `rotate(${rotation.toFixed(3)}deg) ` +
+    `scale(${along.toFixed(5)}, ${across.toFixed(5)}) ` +
+    `rotate(${(-rotation).toFixed(3)}deg)`
   );
 }

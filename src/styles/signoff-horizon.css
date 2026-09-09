@@ -42,30 +42,10 @@
   transform-origin: 50% 50%;
 }
 
-/* Per-glyph / per-slice pieces. Each is transformed independently in the
-   tidal field so the flyer reads as a strand, not a scaled rectangle. */
+/* Per-glyph lag on top of the parent envelope. */
 .footer.signoff .horizon-strand {
   display: inline-block;
   transform-origin: 50% 50%;
-  will-change: transform;
-}
-.footer.signoff .horizon-strand-host {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-.footer.signoff .horizon-strand--slice {
-  position: absolute;
-  inset: 0;
-  display: block;
-}
-.footer.signoff .horizon-strand--slice .btn,
-.footer.signoff .horizon-strand--slice a {
-  pointer-events: none;
-}
-.footer.signoff[data-horizon-scene='pinned'] .horizon-strand-source {
-  opacity: 0;
 }
 
 /* Promotion only while an activation exists: the fall is transform+opacity
@@ -94,7 +74,10 @@
    negative top inset re-grants the measured veil of seam above it. The value is
    published by the effect as --horizon-veil. */
 .footer.signoff[data-horizon-scene='pinned'],
-.footer.signoff[data-horizon-scene='pinned'] .signoff__anchor {
+.footer.signoff[data-horizon-scene='pinned'] .signoff__anchor,
+.footer.signoff[data-horizon-scene='pinned'] .signoff__line,
+.footer.signoff[data-horizon-scene='pinned'] .signoff__line-in,
+.footer.signoff[data-horizon-scene='pinned'] .signoff__title {
   overflow: visible;
 }
 .footer.signoff[data-horizon-scene='pinned'] {
@@ -115,6 +98,9 @@
   transform: none !important;
   opacity: 1 !important;
   pointer-events: auto !important;
+}
+.footer.signoff:focus-within [data-horizon-strand] {
+  transform: none !important;
 }
 .footer.signoff:focus-within > .signoff-horizon__canvas {
   opacity: 0;
