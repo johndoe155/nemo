@@ -884,10 +884,33 @@ export function lensForwardAt(vx: number, vy: number, field: LensField, steps = 
  * hair of fixed-point error never cost the strand an edge. */
 export const LENS_PAD_PX = 10;
 
-/** The displacement-map side, in px. 160 cells over regions up to ~800px give a
- * ~5px cell: the field is smooth at that scale, and the map is re-baked per
- * playhead rather than stretched linearly, so curvature never starves. */
-export const LENS_MAP_SIZE = 160;
+/** The displacement-map side, in px. 128 cells over regions up to ~800px give
+ * a ~6px cell: the field is smooth at that scale, the GPU interpolates the map
+ * bilinearly, and — since V3.1 — the maps are pre-baked as a FILMSTRIP (below),
+ * so one flyer's full fall costs 64 frames of 64KB instead of a re-encode on
+ * every scroll event. */
+export const LENS_MAP_SIZE = 128;
+
+/** The filmstrip: the consumption is baked as `LENS_BAKE_STEPS` stepping-stone
+ * frames per flyer, decoded and kept warm in the browser's image cache, and the
+ * playhead is quantised onto them at paint time. This is not an approximation
+ * choice but a browser-mechanics necessity: replacing an feImage's `href` with
+ * a fresh data URL puts the displacement input through the document's async
+ * image pipeline, and while the fetch is pending the map is TRANSPARENT BLACK —
+ * a displacement of −range on both channels, i.e. every pixel sampling the
+ * void. A live scrub that re-bakes per frame therefore flickers between an old
+ * frame and a void, which is exactly the "random glitchy displacement,
+ * sometimes the whole block disappears" bug the first live build produced.
+ * Sixty-four steps is ~1.5% of the fall each: at the envelope's ~250px span
+ * that is ~4px per step early and ~25px mid-fall, and the warm cache makes
+ * every step free when the scroll arrives. */
+export const LENS_BAKE_STEPS = 64;
+
+/** The filmstrip frame nearest `progress`. Pure, so the component, the harness
+ * and the tests agree on the quantisation. */
+export function lensBakeStep(progress: number): number {
+  return Math.round(clamp01(progress) * LENS_BAKE_STEPS) / LENS_BAKE_STEPS;
+}
 
 /** The region's minimum side: an empty region would invalidate the filter and
  * render the element UNWARPED — the rest pose popping back mid-fall. */

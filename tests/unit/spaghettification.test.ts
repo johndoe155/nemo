@@ -60,6 +60,8 @@ import {
   lensForwardAt,
   lensRegionAt,
   lensSourceAt,
+  lensBakeStep,
+  LENS_BAKE_STEPS,
   LENS_MAP_SIZE,
   overlayMixAt,
   parkedFrameTop,
@@ -1811,4 +1813,26 @@ test('the borders of the consumption arrive with the tide, not before it', () =>
   }
   // Nearest body, first bite: the ordering the response is built on.
   assert.ok(BITE_CENTRES[0] < BITE_CENTRES[1]);
+});
+
+test('the filmstrip quantisation is exact at the ends and even between', () => {
+  // The filmstrip exists because a feImage href is an async image fetch: the
+  // live scrub may never assign a URL the browser has not already decoded, so
+  // the painted playhead is always the nearest pre-baked step.
+  assert.equal(lensBakeStep(-0.2), 0);
+  assert.equal(lensBakeStep(0), 0);
+  assert.equal(lensBakeStep(1), 1);
+  assert.equal(lensBakeStep(1.4), 1);
+  assert.equal(lensBakeStep(0.5), 0.5);
+  const step = 1 / LENS_BAKE_STEPS;
+  // Within half a step the frame stands; beyond it the next frame is claimed.
+  assert.equal(lensBakeStep(step + step * 0.49), step);
+  assert.equal(lensBakeStep(step + step * 0.51), 2 * step);
+  // And it is monotone non-decreasing over its domain.
+  let last = 0;
+  for (let i = 0; i <= LENS_BAKE_STEPS; i += 1) {
+    const q = lensBakeStep(i / LENS_BAKE_STEPS - 1e-9);
+    assert.ok(q >= last - 1e-12, `not monotone at ${i}`);
+    last = q;
+  }
 });

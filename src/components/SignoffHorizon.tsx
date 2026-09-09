@@ -20,7 +20,6 @@ import {
   holdActiveAt,
   holdDistanceAt,
   horizonRadiusAtProgress,
-  lensFieldAt,
   overlayMixAt,
   sheetHeightAt,
   type FlyerId,
@@ -708,8 +707,9 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             // The same field, sheet-local, for the lenses: the scene's flyer
             // centres and the singularity already live in that space, and one
             // space is what keeps the live paint and the frozen frame aligned
-            // through the crossfade.
-            const field = lensFieldAt(p, geometry);
+            // through the crossfade. The field itself is evaluated inside
+            // paintFlyerLens — quantised onto the filmstrip step, so that map,
+            // region and scale are never a mix of two playheads.
             const sheetSingularity = { x: current.anchorX, y: current.anchorY };
             for (const id of FLYER_IDS) {
               const el = flyerEls[id];
@@ -738,7 +738,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
                   width: box.width,
                   height: box.height,
                 };
-                paintFlyerLens(lenses, id, p, raster, sheetSingularity, field);
+                paintFlyerLens(lenses, id, p, raster, sheetSingularity, geometry);
               }
             }
 

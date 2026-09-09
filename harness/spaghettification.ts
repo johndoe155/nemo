@@ -109,7 +109,10 @@ function paint(): void {
     // the region/scale/map (its own quantization keeps repeated scrubs from
     // re-baking below the visible step).
     probe.style.filter = `url(#${FLYER_LENS_ID.invite})`;
-    paintFlyerLens(lenses, 'invite', p, raster, scene.singularity, field);
+    // Same signature the component drives: the field is evaluated INSIDE the
+    // painter (quantised onto the filmstrip step); the harness's own `field`
+    // above is just the read-out's probe.
+    paintFlyerLens(lenses, 'invite', p, raster, scene.singularity, scene.extent);
     // The region overlay: the SAME rounding paintFlyerLens writes, so what
     // is drawn is what is applied. The bbox-units conversion is inside the
     // map; the overlay reads the sheet-px rect straight from lensRegionAt.

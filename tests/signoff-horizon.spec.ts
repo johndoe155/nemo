@@ -969,7 +969,10 @@ test('the DOM warp is a lensing field over the raster — never an affine skew',
       const id = FLYER_IDS[index];
       const lensData = await readLens(id);
       if (progress <= 0.15) {
-        expect(flyer.filter).toBe(`url("#horizon-lens-${id}")`);
+        // Engines disagree on quoting an internal url() in serialised form;
+        // the assertion that matters is WHICH filter is referenced.
+        expect(flyer.filter).toContain(`horizon-lens-${id}`);
+        expect(flyer.filter).toContain('url(');
         // An identity warp (scale 0) would mean "no field present": the old
         // bug in another clothes. Mid-fall the range is tens to hundreds of
         // px; require a real, growing field — and never a bloated one.
@@ -987,11 +990,14 @@ test('the DOM warp is a lensing field over the raster — never an affine skew',
     }
   }
 
-  // The field is BAKED per playhead, not re-scaled: the map's bytes change
-  // whenever the playhead moves (a static map whose scale grows — the old
-  // linear bow — would keep one hash and only move the scale).
+  // The field is BAKED per filmstrip step, not re-scaled: the map's bytes
+  // change whenever the step changes (a static map whose scale grows — the
+  // old linear bow — would keep one hash and only move the scale). Note the
+  // fixture is ARMED: the live paint is gone past MIX_END ≈ 0.38, so only
+  // the bakes below that point ever make it into the DOM at different
+  // playheads — two samples apart in the strip is the provable minimum.
   for (const series of [invites, ctas]) {
-    expect(new Set(series.map((lensData) => lensData.hash)).size).toBeGreaterThanOrEqual(3);
+    expect(new Set(series.map((lensData) => lensData.hash)).size).toBeGreaterThanOrEqual(2);
   }
   // The filter region TRACKS the consumption instead of sitting over the
   // rest box forever: it lifts toward the singularity (its top edge climbs,

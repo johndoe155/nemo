@@ -2,35 +2,55 @@
    Sign-off lens — the DOM plumbing for the live gravitational lens.
 
    The math lives in `lib/spaghettification.ts` (`lensFieldAt` /
-   `lensSourceAt` / `lensForwardAt` / `lensRegionAt` / `computeLensMap`), pure
-   and unit-tested. This module owns the three DOM objects per flyer — the
-   <svg> filter, its feImage displacement map and the feDisplacementMap scale —
-   and the three pieces of care that keep them cheap and honest:
+   `lensRegionAt` / `computeLensMap` / `lensBakeStep`), pure and unit-tested.
+   This module owns the DOM objects per flyer — the <svg> filter, its feImage
+   displacement map and the feDisplacementMap scale — and, since V3.1, the one
+   browser mechanic that decides whether any of it is visible at all:
 
-   · THE REGION MOVES WITH THE CONTENT. Each playhead the field's content
-     hull (sheet-local px) is converted into the filter's objectBoundingBox
-     region, snapped to whole px so a sub-pixel wobble never re-rasterises the
-     element without re-baking anything.
-   · THE MAP IS RE-BAKED, NOT RE-TIMED. Distortion strength is animated by
-     re-baking the map from the field (the field's own gain/evolution), never
-     by merely growing a static map's `scale` — a static map's curvature is a
-     fixed function, so only a re-baked field can give the bow its non-linear
-     arrival. The bake is skipped when the playhead has moved less than the
-     bake granularity and nothing else changed.
+   · feImage hrefs GO THROUGH THE ASYNC IMAGE PIPELINE. Re-assigning
+     `image.href` to a fresh data URL does not take effect on the next paint:
+     the document has to fetch (and decode) the image, and while that is
+     pending the displacement input is TRANSPARENT BLACK. Transparent black
+     reads as channel = 0, i.e. a displacement of `scale·(0 − 0.5) = −range` on
+     BOTH axes — every output pixel sampling hundreds of px up-left of itself,
+     i.e. the void, i.e. the flyer half-misplaced, streaking, or gone entirely.
+     The first live build re-baked (and re-assigned) the map on essentially
+     every scroll frame, so the whole consumption ran inside that fetch
+     pipeline: random glitchy displacement under scroll, the block
+     disappearing outright, and — whenever the pipeline won the race with a
+     stale near-rest map — a flyer that never visibly moved toward the hole at
+     all. THE FILMSTRIP is the fix: the fall is baked once as LENS_BAKE_STEPS
+     stepping frames, every data URL is kept alive AND warm-decoded in the
+     image cache by an <img> twin, and applying a frame only ever swaps in a
+     URL the browser has already decoded.
+
+   · TRIO, NEVER A MIX. A displacement map is only valid against the region
+     and scale it was baked with. Region, feImage placement, scale and href
+     are written atomically, and only when the playhead crosses onto a new
+     filmstrip step — attribute churn on a filter re-rasterises the element.
+
+   · THE REGION STILL TRACKS THE CONTENT. Each filmstrip frame's region is the
+     hull of the rest box's forward image at that frame's playhead (`lensRegionAt`,
+     snapped to whole px), so the map's 128² cells are spent where the content
+     is, and the feImage is pinned exactly over that hull in element-local
+     user space (explicit x/y/width/height — never the spec-default subregion).
+
    · THE SCALE IS THE MAP'S TRUE RANGE. `feDisplacementMap` displaces by
      `scale·(C − 0.5)` per channel; the map encodes the content range (the
      value `computeLensMap` returns) into the full 8-bit channel, so the
      quantisation bias stays a small, uniform translation of the whole warped
-     image (≤ ~1.6px at the deepest live frame, half a pixel mid-flight) —
-     never a wobble of one glyph against another, which is what continuity of
-     the word lives on.
+     image — never a wobble of one glyph against another, which is what the
+     continuity of the word lives on.
    ========================================================================== */
 
 import {
+  LENS_BAKE_STEPS,
   LENS_MAP_SIZE,
+  clamp01,
   computeLensMap,
+  lensFieldAt,
   lensRegionAt,
-  type LensField,
+  type HorizonExtent,
   type LensRect,
   type Point,
   type FlyerId,
@@ -43,28 +63,29 @@ export const FLYER_LENS_ID: Record<FlyerId, string> = {
   cta: 'horizon-lens-cta',
 };
 
-/** Re-bake granularity, in playhead units: below this the painted difference is
- * sub-pixel at the map's own resolution, and the scroll's energy is better
- * spent on the overlay's frames. */
-export const LENS_BAKE_STEP = 0.004;
-
-/** The scale attribute is re-written only when the map's range moved by more
- * than this many px: attribute churn on the filter is itself a raster. */
-const SCALE_WRITE_EPSILON_PX = 0.5;
+/** One baked filmstrip frame: the displacement map's data URL plus the region
+ * and scale that are only valid together with it. */
+interface LensBake {
+  /** The snapped filter region, in sheet px (apply: convert to bbox units). */
+  region: { x: number; y: number; width: number; height: number };
+  /** The displacement scale = 2 × content range at this playhead. */
+  scale: number;
+  /** The PNG data URL. Kept warm by an <img> twin in `keepAlive`. */
+  url: string;
+}
 
 export interface FlyerLensChannel {
   filter: SVGFilterElement;
   image: SVGFEImageElement;
   displace: SVGFEDisplacementMapElement;
-  /** The region currently written on the filter, as SNAPPED sheet px. */
-  region: { x: number; y: number; width: number; height: number } | null;
-  /** The scale last written on the displacement primitive. */
-  scale: number;
-  /** The playhead the current map was baked for. */
-  bakedProgress: number;
-  /** The raster/singularity the current map was baked against. */
-  bakedRaster: LensRect | null;
-  bakedSingularity: Point | null;
+  /** The filmstrip step index whose trio is currently written to the DOM, or
+   * −1 (stand-down: scale 0 written, nothing else trusted). */
+  applied: number;
+  /** The raster/singularity/extent the cache below was baked for; a measured
+   * layout change invalidates the whole strip. */
+  signature: string;
+  /** The filmstrip cache, indexed by step 0..LENS_BAKE_STEPS. */
+  cache: Array<LensBake | null>;
 }
 
 export interface FlyerLenses {
@@ -72,13 +93,27 @@ export interface FlyerLenses {
   canvas: HTMLCanvasElement;
   map: Float32Array;
   channels: Record<FlyerId, FlyerLensChannel>;
+  /** The decoded-image twins that pin every baked URL in the browser's image
+   * cache (dropping these is what lets the feImage re-enter the async fetch
+   * path). */
+  keepAlive: Set<HTMLImageElement>;
+  /** The inputs the background pre-baker is working through, per flyer. */
+  pending: Record<FlyerId, { raster: LensRect; singularity: Point; extent: HorizonExtent } | null>;
+  /** The rAF id of the background pre-baker, 0 when idle. */
+  prebakeFrame: number;
+  /** Round-robin cursor into the steps still to bake. */
+  prebakeIndex: number;
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+/** Filmstrip index of a playhead. */
+const stepIndexOf = (progress: number): number =>
+  Math.round(clamp01(progress) * LENS_BAKE_STEPS);
+
 /** Mount both flyer lenses into `host` (the sheet), replacing any previous
  * mount. The svg is a zero-size defs block; the filters' regions are set by
- * the first bake. Idempotent across StrictMode's double effects. */
+ * the first applied bake. Idempotent across StrictMode's double effects. */
 export function mountFlyerLenses(host: HTMLElement): FlyerLenses {
   host.querySelectorAll('svg.horizon-lens-defs').forEach((node) => node.remove());
   const svg = document.createElementNS(SVG_NS, 'svg');
@@ -92,8 +127,8 @@ export function mountFlyerLenses(host: HTMLElement): FlyerLenses {
     const filter = document.createElementNS(SVG_NS, 'filter');
     filter.setAttribute('id', FLYER_LENS_ID[id]);
     // The region comes from the content hull in the element's own box units;
-    // the primitives (the displacement scale in particular) are painted in
-    // element-local CSS px.
+    // the primitives (the displacement scale, the feImage's placement — see
+    // `applyBake`) are painted in element-local CSS px.
     filter.setAttribute('filterUnits', 'objectBoundingBox');
     filter.setAttribute('primitiveUnits', 'userSpaceOnUse');
     filter.setAttribute('color-interpolation-filters', 'sRGB');
@@ -112,11 +147,9 @@ export function mountFlyerLenses(host: HTMLElement): FlyerLenses {
       filter,
       image,
       displace,
-      region: null,
-      scale: 0,
-      bakedProgress: -1,
-      bakedRaster: null,
-      bakedSingularity: null,
+      applied: -1,
+      signature: '',
+      cache: new Array<LensBake | null>(LENS_BAKE_STEPS + 1).fill(null),
     };
   }
   host.prepend(svg);
@@ -128,78 +161,49 @@ export function mountFlyerLenses(host: HTMLElement): FlyerLenses {
     canvas,
     map: new Float32Array(LENS_MAP_SIZE * LENS_MAP_SIZE * 2),
     channels,
+    keepAlive: new Set(),
+    pending: {
+      invite: null,
+      cta: null,
+    } as Record<FlyerId, { raster: LensRect; singularity: Point; extent: HorizonExtent } | null>,
+    prebakeFrame: 0,
+    prebakeIndex: 0,
   };
 }
 
-/** The region the content currently occupies, in objectBoundingBox units of
- * the flyer's rest box: bbox-fraction geometry, with x/width fractions of the
- * box width and y/height fractions of its height (the spec's own asymmetry —
- * y-fractions must not be divided by the width). */
-function regionUnits(region: LensRect, raster: LensRect): {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-} {
-  return {
-    x: (region.x - raster.x) / raster.width,
-    y: (region.y - raster.y) / raster.height,
-    width: region.width / raster.width,
-    height: region.height / raster.height,
-  };
+/** What a baked strip is valid against: a measured re-layout (a resize, a
+ * refresh) changes it and the whole strip is re-baked. */
+function signatureOf(raster: LensRect, singularity: Point, extent: HorizonExtent): string {
+  return [
+    raster.x, raster.y, raster.width, raster.height,
+    singularity.x, singularity.y,
+    extent.width, extent.height, extent.anchorX, extent.anchorY, extent.veil,
+  ]
+    .map((n) => n.toFixed(3))
+    .join('|');
 }
 
-/** Bake this playhead's displacement map into one flyer's filter, moving the
- * region to the content hull first. Returns true when the map was re-baked.
- * Cheap when nothing moved: a skipped bake is the whole point of keeping the
- * last inputs around. */
-export function paintFlyerLens(
+/** Bake one filmstrip frame: the field at the frame's own playhead (map,
+ * region and scale mutually consistent — the trio rule), the map encoded to
+ * a PNG data URL, and the URL pinned in the image cache. */
+function bakeOne(
   lenses: FlyerLenses,
-  id: FlyerId,
-  progress: number,
+  step: number,
   raster: LensRect,
   singularity: Point,
-  field: LensField,
-): boolean {
-  const channel = lenses.channels[id];
+  extent: HorizonExtent,
+): LensBake | null {
+  const field = lensFieldAt(step / LENS_BAKE_STEPS, extent);
   const region = lensRegionAt(raster, singularity, field);
-  // Snap to whole sheet px: a fractional region is real (the hull is
-  // fractional), but writing it would re-rasterise the element for differences
-  // far below the map's own cell size, and the bake decides from the snapped
-  // value — the map and the region must always describe the same rectangle.
   const snapped = {
     x: Math.round(region.x),
     y: Math.round(region.y),
     width: Math.max(1, Math.round(region.width)),
     height: Math.max(1, Math.round(region.height)),
   };
-  const regionMoved =
-    !channel.region ||
-    channel.region.x !== snapped.x ||
-    channel.region.y !== snapped.y ||
-    channel.region.width !== snapped.width ||
-    channel.region.height !== snapped.height;
-  const rasterMoved =
-    !channel.bakedRaster ||
-    channel.bakedRaster.x !== raster.x ||
-    channel.bakedRaster.y !== raster.y ||
-    channel.bakedRaster.width !== raster.width ||
-    channel.bakedRaster.height !== raster.height ||
-    !channel.bakedSingularity ||
-    channel.bakedSingularity.x !== singularity.x ||
-    channel.bakedSingularity.y !== singularity.y;
-  if (
-    !regionMoved &&
-    !rasterMoved &&
-    channel.bakedProgress >= 0 &&
-    Math.abs(channel.bakedProgress - progress) < LENS_BAKE_STEP
-  ) {
-    return false;
-  }
-  const unfolded = { ...region, width: snapped.width, height: snapped.height, x: snapped.x, y: snapped.y };
   const ctx = lenses.canvas.getContext('2d');
-  if (!ctx) return false;
-  const range = computeLensMap(unfolded, raster, singularity, field, LENS_MAP_SIZE, lenses.map);
+  if (!ctx) return null;
+  const range = computeLensMap(snapped, raster, singularity, field, LENS_MAP_SIZE, lenses.map);
   const img = ctx.createImageData(LENS_MAP_SIZE, LENS_MAP_SIZE);
   const norm = range > 0 ? range : 1;
   for (let k = 0, j = 0; k < lenses.map.length; k += 2, j += 4) {
@@ -211,43 +215,138 @@ export function paintFlyerLens(
     img.data[j + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
-  if (regionMoved) {
-    const units = regionUnits(snapped, raster);
-    channel.filter.setAttribute('x', units.x.toFixed(4));
-    channel.filter.setAttribute('y', units.y.toFixed(4));
-    channel.filter.setAttribute('width', units.width.toFixed(4));
-    channel.filter.setAttribute('height', units.height.toFixed(4));
-    channel.region = snapped;
+  const url = lenses.canvas.toDataURL('image/png');
+  // The decode twin: an identical URL fetched through the normal HTML image
+  // pipeline. The browser's image cache is keyed by the URL string, so once
+  // the twin has decoded, assigning this string to the feImage's href is a
+  // cache hit — no pending fetch, no transparent-black map, no flicker.
+  const twin = new Image();
+  twin.src = url;
+  // decode() forces the decode ahead of first use rather than trusting the
+  // fetch alone; it is fire-and-forget because the warm <img> is itself enough
+  // on engines without it.
+  twin.decode?.().catch(() => undefined);
+  lenses.keepAlive.add(twin);
+  return { region: snapped, scale: 2 * norm, url };
+}
+
+/** Write a baked frame's trio to the DOM, atomically and only when it differs:
+ * the filter's region in bbox units, the feImage pinned over that exact
+ * region in the element's local user space (NEVER the default subregion —
+ * with primitiveUnits="userSpaceOnUse" an un-positioned feImage is a spec
+ * interpretation away from reading the map off the wrong box), the scale, and
+ * the href. Applied only at a step boundary: attribute churn re-rasterises
+ * the element, and sub-step differences are below the map's own resolution. */
+function applyBake(
+  channel: FlyerLensChannel,
+  stepIndex: number,
+  bake: LensBake,
+  raster: LensRect,
+): void {
+  if (channel.applied === stepIndex) return;
+  const { region } = bake;
+  channel.filter.setAttribute('x', ((region.x - raster.x) / raster.width).toFixed(4));
+  channel.filter.setAttribute('y', ((region.y - raster.y) / raster.height).toFixed(4));
+  channel.filter.setAttribute('width', (region.width / raster.width).toFixed(4));
+  channel.filter.setAttribute('height', (region.height / raster.height).toFixed(4));
+  channel.image.setAttribute('x', (region.x - raster.x).toFixed(1));
+  channel.image.setAttribute('y', (region.y - raster.y).toFixed(1));
+  channel.image.setAttribute('width', region.width.toFixed(1));
+  channel.image.setAttribute('height', region.height.toFixed(1));
+  channel.displace.setAttribute('scale', bake.scale.toFixed(1));
+  channel.image.setAttribute('href', bake.url);
+  channel.applied = stepIndex;
+}
+
+/** The background pre-baker: a few frames per rAF, low steps first (the fall
+ * opens at step 0), until both flyers' strips are complete. A paint that
+ * arrives ahead of the baker bakes its own step synchronously instead, so the
+ * reader never waits on this loop for a visible frame. */
+function schedulePrebake(lenses: FlyerLenses): void {
+  if (lenses.prebakeFrame) return;
+  lenses.prebakeFrame = requestAnimationFrame(() => {
+    lenses.prebakeFrame = 0;
+    let done = 0;
+    // Up to 3 bakes per frame: a bake is a 128² map plus a PNG encode, a few
+    // ms apiece; the strip completes inside a second of hold time.
+    for (
+      let cursor = lenses.prebakeIndex;
+      cursor < (LENS_BAKE_STEPS + 1) * FLYER_IDS.length && done < 3;
+      cursor = (lenses.prebakeIndex = cursor + 1)
+    ) {
+      const id = FLYER_IDS[cursor % FLYER_IDS.length];
+      const step = Math.floor(cursor / FLYER_IDS.length);
+      const inputs = lenses.pending[id];
+      const channel = lenses.channels[id];
+      if (!inputs || channel.cache[step]) continue;
+      const bake = bakeOne(lenses, step, inputs.raster, inputs.singularity, inputs.extent);
+      if (bake) channel.cache[step] = bake;
+      done += 1;
+    }
+    if (lenses.prebakeIndex < (LENS_BAKE_STEPS + 1) * FLYER_IDS.length) {
+      schedulePrebake(lenses);
+    }
+  });
+}
+
+/** Paint one flyer's lens for one playhead. The playhead quantises onto the
+ * filmstrip (`lensBakeStep` is the pure form of the same rule); the frame is
+ * baked on demand if the background baker has not reached it yet. */
+export function paintFlyerLens(
+  lenses: FlyerLenses,
+  id: FlyerId,
+  progress: number,
+  raster: LensRect,
+  singularity: Point,
+  extent: HorizonExtent,
+): boolean {
+  const channel = lenses.channels[id];
+  const signature = signatureOf(raster, singularity, extent);
+  if (channel.signature !== signature) {
+    // A measured layout change: every baked region/scale/url pair is about a
+    // different sheet, and the decoded twins are dead weight. Clear both.
+    channel.signature = signature;
+    channel.applied = -1;
+    channel.cache = new Array<LensBake | null>(LENS_BAKE_STEPS + 1).fill(null);
+    lenses.keepAlive.clear();
+    lenses.pending[id] = { raster: { ...raster }, singularity: { ...singularity }, extent: { ...extent } };
+    lenses.prebakeIndex = 0;
+  } else if (!lenses.pending[id]) {
+    lenses.pending[id] = { raster: { ...raster }, singularity: { ...singularity }, extent: { ...extent } };
   }
-  const scale = 2 * norm;
-  if (Math.abs(channel.scale - scale) > SCALE_WRITE_EPSILON_PX) {
-    channel.displace.setAttribute('scale', scale.toFixed(1));
-    channel.scale = scale;
+  const stepIndex = stepIndexOf(progress);
+  let bake = channel.cache[stepIndex];
+  if (!bake) {
+    bake = bakeOne(lenses, stepIndex, raster, singularity, extent);
+    if (!bake) return false;
+    channel.cache[stepIndex] = bake;
   }
-  channel.image.setAttribute('href', lenses.canvas.toDataURL('image/png'));
-  channel.bakedProgress = progress;
-  channel.bakedRaster = { ...raster };
-  channel.bakedSingularity = { x: singularity.x, y: singularity.y };
+  applyBake(channel, stepIndex, bake, raster);
+  schedulePrebake(lenses);
   return true;
 }
 
 /** Stand the lens down mid-scene: a zero scale makes the filter a no-op
  * without removing it (a removed filter re-triggering would paint the unwarped
- * element for a frame). */
+ * element for a frame). The strips are kept: they only go when the measured
+ * signature changes or the lenses are disposed. */
 export function silenceFlyerLenses(lenses: FlyerLenses): void {
   for (const id of FLYER_IDS) {
     const channel = lenses.channels[id];
-    channel.displace.setAttribute('scale', '0');
-    channel.scale = 0;
-    channel.bakedProgress = -1;
-    channel.bakedRaster = null;
-    channel.bakedSingularity = null;
-    channel.region = null;
+    if (channel.applied >= 0) channel.displace.setAttribute('scale', '0');
+    channel.applied = -1;
   }
 }
 
-/** Give everything back: the svg is not React's, and neither is its raster. */
+/** Give everything back: the svg is not React's, and neither is its raster,
+ * nor the dozens of decoded frames pinned in the image cache. */
 export function disposeFlyerLenses(lenses: FlyerLenses): void {
+  if (lenses.prebakeFrame) {
+    cancelAnimationFrame(lenses.prebakeFrame);
+    lenses.prebakeFrame = 0;
+  }
+  for (const id of FLYER_IDS) lenses.pending[id] = null;
+  lenses.keepAlive.clear();
   lenses.svg.remove();
   lenses.canvas.width = 0;
   lenses.canvas.height = 0;

@@ -199,6 +199,52 @@ picture.
   (no per-letter decomposition), left in place per the "don't delete lib
   machinery" convention; nothing paints it.
 
+## V3.1 — the feImage fetch pipeline (live-behavior bugfix)
+
+The first live run of the lens produced two symptoms, and both were DOM
+mechanics, not math: **random glitchy displacement under scroll, seemingly
+punctuated by the block disappearing**, and a block that otherwise **sat
+rigidly at its rest position, never moved toward the hole, and was left
+standing when the curtain footer slid over the sheet**.
+
+Cause: `feImage` hrefs are not style values — replacing one puts the image
+through the document's **async fetch/decode pipeline**, and while that runs,
+the displacement input is *transparent black*: channel 0 reads as
+`scale·(0 − 0.5) = −range` on both axes, so every output pixel samples
+hundreds of px into the void. V3 baked a fresh `toDataURL` PNG on essentially
+every scroll frame, so the whole consumption lived inside the fetch race:
+wrong displacement or nothing while scrolling, a stale near-rest map when the
+pipeline won the race — hence "glitchy / disappears / never moves". (Node
+simulation confirmed the field itself was meaty: baseline fall 49px at p=0.10,
+range 48px → 500px over the fall, so "nothing visible" was impossible on the
+math alone.)
+
+Fix, in `src/lib/signoffLens.ts`:
+
+- **Filmstrip.** The consumption is baked once per flyer as
+  `LENS_BAKE_STEPS` = 64 stepping frames (`lensBakeStep` quantises the
+  playhead, pure and unit-tested), the data URLs kept alive AND pre-decoded by
+  `<img>` twins (`Image` + `decode()`), so assigning a step's URL to the
+  feImage is always an image-cache hit — the async path no longer exists on
+  the scrub path. A background rAF pre-baker fills the strip (~3 bakes/frame);
+  a paint arriving ahead of it bakes its own step synchronously.
+- **Trio, atomically.** Region (bbox units), feImage placement (element-local
+  user-space px — explicit, never the spec-default subregion), scale and href
+  are written together and only across a step boundary; a bake's region/scale
+  are always the ones the map was computed against, and whenever the measured
+  signature (raster/singularity/geometry) changes, the strip and the warm set
+  are rebuilt.
+- `LENS_MAP_SIZE` 160 → **128** (cells ≤ ~6px; the GPU interpolates the map),
+  halving the strip's decoded memory to ~4MB.
+
+Symptom 2 falls out of the same fix: the unarmed/retired-overlay path — where
+the live raster carries the whole fall to the horizon — now actually paints
+the consumption (warp → funnel → region collapse → void) instead of a stalled
+near-rest map, so there is nothing left standing when the curtain arrives.
+Playwright calibration corrected alongside: hash diversity across the live
+window is ≥ 2 distinct baked frames (the armed fixture stops baking past
+MIX_END, by design).
+
 ## Files touched
 
 `src/lib/spaghettification.ts` (lens section + retunes),
