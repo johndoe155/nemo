@@ -40,10 +40,31 @@ const FLYER_SELECTOR: Record<FlyerId, string> = {
 const STRAND_SEL = '[data-horizon-strand]';
 
 /** Split a flyer's text into per-glyph inline-blocks so each character can
- * fall independently. Idempotent. Skips the CTA's cloned slices. */
+ * fall independently. Idempotent. `.chroma` / `.txt-grad` hosts are split
+ * into per-letter clones so their `::before`/`::after` ink stays glued to
+ * the real glyph instead of the whole word. */
 const wrapGlyphs = (root: HTMLElement) => {
   if (root.dataset.horizonGlyphs === '1') return;
   root.dataset.horizonGlyphs = '1';
+  root.querySelectorAll<HTMLElement>('.chroma, .txt-grad').forEach((host) => {
+    if (host.closest('[data-horizon-strand]')) return;
+    const text = host.getAttribute('data-text') ?? host.textContent ?? '';
+    if (!text.length) return;
+    const frag = document.createDocumentFragment();
+    for (const ch of text) {
+      const glyph = ch === ' ' ? '\u00a0' : ch;
+      const strand = document.createElement('span');
+      strand.className = 'horizon-strand';
+      strand.dataset.horizonStrand = 'glyph';
+      const ink = document.createElement('span');
+      ink.className = host.className;
+      ink.setAttribute('data-text', glyph);
+      ink.textContent = glyph;
+      strand.appendChild(ink);
+      frag.appendChild(strand);
+    }
+    host.replaceWith(frag);
+  });
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const nodes: Text[] = [];
   while (walker.nextNode()) nodes.push(walker.currentNode as Text);
@@ -322,11 +343,11 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           if (active === held) return;
           held = active;
           cameraHoldRef.current = active;
-          // The physical response (mass / lensing / Doppler / disk rotation) is
-          // gated on the SAME hold edge as the camera: while the reservation is
-          // growing the hole is eating, and every other state is the static
-          // config. `BlackHoleStage` reads `active` and `progress` per frame.
-          consumptionRef.current.active = active;
+          // Camera hold still follows the reservation. The physical response
+          // (mass / lensing / Doppler / disk rotation) follows the playhead
+          // instead, so an agitated hole stays agitated after the invitation
+          // has been swallowed. `BlackHoleStage` reads `progress` per frame.
+          consumptionRef.current.active = active || playhead.progress >= 1;
           setAnchoring(active);
         };
 
@@ -384,6 +405,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           if (lifted || !scene) return;
           lifted = true;
           wrapGlyphs(flyerEls.invite);
+          wrapGlyphs(flyerEls.cta);
           anchor.style.height = `${scene.anchorHeight}px`;
           for (const id of FLYER_IDS) {
             const el = flyerEls[id];

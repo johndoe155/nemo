@@ -431,20 +431,16 @@ export default function BlackHoleStage({
         // and end between two renders without this effect ever re-running.
         if (!cameraHoldRef?.current) camAnim?.update(dt);
         controls?.update();
-        // The physical response: while the hold is eating, nudge the mass,
-        // lensing, Doppler and disk rotation off their static config by the
-        // consumption's own playhead. This is the SAME clock the warp uses (no
-        // second clock), it is gated on the hold edge the camera is, and it
-        // flattens back to the exact baseline the moment the hold lets go — so
-        // nothing else on the page that reuses this simulation instance can
-        // inherit an altered state. No vendored file is touched: the excursions
-        // are multiplied onto `flatSimulationConfig` and handed to
-        // `sim.updateUniforms`, the vendored class's own runtime API.
+        // The physical response follows the consumption playhead, not the
+        // camera hold. After the invitation is gone the playhead stays at 1
+        // and the hole remains agitated (grown mass, stronger lensing /
+        // Doppler, faster disk). It only returns to the static baseline when
+        // the playhead is back at rest (scroll back up, or teardown).
         if (sim) {
-          const consuming = consumptionRef?.current.active ?? false;
-          if (consuming) {
+          const p = consumptionRef?.current.progress ?? 0;
+          if (p > 0) {
             consumedLastFrame = true;
-            const r = consumptionResponseAt(consumptionRef!.current.progress);
+            const r = consumptionResponseAt(p);
             sim.updateUniforms({
               blackHoleMass: config.blackHoleMass * (1 + r.mass),
               gravitationalLensing: config.gravitationalLensing * (1 + r.lensing),

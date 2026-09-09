@@ -425,8 +425,8 @@ export function followPlayhead(current: number, target: number, scrollDelta: num
    200px headline, and at p = 1 the capture radius has already swallowed every
    texel of the overlay anyway.
 --------------------------------------------------------------------------- */
-export const INFALL_GAIN = 1.15;
-export const INFALL_EASE = 1.35;
+export const INFALL_GAIN = 1.55;
+export const INFALL_EASE = 1.22;
 
 /** The fraction of its rest distance a fragment keeps at `p`: 1 at rest, 0 at
  * the singularity. */
@@ -473,8 +473,8 @@ export function fallAt(progress: number): number {
    with the playhead, so one function serves both the shader's per-fragment
    remap and the flyer's per-element stretch.
 --------------------------------------------------------------------------- */
-export const TIDAL_GAIN = 2.4;
-export const TIDAL_FALLOFF = 1.5;
+export const TIDAL_GAIN = 4.6;
+export const TIDAL_FALLOFF = 1.22;
 export const TIDAL_CAP = 0.96; // a fragment is never remapped past the singularity
 
 /** The playhead-scaled tidal gain, i.e. the shader's `uTidal`: the value that
@@ -495,7 +495,7 @@ export function tidalAt(radius: number, horizonRadius: number, progress: number)
    tangential remap and the flyer's residual rotation so the two spiral the
    same way.
 --------------------------------------------------------------------------- */
-export const SWIRL_TURNS = 0.47;
+export const SWIRL_TURNS = 0.49;
 
 export function swirlAt(progress: number): number {
   return SWIRL_TURNS * Math.pow(clamp01(progress), 1.5);
@@ -680,7 +680,7 @@ export const EFFECTIVE_HORIZON_RADIUS_PX = 26;
  * reaches the ~34px CTA by the time the crossfade is a third through, so the
  * stretch is a live, readable event. The capture threshold still swallows every
  * texel at progress = 1; only the *timing* of the field's arrival changes. */
-export const HORIZON_GROWTH_EXPONENT = 2.4;
+export const HORIZON_GROWTH_EXPONENT = 1.85;
 
 /** The overlay covers the sheet plus `veil` px of the seam above it, so the
  * horizon has to reach the farthest corner of THAT box, not of the sheet. */
@@ -728,19 +728,13 @@ export function horizonRadiusAtProgress(progress: number, extent: HorizonExtent)
    multiplies the vendored baseline by `(1 + excursion)` and flattens back to
    the baseline when the hold is not engaged. Two properties are demanded:
 
-   · SMALL. Every excursion is a few percent, eased in and out, so the hole
+   · SMALL. Every excursion is a few percent, eased in, so the hole
      moves but never jumps, and the sequence stays readable.
-   · RETURNS. At `p = 0` and at `p = 1` every excursion is exactly 0, so a
-     page that reuses this simulation instance after the hold is over sees the
-     unaltered static config. (The release happens at `p = 1`, so "by release"
-     is satisfied by construction.)
-
-   The timing is tied to the per-element crossing order: each flyer is a body
-   the hole has just swallowed, and each swallow is one bite. The nearest flyer
-   (the CTA) bites first, at `BITE_CENTRES[0]`; the far one (the headline) bites
-   second, at `BITE_CENTRES[1]`. A sum of two eased pulses — one per bite — reads
-   as "it just ate something" better than a flat ramp, and both have decayed to
-   nothing by the end of the consumption.
+   · HOLDS. At `p = 0` every excursion is exactly 0. Each swallow steps the
+     hole up and it STAYS there: at `p = 1` the hole is in an agitated state
+     (grown mass, stronger lensing, Doppler, faster disk) rather than snapping
+     back to the quiet baseline the moment the invitation disappears. Scrolling
+     back down the playhead is the only thing that unwinds it.
 --------------------------------------------------------------------------- */
 
 /** The playhead values of the two crossings, nearest flyer first. Measured off
@@ -771,6 +765,13 @@ export function bitePulseAt(progress: number, centre: number, width = BITE_WIDTH
   return Math.max(0, smooth(rise) * smooth(fall));
 }
 
+/** A swallow that eases in around `centre` and then HOLDS at 1 through the
+ * rest of the playhead — the hole does not calm down after the bite. */
+export function biteHoldAt(progress: number, centre: number, width = BITE_WIDTH): number {
+  const t = phase(progress, centre - width, centre);
+  return t * t * (3 - 2 * t);
+}
+
 export interface ConsumptionResponse {
   /** Relative excursion of `blackHoleMass` (and with it the horizon radius). */
   mass: number;
@@ -783,18 +784,18 @@ export interface ConsumptionResponse {
 }
 
 /** The physical excursion at `progress`, as relative offsets from the baseline
- * config. Exactly 0 at both ends of the consumption; a small, eased pair of
- * bumps (one per swallowed body) in between. */
+ * config. Exactly 0 at rest; each swallow steps the hole up, and the last
+ * step is held through p = 1 (agitated, not quiet). */
 export function consumptionResponseAt(progress: number): ConsumptionResponse {
-  const bites = Math.min(
+  const agitation = Math.min(
     1,
-    bitePulseAt(progress, BITE_CENTRES[0]) + bitePulseAt(progress, BITE_CENTRES[1]),
+    biteHoldAt(progress, BITE_CENTRES[0]) * 0.55 + biteHoldAt(progress, BITE_CENTRES[1]) * 0.45,
   );
   return {
-    mass: MASS_BITE * bites,
-    lensing: LENSING_BITE * bites,
-    doppler: DOPPLER_BITE * bites,
-    rotation: ROTATION_BITE * bites,
+    mass: MASS_BITE * agitation,
+    lensing: LENSING_BITE * agitation,
+    doppler: DOPPLER_BITE * agitation,
+    rotation: ROTATION_BITE * agitation,
   };
 }
 
@@ -946,8 +947,8 @@ export function flyerTransform(frame: FlyerFrame): string {
 /** Playhead lag, in units of p, per pixel of extra rest-radius versus the
  * flyer's centre. Far-side glyphs trail; near-side glyphs lead. Capped so a
  * 240px headline cannot desync by more than a tenth of the fall. */
-export const STRAND_LAG_PER_PX = 0.0012;
-export const STRAND_LAG_CAP = 0.14;
+export const STRAND_LAG_PER_PX = 0.0028;
+export const STRAND_LAG_CAP = 0.28;
 
 /** Default slice counts when the caller does not pass measured glyph boxes. */
 export const INVITE_STRANDS = 18;

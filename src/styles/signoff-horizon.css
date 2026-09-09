@@ -77,7 +77,12 @@
 .footer.signoff[data-horizon-scene='pinned'] .signoff__anchor,
 .footer.signoff[data-horizon-scene='pinned'] .signoff__line,
 .footer.signoff[data-horizon-scene='pinned'] .signoff__line-in,
-.footer.signoff[data-horizon-scene='pinned'] .signoff__title {
+.footer.signoff[data-horizon-scene='pinned'] .signoff__title,
+.footer.signoff[data-horizon-scene='pinned'] .signoff__actions,
+.footer.signoff[data-horizon-scene='pinned'] .btn,
+.footer.signoff[data-horizon-scene='pinned'] .pk-stack,
+.footer.signoff[data-horizon-scene='pinned'] .pk-layer,
+.footer.signoff[data-horizon-scene='pinned'] .pk-char {
   overflow: visible;
 }
 .footer.signoff[data-horizon-scene='pinned'] {

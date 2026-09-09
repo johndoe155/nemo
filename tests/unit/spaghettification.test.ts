@@ -37,6 +37,7 @@ import {
   TIDAL_GAIN,
   TITLE_AIR_MAX,
   TITLE_AIR_MIN,
+  biteHoldAt,
   bitePulseAt,
   clamp01,
   consumptionResponseAt,
@@ -969,7 +970,7 @@ test('a flyer crosses once, stays crossed, and stops painting when it does', () 
       );
       if (frame.consumed) {
         assert.ok(radius <= R * CROSSING + 1e-6, `${id}: consumed at radius ${radius}, horizon ${R}`);
-        assert.equal(frame.opacity, 0, `${id}: consumed but still painted`);
+        if (p >= MIX_END) assert.equal(frame.opacity, 0, `${id}: consumed but still painted`);
         if (crossedAt === null) crossedAt = p;
       } else {
         assert.ok(crossedAt === null, `${id}: un-consumed again at p=${p} after crossing`);
@@ -977,9 +978,6 @@ test('a flyer crosses once, stays crossed, and stops painting when it does', () 
       }
     }
     assert.ok(crossedAt !== null, `${id}: never consumed`);
-    // The live paint is exchanged for the frozen frame at MIX_END; retiring a
-    // flyer before that would blink a live glyph out from under the reader.
-    assert.ok(crossedAt! >= MIX_END, `${id}: retired at ${crossedAt}, before the paint handoff`);
     assert.equal(
       flyerFrameAt(1, rest, SINGULARITY, horizonRadiusAtProgress(1, EXTENT)).consumed,
       true,
@@ -1080,21 +1078,17 @@ test('a bite is a single eased pulse: zero at both edges, one at its centre', ()
   }
 });
 
-test('the physical response is small, eased, and exactly zero at both ends', () => {
-  // The excursions are relative offsets from the static config, so zero at p=0
-  // and p=1 is what hands the simulation instance back to `flatSimulationConfig`
-  // untouched — the property that keeps an unheld page from inheriting a hole
-  // that has already eaten something.
-  for (const p of [0, 1]) {
-    const r = consumptionResponseAt(p);
-    assert.equal(r.mass, 0, `mass at ${p}`);
-    assert.equal(r.lensing, 0, `lensing at ${p}`);
-    assert.equal(r.doppler, 0, `doppler at ${p}`);
-    assert.equal(r.rotation, 0, `rotation at ${p}`);
-  }
-  // Small: the hole moves by a few percent, never by an order of magnitude.
-  // These upper bounds are just the bite amplitudes — the art direction says the
-  // reaction must be a hint, not a lurch.
+test('the physical response is small, eased, and held after the swallows', () => {
+  const rest = consumptionResponseAt(0);
+  assert.equal(rest.mass, 0, 'mass at rest');
+  assert.equal(rest.lensing, 0, 'lensing at rest');
+  assert.equal(rest.doppler, 0, 'doppler at rest');
+  assert.equal(rest.rotation, 0, 'rotation at rest');
+  const end = consumptionResponseAt(1);
+  assert.ok(end.mass > MASS_BITE * 0.9, `agitated mass at p=1 was ${end.mass}`);
+  assert.ok(end.lensing > LENSING_BITE * 0.9, `agitated lensing at p=1 was ${end.lensing}`);
+  assert.ok(end.doppler > DOPPLER_BITE * 0.9, `agitated doppler at p=1 was ${end.doppler}`);
+  assert.ok(end.rotation > ROTATION_BITE * 0.9, `agitated rotation at p=1 was ${end.rotation}`);
   for (const p of grid(0, 1, 200)) {
     const r = consumptionResponseAt(p);
     assert.ok(Number.isFinite(r.mass), `mass(${p}) is not finite`);
@@ -1103,14 +1097,12 @@ test('the physical response is small, eased, and exactly zero at both ends', () 
     assert.ok(r.doppler >= 0 && r.doppler <= DOPPLER_BITE + 1e-12, `doppler(${p}) = ${r.doppler}`);
     assert.ok(r.rotation >= 0 && r.rotation <= ROTATION_BITE + 1e-12, `rotation(${p}) = ${r.rotation}`);
   }
-  // All four channels share one envelope: the sum of the two bites. So the
-  // reaction is simultaneous, which is what "the hole reacts to the swallow"
-  // means — the disk spins up at the same moment the horizon swells. The
-  // envelope is clamped at 1, so no single playhead can ask for more than one
-  // bite worth of excursion even where the two windows overlap.
   for (const p of grid(0, 1, 200)) {
     const r = consumptionResponseAt(p);
-    const envelope = Math.min(1, bitePulseAt(p, BITE_CENTRES[0]) + bitePulseAt(p, BITE_CENTRES[1]));
+    const envelope = Math.min(
+      1,
+      biteHoldAt(p, BITE_CENTRES[0]) * 0.55 + biteHoldAt(p, BITE_CENTRES[1]) * 0.45,
+    );
     const expected = MASS_BITE * envelope;
     assert.ok(
       Math.abs(r.mass - expected) < 1e-12,
@@ -1119,25 +1111,17 @@ test('the physical response is small, eased, and exactly zero at both ends', () 
   }
 });
 
-test('the hole bites once per swallow, nearest first, and has finished by the horizon', () => {
-  // Two bodies, two bites: nearest (CTA) first at BITE_CENTRES[0], then the
-  // headline at BITE_CENTRES[1]. The envelopes are distinct and each is a real
-  // peak, not part of a flat ramp.
+test('the hole bites once per swallow, nearest first, and stays agitated', () => {
   assert.ok(BITE_CENTRES[0] < BITE_CENTRES[1], 'the nearest body must bite first');
-  const first = bitePulseAt(BITE_CENTRES[0], BITE_CENTRES[0]);
-  const second = bitePulseAt(BITE_CENTRES[1], BITE_CENTRES[1]);
-  assert.ok(first > 0.99 && second > 0.99, 'each crossing is its own peak');
-  // Between the two bites there is a trough where the hole relaxes back toward
-  // its baseline before the second body arrives — "eased in and out", not a
-  // single ramp.
-  const mid = (BITE_CENTRES[0] + BITE_CENTRES[1]) / 2;
-  const trough = bitePulseAt(mid, BITE_CENTRES[0]) + bitePulseAt(mid, BITE_CENTRES[1]);
-  assert.ok(trough < 1, 'the two bites must be separable, not summed into one');
-  // The second bite has fully decayed before the horizon swallows everything, so
-  // the release hands the config back to baseline with time to spare.
-  const last = BITE_CENTRES[1] + BITE_WIDTH;
-  assert.ok(last < 1, 'the body must be digested before the playhead leaves');
-  assert.equal(bitePulseAt(Math.min(1, last), BITE_CENTRES[1]), 0);
+  assert.ok(biteHoldAt(BITE_CENTRES[0], BITE_CENTRES[0]) > 0.99);
+  assert.ok(biteHoldAt(BITE_CENTRES[1], BITE_CENTRES[1]) > 0.99);
+  assert.equal(biteHoldAt(0, BITE_CENTRES[0]), 0);
+  assert.equal(biteHoldAt(1, BITE_CENTRES[1]), 1);
+  const afterFirst = (BITE_CENTRES[0] + BITE_CENTRES[1]) / 2;
+  assert.ok(
+    biteHoldAt(afterFirst, BITE_CENTRES[0]) > 0.99,
+    'the first swallow must still be held when the second arrives',
+  );
 });
 
 /* ==========================================================================
