@@ -1460,3 +1460,18 @@ test('strand pieces lag by rest radius so a flyer opens into a thread', () => {
   const restDelta = strandDeltaTransform(restPiece, restEnv);
   assert.ok(/translate3d\(0\.000px, 0\.000px, 0\)/.test(restDelta), `rest delta moved: ${restDelta}`);
 });
+
+
+test('live warp is one envelope plus a tidal bow, not independent per-letter playheads', () => {
+  const p = 0.45;
+  const R = horizonRadiusAtProgress(p, EXTENT);
+  const invite = flyerFrameAt(p, FLYERS.invite, SINGULARITY, R);
+  const cta = flyerFrameAt(p, FLYERS.cta, SINGULARITY, R);
+  assert.ok(invite.fall > 0 && cta.fall > 0, 'both flyers are already falling');
+  assert.equal(invite.fall, fallAt(p), 'the invitation shares one fall with the playhead');
+  assert.equal(cta.fall, fallAt(p), 'the CTA shares the same fall — not a per-glyph clock');
+  const bow = fallAt(p) * 72 + tidalGainAt(p) * 28;
+  assert.ok(bow > 20, `lens displacement scale ${bow} is too timid to bend strokes`);
+  assert.ok(bow < 120, `lens displacement scale ${bow} would smear the word into noise`);
+  assert.ok(tidalGainAt(p) > tidalGainAt(0.1), 'the bow strengthens as the field takes hold');
+});

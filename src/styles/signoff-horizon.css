@@ -59,7 +59,7 @@
 .footer.signoff[data-horizon-state='capturing'] [data-horizon-item],
 .footer.signoff[data-horizon-state='hold'] [data-horizon-item],
 .footer.signoff[data-horizon-state='ready'] [data-horizon-item] {
-  will-change: transform, opacity;
+  will-change: transform, opacity, filter;
 }
 
 /* While the scene holds, the sheet must not clip what it is eating with its own
@@ -101,6 +101,7 @@
    without it. */
 .footer.signoff:focus-within [data-horizon-item] {
   transform: none !important;
+  filter: none !important;
   opacity: 1 !important;
   pointer-events: auto !important;
 }

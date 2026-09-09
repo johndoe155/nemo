@@ -16,6 +16,7 @@ import {
   collapseAt,
   consumptionTarget,
   followPlayhead,
+  fallAt,
   flyerFrameAt,
   flyerTransform,
   holdActiveAt,
@@ -23,8 +24,7 @@ import {
   horizonRadiusAtProgress,
   overlayMixAt,
   sheetHeightAt,
-  strandDeltaTransform,
-  strandPieceAt,
+  tidalGainAt,
   type FlyerId,
 } from '../lib/spaghettification';
 import type { EventHorizonWarp } from '../three/eventHorizonWarp';
@@ -37,60 +37,67 @@ const FLYER_SELECTOR: Record<FlyerId, string> = {
   cta: '[data-horizon-item="cta"]',
 };
 
-const STRAND_SEL = '[data-horizon-strand]';
+const LENS_MAP = 64;
+const LENS_ID = 'horizon-lens';
 
-/** Split a flyer's text into per-glyph inline-blocks so each character can
- * fall independently. Idempotent. `.chroma` / `.txt-grad` hosts are split
- * into per-letter clones so their `::before`/`::after` ink stays glued to
- * the real glyph instead of the whole word. */
-const wrapGlyphs = (root: HTMLElement) => {
-  if (root.dataset.horizonGlyphs === '1') return;
-  root.dataset.horizonGlyphs = '1';
-  root.querySelectorAll<HTMLElement>('.chroma, .txt-grad').forEach((host) => {
-    if (host.closest('[data-horizon-strand]')) return;
-    const text = host.getAttribute('data-text') ?? host.textContent ?? '';
-    if (!text.length) return;
-    const frag = document.createDocumentFragment();
-    for (const ch of text) {
-      const glyph = ch === ' ' ? '\u00a0' : ch;
-      const strand = document.createElement('span');
-      strand.className = 'horizon-strand';
-      strand.dataset.horizonStrand = 'glyph';
-      const ink = document.createElement('span');
-      ink.className = host.className;
-      ink.setAttribute('data-text', glyph);
-      ink.textContent = glyph;
-      strand.appendChild(ink);
-      frag.appendChild(strand);
+/** Displacement map for a gravitational bow: centre of the graphic is pulled
+ * toward the hole (up), sides lag, strokes stay continuous. R = x, G = y. */
+const paintLensMap = (ctx: CanvasRenderingContext2D) => {
+  const n = LENS_MAP;
+  const img = ctx.createImageData(n, n);
+  for (let y = 0; y < n; y += 1) {
+    for (let x = 0; x < n; x += 1) {
+      const nx = (x / (n - 1)) * 2 - 1;
+      const ny = (y / (n - 1)) * 2 - 1;
+      const bow = 1 - nx * nx;
+      const dx = -nx * (0.28 + 0.5 * ((ny + 1) * 0.5));
+      const dy = -bow * (0.92 + 0.2 * ny);
+      const i = (y * n + x) * 4;
+      img.data[i] = Math.max(0, Math.min(255, Math.round(128 + dx * 120)));
+      img.data[i + 1] = Math.max(0, Math.min(255, Math.round(128 + dy * 120)));
+      img.data[i + 2] = 128;
+      img.data[i + 3] = 255;
     }
-    host.replaceWith(frag);
-  });
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const nodes: Text[] = [];
-  while (walker.nextNode()) nodes.push(walker.currentNode as Text);
-  for (const node of nodes) {
-    const text = node.nodeValue ?? '';
-    if (!text.length) continue;
-    const parent = node.parentElement;
-    if (!parent) continue;
-    if (parent.closest('[data-horizon-strand]')) continue;
-    if (parent.closest('.chroma, .txt-grad')) continue;
-    const frag = document.createDocumentFragment();
-    for (const ch of text) {
-      const span = document.createElement('span');
-      span.className = 'horizon-strand';
-      span.dataset.horizonStrand = 'glyph';
-      span.textContent = ch === ' ' ? '\u00a0' : ch;
-      frag.appendChild(span);
-    }
-    node.parentNode?.replaceChild(frag, node);
   }
+  ctx.putImageData(img, 0, 0);
 };
 
-const clearStrandTransforms = (el: HTMLElement) => {
-  el.querySelectorAll<HTMLElement>(STRAND_SEL).forEach((piece) => {
-    piece.style.transform = '';
-  });
+const mountLens = (host: HTMLElement): { svg: SVGSVGElement; displace: SVGFEDisplacementMapElement } => {
+  const existing = host.querySelector<SVGSVGElement>('.horizon-lens-defs');
+  existing?.remove();
+  const canvas = document.createElement('canvas');
+  canvas.width = LENS_MAP;
+  canvas.height = LENS_MAP;
+  const ctx = canvas.getContext('2d');
+  if (ctx) paintLensMap(ctx);
+  const href = canvas.toDataURL('image/png');
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add('horizon-lens-defs');
+  svg.setAttribute('width', '0');
+  svg.setAttribute('height', '0');
+  const filter = document.createElementNS(ns, 'filter');
+  filter.setAttribute('id', LENS_ID);
+  filter.setAttribute('x', '-40%');
+  filter.setAttribute('y', '-80%');
+  filter.setAttribute('width', '180%');
+  filter.setAttribute('height', '220%');
+  filter.setAttribute('color-interpolation-filters', 'sRGB');
+  const image = document.createElementNS(ns, 'feImage');
+  image.setAttribute('href', href);
+  image.setAttribute('result', 'map');
+  image.setAttribute('preserveAspectRatio', 'none');
+  const displace = document.createElementNS(ns, 'feDisplacementMap');
+  displace.setAttribute('in', 'SourceGraphic');
+  displace.setAttribute('in2', 'map');
+  displace.setAttribute('xChannelSelector', 'R');
+  displace.setAttribute('yChannelSelector', 'G');
+  displace.setAttribute('scale', '0');
+  filter.append(image, displace);
+  svg.appendChild(filter);
+  host.prepend(svg);
+  return { svg, displace };
 };
 
 const sameSize = (a: SignoffScene, b: SignoffScene) =>
@@ -267,6 +274,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
          * both call. */
         let measuringMinHeight: string | null = null;
         let warp: EventHorizonWarp | null = null;
+        let lens: { svg: SVGSVGElement; displace: SVGFEDisplacementMapElement } | null = null;
         let holdTrigger: ScrollTrigger | null = null;
         let armTrigger: ScrollTrigger | null = null;
         let resizeObserver: ResizeObserver | null = null;
@@ -374,6 +382,8 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           // context per activation and a stale overlay over a plain footer.
           warp?.dispose();
           warp = null;
+          lens?.svg.remove();
+          lens = null;
           armTrigger?.kill();
           armTrigger = null;
           holdTrigger?.kill();
@@ -404,8 +414,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
         const liftFlyers = () => {
           if (lifted || !scene) return;
           lifted = true;
-          wrapGlyphs(flyerEls.invite);
-          wrapGlyphs(flyerEls.cta);
+          if (!lens) lens = mountLens(sheet);
           anchor.style.height = `${scene.anchorHeight}px`;
           for (const id of FLYER_IDS) {
             const el = flyerEls[id];
@@ -424,7 +433,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           anchor.style.height = '';
           for (const id of FLYER_IDS) {
             const el = flyerEls[id];
-            clearStrandTransforms(el);
+            el.style.filter = '';
             el.style.position = '';
             el.style.left = '';
             el.style.top = '';
@@ -452,8 +461,10 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           sheet.style.removeProperty('--horizon-veil');
           sheetVeil = '';
           anchor.style.marginTop = '';
+          if (lens) lens.displace.setAttribute('scale', '0');
           for (const id of FLYER_IDS) {
             flyerEls[id].style.transform = '';
+            flyerEls[id].style.filter = '';
             flyerEls[id].style.opacity = '';
             flyerEls[id].style.pointerEvents = '';
           }
@@ -746,28 +757,13 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
               };
               const flyer = flyerFrameAt(p, rest, singularity, radius);
               el.style.transform = flyerTransform(flyer);
+              el.style.filter = holding && p > 0 ? `url(#${LENS_ID})` : '';
               el.style.opacity = warp ? flyer.opacity.toFixed(4) : '';
               el.style.pointerEvents = flyer.consumed ? 'none' : '';
-
-              const pieces = el.querySelectorAll<HTMLElement>(STRAND_SEL);
-              pieces.forEach((piece) => {
-                let pieceRest = {
-                  x: Number(piece.dataset.strandRestX),
-                  y: Number(piece.dataset.strandRestY),
-                };
-                if (!Number.isFinite(pieceRest.x) || !Number.isFinite(pieceRest.y)) {
-                  piece.style.transform = 'none';
-                  const fresh = piece.getBoundingClientRect();
-                  pieceRest = {
-                    x: fresh.left + fresh.width / 2,
-                    y: fresh.top + fresh.height / 2,
-                  };
-                  piece.dataset.strandRestX = String(pieceRest.x);
-                  piece.dataset.strandRestY = String(pieceRest.y);
-                }
-                const frame = strandPieceAt(p, pieceRest, rest, singularity, radius);
-                piece.style.transform = strandDeltaTransform(frame, flyer);
-              });
+            }
+            if (lens) {
+              const bend = fallAt(p) * 72 + tidalGainAt(p) * 28;
+              lens.displace.setAttribute('scale', bend.toFixed(1));
             }
 
             // The frozen frame takes over the paint as the field takes hold —
