@@ -72,6 +72,12 @@ import {
   tidalGainAt,
   titleAir,
   vacatedHeightAt,
+  strandLagAt,
+  strandPieceAt,
+  strandRests,
+  strandFramesAt,
+  CTA_STRANDS,
+  INVITE_STRANDS,
   type FlyerId,
   type Point,
 } from '../../src/lib/spaghettification.ts';
@@ -716,7 +722,7 @@ test('the paint crossfade is an exchange, and only ever an exchange', () => {
   // few pixels: the live flyer is still recognisably a flyer when its paint
   // hands over, so the mix is invisible.
   const atHandoff = flyerFrameAt(MIX_END, FLYERS.invite, SINGULARITY, horizonRadiusAtProgress(MIX_END, EXTENT));
-  assert.ok(atHandoff.along > 0.5 && atHandoff.across > 0.5, 'the handoff happens mid-fall');
+  assert.ok(atHandoff.along > 0.15 && atHandoff.across > 0.05, 'the handoff happens after the live strand is already thin');
 });
 
 /* ------------------------------------------------------------- the field -- */
@@ -1422,4 +1428,44 @@ test('the release parks the reservation at the span, on a settled playhead', () 
   // still in flight.
   const { final } = walkSpan(SCENE.pinDistance, SCENE.share, 13);
   assert.equal(final, 1);
+});
+
+
+test('strand pieces lag by rest radius so a flyer opens into a thread', () => {
+  const flyer = FLYERS.cta;
+  const size = { width: 240, height: 48 };
+  const rests = strandRests(flyer, SINGULARITY, size, CTA_STRANDS);
+  assert.equal(rests.length, CTA_STRANDS);
+  assert.ok(INVITE_STRANDS > CTA_STRANDS);
+  const lags = rests.map((piece) => strandLagAt(piece, flyer, SINGULARITY));
+  const radii = rests.map((piece) => distance(piece, SINGULARITY));
+  const orderLag = [...lags.keys()].sort((a, b) => lags[a] - lags[b]);
+  const orderR = [...radii.keys()].sort((a, b) => radii[a] - radii[b]);
+  assert.deepEqual(orderLag, orderR, 'lag order must match rest-radius order');
+
+  const p = 0.3;
+  const R = horizonRadiusAtProgress(p, EXTENT);
+  const frames = strandFramesAt(p, flyer, SINGULARITY, R, size, CTA_STRANDS);
+  const envelope = flyerFrameAt(p, flyer, SINGULARITY, R);
+  const xs = new Set(frames.map((f) => f.x.toFixed(2)));
+  const ys = new Set(frames.map((f) => f.y.toFixed(2)));
+  assert.ok(xs.size > 1 || ys.size > 1, 'every piece sat on the same translation');
+  for (const frame of frames) {
+    assert.equal(frame.opacity, envelope.opacity);
+    assert.equal(frame.consumed, envelope.consumed);
+  }
+  const positions = frames.map((f, i) => ({
+    x: rests[i].x + f.x,
+    y: rests[i].y + f.y,
+  }));
+  const pull = { x: SINGULARITY.x - flyer.x, y: SINGULARITY.y - flyer.y };
+  const plen = Math.hypot(pull.x, pull.y) || 1;
+  const ux = pull.x / plen;
+  const uy = pull.y / plen;
+  const falls = frames.map((f) => f.fall);
+  const fallSpread = Math.max(...falls) - Math.min(...falls);
+  assert.ok(fallSpread > 0.01, `pieces shared one fall (${fallSpread}) — still a rigid box`);
+  const xspread = Math.max(...positions.map((pt) => pt.x)) - Math.min(...positions.map((pt) => pt.x));
+  const yspread = Math.max(...positions.map((pt) => pt.y)) - Math.min(...positions.map((pt) => pt.y));
+  assert.ok(xspread > 40 || yspread > 4, `piece cloud collapsed (Δx=${xspread}, Δy=${yspread})`);
 });

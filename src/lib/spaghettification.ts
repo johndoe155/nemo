@@ -632,8 +632,8 @@ export function holdBudgetAt(
    the accessibility tree or the tab order — only their paint is exchanged, and
    focus restores it at any progress.
 --------------------------------------------------------------------------- */
-export const MIX_START = 0.14;
-export const MIX_END = 0.38;
+export const MIX_START = 0.28;
+export const MIX_END = 0.48;
 
 export function overlayMixAt(progress: number): number {
   const t = phase(progress, MIX_START, MIX_END);
@@ -930,5 +930,108 @@ export function flyerTransform(frame: FlyerFrame): string {
     `rotate(${rotation.toFixed(3)}deg) ` +
     `scale(${along.toFixed(5)}, ${across.toFixed(5)}) ` +
     `rotate(${(-rotation).toFixed(3)}deg)`
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   Strands — one flyer is many independently-falling pieces.
+
+   A single affine transform on a bounding box can only ever look like a
+   skewed rectangle. Real tidal stretch that reads as cinematic decomposes the
+   object: each glyph (or button slice) is evaluated in the SAME field at its
+   own rest position, with a small playhead lag for pieces that sit farther
+   from the singularity, so the object visibly elongates into a thread.
+--------------------------------------------------------------------------- */
+
+/** Playhead lag, in units of p, per pixel of extra rest-radius versus the
+ * flyer's centre. Far-side glyphs trail; near-side glyphs lead. Capped so a
+ * 240px headline cannot desync by more than a tenth of the fall. */
+export const STRAND_LAG_PER_PX = 0.0012;
+export const STRAND_LAG_CAP = 0.14;
+
+/** Default slice counts when the caller does not pass measured glyph boxes. */
+export const INVITE_STRANDS = 18;
+export const CTA_STRANDS = 12;
+
+export interface StrandSpec {
+  /** Piece centre in the same coordinate space as `rest` / `singularity`. */
+  rest: Point;
+}
+
+/** Playhead lag for a piece whose rest is `piece` relative to the flyer's
+ * own rest centre. Nearer-to-singularity pieces lead (negative lag, clamped
+ * so they never run before p = 0 in a way that changes rest); farther pieces
+ * trail. */
+export function strandLagAt(piece: Point, flyerRest: Point, singularity: Point): number {
+  const pieceR = Math.hypot(singularity.x - piece.x, singularity.y - piece.y);
+  const flyerR = Math.hypot(singularity.x - flyerRest.x, singularity.y - flyerRest.y) || 1;
+  const extra = pieceR - flyerR;
+  const lag = extra * STRAND_LAG_PER_PX;
+  if (lag > STRAND_LAG_CAP) return STRAND_LAG_CAP;
+  if (lag < -STRAND_LAG_CAP) return -STRAND_LAG_CAP;
+  return lag;
+}
+
+/** The field at one strand piece. Identical to `flyerFrameAt` except the
+ * playhead is shifted by that piece's lag, so the object opens into a thread
+ * instead of remaining a rigid box. Opacity / consumed still follow the
+ * un-lagged playhead so the parent flyer exchanges paint and retires its hit
+ * target as one body. */
+export function strandPieceAt(
+  progress: number,
+  piece: Point,
+  flyerRest: Point,
+  singularity: Point,
+  horizonRadius: number,
+): FlyerFrame {
+  const lag = strandLagAt(piece, flyerRest, singularity);
+  const p = clamp01(progress);
+  const warped = flyerFrameAt(clamp01(p - lag), piece, singularity, horizonRadius);
+  const envelope = flyerFrameAt(p, flyerRest, singularity, horizonRadius);
+  return {
+    ...warped,
+    opacity: envelope.opacity,
+    consumed: envelope.consumed,
+  };
+}
+
+/** Evenly spaced piece centres across a flyer box, along the axis perpendicular
+ * to the pull (so a vertical pull strands the headline left-to-right into a
+ * vertical thread). `count` is the number of pieces. */
+export function strandRests(
+  flyerRest: Point,
+  singularity: Point,
+  size: { width: number; height: number },
+  count: number,
+): Point[] {
+  const n = Math.max(1, Math.floor(count));
+  const dx = singularity.x - flyerRest.x;
+  const dy = singularity.y - flyerRest.y;
+  const len = Math.hypot(dx, dy) || 1;
+  // Unit vector across the pull (screen-space, 90°).
+  const ax = -dy / len;
+  const ay = dx / len;
+  const span = Math.abs(ax) * size.width + Math.abs(ay) * size.height;
+  const half = span / 2;
+  if (n === 1) return [{ x: flyerRest.x, y: flyerRest.y }];
+  const rests: Point[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const t = n === 1 ? 0 : (i / (n - 1)) * 2 - 1; // −1 … +1
+    const dist = t * half * 0.92; // stay inside the painted box
+    rests.push({ x: flyerRest.x + ax * dist, y: flyerRest.y + ay * dist });
+  }
+  return rests;
+}
+
+export function strandFramesAt(
+  progress: number,
+  flyerRest: Point,
+  singularity: Point,
+  horizonRadius: number,
+  size: { width: number; height: number },
+  count: number,
+): FlyerFrame[] {
+  return strandRests(flyerRest, singularity, size, count).map((piece) =>
+    strandPieceAt(progress, piece, flyerRest, singularity, horizonRadius),
   );
 }

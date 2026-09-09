@@ -10,6 +10,7 @@ import {
   type SignoffScene,
 } from '../lib/signoffHorizonGeometry';
 import {
+  CTA_STRANDS,
   FLYER_IDS,
   PLAYHEAD_SMOOTH_PX,
   clamp01,
@@ -23,6 +24,7 @@ import {
   horizonRadiusAtProgress,
   overlayMixAt,
   sheetHeightAt,
+  strandPieceAt,
   type FlyerId,
 } from '../lib/spaghettification';
 import type { EventHorizonWarp } from '../three/eventHorizonWarp';
@@ -33,6 +35,64 @@ gsap.registerPlugin(ScrollTrigger);
 const FLYER_SELECTOR: Record<FlyerId, string> = {
   invite: '[data-horizon-item="invite"]',
   cta: '[data-horizon-item="cta"]',
+};
+
+const STRAND_SEL = '[data-horizon-strand]';
+
+/** Split a flyer's text into per-glyph inline-blocks so each character can
+ * fall independently. Idempotent. Skips the CTA's cloned slices. */
+const wrapGlyphs = (root: HTMLElement) => {
+  if (root.dataset.horizonGlyphs === '1') return;
+  root.dataset.horizonGlyphs = '1';
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes: Text[] = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+  for (const node of nodes) {
+    const text = node.nodeValue ?? '';
+    if (!text.length) continue;
+    if (node.parentElement?.closest('[data-horizon-strand]')) continue;
+    const frag = document.createDocumentFragment();
+    for (const ch of text) {
+      const span = document.createElement('span');
+      span.className = 'horizon-strand';
+      span.dataset.horizonStrand = 'glyph';
+      span.textContent = ch === ' ' ? '\u00a0' : ch;
+      frag.appendChild(span);
+    }
+    node.parentNode?.replaceChild(frag, node);
+  }
+};
+
+/** Vertical slices of the CTA: clones of the painted button, each clipped to
+ * a strip, so the pill tears into a thread instead of scaling as one box.
+ * The real <a> stays in the tree (tabbable, named); the clones are aria-hidden. */
+const sliceCta = (el: HTMLElement) => {
+  if (el.dataset.horizonSliced === '1') return;
+  el.dataset.horizonSliced = '1';
+  const source = el.querySelector<HTMLElement>('a, button, .btn');
+  if (!source) return;
+  const host = document.createElement('div');
+  host.className = 'horizon-strand-host';
+  host.setAttribute('aria-hidden', 'true');
+  const n = CTA_STRANDS;
+  for (let i = 0; i < n; i += 1) {
+    const slice = document.createElement('div');
+    slice.className = 'horizon-strand horizon-strand--slice';
+    slice.dataset.horizonStrand = 'slice';
+    const left = (i / n) * 100;
+    const right = 100 - ((i + 1) / n) * 100;
+    slice.style.clipPath = `inset(0 ${right}% 0 ${left}%)`;
+    slice.appendChild(source.cloneNode(true));
+    host.appendChild(slice);
+  }
+  el.appendChild(host);
+  source.classList.add('horizon-strand-source');
+};
+
+const clearStrandTransforms = (el: HTMLElement) => {
+  el.querySelectorAll<HTMLElement>(STRAND_SEL).forEach((piece) => {
+    piece.style.transform = '';
+  });
 };
 
 const sameSize = (a: SignoffScene, b: SignoffScene) =>
@@ -346,6 +406,8 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
         const liftFlyers = () => {
           if (lifted || !scene) return;
           lifted = true;
+          wrapGlyphs(flyerEls.invite);
+          sliceCta(flyerEls.cta);
           anchor.style.height = `${scene.anchorHeight}px`;
           for (const id of FLYER_IDS) {
             const el = flyerEls[id];
@@ -364,6 +426,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           anchor.style.height = '';
           for (const id of FLYER_IDS) {
             const el = flyerEls[id];
+            clearStrandTransforms(el);
             el.style.position = '';
             el.style.left = '';
             el.style.top = '';
@@ -684,20 +747,50 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
                 y: current.pinnedTop + current.flyers[id].y,
               };
               const flyer = flyerFrameAt(p, rest, singularity, radius);
-              el.style.transform = flyerTransform(flyer);
-              // The alpha is a paint EXCHANGE with the frozen frame, never the
-              // thing that removes the element: it is only written once that
-              // frame is attached and drawing. With no overlay the live glyphs
-              // carry the whole fall and are consumed by their own geometry —
-              // translated onto the hole's centre and scaled to zero.
+              // The parent flyer is NOT warped as a rigid box — that is the
+              // failure mode of the last two passes. Opacity / hit-target still
+              // live on the envelope so the CTA stays one named control.
+              el.style.transform = '';
               el.style.opacity = warp ? flyer.opacity.toFixed(4) : '';
-              // Past the event horizon the frozen frame paints void there, so
-              // the real element must not keep an invisible hit target sitting
-              // over the hole. pointer-events (NOT visibility) is the tool: the
-              // flyer stays in the tab order and in the accessibility tree, and
-              // focus anywhere in the sheet restores paint and pointer together
-              // (see signoff-horizon.css).
               el.style.pointerEvents = flyer.consumed ? 'none' : '';
+
+              const pieces = el.querySelectorAll<HTMLElement>(STRAND_SEL);
+              if (pieces.length === 0) {
+                // Fail closed: no pieces yet (pre-lift) — keep the envelope
+                // transform so the sequence still consumes something.
+                el.style.transform = flyerTransform(flyer);
+                continue;
+              }
+              const parentBox = el.getBoundingClientRect();
+              pieces.forEach((piece) => {
+                let pieceRest = {
+                  x: Number(piece.dataset.strandRestX),
+                  y: Number(piece.dataset.strandRestY),
+                };
+                if (!Number.isFinite(pieceRest.x) || !Number.isFinite(pieceRest.y)) {
+                  piece.style.transform = 'none';
+                  const fresh = piece.getBoundingClientRect();
+                  if (piece.dataset.horizonStrand === 'slice') {
+                    const i = Number(piece.dataset.strandIndex);
+                    const n = Number(piece.dataset.strandCount) || pieces.length;
+                    const w = current.flyers[id].width;
+                    pieceRest = {
+                      x: rest.x + ((i + 0.5) / n - 0.5) * w,
+                      y: rest.y,
+                    };
+                  } else {
+                    pieceRest = {
+                      x: fresh.left + fresh.width / 2,
+                      y: fresh.top + fresh.height / 2,
+                    };
+                  }
+                  piece.dataset.strandRestX = String(pieceRest.x);
+                  piece.dataset.strandRestY = String(pieceRest.y);
+                  void parentBox;
+                }
+                const frame = strandPieceAt(p, pieceRest, rest, singularity, radius);
+                piece.style.transform = flyerTransform(frame);
+              });
             }
 
             // The frozen frame takes over the paint as the field takes hold —

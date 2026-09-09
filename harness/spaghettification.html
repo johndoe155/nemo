@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Spaghettification harness</title>
+  <style>
+    html, body { margin: 0; background: #07070c; color: #eee; font: 14px/1.4 ui-sans-serif, system-ui; }
+    #stage { position: relative; width: 720px; height: 520px; margin: 24px auto; background: radial-gradient(circle at 360px 140px, #1a1028 0 40px, #050508 90px); overflow: hidden; border: 1px solid #222; }
+    .hole { position: absolute; left: 330px; top: 110px; width: 60px; height: 60px; border-radius: 50%; background: #000; box-shadow: 0 0 40px 16px #3a1060; }
+    #invite, #cta { position: absolute; left: 0; top: 0; transform-origin: 50% 50%; }
+    .glyph { display: inline-block; transform-origin: 50% 50%; font: 700 28px/1.1 "Times New Roman", serif; letter-spacing: 0.04em; color: #f4e8ff; }
+    .slice { position: absolute; inset: 0; background: linear-gradient(#c9a0ff, #7a3cff); color: #12081c; font: 700 13px/48px sans-serif; text-align: center; }
+    #cta { width: 240px; height: 48px; }
+    #invite { white-space: nowrap; }
+    label { display: block; width: 720px; margin: 0 auto 8px; }
+    #notes { width: 720px; margin: 12px auto; white-space: pre-wrap; color: #bbb; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <label>playhead p <input id="p" type="range" min="0" max="1000" value="0" /> <span id="pv">0.00</span></label>
+  <div id="stage">
+    <div class="hole"></div>
+    <div id="invite"></div>
+    <div id="cta"></div>
+  </div>
+  <div id="notes"></div>
+  <script type="module">
+    const clamp01 = (n) => (n < 0 ? 0 : n > 1 ? 1 : n);
+    const INFALL_GAIN = 1.15, INFALL_EASE = 1.35;
+    const TIDAL_GAIN = 2.4, TIDAL_FALLOFF = 1.5, TIDAL_CAP = 0.96;
+    const SWIRL_TURNS = 0.47, MAX_ALONG = 24, SLOPE_FLOOR = 1 / MAX_ALONG;
+    const MIX_START = 0.28, MIX_END = 0.48;
+    const HORIZON_GROWTH_EXPONENT = 2.4, EFFECTIVE_HORIZON_RADIUS_PX = 26;
+    const STRAND_LAG_PER_PX = 0.00055, STRAND_LAG_CAP = 0.1;
+    const contractionAt = (progress) => {
+      const q = 1 - clamp01(progress);
+      const pull = INFALL_GAIN * Math.pow(1 - q, INFALL_EASE);
+      const sum = q + pull;
+      return sum > 0 ? q / sum : 0;
+    };
+    const overlayMixAt = (progress) => {
+      const t = MIX_END <= MIX_START ? (progress >= MIX_END ? 1 : 0) : clamp01((progress - MIX_START) / (MIX_END - MIX_START));
+      return t * t * (3 - 2 * t);
+    };
+    const tidalGainAt = (p) => TIDAL_GAIN * clamp01(p);
+    const tidalAt = (radius, horizonRadius, progress) => {
+      if (!(radius > 0) || !(horizonRadius > 0)) return 0;
+      return Math.min(TIDAL_CAP, tidalGainAt(progress) * Math.pow(horizonRadius / radius, TIDAL_FALLOFF));
+    };
+    const swirlAt = (p) => SWIRL_TURNS * Math.pow(clamp01(p), 1.5);
+    const flyerFrameAt = (progress, rest, singularity, horizonRadius) => {
+      const p = clamp01(progress);
+      const dx = singularity.x - rest.x, dy = singularity.y - rest.y;
+      const restRadius = Math.hypot(dx, dy) || 1;
+      const contraction = contractionAt(p);
+      const radius = restRadius * contraction;
+      const tidal = tidalAt(radius, horizonRadius, p);
+      const across = contraction / (1 + tidal * contraction);
+      const slope = 1 + tidal * contraction * (1 - TIDAL_FALLOFF);
+      const along = slope > SLOPE_FLOOR ? Math.min(contraction / slope, MAX_ALONG) : MAX_ALONG;
+      const axis = (Math.atan2(dy, dx) * 180) / Math.PI;
+      const drag = (tidal * swirlAt(p) * 360) % 360;
+      return { fall: 1 - contraction, x: dx * (1 - contraction), y: dy * (1 - contraction), along, across, rotation: axis + drag, opacity: 1 - overlayMixAt(p) };
+    };
+    const flyerTransform = (f) =>
+      `translate3d(${f.x.toFixed(3)}px, ${f.y.toFixed(3)}px, 0) rotate(${f.rotation.toFixed(3)}deg) scale(${f.along.toFixed(5)}, ${f.across.toFixed(5)}) rotate(${(-f.rotation).toFixed(3)}deg)`;
+    const strandLagAt = (piece, flyerRest, singularity) => {
+      const pieceR = Math.hypot(singularity.x - piece.x, singularity.y - piece.y);
+      const flyerR = Math.hypot(singularity.x - flyerRest.x, singularity.y - flyerRest.y) || 1;
+      const lag = (pieceR - flyerR) * STRAND_LAG_PER_PX;
+      return Math.max(-STRAND_LAG_CAP, Math.min(STRAND_LAG_CAP, lag));
+    };
+    const strandPieceAt = (progress, piece, flyerRest, singularity, horizonRadius) => {
+      const lag = strandLagAt(piece, flyerRest, singularity);
+      const warped = flyerFrameAt(clamp01(progress - lag), piece, singularity, horizonRadius);
+      const envelope = flyerFrameAt(clamp01(progress), flyerRest, singularity, horizonRadius);
+      return { ...warped, opacity: envelope.opacity };
+    };
+    const SING = { x: 360, y: 140 };
+    const inviteRest = { x: 360, y: 280 };
+    const ctaRest = { x: 360, y: 360 };
+    const TEXT = 'ENTER THE NEMOVERSE.';
+    const inviteEl = document.getElementById('invite');
+    const ctaEl = document.getElementById('cta');
+    const glyphs = [];
+    [...TEXT].forEach((ch, i) => {
+      const s = document.createElement('span');
+      s.className = 'glyph';
+      s.textContent = ch === ' ' ? '\u00a0' : ch;
+      inviteEl.appendChild(s);
+      glyphs.push(s);
+    });
+    inviteEl.style.left = '0px';
+    inviteEl.style.top = '0px';
+    // place invite so its centre is inviteRest
+    requestAnimationFrame(() => {
+      const box = inviteEl.getBoundingClientRect();
+      const stage = document.getElementById('stage').getBoundingClientRect();
+      inviteEl.style.left = `${inviteRest.x - box.width / 2}px`;
+      inviteEl.style.top = `${inviteRest.y - box.height / 2}px`;
+      ctaEl.style.left = `${ctaRest.x - 120}px`;
+      ctaEl.style.top = `${ctaRest.y - 24}px`;
+      const N = 12;
+      const slices = [];
+      for (let i = 0; i < N; i++) {
+        const d = document.createElement('div');
+        d.className = 'slice';
+        d.textContent = 'EXPLORE THE UNIVERSES';
+        const left = (i / N) * 100;
+        const right = 100 - ((i + 1) / N) * 100;
+        d.style.clipPath = `inset(0 ${right}% 0 ${left}%)`;
+        ctaEl.appendChild(d);
+        slices.push({ el: d, rest: { x: ctaRest.x + ((i + 0.5) / N - 0.5) * 240, y: ctaRest.y } });
+      }
+      const glyphRests = glyphs.map((el) => {
+        const b = el.getBoundingClientRect();
+        return { el, rest: { x: b.left - stage.left + b.width / 2, y: b.top - stage.top + b.height / 2 } };
+      });
+      const notes = document.getElementById('notes');
+      const pv = document.getElementById('pv');
+      const paint = (p) => {
+        pv.textContent = p.toFixed(2);
+        const horizon = p * (EFFECTIVE_HORIZON_RADIUS_PX + (400 - EFFECTIVE_HORIZON_RADIUS_PX) * Math.pow(p, HORIZON_GROWTH_EXPONENT));
+        glyphRests.forEach(({ el, rest }) => {
+          const f = strandPieceAt(p, rest, inviteRest, SING, horizon);
+          el.style.transform = flyerTransform(f);
+          el.style.opacity = String(f.opacity);
+        });
+        slices.forEach(({ el, rest }) => {
+          const f = strandPieceAt(p, rest, ctaRest, SING, horizon);
+          el.style.transform = flyerTransform(f);
+          el.style.opacity = String(f.opacity);
+        });
+        const env = flyerFrameAt(p, ctaRest, SING, horizon);
+        notes.textContent = `p=${p.toFixed(2)}  CTA envelope along/across=${env.along.toFixed(3)}/${env.across.toFixed(3)}  ratio=${(env.along / Math.max(env.across, 1e-6)).toFixed(2)}  opacity=${env.opacity.toFixed(3)}\nLive glyphs stay independent — if this still looks like one rectangle, the strand split failed.`;
+      };
+      document.getElementById('p').addEventListener('input', (e) => paint(Number(e.target.value) / 1000));
+      paint(0);
+    });
+  </script>
+</body>
+</html>

@@ -42,6 +42,32 @@
   transform-origin: 50% 50%;
 }
 
+/* Per-glyph / per-slice pieces. Each is transformed independently in the
+   tidal field so the flyer reads as a strand, not a scaled rectangle. */
+.footer.signoff .horizon-strand {
+  display: inline-block;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+.footer.signoff .horizon-strand-host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.footer.signoff .horizon-strand--slice {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.footer.signoff .horizon-strand--slice .btn,
+.footer.signoff .horizon-strand--slice a {
+  pointer-events: none;
+}
+.footer.signoff[data-horizon-scene='pinned'] .horizon-strand-source {
+  opacity: 0;
+}
+
 /* Promotion only while an activation exists: the fall is transform+opacity
    only, so the whole sequence stays on the compositor.
 
@@ -121,6 +147,15 @@
     top: auto !important;
     width: auto !important;
     height: auto !important;
+  }
+  .footer.signoff [data-horizon-strand] {
+    transform: none !important;
+  }
+  .footer.signoff .horizon-strand-host {
+    display: none !important;
+  }
+  .footer.signoff .horizon-strand-source {
+    opacity: 1 !important;
   }
   .footer.signoff .signoff__anchor {
     height: auto !important;
