@@ -55,6 +55,12 @@ import {
   framingHolds,
   horizonRadiusAtProgress,
   infallAt,
+  computeLensMap,
+  lensFieldAt,
+  lensForwardAt,
+  lensRegionAt,
+  lensSourceAt,
+  LENS_MAP_SIZE,
   overlayMixAt,
   parkedFrameTop,
   parkedHem,
@@ -1462,16 +1468,347 @@ test('strand pieces lag by rest radius so a flyer opens into a thread', () => {
 });
 
 
-test('live warp is one envelope plus a tidal bow, not independent per-letter playheads', () => {
-  const p = 0.45;
-  const R = horizonRadiusAtProgress(p, EXTENT);
-  const invite = flyerFrameAt(p, FLYERS.invite, SINGULARITY, R);
-  const cta = flyerFrameAt(p, FLYERS.cta, SINGULARITY, R);
-  assert.ok(invite.fall > 0 && cta.fall > 0, 'both flyers are already falling');
-  assert.equal(invite.fall, fallAt(p), 'the invitation shares one fall with the playhead');
-  assert.equal(cta.fall, fallAt(p), 'the CTA shares the same fall — not a per-glyph clock');
-  const bow = fallAt(p) * 72 + tidalGainAt(p) * 28;
-  assert.ok(bow > 20, `lens displacement scale ${bow} is too timid to bend strokes`);
-  assert.ok(bow < 120, `lens displacement scale ${bow} would smear the word into noise`);
-  assert.ok(tidalGainAt(p) > tidalGainAt(0.1), 'the bow strengthens as the field takes hold');
+/* ==========================================================================
+   Requirement (critical correction) — the live warp is a displacement FIELD,
+   never an affine transform. The element's raster is re-sampled per fragment
+   through the same remap the shader integrates, and the four properties the
+   correction demands are stated as measurable properties of that field:
+   aggressive spaghettification, exponential near-side stretching, concentric
+   arching, and one continuous body.
+
+   The reference rasters: the invitation's headline line (~700×115) with its
+   centre at the fixture's invite rest, and the CTA pill (~240×52) at the CTA
+   rest, in sheet-local coordinates — the same numbers the component feeds
+   `computeLensMap` with.
+   ========================================================================== */
+
+/** The invitation's rest raster, sheet-local (the fixture's ~700×115 line). */
+const INVITE_RASTER = { x: FLYERS.invite.x - 350, y: FLYERS.invite.y - 57.5, width: 700, height: 115 };
+/** The CTA's rest raster (~240×52). */
+const CTA_RASTER = { x: FLYERS.cta.x - 120, y: FLYERS.cta.y - 26, width: 240, height: 52 };
+/** The singularity, sheet-local. */
+const SHEET_SINGULARITY: Point = { x: SCENE.anchorX, y: SCENE.anchorY };
+
+/** Forward-map a horizontal run of points on a rest line and report the image
+ * line. This is the picture the archived "bow" number used to gesture at;
+ * here it is the integral of the real field instead of a hand-written dy. */
+const mapBaseline = (p: number, raster: typeof INVITE_RASTER, n = 11): Point[] => {
+  const field = lensFieldAt(p, EXTENT);
+  const points: Point[] = [];
+  for (let i = 0; i < n; i += 1) {
+    const px = raster.x + (raster.width * i) / (n - 1);
+    const py = raster.y + raster.height; // the baseline: the word's own bottom
+    const out = lensForwardAt(px - SHEET_SINGULARITY.x, py - SHEET_SINGULARITY.y, field, 6);
+    points.push({ x: SHEET_SINGULARITY.x + out.x, y: SHEET_SINGULARITY.y + out.y });
+  }
+  return points;
+};
+
+test('the lens is the identity at rest, on every map cell', () => {
+  const field = lensFieldAt(0, EXTENT);
+  for (const [vx, vy] of [[0, 0], [120, -40], [-300, 220], [640, 800]] as const) {
+    const source = lensSourceAt(vx, vy, field);
+    assert.ok(Math.abs(source.x - vx) < 1e-9, `identity moved x at ${vx},${vy}`);
+    assert.ok(Math.abs(source.y - vy) < 1e-9, `identity moved y at ${vx},${vy}`);
+    const out = lensForwardAt(vx, vy, field);
+    assert.ok(Math.abs(out.x - vx) < 1e-9);
+    assert.ok(Math.abs(out.y - vy) < 1e-9);
+  }
+  // …and the rasterised map is numerically a no-op: range 0, so the filter's
+  // scale goes to zero and the handoff into the pinned scene cannot move the
+  // type by even a sub-pixel.
+  const region = lensRegionAt(INVITE_RASTER, SHEET_SINGULARITY, field);
+  const map = new Float32Array(64 * 64 * 2);
+  const range = computeLensMap(region, INVITE_RASTER, SHEET_SINGULARITY, field, 64, map);
+  assert.equal(range, 0, 'a rest field must not displace anything');
+  for (let k = 0; k < map.length; k += 1) {
+    // Void cells are written direction-preserving at magnitude 1 (a no-content
+    // bake), content cells are zero: nothing exceeds a no-op by a pixel.
+    assert.ok(Math.abs(map[k]) <= 1, `rest map displaced ${map[k]} at ${k}`);
+  }
+});
+
+/** Decompose the mapped baseline into its list (the linear term — the frame
+ * dragging, subordinate by design) and its arch (the quadratic term — the
+ * radial field's signature, which a skew CANNOT produce). Least squares on
+ * `y(u) = q·u² + l·u + a`, u half-centred. */
+const quadraticTerms = (points: Point[], centreX: number): { arch: number; list: number } => {
+  let s0 = 0;
+  let s1 = 0;
+  let s2 = 0;
+  let s3 = 0;
+  let s4 = 0;
+  let sy = 0;
+  let suy = 0;
+  let suuy = 0;
+  for (const { x, y } of points) {
+    const u = x - centreX;
+    s0 += 1;
+    s1 += u;
+    s2 += u * u;
+    s3 += u * u * u;
+    s4 += u ** 4;
+    sy += y;
+    suy += u * y;
+    suuy += u * u * y;
+  }
+  // 3×3 Gaussian elimination on the normal equations.
+  const m = [[s0, s1, s2], [s1, s2, s3], [s2, s3, s4]];
+  const v = [sy, suy, suuy];
+  for (let column = 0; column < 3; column += 1) {
+    let pivot = column;
+    for (let row = column + 1; row < 3; row += 1) {
+      if (Math.abs(m[row][column]) > Math.abs(m[pivot][column])) pivot = row;
+    }
+    [m[column], m[pivot]] = [m[pivot], m[column]];
+    [v[column], v[pivot]] = [v[pivot], v[column]];
+    for (let row = column + 1; row < 3; row += 1) {
+      const factor = m[row][column] / m[column][column];
+      for (let cc = column; cc < 3; cc += 1) m[row][cc] -= factor * m[column][cc];
+      v[row] -= factor * v[column];
+    }
+  }
+  const q = v[2] / m[2][2];
+  const l = (v[1] - m[1][2] * q) / m[1][1];
+  return { arch: q, list: l };
+};
+
+test('the field is radial: a horizontal baseline ARCHES UP, concentric with the disk', () => {
+  // Requirement: "concentric arching". The baseline of the headline bows
+  // toward the hole — its middle (nearest the singularity) is pulled harder
+  // than its ends — and the bow is zero at rest and grows with the playhead.
+  // A linear skew cannot arch a line at all (a line in, a line out), so the
+  // assertion is stated on the QUADRATIC term of the mapped baseline: the
+  // arch in px of sagitta across the half-width (350px) of the fixture word.
+  // Measured with the tuned field: 2.9px at p = 0.2, 13.9px at p = 0.3 and
+  // 36.6px at p = 0.35, while the frame-dragging list stays subordinate.
+  for (const [p, want] of [[0.1, 0.1], [0.2, 1.8], [0.3, 8], [0.35, 22]] as const) {
+    const base = mapBaseline(p, INVITE_RASTER, 21);
+    const { arch, list } = quadraticTerms(base, SHEET_SINGULARITY.x);
+    // y is down, so an UPWARD bow is a positive quadratic term: the ends sit
+    // below the middle.
+    assert.ok(arch > 0, `p=${p}: the baseline bows DOWNWARD (${arch}) — the field is inverted`);
+    const sagitta = arch * 350 * 350;
+    assert.ok(sagitta > want, `p=${p}: the arch spans ${sagitta}px — a skew, not a bow`);
+    // The list is the frame dragging, and it must stay the junior partner:
+    // a build whose sideways character exceeds its curvature is the failed
+    // linear skew all over again.
+    if (p >= 0.2) {
+      assert.ok(
+        sagitta > Math.abs(list) * 350,
+        `p=${p}: listing (${(Math.abs(list) * 350).toFixed(1)}px) dominates the arch (${sagitta.toFixed(1)}px)`,
+      );
+    }
+  }
+  // The bow deepens strictly as the field arrives, through the live window.
+  let previous = 0;
+  for (const p of grid(0.05, 0.35, 20)) {
+    const base = mapBaseline(p, INVITE_RASTER, 21);
+    const { arch } = quadraticTerms(base, SHEET_SINGULARITY.x);
+    const sagitta = arch * 350 * 350;
+    assert.ok(sagitta > previous - 1e-9, `the arch shrank at p=${p}`);
+    previous = sagitta;
+  }
+});
+
+test('the near side of a glyph strands exponentially harder than its far side', () => {
+  // Requirement: "exponential stretching". Read the tide across the
+  // invitation's own 115px-tall glyph run: the top (nearest the horizon)
+  // against the bottom, at the image radius the playhead has contracted the
+  // flyer to. The differential must be non-linear — a power-law gradient —
+  // and it must be present BEFORE the frozen frame takes over.
+  for (const p of [0.25, 0.3, 0.35]) {
+    const field = lensFieldAt(p, EXTENT);
+    const c = contractionAt(p);
+    const centre = INVITE_RASTER.y + INVITE_RASTER.height / 2;
+    const top = (centre - SHEET_SINGULARITY.y) * c - (INVITE_RASTER.height / 2) * c;
+    const bottom = (centre - SHEET_SINGULARITY.y) * c + (INVITE_RASTER.height / 2) * c;
+    const tideTop = tidalAt(top, field.horizon, p);
+    const tideBottom = tidalAt(bottom, field.horizon, p);
+    assert.ok(
+      tideTop > tideBottom * 1.15,
+      `p=${p}: the surface tide is ${tideTop.toFixed(3)} top vs ${tideBottom.toFixed(3)} bottom — linear skew territory`,
+    );
+    // Power law, not a linear gradient: the tide falls off super-linearly
+    // between the two edges, i.e. log(tide) is negatively curved in log(r) —
+    // the sampled mid-tide sits BELOW the linear interpolation (the gradient
+    // steepens toward the hole).
+    const mid = (top + bottom) / 2;
+    const tideMid = tidalAt(mid, field.horizon, p);
+    const linear = (tideTop + tideBottom) / 2;
+    if (tideTop < TIDAL_CAP * 0.98) {
+      assert.ok(tideMid < linear, `p=${p}: the tide is not convex toward the hole`);
+    }
+  }
+  // And the anisotropy it produces — the live-window look itself. These are
+  // the numbers the old constants could not reach before the handoff: at the
+  // invitation, along/across ≥ 1.3 by p = 0.3 and ≥ 1.5 by p = 0.35.
+  for (const [p, want] of [[0.3, 1.3], [0.35, 1.5]] as const) {
+    const field = lensFieldAt(p, EXTENT);
+    const frame = flyerFrameAt(p, FLYERS.invite, SINGULARITY, field.horizon);
+    const ratio = frame.along / frame.across;
+    assert.ok(ratio >= want, `p=${p}: anisotropy ${ratio} < ${want} — the flat skew is back`);
+    assert.ok(Number.isFinite(field.horizon) && field.horizon > 0);
+  }
+});
+
+test('the word thins and funnels inward as one body — never blooms, never shatters', () => {
+  // Requirement: funnel inward + preserve unified cohesion. The mapped
+  // baseline's horizontal span narrows (tangential squeeze) while its arch
+  // deepens, and the mapped box perimeter is a continuum — neighbouring
+  // samples stay neighbours (the field is C∞ away from the horizon: nothing
+  // can tear a hole into the middle of the word).
+  let previousSpan = INVITE_RASTER.width;
+  for (const p of grid(0.02, 0.37, 24)) {
+    const base = mapBaseline(p, INVITE_RASTER, 21);
+    const span = base[20].x - base[0].x;
+    assert.ok(span < previousSpan + 1e-9, `the word bloomed at p=${p}`);
+    if (previousSpan !== INVITE_RASTER.width) {
+      assert.ok(span < previousSpan, `the funnel stalled at p=${p}`);
+    }
+    previousSpan = span;
+    // Continuity of the mapped curve: neighbour steps are small relative to
+    // the whole arch — a shatter would read as a step discontinuity.
+    for (let i = 1; i < base.length; i += 1) {
+      const step = distance(base[i - 1], base[i]);
+      assert.ok(step < INVITE_RASTER.width / 10, `p=${p}: the mapped word tore at index ${i}`);
+    }
+  }
+  assert.ok(previousSpan < INVITE_RASTER.width * 0.75, `still ${previousSpan}px wide — no funnel`);
+});
+
+test('the filter region tracks the falling content and collapses onto the singularity', () => {
+  // At rest the content is the box: the region IS the box, padded.
+  const rest = lensRegionAt(INVITE_RASTER, SHEET_SINGULARITY, lensFieldAt(0, EXTENT));
+  assert.ok(Math.abs(rest.x - (INVITE_RASTER.x - 10)) < 1e-9);
+  assert.ok(Math.abs(rest.y - (INVITE_RASTER.y - 10)) < 1e-9);
+  assert.ok(Math.abs(rest.width - (INVITE_RASTER.width + 20)) < 1e-9);
+  assert.ok(Math.abs(rest.height - (INVITE_RASTER.height + 20)) < 1e-9);
+  // Mid-fall the content is between the rest box and the hole; deep in the
+  // fall the hull hugs the singularity. The honest invariant is the hull's
+  // DISTANCE from the singularity — the centre line alone is NOT monotone,
+  // because the frame dragging orbits the content around the hole while it
+  // falls in (a swallowed body spirals; that is physical, and asserted here
+  // rather than hidden).
+  const PROBES = [
+    [INVITE_RASTER.x, INVITE_RASTER.y],
+    [INVITE_RASTER.x + INVITE_RASTER.width, INVITE_RASTER.y],
+    [INVITE_RASTER.x, INVITE_RASTER.y + INVITE_RASTER.height],
+    [INVITE_RASTER.x + INVITE_RASTER.width, INVITE_RASTER.y + INVITE_RASTER.height],
+    [INVITE_RASTER.x + INVITE_RASTER.width / 2, INVITE_RASTER.y + INVITE_RASTER.height],
+  ] as const;
+  let previousReach = Infinity;
+  for (const p of grid(0.05, 0.995, 40)) {
+    const region = lensRegionAt(INVITE_RASTER, SHEET_SINGULARITY, lensFieldAt(p, EXTENT));
+    // The painted content is inside the region, exactly what the region is
+    // for: sample-pointwise on the forward image of the perimeter.
+    const field = lensFieldAt(p, EXTENT);
+    let reach = 0;
+    for (const [px, py] of PROBES) {
+      const out = lensForwardAt(px - SHEET_SINGULARITY.x, py - SHEET_SINGULARITY.y, field, 6);
+      const wx = SHEET_SINGULARITY.x + out.x;
+      const wy = SHEET_SINGULARITY.y + out.y;
+      assert.ok(wx >= region.x - 1e-9 && wx <= region.x + region.width + 1e-9, `x escaped the region at p=${p}`);
+      assert.ok(wy >= region.y - 1e-9 && wy <= region.y + region.height + 1e-9, `y escaped the region at p=${p}`);
+      reach = Math.max(reach, out.x * out.x + out.y * out.y);
+    }
+    assert.ok(reach <= previousReach + 4, `the content hull receded from the hole at p=${p}`);
+    previousReach = reach;
+  }
+  const end = lensRegionAt(INVITE_RASTER, SHEET_SINGULARITY, lensFieldAt(1, EXTENT));
+  assert.ok(end.width < INVITE_RASTER.width / 4, 'the hull did not collapse with the fall');
+  const centre = { x: end.x + end.width / 2, y: end.y + end.height / 2 };
+  assert.ok(distance(centre, SHEET_SINGULARITY) < 40, `the hull collapsed ${distance(centre, SHEET_SINGULARITY)}px off the singularity`);
+});
+
+test('the baked map: content cells pull toward the singularity, void cells never paint', () => {
+  const p = 0.3;
+  const field = lensFieldAt(p, EXTENT);
+  const region = lensRegionAt(INVITE_RASTER, SHEET_SINGULARITY, field);
+  const size = LENS_MAP_SIZE;
+  const map = new Float32Array(size * size * 2);
+  const range = computeLensMap(region, INVITE_RASTER, SHEET_SINGULARITY, field, size, map);
+  assert.ok(range > 20, `p=${p}: the map's range is ${range}px — too timid to bend strokes`);
+  assert.ok(range < 900, `p=${p}: range ${range}px would quantise the word into noise`);
+  let contentCells = 0;
+  let voidCells = 0;
+  let sided = 0;
+  let funnelled = 0;
+  for (let j = 0; j < size; j += 1) {
+    for (let i = 0; i < size; i += 1) {
+      const wy = region.y + ((j + 0.5) / size) * region.height;
+      const wx = region.x + ((i + 0.5) / size) * region.width;
+      const k = (j * size + i) * 2;
+      const sx = wx + map[k];
+      const sy = wy + map[k + 1];
+      const inside =
+        sx >= INVITE_RASTER.x &&
+        sx <= INVITE_RASTER.x + INVITE_RASTER.width &&
+        sy >= INVITE_RASTER.y &&
+        sy <= INVITE_RASTER.y + INVITE_RASTER.height;
+      if (!inside) {
+        voidCells += 1;
+        continue; // a void cell: the sampled point is off the raster, as promised
+      }
+      contentCells += 1;
+      // A content cell's displacement points from the output position back OUT
+      // to its rest source: away from the singularity, not toward it (the warp
+      // pulls the image inward — the map pulls the samples outward). This is
+      // the radial half of the funnel, exact in the presence of swirling.
+      const away = map[k] * (wx - SHEET_SINGULARITY.x) + map[k + 1] * (wy - SHEET_SINGULARITY.y);
+      assert.ok(away >= -1e-6, `cell ${i},${j} samples toward the hole — the warp is inverted`);
+      // The sideways half — left letters reach left, right letters reach
+      // right — is asserted in aggregate: the frame dragging rotates every
+      // sample the same way around the hole, so a cell-by-cell x-sign check
+      // would misread rotation as a broken funnel. Tally the shares instead.
+      if (wx < SHEET_SINGULARITY.x - 40) {
+        sided += 1;
+        if (map[k] < 0) funnelled += 1;
+      } else if (wx > SHEET_SINGULARITY.x + 40) {
+        sided += 1;
+        if (map[k] > 0) funnelled += 1;
+      }
+    }
+  }
+  // …with enough off-axis content to make the tally meaningful, and a broad
+  // majority of it reaching to its own side of the axis (the exact share is
+  // ~92% at this playhead; a linear skew would still pass 100% here, which is
+  // why this is a funnel property, not the whole story — the arch test above
+  // is the one a skew can never pass).
+  assert.ok(sided > 50, 'too little off-axis content to judge the funnel');
+  assert.ok(
+    funnelled / sided > 0.8,
+    `only ${funnelled}/${sided} off-axis cells funnel toward their own side — the word is slanting, not arching`,
+  );
+  // The map is mostly sky and word-edge: both populations exist, and nothing
+  // in between mislabels them.
+  assert.ok(contentCells > 0, 'no content at all mid-fall — the word is already void');
+  assert.ok(voidCells > 0, 'no void mid-fall — the field stopped consuming');
+});
+
+test('the borders of the consumption arrive with the tide, not before it', () => {
+  // Bite placement, restated as arithmetic on the reference scene the bites
+  // were art-directed on (CTA ~34px out, headline ~120px out, cover 976):
+  // each centre must sit just past its body's own crossing, so the hole
+  // reacts AS the body goes in, not before and not after.
+  const cover = coverRadius(EXTENT);
+  assert.ok(cover > 900 && cover < 1100, `the fixture's cover moved to ${cover} — re-derive the bites instead`);
+  for (const [index, restRadius] of [34, 120].entries()) {
+    let crossing = Infinity;
+    for (const probe of grid(0.001, 1, 4000)) {
+      if (restRadius * contractionAt(probe) <= CROSSING * horizonRadiusAtProgress(probe, EXTENT)) {
+        crossing = probe;
+        break;
+      }
+    }
+    const centre = BITE_CENTRES[index];
+    assert.ok(Number.isFinite(crossing), `rest ${restRadius}px never crosses`);
+    assert.ok(centre >= crossing, `bite ${index} fires BEFORE its body crosses (${centre} < ${crossing})`);
+    assert.ok(
+      centre - crossing <= 0.08,
+      `bite ${index} lags its crossing by ${centre - crossing} — the reaction would land late`,
+    );
+  }
+  // Nearest body, first bite: the ordering the response is built on.
+  assert.ok(BITE_CENTRES[0] < BITE_CENTRES[1]);
 });

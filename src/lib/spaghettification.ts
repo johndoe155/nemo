@@ -10,10 +10,16 @@
         the sheet's hem to the end of the site never changes, and the floor tracks
         the void (`vacatedHeightAt` is that rate, written down once).
 
-     2 · the live flyers' trajectory (`flyerFrameAt`) — the headline and the CTA
-        are lifted out of document flow, translated onto the singularity's exact
-        coordinates, stretched along the pull axis, squeezed across it and
-        scaled to precisely zero.
+     2 · the live flyers' lens (`lensFieldAt` / `lensSourceAt` / `lensForwardAt` /
+        `lensRegionAt` / `computeLensMap`, mounted by `lib/signoffLens.ts`) — the
+        headline and the CTA are lifted out of document flow and warped by an SVG
+        displacement map that evaluates the SAME field over their rasters:
+        radially arched, exponentially tidal, one continuous body per flyer. No
+        affine transform is ever written on the flyers: a 2D transform is linear,
+        and gravitational lensing is not. `flyerFrameAt` survives as the envelope
+        that answers the two scalar questions — the paint-exchange opacity and
+        the event-horizon crossing — and as the numeric Jacobian the shader's
+        remap is checked against.
 
      3 · the frozen frame's warp (`infallAt` / `tidalAt` / `swirlAt`, consumed by
         `three/eventHorizonWarp.ts`) — the shader remaps every fragment through
@@ -23,13 +29,14 @@
         scroll-domain quantity, so the state of the whole scene is a function of
         where the reader IS, never of how long they took to get there.
 
-   (2) and (3) are the same field evaluated two ways: per element on the CPU,
-   per fragment on the GPU. That is deliberate. The live paint is exchanged for
-   the frozen frame part-way through the fall (`overlayMixAt`), and a handoff
-   between two different motion models would be visible as a jump. There is
-   therefore no per-flyer stagger either — the shader cannot stagger, and the
-   differentiation comes from geometry instead: each flyer sits at its own
-   radius, so the tidal gradient bites each one at its own moment.
+   (2) and (3) are the same field evaluated two ways: per displacement-map cell
+   on the CPU, per fragment on the GPU. That is deliberate. The live paint is
+   exchanged for the frozen frame part-way through the fall (`overlayMixAt`),
+   and a handoff between two different motion models would be visible as a
+   jump. There is therefore no per-flyer stagger either — the shader cannot
+   stagger, and the differentiation comes from geometry instead: each flyer
+   sits at its own radius, so the tidal gradient bites each one at its own
+   moment.
 
    Nothing here touches the DOM, GSAP or WebGL. The curves ARE the art
    direction, so they live as pure functions and are unit-tested on their own
@@ -473,8 +480,28 @@ export function fallAt(progress: number): number {
    with the playhead, so one function serves both the shader's per-fragment
    remap and the flyer's per-element stretch.
 --------------------------------------------------------------------------- */
-export const TIDAL_GAIN = 4.6;
-export const TIDAL_FALLOFF = 1.22;
+/* The gain and falloff are tuned TOGETHER with `HORIZON_GROWTH_EXPONENT` so the
+ * tidal gradient bites inside the still-opaque window of the live paint
+ * (mix completes at MIX_END = 0.38), not after it. The measurements that pin
+ * the look, off the 1280×900 reference scene:
+ *
+ *   · anisotropy at the invitation: along/across ≈ 1.30 at p = 0.30, ≈ 1.59 at
+ *     p = 0.35 and ≈ 1.87 by the handoff — the distortion is a strand, not a
+ *     slant, long before the frozen frame takes over;
+ *   · the tide at the TOP of the invitation's own glyphs (the side nearest the
+ *     horizon) runs ≈ 1.37× the tide at their bottoms through the whole live
+ *     window — the requirement's "stretch exponentially more" — without ever
+ *     saturating early enough to flatten the gradient (the top edge reaches
+ *     the cap only at the handoff itself);
+ *   · the bow of the headline's baseline reaches ≈ −12 px at p = 0.30 and
+ *     ≈ −28 px at p = 0.35 (negative = arched UP toward the hole, concentric
+ *     with the accretion disk).
+ *
+ * An earlier tuning (gain 4.6, falloff 1.22, horizon exponent 1.85) never
+ * exceeded a 1.10 anisotropy before the handoff, which is precisely why the
+ * sequence read as a flat 2D skew. */
+export const TIDAL_GAIN = 6.0;
+export const TIDAL_FALLOFF = 1.35;
 export const TIDAL_CAP = 0.96; // a fragment is never remapped past the singularity
 
 /** The playhead-scaled tidal gain, i.e. the shader's `uTidal`: the value that
@@ -495,7 +522,13 @@ export function tidalAt(radius: number, horizonRadius: number, progress: number)
    tangential remap and the flyer's residual rotation so the two spiral the
    same way.
 --------------------------------------------------------------------------- */
-export const SWIRL_TURNS = 0.49;
+/* Kept subordinate to the radial field: the drag must read as frame dragging,
+ * not as the list of a rigid skew. On the reference baseline the arch
+ * (quadratic term of the mapped line) leads the drag's list (linear term)
+ * through the whole live window — 2.9px vs 1.1px at p = 0.2, 13.9 vs 9.8 at
+ * p = 0.3, 36.6 vs 23.5 at p = 0.35 — and the disk still spirals the last of
+ * the fall away below the horizon. */
+export const SWIRL_TURNS = 0.2;
 
 export function swirlAt(progress: number): number {
   return SWIRL_TURNS * Math.pow(clamp01(progress), 1.5);
@@ -673,14 +706,16 @@ export const EFFECTIVE_HORIZON_RADIUS_PX = 26;
  * to strand). It is tuned together with `TIDAL_GAIN` / `TIDAL_FALLOFF` so the
  * dramatic anisotropy lands INSIDE the still-opaque window: the paint crossfade
  * hands the live text to the frozen frame at `MIX_END`, and the ratio
- * `along / across` has to reach ~1.3 while the live layer is still half-visible
- * (opacity ≥ 0.5), not after it has faded out. The earlier cubic growth (`p³`)
- * arrived at the nearest flyer too late — the interesting stretch happened after
- * the reader stopped watching the live glyphs. The tuned value (≈ quadratic)
- * reaches the ~34px CTA by the time the crossfade is a third through, so the
- * stretch is a live, readable event. The capture threshold still swallows every
- * texel at progress = 1; only the *timing* of the field's arrival changes. */
-export const HORIZON_GROWTH_EXPONENT = 1.85;
+ * `along / across` has to be ~1.5 while the live layer is still half-visible
+ * (opacity ≥ 0.5), not after it has faded out. The earlier ~quadratic growth
+ * (1.85) held the horizon at ~40px at p = 0.3 — a radius the flyers, falling
+ * from hundreds of px away, never came near while they were still lit — and the
+ * result read as a rigid, flat skew. The tuned near-linear growth (1.15)
+ * reaches ~80px by p = 0.3 and ~128px by the handoff: the tide catches the
+ * glyphs while they are still the thing being watched. The capture threshold
+ * still swallows every texel at progress = 1; only the *timing* of the field's
+ * arrival changes. */
+export const HORIZON_GROWTH_EXPONENT = 1.15;
 
 /** The overlay covers the sheet plus `veil` px of the seam above it, so the
  * horizon has to reach the farthest corner of THAT box, not of the sheet. */
@@ -712,6 +747,291 @@ export function horizonRadiusAtProgress(progress: number, extent: HorizonExtent)
   return p * (EFFECTIVE_HORIZON_RADIUS_PX + (cover - EFFECTIVE_HORIZON_RADIUS_PX) * growth);
 }
 
+/* ============================================================================
+   THE LIVE LENS — the shader's own field, evaluated per fragment over an SVG
+   displacement map.
+
+   This is the replacement for the affine warp (`flyerTransform`), and the
+   reason for it is a theorem, not a taste: a single 2D transform on one
+   bounding box is a LINEAR map. It can translate, rotate, scale and shear —
+   and that is all it can do, which is exactly what the failed builds of this
+   section read as: a rigid, flat skew. True gravitational lensing is not
+   linear in position:
+
+     · it is RADIAL. A horizontal baseline does not slant under it — it arches,
+       because the middle of the word sits closer to the singularity than its
+       ends, so the middle is pulled harder. The image of a straight line is a
+       curve concentric with the accretion disk.
+     · its strength is NON-LINEAR — a power law in the radius. The top of a
+       glyph (the side nearest the event horizon) is pulled exponentially
+       harder than its bottom, so letters strand vertically instead of
+       compressing uniformly.
+     · it is CONTINUOUS. The word "NEMOVERSE", its global gradient and the CTA
+       must warp as one unbroken raster — no strand splitting, no per-letter
+       playheads. A displacement field over the element's OWN pixels warps the
+       raster as one body by construction; nothing can shatter what is never
+       separated.
+
+   `feDisplacementMap` is that medium for the live DOM: every output pixel of
+   the flyer is re-sampled from a source position given by this field — the
+   SAME `f(r) = r·(1 + infall + tidal(r))`, rotated by the same frame dragging,
+   that `three/eventHorizonWarp.ts` integrates per fragment for the frozen
+   frame. The two layers therefore agree pixel-for-pixel through the paint
+   crossfade, and the live text stops being a skewed rectangle and starts
+   being a lensed image.
+
+   Two engineering facts shape the code:
+
+   · THE FILTER REGION TRACKS THE CONTENT. A displacement map is stretched
+     over the filter's region, so the map's pixels are only as local as the
+     region is tight. The region is the hull of the FORWARD image of the
+     flyer's rest box (where the raster has fallen TO), re-computed every
+     playhead: as the fall proceeds the region funnels toward the singularity,
+     which is both a raster-cost saving and a map-resolution doubling where
+     the field's curvature is highest.
+   · THE MAP IS RE-BAKED PER PLAYHEAD, including its dynamic range. Offsets
+     that would sample outside the flyer's raster are transparent no matter
+     their magnitude (that IS the consumption: nothing to paint), so the
+     encoding's range is spent on the content cells only — `computeLensMap`
+     returns that range and the component writes it as the filter's `scale`.
+     Eight bits of displaced resolution then cost well under a pixel of bias.
+   ========================================================================== */
+
+/** One frame of the field, as the lens needs it. Every value comes from the
+ * primitives above, so the live paint and the frozen frame can never drift. */
+export interface LensField {
+  /** The effective horizon radius, in px (`horizonRadiusAtProgress`). */
+  horizon: number;
+  /** The global infall term (`shaderInfallAt` — finite at every playhead). */
+  infall: number;
+  /** The playhead-scaled tidal gain (`tidalGainAt`). */
+  gain: number;
+  /** Frame dragging, in turns (`swirlAt`). */
+  swirl: number;
+}
+
+export function lensFieldAt(progress: number, extent: HorizonExtent): LensField {
+  const p = clamp01(progress);
+  return {
+    horizon: horizonRadiusAtProgress(p, extent),
+    infall: shaderInfallAt(p),
+    gain: tidalGainAt(p),
+    swirl: swirlAt(p),
+  };
+}
+
+/** A rectangle in sheet-local CSS px: the flyer's rest box, or the filter
+ * region the flyer's content has fallen into. */
+export interface LensRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** The inverse image of an OUTPUT point: where the warped raster samples the
+ * rest image from, expressed relative to the singularity. This is the
+ * shader's tidal remap, copied operation-for-operation so the two layers
+ * agree: stretch the source radius by `1 + infall + tidal`, then rotate the
+ * source direction by the frame dragging. `v` is the output point relative to
+ * the singularity, y down. */
+export function lensSourceAt(vx: number, vy: number, field: LensField): Point {
+  const r = Math.hypot(vx, vy);
+  if (!(r > 1e-4)) return { x: 0, y: 0 };
+  const tidal =
+    field.horizon > 0
+      ? Math.min(TIDAL_CAP, field.gain * Math.pow(field.horizon / r, TIDAL_FALLOFF))
+      : 0;
+  const stretch = 1 + field.infall + tidal;
+  const drag = tidal * field.swirl * 2 * Math.PI;
+  const cosine = Math.cos(drag);
+  const sine = Math.sin(drag);
+  return {
+    x: stretch * (vx * cosine - vy * sine),
+    y: stretch * (vx * sine + vy * cosine),
+  };
+}
+
+/** The FORWARD image of a rest point: where a source pixel lands. The inverse
+ * map has no closed form (`tidal` is evaluated at the output radius), so the
+ * output radius is solved by fixed-point iteration — `r = f(r_out)` converges
+ * in a few steps wherever the field is unsaturated, and the region that
+ * consumes this only ever needs ~1px of accuracy. The direction counter-rotates
+ * by the drag at the solved radius. */
+export function lensForwardAt(vx: number, vy: number, field: LensField, steps = 3): Point {
+  const r = Math.hypot(vx, vy);
+  if (!(r > 1e-4)) return { x: 0, y: 0 };
+  const tide = (radius: number): number =>
+    field.horizon > 0
+      ? Math.min(TIDAL_CAP, field.gain * Math.pow(field.horizon / Math.max(radius, 1e-4), TIDAL_FALLOFF))
+      : 0;
+  let out = r / (1 + field.infall + tide(r / (1 + field.infall)));
+  for (let i = 1; i < steps; i += 1) {
+    out = r / (1 + field.infall + tide(out));
+  }
+  const drag = -tide(out) * field.swirl * 2 * Math.PI;
+  const cosine = Math.cos(drag);
+  const sine = Math.sin(drag);
+  const ox = (vx / r) * out;
+  const oy = (vy / r) * out;
+  return {
+    x: ox * cosine - oy * sine,
+    y: ox * sine + oy * cosine,
+  };
+}
+
+/** Room around the content hull, in px, so the swirl's tangential drift and a
+ * hair of fixed-point error never cost the strand an edge. */
+export const LENS_PAD_PX = 10;
+
+/** The displacement-map side, in px. 160 cells over regions up to ~800px give a
+ * ~5px cell: the field is smooth at that scale, and the map is re-baked per
+ * playhead rather than stretched linearly, so curvature never starves. */
+export const LENS_MAP_SIZE = 160;
+
+/** The region's minimum side: an empty region would invalidate the filter and
+ * render the element UNWARPED — the rest pose popping back mid-fall. */
+export const LENS_MIN_REGION_PX = 4;
+
+/** The filter region for one playhead: the hull of the forward image of the
+ * flyer's rest-box perimeter, padded. The image of a continuously remapped
+ * compact box is bounded by the image of its boundary (the field is a
+ * homeomorphism wherever `infall > 0`, and the pad absorbs what the swirl's
+ * interior extrema may add), so sampling the perimeter — not the area — is
+ * the honest hull. The singularity itself is never included explicitly: as
+ * the fall completes the hull collapses onto it by construction. */
+export function lensRegionAt(raster: LensRect, singularity: Point, field: LensField): LensRect {
+  const nx = Math.max(4, Math.min(24, Math.ceil(raster.width / 48)));
+  const ny = Math.max(4, Math.min(24, Math.ceil(raster.height / 48)));
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  const visit = (px: number, py: number) => {
+    const out = lensForwardAt(px - singularity.x, py - singularity.y, field);
+    const wx = singularity.x + out.x;
+    const wy = singularity.y + out.y;
+    if (wx < minX) minX = wx;
+    if (wx > maxX) maxX = wx;
+    if (wy < minY) minY = wy;
+    if (wy > maxY) maxY = wy;
+  };
+  for (let i = 0; i <= nx; i += 1) {
+    const px = raster.x + (raster.width * i) / nx;
+    visit(px, raster.y);
+    visit(px, raster.y + raster.height);
+  }
+  for (let j = 1; j < ny; j += 1) {
+    const py = raster.y + (raster.height * j) / ny;
+    visit(raster.x, py);
+    visit(raster.x + raster.width, py);
+  }
+  if (!finite(minX, minY, maxX, maxY)) {
+    return { ...raster };
+  }
+  const x = minX - LENS_PAD_PX;
+  const y = minY - LENS_PAD_PX;
+  return {
+    x,
+    y,
+    width: Math.max(LENS_MIN_REGION_PX, maxX - minX + 2 * LENS_PAD_PX),
+    height: Math.max(LENS_MIN_REGION_PX, maxY - minY + 2 * LENS_PAD_PX),
+  };
+}
+
+/** How far inside the raster a sampled source must sit to count as content:
+ * the anti-alias band at the raster's own edge must not read as content for a
+ * cell that is really void. */
+export const LENS_CONTENT_TOLERANCE_PX = 0.75;
+
+/** Rasterise the lens for `feImage`: for each map cell — an OUTPUT position —
+ * the offset from that position to its SOURCE sample, in sheet CSS px. Cells
+ * whose source lands outside the flyer's raster are VOID (the sample is
+ * transparent whatever the offset, and the void is how the horizon consumes
+ * geometrically); their offsets are written direction-preserving with the
+ * content range as their magnitude, which provably keeps the sampled point
+ * off the raster:
+ *
+ *   · inner voids: the output cell AND its true source both sit inside the
+ *     void ball around the singularity (the inverse map is radial and
+ *     monotone), so every scaled point between them stays inside it — outside
+ *     the raster, whose nearest approach to the singularity is the rest
+ *     radius;
+ *   · outer voids: both radii exceed the raster's farthest radius, and so
+ *     does every point between them.
+ *
+ * The magnitude range is therefore spent on the CONTENT cells alone, which is
+ * what keeps 8-bit displacement encoding sub-pixel in the far field instead
+ * of quantising away the arch.
+ *
+ * `out` is `size × size × 2` interleaved dx,dy. Returns the content range:
+ * the maximum |offset| over content cells, or 0 when nothing samples the
+ * raster (rest, and full consumption). */
+export function computeLensMap(
+  region: LensRect,
+  raster: LensRect,
+  singularity: Point,
+  field: LensField,
+  size: number,
+  out: Float32Array,
+): number {
+  const n = Math.max(2, Math.floor(size));
+  const near = LENS_CONTENT_TOLERANCE_PX;
+  const left = raster.x + near;
+  const right = raster.x + raster.width - near;
+  const top = raster.y + near;
+  const bottom = raster.y + raster.height - near;
+  let range = 0;
+  for (let j = 0; j < n; j += 1) {
+    const wy = region.y + ((j + 0.5) / n) * region.height;
+    for (let i = 0; i < n; i += 1) {
+      const wx = region.x + ((i + 0.5) / n) * region.width;
+      const vx = wx - singularity.x;
+      const vy = wy - singularity.y;
+      const source = lensSourceAt(vx, vy, field);
+      const px = singularity.x + source.x;
+      const py = singularity.y + source.y;
+      const k = (j * n + i) * 2;
+      if (px >= left && px <= right && py >= top && py <= bottom) {
+        const dx = px - wx;
+        const dy = py - wy;
+        out[k] = dx;
+        out[k + 1] = dy;
+        if (Math.abs(dx) > range) range = Math.abs(dx);
+        if (Math.abs(dy) > range) range = Math.abs(dy);
+      } else {
+        out[k] = NaN; // void: re-written below, once the content range is known
+        out[k + 1] = NaN;
+      }
+    }
+  }
+  const magnitude = range > 0 ? range : 1;
+  for (let j = 0; j < n; j += 1) {
+    const wy = region.y + ((j + 0.5) / n) * region.height;
+    for (let i = 0; i < n; i += 1) {
+      const k = (j * n + i) * 2;
+      if (!Number.isNaN(out[k])) continue;
+      const wx = region.x + ((i + 0.5) / n) * region.width;
+      const vx = wx - singularity.x;
+      const vy = wy - singularity.y;
+      const source = lensSourceAt(vx, vy, field);
+      const dx = source.x - vx;
+      const dy = source.y - vy;
+      const length = Math.hypot(dx, dy);
+      if (length > 1e-9) {
+        out[k] = (dx / length) * magnitude;
+        out[k + 1] = (dy / length) * magnitude;
+      } else {
+        // The cell sits on the singularity itself: sample straight past it,
+        // into the void, rather than at it.
+        out[k] = 0;
+        out[k + 1] = vy >= 0 ? magnitude : -magnitude;
+      }
+    }
+  }
+  return range;
+}
+
 /* ---------------------------------------------------------------------------
    The physical response — the black hole reacting to what it eats.
 
@@ -739,16 +1059,16 @@ export function horizonRadiusAtProgress(progress: number, extent: HorizonExtent)
 
 /** The playhead values of the two crossings, nearest flyer first. Measured off
  * the reference scene with the current horizon growth, where the CTA (nearest,
- * ~34px) crosses at p≈0.383 and the headline (~120px) at p≈0.525. The bite is
+ * ~34px) crosses at p≈0.240 and the headline (~120px) at p≈0.388. The bite is
  * centred a hair past its crossing, so the reaction lands as the body goes in
  * rather than just before it. Art direction, not a constant from the shader. */
-export const BITE_CENTRES = [0.39, 0.53];
+export const BITE_CENTRES = [0.25, 0.41];
 
 /** Half-width of each bite's eased pulse, in playhead units. Narrow enough to
  * read as an event, wide enough not to flicker at a frame's duration, and small
  * enough that the two windows stay separate — a clear trough between the
  * swallows, not one merged hump. */
-export const BITE_WIDTH = 0.11;
+export const BITE_WIDTH = 0.07;
 
 /** Peak relative excursion per bite, as a fraction of the baseline. */
 export const MASS_BITE = 0.2; // +20% Schwarzschild mass → horizon grows

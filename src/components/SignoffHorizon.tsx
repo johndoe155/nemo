@@ -16,17 +16,23 @@ import {
   collapseAt,
   consumptionTarget,
   followPlayhead,
-  fallAt,
   flyerFrameAt,
-  flyerTransform,
   holdActiveAt,
   holdDistanceAt,
   horizonRadiusAtProgress,
+  lensFieldAt,
   overlayMixAt,
   sheetHeightAt,
-  tidalGainAt,
   type FlyerId,
 } from '../lib/spaghettification';
+import {
+  FLYER_LENS_ID,
+  disposeFlyerLenses,
+  mountFlyerLenses,
+  paintFlyerLens,
+  silenceFlyerLenses,
+  type FlyerLenses,
+} from '../lib/signoffLens';
 import type { EventHorizonWarp } from '../three/eventHorizonWarp';
 import '../styles/signoff-horizon.css';
 
@@ -35,69 +41,6 @@ gsap.registerPlugin(ScrollTrigger);
 const FLYER_SELECTOR: Record<FlyerId, string> = {
   invite: '[data-horizon-item="invite"]',
   cta: '[data-horizon-item="cta"]',
-};
-
-const LENS_MAP = 64;
-const LENS_ID = 'horizon-lens';
-
-/** Displacement map for a gravitational bow: centre of the graphic is pulled
- * toward the hole (up), sides lag, strokes stay continuous. R = x, G = y. */
-const paintLensMap = (ctx: CanvasRenderingContext2D) => {
-  const n = LENS_MAP;
-  const img = ctx.createImageData(n, n);
-  for (let y = 0; y < n; y += 1) {
-    for (let x = 0; x < n; x += 1) {
-      const nx = (x / (n - 1)) * 2 - 1;
-      const ny = (y / (n - 1)) * 2 - 1;
-      const bow = 1 - nx * nx;
-      const dx = -nx * (0.28 + 0.5 * ((ny + 1) * 0.5));
-      const dy = -bow * (0.92 + 0.2 * ny);
-      const i = (y * n + x) * 4;
-      img.data[i] = Math.max(0, Math.min(255, Math.round(128 + dx * 120)));
-      img.data[i + 1] = Math.max(0, Math.min(255, Math.round(128 + dy * 120)));
-      img.data[i + 2] = 128;
-      img.data[i + 3] = 255;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-};
-
-const mountLens = (host: HTMLElement): { svg: SVGSVGElement; displace: SVGFEDisplacementMapElement } => {
-  const existing = host.querySelector<SVGSVGElement>('.horizon-lens-defs');
-  existing?.remove();
-  const canvas = document.createElement('canvas');
-  canvas.width = LENS_MAP;
-  canvas.height = LENS_MAP;
-  const ctx = canvas.getContext('2d');
-  if (ctx) paintLensMap(ctx);
-  const href = canvas.toDataURL('image/png');
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.classList.add('horizon-lens-defs');
-  svg.setAttribute('width', '0');
-  svg.setAttribute('height', '0');
-  const filter = document.createElementNS(ns, 'filter');
-  filter.setAttribute('id', LENS_ID);
-  filter.setAttribute('x', '-40%');
-  filter.setAttribute('y', '-80%');
-  filter.setAttribute('width', '180%');
-  filter.setAttribute('height', '220%');
-  filter.setAttribute('color-interpolation-filters', 'sRGB');
-  const image = document.createElementNS(ns, 'feImage');
-  image.setAttribute('href', href);
-  image.setAttribute('result', 'map');
-  image.setAttribute('preserveAspectRatio', 'none');
-  const displace = document.createElementNS(ns, 'feDisplacementMap');
-  displace.setAttribute('in', 'SourceGraphic');
-  displace.setAttribute('in2', 'map');
-  displace.setAttribute('xChannelSelector', 'R');
-  displace.setAttribute('yChannelSelector', 'G');
-  displace.setAttribute('scale', '0');
-  filter.append(image, displace);
-  svg.appendChild(filter);
-  host.prepend(svg);
-  return { svg, displace };
 };
 
 const sameSize = (a: SignoffScene, b: SignoffScene) =>
@@ -274,7 +217,10 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
          * both call. */
         let measuringMinHeight: string | null = null;
         let warp: EventHorizonWarp | null = null;
-        let lens: { svg: SVGSVGElement; displace: SVGFEDisplacementMapElement } | null = null;
+        /** The two live gravitational lenses (one filter per flyer). Mounted
+         * with the lift, disposed with the scene; the field itself is baked
+         * per playhead by `paintFlyerLens`. */
+        let lenses: FlyerLenses | null = null;
         let holdTrigger: ScrollTrigger | null = null;
         let armTrigger: ScrollTrigger | null = null;
         let resizeObserver: ResizeObserver | null = null;
@@ -382,8 +328,8 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           // context per activation and a stale overlay over a plain footer.
           warp?.dispose();
           warp = null;
-          lens?.svg.remove();
-          lens = null;
+          if (lenses) disposeFlyerLenses(lenses);
+          lenses = null;
           armTrigger?.kill();
           armTrigger = null;
           holdTrigger?.kill();
@@ -414,7 +360,10 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
         const liftFlyers = () => {
           if (lifted || !scene) return;
           lifted = true;
-          if (!lens) lens = mountLens(sheet);
+          // The lenses mount with the lift: from here on the warp is a
+          // displacement field over each flyer's raster — the shader's own
+          // field, never an affine transform on a bounding box.
+          if (!lenses) lenses = mountFlyerLenses(sheet);
           anchor.style.height = `${scene.anchorHeight}px`;
           for (const id of FLYER_IDS) {
             const el = flyerEls[id];
@@ -461,7 +410,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           sheet.style.removeProperty('--horizon-veil');
           sheetVeil = '';
           anchor.style.marginTop = '';
-          if (lens) lens.displace.setAttribute('scale', '0');
+          if (lenses) silenceFlyerLenses(lenses);
           for (const id of FLYER_IDS) {
             flyerEls[id].style.transform = '';
             flyerEls[id].style.filter = '';
@@ -739,31 +688,58 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             // at any playhead lag, and why a release that lands on a still-
             // settling fall moves nothing.
 
-            // The flyers: the same field the shader integrates per fragment,
-            // evaluated per element. Translation onto the singularity's exact
-            // coordinates, tidal stretch along the pull axis, squeeze across it,
-            // frame dragging, and a scale that reaches precisely zero.
+            // The flyers: the shader's own field, evaluated per fragment over
+            // each flyer's raster by an SVG displacement map — radial, tidal,
+            // continuous. THE LINEAR SKEW IS DELIBERATELY GONE: no affine
+            // transform is ever written on a flyer. A 2D transform on one
+            // bounding box can translate/rotate/scale/shear and nothing else,
+            // which is exactly the flat look this section kept being
+            // criticised for; what remains — the word arching up concentric
+            // with the accretion disk and stranding into it — provably cannot
+            // be expressed by one. `flyerFrameAt` survives for the two scalar
+            // envelope facts (paint exchange, crossing), not for paint.
             const geometry = sceneGeometry(current);
             const radius = horizonRadiusAtProgress(p, geometry);
+            const lensOn = holding && p > 0 && lenses !== null;
             const singularity = {
               x: current.sheetLeft + current.anchorX,
               y: current.pinnedTop + current.anchorY,
             };
+            // The same field, sheet-local, for the lenses: the scene's flyer
+            // centres and the singularity already live in that space, and one
+            // space is what keeps the live paint and the frozen frame aligned
+            // through the crossfade.
+            const field = lensFieldAt(p, geometry);
+            const sheetSingularity = { x: current.anchorX, y: current.anchorY };
             for (const id of FLYER_IDS) {
               const el = flyerEls[id];
+              const box = current.flyers[id];
               const rest = {
-                x: current.sheetLeft + current.flyers[id].x,
-                y: current.pinnedTop + current.flyers[id].y,
+                x: current.sheetLeft + box.x,
+                y: current.pinnedTop + box.y,
               };
               const flyer = flyerFrameAt(p, rest, singularity, radius);
-              el.style.transform = flyerTransform(flyer);
-              el.style.filter = holding && p > 0 ? `url(#${LENS_ID})` : '';
+              // Never a transform: the layout box is the rest box at every
+              // playhead, and the warp is entirely a property of the raster.
+              el.style.transform = '';
               el.style.opacity = warp ? flyer.opacity.toFixed(4) : '';
               el.style.pointerEvents = flyer.consumed ? 'none' : '';
-            }
-            if (lens) {
-              const bend = fallAt(p) * 72 + tidalGainAt(p) * 28;
-              lens.displace.setAttribute('scale', bend.toFixed(1));
+              // Once the frozen frame owns the paint (or hold over), the lens
+              // stands down: re-baking a field nobody can see is wasted raster.
+              // In the unarmed fallback (no warp) the live raster carries the
+              // fall alone, so the lens runs to the horizon itself.
+              const live = warp ? flyer.opacity > 0.015 : true;
+              const on = lensOn && live;
+              el.style.filter = on ? `url(#${FLYER_LENS_ID[id]})` : '';
+              if (on && lenses) {
+                const raster = {
+                  x: box.x - box.width / 2,
+                  y: box.y - box.height / 2,
+                  width: box.width,
+                  height: box.height,
+                };
+                paintFlyerLens(lenses, id, p, raster, sheetSingularity, field);
+              }
             }
 
             // The frozen frame takes over the paint as the field takes hold —

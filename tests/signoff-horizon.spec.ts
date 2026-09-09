@@ -33,6 +33,11 @@ const invite = '[data-horizon-item="invite"]';
 const cta = '[data-horizon-item="cta"]';
 const FLYERS = [invite, cta] as const;
 
+/** The flyer ids in FLYERS order: the link between a `data-horizon-item` and
+ * its displacement filter (`#horizon-lens-<id>`), mirroring `FLYER_SELECTOR`
+ * in the component. */
+const FLYER_IDS = ['invite', 'cta'] as const;
+
 /** The hold and the arm line. One trigger holds both boxes — the black hole's
  * container and the sign-off sheet — to the viewport for the whole consumption,
  * and it owns the scrub. There is no second trigger because the release must not
@@ -302,6 +307,7 @@ const readScene = (page: Page) => page.evaluate(() => {
         height: box.height,
         opacity: parseFloat(getComputedStyle(el).opacity),
         transform: getComputedStyle(el).transform,
+        filter: getComputedStyle(el).filter,
         pointerEvents: getComputedStyle(el).pointerEvents,
         // The LAYOUT box, which a transform does not touch: `offset*` is what
         // the lift out of document flow writes, and what must not move while the
@@ -817,10 +823,11 @@ test('one snapshot/texture; reversible playhead; geometric full consumption', as
   for (const selector of FLYERS) {
     const flyer = rest.flyers.find((f) => f.selector === selector)!;
     expect(flyer.opacity).toBe(1);
-    // The field is the identity at rest: the effect has written a transform, and
-    // that transform must be exactly no-op, or the handoff to the pinned scene
-    // would move the type.
+    // The field is the identity at rest: no transform was ever written (the
+    // warp is a filter, not a matrix), and the lens has not been engaged, or
+    // the handoff to the pinned scene would move the type.
     expect(parseMatrix(flyer.transform)).toEqual([1, 0, 0, 1, 0, 0]);
+    expect(flyer.filter).toBe('none');
   }
 
   // The overlay covers the sheet plus the measured veil of headroom above it,
@@ -895,14 +902,14 @@ test('one snapshot/texture; reversible playhead; geometric full consumption', as
 });
 
 /* ==========================================================================
-   Requirements 2 and 3 — spaghettification, and translation into the point.
+   Requirements 2 and 3 — spaghettification, and translation into the point,
+   as a DISPLACEMENT FIELD: no affine transform is ever written on a flyer.
    ======================================================================== */
 
-test('the DOM warp is the same field the shader integrates, per flyer', async ({ page }) => {
+test('the DOM warp is a lensing field over the raster — never an affine skew', async ({ page }) => {
   await open(page);
   await scrollProgress(page, 0);
   const rest = await readScene(page);
-  const singularity = rest.frame.centre;
   const canvasBox = await page.locator(overlay).boundingBox();
   const sheetBox = await page.locator(root).boundingBox();
   expect(canvasBox).not.toBeNull();
@@ -910,103 +917,101 @@ test('the DOM warp is the same field the shader integrates, per flyer', async ({
   const veil = sheetBox!.y - canvasBox!.y;
   expect(veil).toBeGreaterThan(0);
 
+  /** Read the live lens for one flyer: its filter region (bbox units), the
+   * displacement scale in px, and a fingerprint of the baked map's URL. */
+  const readLens = (id: 'invite' | 'cta') =>
+    page.evaluate((lensId) => {
+      const filterEl = document.getElementById(lensId)!;
+      const image = filterEl.querySelector('feImage')!;
+      const displace = filterEl.querySelector('feDisplacementMap')!;
+      const href = image.getAttribute('href') ?? '';
+      let hash = 0;
+      for (let i = 0; i < href.length; i += 1) hash = ((hash << 5) - hash + href.charCodeAt(i)) | 0;
+      return {
+        x: parseFloat(filterEl.getAttribute('x') ?? '0'),
+        y: parseFloat(filterEl.getAttribute('y') ?? '0'),
+        width: parseFloat(filterEl.getAttribute('width') ?? '1'),
+        height: parseFloat(filterEl.getAttribute('height') ?? '1'),
+        scale: parseFloat(displace.getAttribute('scale') ?? '0'),
+        href: href.slice(0, 22),
+        bytes: href.length,
+        hash,
+      };
+    }, `horizon-lens-${id}`);
+
+  const invites: Array<Awaited<ReturnType<typeof readLens>>> = [];
+  const ctas: Array<Awaited<ReturnType<typeof readLens>>> = [];
+
   for (const progress of [0.15, 0.4, 0.65, 0.85]) {
     await scrollProgress(page, progress);
     const scene = await readScene(page);
-    const expected = await page.evaluate(
-      async ({ p, point, rests, veil: margin }) => {
-        const field = await import('/src/lib/spaghettification.ts');
-        const sheet = document.querySelector<HTMLElement>('.footer.signoff')!;
-        const box = sheet.getBoundingClientRect();
-        const extent = {
-          width: box.width,
-          height: box.height,
-          anchorX: point.x - box.left,
-          anchorY: point.y - box.top,
-          veil: margin,
-        };
-        const radius = field.horizonRadiusAtProgress(p, extent);
-        return rests.map((body: { selector: string; x: number; y: number }) => {
-          const frame = field.flyerFrameAt(p, { x: body.x, y: body.y }, point, radius);
-          return { selector: body.selector, radius, ...frame };
-        });
-      },
-      {
-        p: progress,
-        point: singularity,
-        veil,
-        rests: rest.flyers.map((flyer) => ({
-          selector: flyer.selector,
-          x: flyer.centre.x,
-          y: flyer.centre.y,
-        })),
-      },
-    );
+    for (const [index, selector] of FLYERS.entries()) {
+      const flyer = scene.flyers[index];
+      const at = rest.flyers[index];
+      expect(flyer.selector).toBe(selector);
 
-    for (const want of expected) {
-      const flyer = scene.flyers.find((f) => f.selector === want.selector)!;
-      const at = rest.flyers.find((f) => f.selector === want.selector)!;
-      const pull = { x: singularity.x - at.centre.x, y: singularity.y - at.centre.y };
-      const pullLength = Math.hypot(pull.x, pull.y);
+      // THE CORRECTION, asserted first: a linear skew is a transform, and the
+      // warp here provably is not one. The matrix is the identity at every
+      // playhead — the distortion lives entirely in the raster's own filter,
+      // where curvature is expressible.
+      expect(parseMatrix(flyer.transform)).toEqual([1, 0, 0, 1, 0, 0]);
 
-      // Requirement 3: it travels toward the singularity, it does not bloat in
-      // place. The displacement is the field's own fall fraction of the pull.
-      const moved = { x: flyer.centre.x - at.centre.x, y: flyer.centre.y - at.centre.y };
-      expect(Math.abs(moved.x - want.x)).toBeLessThan(0.75);
-      expect(Math.abs(moved.y - want.y)).toBeLessThan(0.75);
-      expect(moved.x * pull.x + moved.y * pull.y).toBeGreaterThan(0);
-      expect(Math.hypot(singularity.x - flyer.centre.x, singularity.y - flyer.centre.y))
-        .toBeLessThan(pullLength);
+      // The layout box is the rest box: the lift alone positions the flyer,
+      // and the fall never becomes a layout motion.
+      expect(flyer.offsetLeft).toBe(at.offsetLeft);
+      expect(flyer.offsetTop).toBe(at.offsetTop);
+      expect(flyer.offsetWidth).toBe(at.offsetWidth);
+      expect(flyer.offsetHeight).toBe(at.offsetHeight);
 
-      // Requirement 2: the box is warped, not uniformly scaled. rotate·scale·
-      // rotate⁻¹ is symmetric (no shear), its eigenvalues are `along`/`across`,
-      // and the stretched eigenvector points at the singularity.
-      const matrix = parseMatrix(flyer.transform);
-      expect(matrix, `${want.selector}: unexpected transform ${flyer.transform}`).not.toBeNull();
-      const [a, b, c, d, e, f] = matrix!;
-      expect(Math.abs(b - c)).toBeLessThan(1e-4);
-      expect(Math.abs(e - want.x)).toBeLessThan(0.75);
-      expect(Math.abs(f - want.y)).toBeLessThan(0.75);
-      const mean = (a + d) / 2;
-      const root = Math.sqrt(Math.max(0, ((a - d) / 2) ** 2 + b * c));
-      const major = mean + root;
-      const minor = mean - root;
-      expect(Math.abs(major - want.along)).toBeLessThan(2e-3);
-      expect(Math.abs(minor - want.across)).toBeLessThan(2e-3);
-      expect(major).toBeGreaterThan(minor);
-      // Eigenvector of the major eigenvalue: the pull axis, up to frame dragging.
-      const axis = Math.abs(c) > 1e-6
-        ? { x: c, y: major - a }
-        : { x: a >= d ? 1 : 0, y: a >= d ? 0 : 1 };
-      const length = Math.hypot(axis.x, axis.y);
-      const cosine = (axis.x * pull.x + axis.y * pull.y) / (length * pullLength);
-      expect(Math.abs(cosine)).toBeGreaterThan(0.2); // the swirl may rotate it
-      expect(Math.abs(Math.abs(cosine))).toBeLessThanOrEqual(1 + 1e-9);
+      // The lens. While the live paint is on (the crossfade completes at
+      // MIX_END = 0.38; afterwards the live layer is invisible and the filter
+      // is stood down), the flyer is warped by ITS OWN displacement filter.
+      const id = FLYER_IDS[index];
+      const lensData = await readLens(id);
+      if (progress <= 0.15) {
+        expect(flyer.filter).toBe(`url("#horizon-lens-${id}")`);
+        // An identity warp (scale 0) would mean "no field present": the old
+        // bug in another clothes. Mid-fall the range is tens to hundreds of
+        // px; require a real, growing field — and never a bloated one.
+        expect(lensData.scale).toBeGreaterThan(0);
+        expect(lensData.scale).toBeLessThan(2200);
+        // The map is a re-baked PNG, not a re-used one.
+        expect(lensData.href).toBe('data:image/png;base64,');
+        expect(lensData.bytes).toBeGreaterThan(200);
+      }
+      if (progress >= 0.4) {
+        // The frozen frame owns the paint: live layer fully exchanged.
+        expect(flyer.opacity).toBe(0);
+      }
+      (id === 'invite' ? invites : ctas).push(lensData);
     }
   }
 
-  // At the end of the fall every flyer has crossed the event horizon: its
-  // centre is ON the singularity's coordinates and its scale is exactly zero —
-  // not "a small fraction of its rest size" and not an opacity fade over an
-  // unwarped box. Requirement 3's last clause, read off the real DOM.
+  // The field is BAKED per playhead, not re-scaled: the map's bytes change
+  // whenever the playhead moves (a static map whose scale grows — the old
+  // linear bow — would keep one hash and only move the scale).
+  for (const series of [invites, ctas]) {
+    expect(new Set(series.map((lensData) => lensData.hash)).size).toBeGreaterThanOrEqual(3);
+  }
+  // The filter region TRACKS the consumption instead of sitting over the
+  // rest box forever: it lifts toward the singularity (its top edge climbs,
+  // in bbox units) and it collapses as the last of the content falls in.
+  const inviteTracked = invites[invites.length - 1];
+  expect(inviteTracked.y).toBeLessThanOrEqual(invites[0].y + 0.001);
+  expect(inviteTracked.height).toBeLessThan(invites[0].height);
+
+  // At the end of the fall every flyer has crossed the event horizon — not
+  // "scaled to zero" in a matrix (there is no matrix), but consumed: no
+  // visible paint of its own, no pointer target left over the hole, and the
+  // frozen frame's geometry has swallowed every texel (asserted above).
   await scrollProgress(page, 1);
   const end = await readScene(page);
   for (const index of [0, 1]) {
     const flyer = end.flyers[index];
     const at = rest.flyers[index];
-    const left = Math.hypot(singularity.x - flyer.centre.x, singularity.y - flyer.centre.y);
-    expect(left).toBeLessThan(0.5);
-    expect(flyer.width).toBeLessThan(0.5);
-    expect(flyer.height).toBeLessThan(0.5);
-    // The written transform is the degenerate matrix: a zero scale, and a
-    // translation that is exactly the pull vector.
-    const matrix = parseMatrix(flyer.transform);
-    expect(matrix).not.toBeNull();
-    const [a, b, c, d, e, f] = matrix!;
-    expect(Math.abs(a) + Math.abs(b) + Math.abs(c) + Math.abs(d)).toBeLessThan(1e-6);
-    expect(Math.abs(e - (singularity.x - at.centre.x))).toBeLessThan(0.5);
-    expect(Math.abs(f - (singularity.y - at.centre.y))).toBeLessThan(0.5);
-    // Consumed: no invisible hit target left over the hole, but still focusable.
+    expect(parseMatrix(flyer.transform)).toEqual([1, 0, 0, 1, 0, 0]);
+    expect(flyer.offsetLeft).toBe(at.offsetLeft);
+    expect(flyer.offsetTop).toBe(at.offsetTop);
     expect(flyer.pointerEvents).toBe('none');
     expect(flyer.opacity).toBe(0);
   }

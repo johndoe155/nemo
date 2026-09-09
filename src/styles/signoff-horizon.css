@@ -5,8 +5,8 @@
    Nothing here changes the tab order, the accessible name of the CTA, or the
    curtain's layout: the sheet keeps its own margin, stacking context and
    background, and the only element this file adds paint for is the overlay
-   canvas (pointer-inert, aria-hidden) plus the two flyers the effect writes
-   transforms to.
+   canvas (pointer-inert, aria-hidden) plus the two flyers the effect lenses
+   through their SVG displacement filters.
    ========================================================================== */
 
 /* The frozen frame. JS owns `top`/`width`/`height`: the canvas covers the
@@ -42,24 +42,26 @@
   transform-origin: 50% 50%;
 }
 
-/* Per-glyph lag on top of the parent envelope. */
+/* Per-glyph lag on top of the parent envelope. Unused by the lens — a
+   displacement field can only warp a raster it is given whole, which is the
+   point: the word cannot shatter what it never separates. */
 .footer.signoff .horizon-strand {
   display: inline-block;
   transform-origin: 50% 50%;
 }
 
-/* Promotion only while an activation exists: the fall is transform+opacity
-   only, so the whole sequence stays on the compositor.
+/* Promotion only while an activation exists: the warp is filter+opacity, so
+   the raster of the lens is the only expensive thing the sequence owns.
 
    'hold' is on the list deliberately: it is the state where the overlay was
    withheld — no WebGL2, a stage that never came up, a capture that timed out — and
    the DOM still runs the entire consumption under it. The lift, the collapse and
-   the curtain are layout and transforms, none of which need a GPU, so the
-   compositor hint is exactly as applicable as it is with the paint. */
+   the curtain are layout, and the lens is an SVG filter, none of which need a
+   GPU context of their own, so the sequence appears everywhere the hold does. */
 .footer.signoff[data-horizon-state='capturing'] [data-horizon-item],
 .footer.signoff[data-horizon-state='hold'] [data-horizon-item],
 .footer.signoff[data-horizon-state='ready'] [data-horizon-item] {
-  will-change: transform, opacity, filter;
+  will-change: opacity, filter;
 }
 
 /* While the scene holds, the sheet must not clip what it is eating with its own
