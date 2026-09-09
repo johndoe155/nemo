@@ -6,6 +6,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BlackHoleSimulation } from '../three/blackhole/blackhole.js';
 import { CameraAnimation } from '../three/blackhole/camera-animation.js';
 import { flatSimulationConfig as config } from '../three/blackhole/blackhole.config.js';
+import { consumptionResponseAt } from '../lib/spaghettification';
 import BlackHoleStill from './BlackHoleStill';
 import type { BlackHoleStageStatus } from '../lib/singularityGate';
 
@@ -322,6 +323,7 @@ async function acquireDevice(adapter: GPUAdapterLike): Promise<GPUDeviceLike | n
 export default function BlackHoleStage({
   onStatusChange,
   cameraHoldRef,
+  consumptionRef,
 }: {
   onStatusChange?: (status: BlackHoleStageStatus) => void;
   /** Held true by the pinned consumption scene (see `lib/singularityGate.tsx`)
@@ -332,6 +334,14 @@ export default function BlackHoleStage({
    * keeps turning and the lensing keeps resolving, so the hole reads as a live
    * body that has stopped moving, not as a paused video. */
   cameraHoldRef?: { readonly current: boolean };
+  /** The consumption playhead, written by `SignoffHorizon` while the hold is
+   * engaged. When it is active the stage nudges a subset of the simulation's
+   * status parameters — mass, lensing, Doppler and disk rotation — off their
+   * `flatSimulationConfig` baseline, so the hole visibly reacts to what it is
+   * eating. Every other state leaves the sim exactly at the static config.
+   * Same pattern as `cameraHoldRef`: a ref read per frame, no re-render, and
+   * no vendored simulation file is touched to do it. */
+  consumptionRef?: { readonly current: { active: boolean; progress: number } };
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<StageStatus>('booting');
@@ -382,6 +392,10 @@ export default function BlackHoleStage({
     let canvas: HTMLCanvasElement | null = null;
     let resizeObs: ResizeObserver | null = null;
     let viewObs: IntersectionObserver | null = null;
+    /** Whether the last frame we wrote was a consumption excursion (as opposed
+     * to the static baseline). Lets us restore the baseline exactly once on the
+     * frame the hold disengages, rather than every idle frame. */
+    let consumedLastFrame = false;
 
     const fail = (next: 'unsupported' | 'error', label: string, hint?: string) => {
       setNote({ label, hint });
@@ -417,6 +431,36 @@ export default function BlackHoleStage({
         // and end between two renders without this effect ever re-running.
         if (!cameraHoldRef?.current) camAnim?.update(dt);
         controls?.update();
+        // The physical response: while the hold is eating, nudge the mass,
+        // lensing, Doppler and disk rotation off their static config by the
+        // consumption's own playhead. This is the SAME clock the warp uses (no
+        // second clock), it is gated on the hold edge the camera is, and it
+        // flattens back to the exact baseline the moment the hold lets go — so
+        // nothing else on the page that reuses this simulation instance can
+        // inherit an altered state. No vendored file is touched: the excursions
+        // are multiplied onto `flatSimulationConfig` and handed to
+        // `sim.updateUniforms`, the vendored class's own runtime API.
+        if (sim) {
+          const consuming = consumptionRef?.current.active ?? false;
+          if (consuming) {
+            consumedLastFrame = true;
+            const r = consumptionResponseAt(consumptionRef!.current.progress);
+            sim.updateUniforms({
+              blackHoleMass: config.blackHoleMass * (1 + r.mass),
+              gravitationalLensing: config.gravitationalLensing * (1 + r.lensing),
+              dopplerStrength: config.dopplerStrength * (1 + r.doppler),
+              diskRotationSpeed: config.diskRotationSpeed * (1 + r.rotation),
+            });
+          } else if (consumedLastFrame) {
+            consumedLastFrame = false;
+            sim.updateUniforms({
+              blackHoleMass: config.blackHoleMass,
+              gravitationalLensing: config.gravitationalLensing,
+              dopplerStrength: config.dopplerStrength,
+              diskRotationSpeed: config.diskRotationSpeed,
+            });
+          }
+        }
         if (sim && camera) sim.update(dt, camera);
         draw();
       } catch (error) {
@@ -782,9 +826,9 @@ export default function BlackHoleStage({
     void boot();
 
     return release;
-    // `cameraHoldRef` is a stable ref object: listing it keeps the closure
-    // honest without ever re-running the boot sequence.
-  }, [attempt, cameraHoldRef]);
+    // `cameraHoldRef` and `consumptionRef` are stable ref objects: listing them
+    // keeps the closure honest without ever re-running the boot sequence.
+  }, [attempt, cameraHoldRef, consumptionRef]);
 
   const retry = () => {
     setNote(null);

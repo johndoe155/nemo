@@ -473,7 +473,7 @@ export function fallAt(progress: number): number {
    with the playhead, so one function serves both the shader's per-fragment
    remap and the flyer's per-element stretch.
 --------------------------------------------------------------------------- */
-export const TIDAL_GAIN = 0.9;
+export const TIDAL_GAIN = 1.4;
 export const TIDAL_FALLOFF = 1.6;
 export const TIDAL_CAP = 0.96; // a fragment is never remapped past the singularity
 
@@ -495,7 +495,7 @@ export function tidalAt(radius: number, horizonRadius: number, progress: number)
    tangential remap and the flyer's residual rotation so the two spiral the
    same way.
 --------------------------------------------------------------------------- */
-export const SWIRL_TURNS = 0.42;
+export const SWIRL_TURNS = 0.47;
 
 export function swirlAt(progress: number): number {
   return SWIRL_TURNS * Math.pow(clamp01(progress), 1.5);
@@ -632,7 +632,7 @@ export function holdBudgetAt(
    the accessibility tree or the tab order — only their paint is exchanged, and
    focus restores it at any progress.
 --------------------------------------------------------------------------- */
-export const MIX_START = 0.04;
+export const MIX_START = 0.12;
 export const MIX_END = 0.38;
 
 export function overlayMixAt(progress: number): number {
@@ -649,12 +649,28 @@ export function overlayMixAt(progress: number): number {
    at every footer size. It never touches the mass, the lensing gain or the step
    size — the vendored physics below the horizon is unchanged by it.
 
-   Growth is quartic on purpose: the horizon holds small while the sheet is
-   still recognisably a sheet, then closes fast. By the time it matters, the
-   infall has already contracted the image and the tidal term has already
-   stranded it.
+   The exponent of the growth curve is the tuning knob that decides whether the
+   flyers read as a *drop then snap* (a late, quartic close) or as a real
+   spaghettification (a field that reaches them while they are still large
+   enough to strand). The earlier quartic growth (`p⁴`) held the horizon small
+   for the first half of the fall, so the two flyers — which sit only ~34px and
+   ~120px from the singularity — spent their whole visible, still-opaque phase
+   far outside the tidal gradient and contracted nearly isotropically: the
+   texture warped late, after the live paint had already handed over, and the
+   sequence read as shrink-and-fade. Cubic growth (`p³`) reaches the same
+   overlay in the same distance but arrives at the flyers about half a playhead
+   earlier, so the tidal term bites them (and the frozen frame) while they are
+   still recognisably a headline and a button. The capture threshold still
+   swallows every texel at progress = 1; only the *timing* of the field's
+   arrival changes.
 --------------------------------------------------------------------------- */
 export const EFFECTIVE_HORIZON_RADIUS_PX = 26;
+
+/** The exponent of the horizon's growth curve: 3 (cubic) is the tuned value that
+ * lets the tidal gradient reach the flyers while they are still opaque, instead
+ * of waiting until the infall has already contracted the image. See the note on
+ * `EFFECTIVE_HORIZON_RADIUS_PX` above. */
+export const HORIZON_GROWTH_EXPONENT = 3;
 
 /** The overlay covers the sheet plus `veil` px of the seam above it, so the
  * horizon has to reach the farthest corner of THAT box, not of the sheet. */
@@ -682,8 +698,94 @@ export function coverRadius(extent: HorizonExtent): number {
 export function horizonRadiusAtProgress(progress: number, extent: HorizonExtent): number {
   const p = clamp01(progress);
   const cover = Math.max(EFFECTIVE_HORIZON_RADIUS_PX, coverRadius(extent));
-  const growth = p * p * p * p;
+  const growth = Math.pow(p, HORIZON_GROWTH_EXPONENT);
   return p * (EFFECTIVE_HORIZON_RADIUS_PX + (cover - EFFECTIVE_HORIZON_RADIUS_PX) * growth);
+}
+
+/* ---------------------------------------------------------------------------
+   The physical response — the black hole reacting to what it eats.
+
+   `flatSimulationConfig` is a STATIC file: `BlackHoleStage` reads the vendored
+   mass, lensing gain, Doppler exponent and disk rotation speed once and never
+   changes them, so the hole looks the same whether it is about to eat the
+   invitation or has finished. This section makes a subset of those parameters
+   respond to the SAME consumption playhead that drives the warp — one clock,
+   never a second — so the hole reads as a body that notices the bodies falling
+   into it.
+
+   These are pure functions of `p` that return EXCURSIONS (relative offsets from
+   the baseline in `flatSimulationConfig`), never absolute values: the caller
+   multiplies the vendored baseline by `(1 + excursion)` and flattens back to
+   the baseline when the hold is not engaged. Two properties are demanded:
+
+   · SMALL. Every excursion is a few percent, eased in and out, so the hole
+     moves but never jumps, and the sequence stays readable.
+   · RETURNS. At `p = 0` and at `p = 1` every excursion is exactly 0, so a
+     page that reuses this simulation instance after the hold is over sees the
+     unaltered static config. (The release happens at `p = 1`, so "by release"
+     is satisfied by construction.)
+
+   The timing is tied to the per-element crossing order: each flyer is a body
+   the hole has just swallowed, and each swallow is one bite. The nearest flyer
+   (the CTA) bites first, at `BITE_CENTRES[0]`; the far one (the headline) bites
+   second, at `BITE_CENTRES[1]`. A sum of two eased pulses — one per bite — reads
+   as "it just ate something" better than a flat ramp, and both have decayed to
+   nothing by the end of the consumption.
+--------------------------------------------------------------------------- */
+
+/** The playhead values of the two crossings, nearest flyer first. Measured off
+ * the reference scene with the cubic horizon growth, where the CTA (nearest,
+ * ~34px) crosses at p≈0.391 and the headline (~120px) at p≈0.525. The bite is
+ * centred a hair past its crossing, so the reaction lands as the body goes in
+ * rather than just before it. Art direction, not a constant from the shader. */
+export const BITE_CENTRES = [0.39, 0.53];
+
+/** Half-width of each bite's eased pulse, in playhead units. Narrow enough to
+ * read as an event, wide enough not to flicker at a frame's duration, and small
+ * enough that the two windows stay separate — a clear trough between the
+ * swallows, not one merged hump. */
+export const BITE_WIDTH = 0.11;
+
+/** Peak relative excursion per bite, as a fraction of the baseline. */
+export const MASS_BITE = 0.2; // +20% Schwarzschild mass → horizon grows
+export const LENSING_BITE = 0.14; // +14% bending
+export const DOPPLER_BITE = 0.22; // +22% Doppler boosting
+export const ROTATION_BITE = 0.28; // +28% disk rotation speed
+
+/** A smooth raised pulse centred at `centre`: 0 at both edges of the window and
+ * 1 at its centre, eased in and out with a smoothstep so neither end sticks. */
+export function bitePulseAt(progress: number, centre: number, width = BITE_WIDTH): number {
+  const rise = phase(progress, centre - width, centre);
+  const fall = 1 - phase(progress, centre, centre + width);
+  const smooth = (t: number): number => t * t * (3 - 2 * t);
+  return Math.max(0, smooth(rise) * smooth(fall));
+}
+
+export interface ConsumptionResponse {
+  /** Relative excursion of `blackHoleMass` (and with it the horizon radius). */
+  mass: number;
+  /** Relative excursion of `gravitationalLensing`. */
+  lensing: number;
+  /** Relative excursion of `dopplerStrength`. */
+  doppler: number;
+  /** Relative excursion of `diskRotationSpeed`. */
+  rotation: number;
+}
+
+/** The physical excursion at `progress`, as relative offsets from the baseline
+ * config. Exactly 0 at both ends of the consumption; a small, eased pair of
+ * bumps (one per swallowed body) in between. */
+export function consumptionResponseAt(progress: number): ConsumptionResponse {
+  const bites = Math.min(
+    1,
+    bitePulseAt(progress, BITE_CENTRES[0]) + bitePulseAt(progress, BITE_CENTRES[1]),
+  );
+  return {
+    mass: MASS_BITE * bites,
+    lensing: LENSING_BITE * bites,
+    doppler: DOPPLER_BITE * bites,
+    rotation: ROTATION_BITE * bites,
+  };
 }
 
 /* ---------------------------------------------------------------------------
@@ -698,8 +800,18 @@ export const FLYER_IDS: FlyerId[] = ['invite', 'cta'];
 /** A flyer has crossed once the horizon has grown past this fraction of its
  * current radius. Crossing retires its hit target; its paint is retired by its
  * own scale, which reaches zero at p = 1 (and is already far below a pixel by
- * the time it crosses). */
-export const CROSSING = 0.98;
+ * the time it crosses).
+ *
+ * This is a fraction of the CURRENT (contracted) radius, not a fixed pixel
+ * distance, so it is the one crossing knob that is safe to tune alongside the
+ * horizon's growth exponent: with cubic growth the horizon arrives at the
+ * flyers earlier, and a flyer with the old 0.98 threshold crossed before the
+ * paint handoff (`MIX_END`). Lowering the threshold to 0.70 keeps a flyer's
+ * hit target alive until it is genuinely inside the horizon — farther in than
+ * `0.98 · R` — so the geometry-only consumption still retires it in order of
+ * distance and *after* the paint exchange, which is the property the crossing
+ * test pins. */
+export const CROSSING = 0.7;
 
 /** The most a flyer may be stretched along the pull axis. A strand, not a
  * balloon: with the field as written the slope never gets small enough for this

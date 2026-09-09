@@ -2,9 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  BITE_CENTRES,
+  BITE_WIDTH,
   COLLAPSE_LEAD,
   COLLAPSE_TAIL,
   CROSSING,
+  DOPPLER_BITE,
   EFFECTIVE_HORIZON_RADIUS_PX,
   FLYER_IDS,
   HARD_FRAME_FLOOR,
@@ -25,13 +28,18 @@ import {
   SHEET_RUN_RATIO,
   SLOPE_FLOOR,
   SPACER_PAD,
+  LENSING_BITE,
+  MASS_BITE,
+  ROTATION_BITE,
   SWIRL_TURNS,
   TIDAL_CAP,
   TIDAL_FALLOFF,
   TIDAL_GAIN,
   TITLE_AIR_MAX,
   TITLE_AIR_MIN,
+  bitePulseAt,
   clamp01,
+  consumptionResponseAt,
   collapsibleHeight,
   collapseAt,
   consumptionTarget,
@@ -1037,6 +1045,92 @@ test('the horizon grows from a seed to every corner of the overlay', () => {
     const at: Point = { x: FLYERS[id].x + frame.x, y: FLYERS[id].y + frame.y };
     assert.ok(distance(at, SINGULARITY) <= cover, 'every flyer stays inside the overlay box');
   }
+});
+
+/* ---------------------------------------------------------------------------
+   The physical response — the black hole reacting to what it eats. These are
+   pure functions of the SAME playhead that drives the warp, so they hold even
+   when nothing is mounted: a unit test can prove the excursions are zero at
+   both ends, small throughout, and bite at the two crossings.
+--------------------------------------------------------------------------- */
+
+test('a bite is a single eased pulse: zero at both edges, one at its centre', () => {
+  const centre = BITE_CENTRES[0];
+  // The edges of the pulse's own window are exactly zero — no plateau that would
+  // make the two bites, or either bite and the rest, run together.
+  assert.equal(bitePulseAt(centre - BITE_WIDTH, centre), 0);
+  assert.equal(bitePulseAt(centre + BITE_WIDTH, centre), 0);
+  assert.ok(Math.abs(bitePulseAt(centre, centre) - 1) < 1e-12, 'a bite peaks at its centre');
+  // Outside the window it is zero everywhere, so the two bites never overlap a
+  // flyer that has not crossed or has already been eaten.
+  assert.equal(bitePulseAt(centre - BITE_WIDTH * 2, centre), 0);
+  assert.equal(bitePulseAt(centre + BITE_WIDTH * 2, centre), 0);
+  // It never goes negative, and it is finite.
+  for (const p of grid(0, 1, 200)) {
+    const value = bitePulseAt(p, centre);
+    assert.ok(Number.isFinite(value), `bitePulseAt(${p}) is not finite`);
+    assert.ok(value >= -1e-12 && value <= 1 + 1e-12, `bitePulseAt(${p}) = ${value} escaped [0, 1]`);
+  }
+});
+
+test('the physical response is small, eased, and exactly zero at both ends', () => {
+  // The excursions are relative offsets from the static config, so zero at p=0
+  // and p=1 is what hands the simulation instance back to `flatSimulationConfig`
+  // untouched — the property that keeps an unheld page from inheriting a hole
+  // that has already eaten something.
+  for (const p of [0, 1]) {
+    const r = consumptionResponseAt(p);
+    assert.equal(r.mass, 0, `mass at ${p}`);
+    assert.equal(r.lensing, 0, `lensing at ${p}`);
+    assert.equal(r.doppler, 0, `doppler at ${p}`);
+    assert.equal(r.rotation, 0, `rotation at ${p}`);
+  }
+  // Small: the hole moves by a few percent, never by an order of magnitude.
+  // These upper bounds are just the bite amplitudes — the art direction says the
+  // reaction must be a hint, not a lurch.
+  for (const p of grid(0, 1, 200)) {
+    const r = consumptionResponseAt(p);
+    assert.ok(Number.isFinite(r.mass), `mass(${p}) is not finite`);
+    assert.ok(r.mass >= 0 && r.mass <= MASS_BITE + 1e-12, `mass(${p}) = ${r.mass}`);
+    assert.ok(r.lensing >= 0 && r.lensing <= LENSING_BITE + 1e-12, `lensing(${p}) = ${r.lensing}`);
+    assert.ok(r.doppler >= 0 && r.doppler <= DOPPLER_BITE + 1e-12, `doppler(${p}) = ${r.doppler}`);
+    assert.ok(r.rotation >= 0 && r.rotation <= ROTATION_BITE + 1e-12, `rotation(${p}) = ${r.rotation}`);
+  }
+  // All four channels share one envelope: the sum of the two bites. So the
+  // reaction is simultaneous, which is what "the hole reacts to the swallow"
+  // means — the disk spins up at the same moment the horizon swells. The
+  // envelope is clamped at 1, so no single playhead can ask for more than one
+  // bite worth of excursion even where the two windows overlap.
+  for (const p of grid(0, 1, 200)) {
+    const r = consumptionResponseAt(p);
+    const envelope = Math.min(1, bitePulseAt(p, BITE_CENTRES[0]) + bitePulseAt(p, BITE_CENTRES[1]));
+    const expected = MASS_BITE * envelope;
+    assert.ok(
+      Math.abs(r.mass - expected) < 1e-12,
+      `mass(${p}) = ${r.mass}, expected ${expected} — the channels must not diverge`,
+    );
+  }
+});
+
+test('the hole bites once per swallow, nearest first, and has finished by the horizon', () => {
+  // Two bodies, two bites: nearest (CTA) first at BITE_CENTRES[0], then the
+  // headline at BITE_CENTRES[1]. The envelopes are distinct and each is a real
+  // peak, not part of a flat ramp.
+  assert.ok(BITE_CENTRES[0] < BITE_CENTRES[1], 'the nearest body must bite first');
+  const first = bitePulseAt(BITE_CENTRES[0], BITE_CENTRES[0]);
+  const second = bitePulseAt(BITE_CENTRES[1], BITE_CENTRES[1]);
+  assert.ok(first > 0.99 && second > 0.99, 'each crossing is its own peak');
+  // Between the two bites there is a trough where the hole relaxes back toward
+  // its baseline before the second body arrives — "eased in and out", not a
+  // single ramp.
+  const mid = (BITE_CENTRES[0] + BITE_CENTRES[1]) / 2;
+  const trough = bitePulseAt(mid, BITE_CENTRES[0]) + bitePulseAt(mid, BITE_CENTRES[1]);
+  assert.ok(trough < 1, 'the two bites must be separable, not summed into one');
+  // The second bite has fully decayed before the horizon swallows everything, so
+  // the release hands the config back to baseline with time to spare.
+  const last = BITE_CENTRES[1] + BITE_WIDTH;
+  assert.ok(last < 1, 'the body must be digested before the playhead leaves');
+  assert.equal(bitePulseAt(Math.min(1, last), BITE_CENTRES[1]), 0);
 });
 
 /* ==========================================================================

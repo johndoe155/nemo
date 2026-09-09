@@ -120,7 +120,7 @@ const triggerLine = (inset: number): string =>
  */
 export default function SignoffHorizon({ children }: { children: ReactNode }) {
   const rootRef = useRef<HTMLElement>(null);
-  const { canHoldSignoff, canWarpSignoff, frameRef, holdRef, cameraHoldRef } = useSingularityGate();
+  const { canHoldSignoff, canWarpSignoff, frameRef, holdRef, cameraHoldRef, consumptionRef } = useSingularityGate();
 
   // useLayoutEffect, not useEffect: the reservation has to be in the DOM's height
   // before ScrollTrigger measures anything (a first paint with the composition
@@ -285,6 +285,11 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           if (active === held) return;
           held = active;
           cameraHoldRef.current = active;
+          // The physical response (mass / lensing / Doppler / disk rotation) is
+          // gated on the SAME hold edge as the camera: while the reservation is
+          // growing the hole is eating, and every other state is the static
+          // config. `BlackHoleStage` reads `active` and `progress` per frame.
+          consumptionRef.current.active = active;
           setAnchoring(active);
         };
 
@@ -302,6 +307,8 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           afterRefresh();
           handBackDocument();
           cameraHoldRef.current = false;
+          consumptionRef.current.active = false;
+          consumptionRef.current.progress = 0;
           held = false;
           // The canvas is appended by hand, so React never sees it, and the WebGL2
           // context is ours to give back. Both used to leak: no dispose anywhere,
@@ -368,6 +375,8 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
 
         const releaseLayout = () => {
           cameraHoldRef.current = false;
+          consumptionRef.current.active = false;
+          consumptionRef.current.progress = 0;
           held = false;
           setAnchoring(false);
           // The reservation is the ONE thing this effect adds to the layout, so it
@@ -604,6 +613,10 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             // below the hem and no gap opens under the sheet while the reader
             // waits for the capture.
             const p = clamp01(capturing ? 0 : progress);
+            // The simulation's physical response reads this playhead each frame.
+            // Written here, on the same clock the warp is painted with, so the
+            // hole reacts to the consumption at the moment it happens.
+            consumptionRef.current.progress = p;
             const holding = held || p > 0;
             // The hole is rigidly static for as long as the screen is locked, and
             // its cinematic camera holds with it — `applyHold` owns that flag, on
@@ -968,7 +981,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
       clearFrameFit(frameRef.current);
       restorePaint();
     };
-  }, [canHoldSignoff, canWarpSignoff, frameRef, holdRef, cameraHoldRef]);
+  }, [canHoldSignoff, canWarpSignoff, frameRef, holdRef, cameraHoldRef, consumptionRef]);
 
   return <footer ref={rootRef} className="footer signoff" aria-label="Closing invitation">{children}</footer>;
 }

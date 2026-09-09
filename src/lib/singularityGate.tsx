@@ -59,6 +59,14 @@ interface SingularityGate {
    * with the footer) because it has to sit above the composition, and it is handed
    * across here for the same reason `frameRef` is. */
   holdRef: RefObject<HTMLDivElement>;
+  /** The consumption playhead and whether the hold is engaged, written by
+   * `SignoffHorizon` and read per frame by `BlackHoleStage` to drive the
+   * simulation's physical response (mass / lensing / Doppler / disk rotation).
+   * A ref rather than state on purpose: the render loop reads it once per frame
+   * and nothing anywhere needs to re-render because of it. Only the hold's OWN
+   * clock (`p`) feeds it — see `consumptionResponseAt` in
+   * lib/spaghettification.ts, which turns this into the uniform excursions. */
+  consumptionRef: MutableRefObject<{ active: boolean; progress: number }>;
   reportStatus: (status: BlackHoleStageStatus) => void;
   /** True for exactly as long as the hold is keeping the screen locked. The black
    * hole has to be rigidly static while the invitation falls into it, and "static"
@@ -84,6 +92,7 @@ export function SingularityProvider({ children }: { children: ReactNode }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const holdRef = useRef<HTMLDivElement>(null);
   const cameraHoldRef = useRef(false);
+  const consumptionRef = useRef({ active: false, progress: 0 });
   const canHoldSignoff = !isMobile && !reduced;
   const value = useMemo(
     () => ({
@@ -93,6 +102,7 @@ export function SingularityProvider({ children }: { children: ReactNode }) {
       canWarpSignoff: canHoldSignoff && status === 'live',
       frameRef,
       holdRef,
+      consumptionRef,
       reportStatus,
       cameraHoldRef,
     }),

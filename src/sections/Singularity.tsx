@@ -30,7 +30,7 @@ import { useSingularityGate } from '../lib/singularityGate';
    ========================================================================== */
 
 export default function Singularity() {
-  const { isMobile, frameRef, holdRef, reportStatus, cameraHoldRef } = useSingularityGate();
+  const { isMobile, frameRef, holdRef, reportStatus, cameraHoldRef, consumptionRef } = useSingularityGate();
 
   // On mobile: render nothing — the section must appear as if it was never
   // implemented. No DOM, no canvas, no observers, no heavy GPU init, and no
@@ -73,7 +73,11 @@ export default function Singularity() {
             other half of "static": the box is held by the reservation, the framing
             inside it by the stage (see components/SignoffHorizon.tsx). */}
         <div className="bh-frame" ref={frameRef}>
-          <BlackHoleStage onStatusChange={reportStatus} cameraHoldRef={cameraHoldRef} />
+          <BlackHoleStage
+            onStatusChange={reportStatus}
+            cameraHoldRef={cameraHoldRef}
+            consumptionRef={consumptionRef}
+          />
         </div>
       </section>
     </>
