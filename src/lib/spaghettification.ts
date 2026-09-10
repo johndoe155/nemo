@@ -852,24 +852,100 @@ export function lensSourceAt(vx: number, vy: number, field: LensField): Point {
   };
 }
 
-/** The FORWARD image of a rest point: where a source pixel lands. The inverse
- * map has no closed form (`tidal` is evaluated at the output radius), so the
- * output radius is solved by fixed-point iteration — `r = f(r_out)` converges
- * in a few steps wherever the field is unsaturated, and the region that
- * consumes this only ever needs ~1px of accuracy. The direction counter-rotates
- * by the drag at the solved radius. */
-export function lensForwardAt(vx: number, vy: number, field: LensField, steps = 3): Point {
+/** Per-field prepaid terms for forward solves: the throat location and the
+ * tidal coefficient `gain·R^F`, so each root costs a handful of small pows
+ * instead of re-deriving the field per point. */
+interface LensForwardPrep {
+  /** The hook of P — where P'(out) = 0 — or 0 when the field is monotone
+   * (rest, or the cap binding above the throat's tide). */
+  throat: number;
+  /** gain·horizon^TIDAL_FALLOFF — the k in t(out) = k·out^(−F). */
+  coefficient: number;
+  hasField: boolean;
+}
+
+/** The tide of an output radius, reused by the solver, its derivative and the
+ * final drag. */
+const tideAt = (out: number, field: LensField, prep?: LensForwardPrep): number => {
+  if (!(field.horizon > 0) || !(field.gain > 0)) return 0;
+  const k = prep ? prep.coefficient : field.gain * Math.pow(field.horizon, TIDAL_FALLOFF);
+  return Math.min(TIDAL_CAP, k * Math.pow(Math.max(out, 1e-4), -TIDAL_FALLOFF));
+};
+
+function prepLensForward(field: LensField): LensForwardPrep {
+  const hasField = field.horizon > 0 && field.gain > 0;
+  if (!hasField) return { throat: 0, coefficient: 0, hasField };
+  const coefficient = field.gain * Math.pow(field.horizon, TIDAL_FALLOFF);
+  // P'(out) = (1 + infall) − (F−1)·t(out) = 0 ⟹ t(out*) = (1+infall)/(F−1).
+  // Above TIDAL_CAP the derivative at fully-unclamped strength is irrelevant:
+  // a throat whose demanded tide exceeds the cap never forms — P is monotone.
+  const demand = (1 + field.infall) / (TIDAL_FALLOFF - 1);
+  const throat =
+    demand <= TIDAL_CAP
+      ? Math.pow((coefficient * (TIDAL_FALLOFF - 1)) / Math.max(1 + field.infall, 1e-9), 1 / TIDAL_FALLOFF)
+      : 0;
+  return { throat, coefficient, hasField };
+}
+
+/** One forward radius: the rising-branch root of P(out) = r, or 0 when the
+ * rest point has been captured (r < min P — the physical content of "the
+ * horizon ate this pixel first"). Newton from a conservative seed with hard
+ * branch guards: P is smooth and strictly increasing above the throat, so a
+ * dozen guarded steps land sub-milli-pixel accuracy. */
+function solveForwardRadius(r: number, field: LensField, prep: LensForwardPrep): number {
+  if (!prep.hasField || !(r > 1e-4)) return Math.max(r, 0);
+  const lo = Math.max(prep.throat, 1e-6);
+  if (prep.throat > 0) {
+    const floorValue = prep.throat * (1 + field.infall + tideAt(prep.throat, field, prep));
+    if (floorValue > r) return 0; // captured
+  }
+  // `P(r) = r·(1 + i + t(r)) ≥ r`, so r/(1+i) sits below the root — the seed
+  // always leans toward the throat, never past the root downwards.
+  let out = Math.max(r / (1 + field.infall), lo * (1 + 1e-3));
+  for (let i = 0; i < 12; i += 1) {
+    const tide = tideAt(out, field, prep);
+    const error = out * (1 + field.infall + tide) - r;
+    if (Math.abs(error) < r * 1e-5) break;
+    // Slope of P: (1 + infall) − (F−1)·t(out), floor-clamped so a stray
+    // evaluation landing in the falling branch cannot flip the step's sign.
+    const slope = Math.max(1 + field.infall - (TIDAL_FALLOFF - 1) * tide, 1e-6);
+    const next = out - error / slope;
+    out = Number.isFinite(next) ? Math.min(Math.max(next, lo * 1.0001), r * 1.5) : lo;
+  }
+  return out;
+}
+
+/** The FORWARD image of a rest point: where a source pixel lands. The implicit
+ * equation is `out·(1 + infall + tidal(out)) = r` — transcendental, and NOT
+ * convex in `out`: the tidal term `out^(1−TIDAL_FALLOFF)` runs to +∞ as
+ * `out → 0⁺`, descends through a throat, and rises. That throat is the
+ * physical capture boundary — rest radii with `r < min P` have NO forward
+ * image on this side of the horizon (the shader shows the same thing as its
+ * void cells) — and a naive fixed-point iteration near it diverges or roots
+ * on the wrong branch, which is exactly the garbage the first mosaic build
+ * measured. This solver locates the throat analytically, roots only on the
+ * rising branch, and reports capture as {0, 0} (the hull-following region
+ * then sees the singularity, which is correct). */
+export function lensForwardAt(vx: number, vy: number, field: LensField): Point {
+  const prep = prepLensForward(field);
+  return lensForwardWithPrep(vx, vy, field, prep);
+}
+
+/** As `lensForwardAt`, for the batch paths (the region hull, the mosaic). */
+export function lensForwardBatchAt(vectors: readonly Point[], field: LensField): Point[] {
+  const prep = prepLensForward(field);
+  return vectors.map((v) => lensForwardWithPrep(v.x, v.y, field, prep));
+}
+
+function lensForwardWithPrep(vx: number, vy: number, field: LensField, prep: LensForwardPrep): Point {
   const r = Math.hypot(vx, vy);
   if (!(r > 1e-4)) return { x: 0, y: 0 };
-  const tide = (radius: number): number =>
-    field.horizon > 0
-      ? Math.min(TIDAL_CAP, field.gain * Math.pow(field.horizon / Math.max(radius, 1e-4), TIDAL_FALLOFF))
-      : 0;
-  let out = r / (1 + field.infall + tide(r / (1 + field.infall)));
-  for (let i = 1; i < steps; i += 1) {
-    out = r / (1 + field.infall + tide(out));
-  }
-  const drag = -tide(out) * field.swirl * 2 * Math.PI;
+  const out = solveForwardRadius(r, field, prep);
+  if (!(out > 0)) return { x: 0, y: 0 };
+  // Undo the drag: the inverse-map rotation is +θ(out), so the forward image
+  // counter-rotates by it.
+  const tide = tideAt(out, field, prep);
+  const drag = -tide * field.swirl * 2 * Math.PI;
   const cosine = Math.cos(drag);
   const sine = Math.sin(drag);
   const ox = (vx / r) * out;

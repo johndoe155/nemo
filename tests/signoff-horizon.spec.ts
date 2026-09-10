@@ -33,11 +33,6 @@ const invite = '[data-horizon-item="invite"]';
 const cta = '[data-horizon-item="cta"]';
 const FLYERS = [invite, cta] as const;
 
-/** The flyer ids in FLYERS order: the link between a `data-horizon-item` and
- * its displacement filter (`#horizon-lens-<id>`), mirroring `FLYER_SELECTOR`
- * in the component. */
-const FLYER_IDS = ['invite', 'cta'] as const;
-
 /** The hold and the arm line. One trigger holds both boxes — the black hole's
  * container and the sign-off sheet — to the viewport for the whole consumption,
  * and it owns the scrub. There is no second trigger because the release must not
@@ -823,9 +818,9 @@ test('one snapshot/texture; reversible playhead; geometric full consumption', as
   for (const selector of FLYERS) {
     const flyer = rest.flyers.find((f) => f.selector === selector)!;
     expect(flyer.opacity).toBe(1);
-    // The field is the identity at rest: no transform was ever written (the
-    // warp is a filter, not a matrix), and the lens has not been engaged, or
-    // the handoff to the pinned scene would move the type.
+    // The field is the identity at rest: no transform was ever written, and
+    // no filter either (V4: the SVG lens substrate is retired) — or the
+    // handoff to the pinned scene would move the type.
     expect(parseMatrix(flyer.transform)).toEqual([1, 0, 0, 1, 0, 0]);
     expect(flyer.filter).toBe('none');
   }
@@ -903,10 +898,11 @@ test('one snapshot/texture; reversible playhead; geometric full consumption', as
 
 /* ==========================================================================
    Requirements 2 and 3 — spaghettification, and translation into the point,
-   as a DISPLACEMENT FIELD: no affine transform is ever written on a flyer.
+   rendered ON THE OVERLAY ONLY: no affine transform and (V4) no SVG filter
+   is ever written on a live flyer.
    ======================================================================== */
 
-test('the DOM warp is a lensing field over the raster — never an affine skew', async ({ page }) => {
+test('the DOM warp lives on the overlay — never an affine skew, never a filter', async ({ page }) => {
   await open(page);
   await scrollProgress(page, 0);
   const rest = await readScene(page);
@@ -917,39 +913,10 @@ test('the DOM warp is a lensing field over the raster — never an affine skew',
   const veil = sheetBox!.y - canvasBox!.y;
   expect(veil).toBeGreaterThan(0);
 
-  /** Read the live lens for one flyer: its ACTIVE chain (the `-a`/`-b` filter
-   * the element's computed `filter` currently references — the ping-pong is
-   * the invalidation fix), its region (bbox units), the displacement scale in
-   * px, and a fingerprint of the baked map's URL. */
-  const readLens = (selector: string) =>
-    page.evaluate((sel) => {
-      const el = document.querySelector<HTMLElement>(sel)!;
-      const filterDecl = getComputedStyle(el).filter;
-      const match = /url\((['"]?)#([^'")]+)\1\)/.exec(filterDecl);
-      if (!match) return null;
-      const filterEl = document.getElementById(match[2]);
-      if (!filterEl) return null;
-      const image = filterEl.querySelector('feImage')!;
-      const displace = filterEl.querySelector('feDisplacementMap')!;
-      const href = image.getAttribute('href') ?? '';
-      let hash = 0;
-      for (let i = 0; i < href.length; i += 1) hash = ((hash << 5) - hash + href.charCodeAt(i)) | 0;
-      return {
-        id: match[2],
-        x: parseFloat(filterEl.getAttribute('x') ?? '0'),
-        y: parseFloat(filterEl.getAttribute('y') ?? '0'),
-        width: parseFloat(filterEl.getAttribute('width') ?? '1'),
-        height: parseFloat(filterEl.getAttribute('height') ?? '1'),
-        scale: parseFloat(displace.getAttribute('scale') ?? '0'),
-        href: href.slice(0, 22),
-        bytes: href.length,
-        hash,
-      };
-    }, selector);
-
-  type LiveLens = NonNullable<Awaited<ReturnType<typeof readLens>>>;
-  const invites: LiveLens[] = [];
-  const ctas: LiveLens[] = [];
+  // Which renderer took the snapshot is inspectable: the heavyweight fixture
+  // is GPU-armed, so this is the shader — but the contract the suite asserts
+  // below is identical for the 2D mosaic fallback.
+  await expect(page.locator(root)).toHaveAttribute('data-horizon-renderer', /^(shader|mosaic)$/);
 
   for (const progress of [0.15, 0.4, 0.65, 0.85]) {
     await scrollProgress(page, progress);
@@ -961,9 +928,15 @@ test('the DOM warp is a lensing field over the raster — never an affine skew',
 
       // THE CORRECTION, asserted first: a linear skew is a transform, and the
       // warp here provably is not one. The matrix is the identity at every
-      // playhead — the distortion lives entirely in the raster's own filter,
+      // playhead — the distortion lives entirely in the overlay's raster,
       // where curvature is expressible.
       expect(parseMatrix(flyer.transform)).toEqual([1, 0, 0, 1, 0, 0]);
+
+      // V4's second rule: no SVG filter on a live flyer, EVER. The
+      // feDisplacementMap substrate renders as transparent black on engines
+      // whose feImage does not paint data-URL maps (user-verified), so it is
+      // gone for good — this assertion is the tripwire keeping it gone.
+      expect(flyer.filter).toBe('none');
 
       // The layout box is the rest box: the lift alone positions the flyer,
       // and the fall never becomes a layout motion.
@@ -972,59 +945,26 @@ test('the DOM warp is a lensing field over the raster — never an affine skew',
       expect(flyer.offsetWidth).toBe(at.offsetWidth);
       expect(flyer.offsetHeight).toBe(at.offsetHeight);
 
-      // The lens. While the live paint is on (the crossfade completes at
-      // MIX_END = 0.38; afterwards the live layer is invisible and the filter
-      // is stood down), the flyer is warped by ITS OWN displacement filter.
-      const id = FLYER_IDS[index];
-      const lensData = await readLens(selector);
-      if (progress <= 0.15) {
-        // The element references ONE chain of the flyer's ping-pong pair
-        // (`#horizon-lens-<id>-[ab]`), and that chain is live, not stood down.
-        expect(lensData).not.toBeNull();
-        expect(lensData!.id).toMatch(new RegExp(`^horizon-lens-${id}-[ab]$`));
-        // An identity warp (scale 0) would mean "no field present": the old
-        // bug in another clothes. Mid-fall the range is tens to hundreds of
-        // px; require a real, growing field — and never a bloated one.
-        expect(lensData!.scale).toBeGreaterThan(0);
-        expect(lensData!.scale).toBeLessThan(2200);
-        // The map is a re-baked PNG, not a re-used one.
-        expect(lensData!.href).toBe('data:image/png;base64,');
-        expect(lensData!.bytes).toBeGreaterThan(200);
-      }
       if (progress >= 0.4) {
         // The frozen frame owns the paint: live layer fully exchanged.
         expect(flyer.opacity).toBe(0);
       }
-      if (lensData) (id === 'invite' ? invites : ctas).push(lensData);
     }
   }
 
-  // The field is BAKED per filmstrip step, not re-scaled: the map's bytes
-  // change whenever the step changes (a static map whose scale grows — the
-  // old linear bow — would keep one hash and only move the scale). Note the
-  // fixture is ARMED: the live paint is gone past MIX_END ≈ 0.38, so only
-  // the bakes below that point ever make it into the DOM at different
-  // playheads — two samples apart in the strip is the provable minimum.
-  for (const series of [invites, ctas]) {
-    expect(new Set(series.map((lensData) => lensData.hash)).size).toBeGreaterThanOrEqual(2);
-  }
-  // The filter region TRACKS the consumption instead of sitting over the
-  // rest box forever: it lifts toward the singularity (its top edge climbs,
-  // in bbox units) and it collapses as the last of the content falls in.
-  const inviteTracked = invites[invites.length - 1];
-  expect(inviteTracked.y).toBeLessThanOrEqual(invites[0].y + 0.001);
-  expect(inviteTracked.height).toBeLessThan(invites[0].height);
-
-  // At the end of the fall every flyer has crossed the event horizon — not
-  // "scaled to zero" in a matrix (there is no matrix), but consumed: no
-  // visible paint of its own, no pointer target left over the hole, and the
-  // frozen frame's geometry has swallowed every texel (asserted above).
+  // The overlay canvas tracks the sheet through the fall: same width, sheet +
+  // veil of headroom, never a straggler slab over the rest box — and at the
+  // end of the fall every flyer has crossed the event horizon: not "scaled to
+  // zero" in a matrix (there is no matrix), but consumed: no visible paint of
+  // its own, no pointer target left over the hole, and the frozen frame's
+  // geometry swallowing every texel (asserted by the snapshot test above).
   await scrollProgress(page, 1);
   const end = await readScene(page);
   for (const index of [0, 1]) {
     const flyer = end.flyers[index];
     const at = rest.flyers[index];
     expect(parseMatrix(flyer.transform)).toEqual([1, 0, 0, 1, 0, 0]);
+    expect(flyer.filter).toBe('none');
     expect(flyer.offsetLeft).toBe(at.offsetLeft);
     expect(flyer.offsetTop).toBe(at.offsetTop);
     expect(flyer.pointerEvents).toBe('none');

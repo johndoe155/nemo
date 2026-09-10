@@ -310,3 +310,65 @@ rebuilds the strip without ever flipping mid-decode.
 `tests/signoff-horizon.spec.ts` (readScene + the affine-matrix contract replaced
 by the lensing contract), `harness/spaghettification.html` (+ its new sibling
 `harness/spaghettification.ts`), this write-up.
+
+## V4 — kill the SVG filter; draw the field with `drawImage` ("rigid anchoring, vanished text")
+
+The three V3.x rounds each removed a real mechanism (async map fetch,
+in-place attribute mutation, mixed coordinate spaces), and each time the
+failure grew quieter — until the user's two screens said end of the road:
+on the real site the text stayed rigidly anchored and was left standing
+while the curtain passed; in the harness the probe tracked its (correct)
+dashed hull and then vanished without warping. A displacement map that
+samples as transparent black (−range on both channels: every output pixel
+reads the void) is exactly that fingerprint. The feImage/data-URL
+displacement input does not paint on live HTML-element filters in that
+engine, in any of the three formulations. **The substrate is dead; stop
+negotiating with it.**
+
+- **The fallback renderer is a 2D mosaic** (`src/lib/signoffMosaic.ts`):
+  the same one-shot snapshot the WebGL warp consumes, sliced into 3px
+  columns × 8 row control points and re-composited with `drawImage` —
+  destination points from the SAME `lensForwardAt` math the shader's map
+  is baked with. Every engine that can rasterise the snapshot can draw
+  the mosaic, and at p = 0 the slice list is provably the identity
+  (unit-tested: source rect = destination rect to the pixel, so the
+  crossfade `mix` ramps the live DOM out and the mosaic in seamlessly).
+- **`arm()` no longer asks the GPU's permission.** The capture runs
+  whenever the hold can run; `canWarpSignoff` only chooses the renderer:
+  shader when the stage is live, mosaic otherwise, mosaic again if the
+  shader throws on construction. `data-horizon-renderer` says which one
+  won, so a stale overlay can never read as a stale pin.
+- **The ultimate degrade recedes, never stands.** With no overlay at all
+  (capture timed out, renderer-less build), the live flyers fade out on
+  `1 − overlayMixAt(p)` while the hold, the fall-under-the-curtain, the
+  collapse and the release run untouched. Rigid anchored text under a
+  passing curtain is the one failure mode this section is no longer
+  allowed to have.
+- **A per-frame cost fix hidden in a solver rewrite.** The mosaic exposed
+  that `lensForwardAt`'s three-step fixed-point inversion diverges near
+  the horizon: P(out) = out·(1+i+t(out)) is genuinely transcendental and
+  NON-monotone (the uncapped tidal term out^(1−F) drives P → +∞ as
+  out → 0⁺, falls through a throat, then rises — rest radii below
+  P(throat) have already crossed the horizon). The new solver
+  (`prepLensForward`/`solveForwardRadius`) locates the throat
+  analytically, runs 12 guarded Newton steps from a conservative seed,
+  and returns the capture (0, 0) honestly — which is also what now clamps
+  the forward hull, so a late-fall slice list collapses into the point
+  instead of diverging into NaN bleed.
+
+The harness is rewritten on the same architecture (procedural rest-pose
+raster paint in place of html2canvas, production mosaic production
+mix-exchange), so what the slider shows is WHAT THE FALLBACK RENDERS —
+not a promising approximation of it.
+
+## Files touched (V4)
+
+`src/lib/spaghettification.ts` (throat-aware forward solver +
+`lensForwardBatchAt`), `src/lib/signoffMosaic.ts` (new — the 2D
+fallback), `src/lib/signoffLens.ts` (**deleted**, with its tests — the
+substrate is retired for good), `src/components/SignoffHorizon.tsx`
+(overlay abstraction, renderer choice, always-on capture, opacity coda),
+`src/styles/signoff-horizon.css` (`will-change: opacity`; filter prose
+gone), `tests/unit/signoffMosaic.test.ts` (new), `harness/spaghettification.*`
+(rewritten), `tests/signoff-horizon.spec.ts` (the warp test asserts the
+new DOM contract), this write-up.

@@ -5,25 +5,29 @@
   Served by the repo's own dev server (`npm run dev`, port 5173 — vite.Config
   allowlists it, and `base:"./"` keeps the bare-module rewrite relative), so
   this file IMPORTS THE PRODUCTION FIELD from src/lib/spaghettification.ts.
-  No math or constants are duplicated here: what you scrub is the function the
-  live flyers' feDisplacementMap is baked from — same law, same constants —
-  plus the lens-map plumbing from src/lib/signoffLens.ts, wired EXACTLY the
-  way SignoffHorizon.tsx wires the real #horizon-lens-{invite,cta} pair.
+  No math or constants are duplicated here: what you scrub is the same
+  `lensFieldAt` the live overlay draws from — plus the PRODUCTION fallback
+  renderer from src/lib/signoffMosaic.ts, wired the way SignoffHorizon.tsx's
+  unarmed path wires it: one rest-pose raster (painted procedurally with the
+  probe's computed font, standing in for html2canvas), one overlay canvas,
+  `draw(p, geometry, flyers)` per playhead, the live DOM crossfaded out on the
+  same mix the sheet CSS uses. NO SVG FILTER anywhere: that substrate is
+  permanently retired (engines sampled feImage data-URL displacement maps as
+  transparent black — three fix-rounds later the verdict stood), so what you
+  scrub here is what the real fallback paints.
 
   The probe is a stand-in flyer (a noun-scenario headline in the sheet's own
   type), positioned and sized the way the fixture places them relative to a
   singularity directly above. You drag the playhead handle and watch, at any
   speed, in direct-Zoom:
 
-  1. the lift carry the probe toward the singularity (the pull axis),
-  2. its TOP stretch exponentially further than its bottom (tidal headroom —
-     the centerline swallows the late infall per INVALL_SATURATION),
+  1. the fall carry the probe toward the singularity (the pull axis),
+  2. its NEAR edge lead the far one exponentially (the tide differential),
   3. its baseline arch into the quadratic term (concentric with the disk, NOT
      a list — the frame-drag swirl is kept subordinate),
   4. the texture pinching off and collapsing INTO the point at the horizon,
-  5. the filter region — heightened hull of the rest perimeter's forward
-     image, padded straddle, bottom clamped at the disk's far hem — clamp
-     onto the content's shrinking band on the pull axis.
+  5. the dashed audit rect — the forward hull of the rest perimeter
+     (lensRegionAt) — ride the same fall.
 
   The camera's own frame ("the camera sprite") is hinted by the screen-fixed
   outline behind the hole; the playhead drive below stands in appearance only
@@ -47,17 +51,17 @@
     <aside id="needs">
       <h1>Sign-off lensing invariants</h1>
       <ul>
-        <li>No affine transform on the flyer — the distortion is a displacement field (inspect: <code>transform</code> stays empty, <code>filter</code> flips between <code>url(#horizon-lens-invite-a)</code> and <code>url(#horizon-lens-invite-b)</code> as you scrub).</li>
-        <li>Concentric arching — the baseline bows toward the hole (hatched guides run concentric with the disk; the quadratic coefficient is read off the map below).</li>
-        <li>Exponential near-edge stretch — the upper rows of the type attenuate upward faster than the lower ones sag.</li>
-        <li>Unified cohesion — the raster moves as one object; the void above it that the map sources lies outside the element's box and erases itself, so the letterforms pinch off and dive into the point.</li>
-        <li>Region tracking — the dashed rect is the filter region (bbox units): it rides the fall and collapses with the content instead of leaving a fixed slab over the rest position.</li>
+        <li>Neither transform nor filter on the flyer — the warp lives on the overlay canvas (inspect: the probe keeps <code>transform</code>/<code>filter</code> empty; only <code>opacity</code> moves, as the crossfade mix).</li>
+        <li>Concentric arching — the baseline bows toward the hole (hatched guides run concentric with the disk; the quadratic coefficient is read out below).</li>
+        <li>Exponential near-edge differential — the rows nearest the horizon keep more of their destination height than the far rows as the sheet contracts.</li>
+        <li>Unified cohesion — the raster moves as one object; slices whose destination height collapses erase themselves, so the letterforms pinch off and dive into the point rather than tearing.</li>
+        <li>Region audit — the dashed rect is the forward hull (<code>lensRegionAt</code>): it rides the fall and collapses with the content instead of leaving a fixed slab over the rest position.</li>
       </ul>
     </aside>
 
     <div id="scrub">
       <input id="playhead" type="range" min="0" max="1" step="0.001" value="0" />
-      <output id="readout">p = 0.000 · rest (identity map, scale 0, filter off)</output>
+      <output id="readout">p = 0.000 · rest (identity mosaic verified, live DOM shown)</output>
     </div>
 
     <style>
@@ -124,7 +128,7 @@
         -webkit-background-clip: text;
         background-clip: text;
         -webkit-text-fill-color: transparent;
-        will-change: opacity, filter;
+        will-change: opacity;
       }
       #region {
         position: absolute;

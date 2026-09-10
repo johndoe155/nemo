@@ -24,14 +24,7 @@ import {
   sheetHeightAt,
   type FlyerId,
 } from '../lib/spaghettification';
-import {
-  disposeFlyerLenses,
-  mountFlyerLenses,
-  paintFlyerLens,
-  silenceFlyerLenses,
-  type FlyerLenses,
-} from '../lib/signoffLens';
-import type { EventHorizonWarp } from '../three/eventHorizonWarp';
+import { createSignoffMosaic, type SignoffOverlay } from '../lib/signoffMosaic';
 import '../styles/signoff-horizon.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -142,6 +135,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
       sheet.style.removeProperty('--horizon-mix');
       sheet.style.removeProperty('--horizon-veil');
       delete sheet.dataset.horizonPaint;
+      delete sheet.dataset.horizonRenderer;
       delete sheet.dataset.horizonProgress;
       delete sheet.dataset.horizonState;
       delete sheet.dataset.horizonScene;
@@ -214,11 +208,15 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
          * borrowed. Handed back by `handBackDocument`, which `resync` and `release`
          * both call. */
         let measuringMinHeight: string | null = null;
-        let warp: EventHorizonWarp | null = null;
-        /** The two live gravitational lenses (one filter per flyer). Mounted
-         * with the lift, disposed with the scene; the field itself is baked
-         * per playhead by `paintFlyerLens`. */
-        let lenses: FlyerLenses | null = null;
+        /** The frozen frame, whichever renderer built it: the WebGL2 shader
+         * overlay when the stage's capability says so, or the 2D mosaic — the
+         * SAME field, rendered as column slices out of the one-shot snapshot,
+         * on every engine with a working canvas. Never an SVG filter: three
+         * rounds of feDisplacementMap fixes (async cache, ping-pong chains,
+         * a unified coordinate space) all produced clean maps that engines
+         * then sampled as transparent black, so that substrate is gone for
+         * good and the live flyers never carry a filter again. */
+        let overlay: SignoffOverlay | null = null;
         let holdTrigger: ScrollTrigger | null = null;
         let armTrigger: ScrollTrigger | null = null;
         let resizeObserver: ResizeObserver | null = null;
@@ -324,10 +322,8 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           // context is ours to give back. Both used to leak: no dispose anywhere,
           // which a status flip (live → error → live) would pay for with a fresh
           // context per activation and a stale overlay over a plain footer.
-          warp?.dispose();
-          warp = null;
-          if (lenses) disposeFlyerLenses(lenses);
-          lenses = null;
+          overlay?.dispose();
+          overlay = null;
           armTrigger?.kill();
           armTrigger = null;
           holdTrigger?.kill();
@@ -358,10 +354,6 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
         const liftFlyers = () => {
           if (lifted || !scene) return;
           lifted = true;
-          // The lenses mount with the lift: from here on the warp is a
-          // displacement field over each flyer's raster — the shader's own
-          // field, never an affine transform on a bounding box.
-          if (!lenses) lenses = mountFlyerLenses(sheet);
           anchor.style.height = `${scene.anchorHeight}px`;
           for (const id of FLYER_IDS) {
             const el = flyerEls[id];
@@ -408,7 +400,6 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           sheet.style.removeProperty('--horizon-veil');
           sheetVeil = '';
           anchor.style.marginTop = '';
-          if (lenses) silenceFlyerLenses(lenses);
           for (const id of FLYER_IDS) {
             flyerEls[id].style.transform = '';
             flyerEls[id].style.filter = '';
@@ -533,17 +524,17 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           resync();
         };
 
-        /** The capture and the warp, lost. `applyFrame` then paints the live
-         * flyers with no alpha exchange, and the next approach of the footer can
-         * arm a fresh capture (the layout changed, so the old raster is no longer
-         * the page it depicts). */
+        /** The capture and the overlay, lost. `applyFrame` then paints the
+         * flyers receding on their own (the opacity coda), and the next
+         * approach of the footer can arm a fresh capture (the layout changed,
+         * so the old raster is no longer the page it depicts). */
         const retireOverlay = (reason: string, error?: unknown) => {
           if (released || overlayOff) return;
           overlayOff = true;
           armed = false;
           capturedScene = null;
-          warp?.dispose();
-          warp = null;
+          overlay?.dispose();
+          overlay = null;
           if (error) console.info(`[signoff-horizon] ${reason}`, error);
           else console.info(`[signoff-horizon] ${reason}`);
           // Say WHAT is running, not merely that the paint is gone: a reader (and
@@ -553,6 +544,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           if (held) sheet.dataset.horizonState = 'hold';
           else delete sheet.dataset.horizonState;
           delete sheet.dataset.horizonPaint;
+          delete sheet.dataset.horizonRenderer;
         };
 
         /* ---- the playhead: scroll-domain, exact at both ends ------------- */
@@ -686,30 +678,22 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             // at any playhead lag, and why a release that lands on a still-
             // settling fall moves nothing.
 
-            // The flyers: the shader's own field, evaluated per fragment over
-            // each flyer's raster by an SVG displacement map — radial, tidal,
-            // continuous. THE LINEAR SKEW IS DELIBERATELY GONE: no affine
-            // transform is ever written on a flyer. A 2D transform on one
-            // bounding box can translate/rotate/scale/shear and nothing else,
-            // which is exactly the flat look this section kept being
-            // criticised for; what remains — the word arching up concentric
-            // with the accretion disk and stranding into it — provably cannot
-            // be expressed by one. `flyerFrameAt` survives for the two scalar
-            // envelope facts (paint exchange, crossing), not for paint.
+            // The flyers: never a transform, and (V4) NEVER A FILTER. A 2D
+            // transform on one bounding box can translate/rotate/scale/shear
+            // and nothing else, which is exactly the flat look this section
+            // kept being criticised for; and the SVG displacement stack that
+            // used to carry the warp renders void on engines whose feImage
+            // does not paint a data-URL map (user-verified three times). What
+            // remains on the live rasters is the scalar envelope
+            // `flyerFrameAt` provides, and the warp itself is rendered by the
+            // overlay — shader or mosaic — against the same snapshot.
             const geometry = sceneGeometry(current);
             const radius = horizonRadiusAtProgress(p, geometry);
-            const lensOn = holding && p > 0 && lenses !== null;
             const singularity = {
               x: current.sheetLeft + current.anchorX,
               y: current.pinnedTop + current.anchorY,
             };
-            // The same field, sheet-local, for the lenses: the scene's flyer
-            // centres and the singularity already live in that space, and one
-            // space is what keeps the live paint and the frozen frame aligned
-            // through the crossfade. The field itself is evaluated inside
-            // paintFlyerLens — quantised onto the filmstrip step, so that map,
-            // region and scale are never a mix of two playheads.
-            const sheetSingularity = { x: current.anchorX, y: current.anchorY };
+            const mix = overlayMixAt(p);
             for (const id of FLYER_IDS) {
               const el = flyerEls[id];
               const box = current.flyers[id];
@@ -718,53 +702,37 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
                 y: current.pinnedTop + box.y,
               };
               const flyer = flyerFrameAt(p, rest, singularity, radius);
-              // Never a transform: the layout box is the rest box at every
-              // playhead, and the warp is entirely a property of the raster.
+              // The layout box is the rest box at every playhead, and the
+              // exchange is scalar: when an overlay owns the fall the live DOM
+              // fades out on the mix; when there is NO overlay (renderer-less
+              // fallback) the live flyer recedes on its own — the one thing a
+              // degraded build must never do is leave the text standing rigid
+              // while the curtain scrolls over it.
               el.style.transform = '';
-              el.style.opacity = warp ? flyer.opacity.toFixed(4) : '';
+              el.style.filter = '';
+              el.style.opacity = (overlay ? flyer.opacity : 1 - mix).toFixed(4);
               el.style.pointerEvents = flyer.consumed ? 'none' : '';
-              // Once the frozen frame owns the paint (or hold over), the lens
-              // stands down: re-baking a field nobody can see is wasted raster.
-              // In the unarmed fallback (no warp) the live raster carries the
-              // fall alone, so the lens runs to the horizon itself.
-              const live = warp ? flyer.opacity > 0.015 : true;
-              const on = lensOn && live;
-              if (on && lenses) {
-                const raster = {
-                  x: box.x - box.width / 2,
-                  y: box.y - box.height / 2,
-                  width: box.width,
-                  height: box.height,
-                };
-                // FIRST the bake into the inactive chain, THEN the style swap
-                // onto it: changing the url() the client references is the one
-                // invalidation path every engine honours (attribute mutation
-                // inside an already-referenced filter is not reliably
-                // observed — the "non-motile" bug). The paint returns the id
-                // to flip to; a half-written chain is never referenced.
-                const lensId = paintFlyerLens(lenses, id, p, raster, sheetSingularity, geometry);
-                el.style.filter = lensId ? `url(#${lensId})` : '';
-              } else {
-                el.style.filter = '';
-              }
             }
 
             // The frozen frame takes over the paint as the field takes hold —
             // and only if there is a frozen frame to take over with.
-            sheet.style.setProperty('--horizon-mix', (warp ? overlayMixAt(p) : 0).toFixed(4));
+            sheet.style.setProperty('--horizon-mix', (overlay ? mix : 0).toFixed(4));
             // Degraded, but only in paint: say so, so a reader (and a test) can
             // tell "the overlay is not mounted here" from "the scene never ran".
-            if (!warp && held && sheet.dataset.horizonState !== 'hold') sheet.dataset.horizonState = 'hold';
-            if (warp) {
+            if (!overlay && held && sheet.dataset.horizonState !== 'hold') sheet.dataset.horizonState = 'hold';
+            if (overlay) {
               try {
-                warp.draw(p, geometry);
+                overlay.draw(p, geometry, {
+                  invite: current.flyers.invite,
+                  cta: current.flyers.cta,
+                });
                 sheet.dataset.horizonPaint = 'snapshot';
               } catch (error) {
                 // A dead context costs the frozen frame. It does not cost the hold,
                 // the fall, the collapse or the release, and it must never take the
                 // composition's box down with it — that is how a driver reset
                 // became "pinning is entirely non-functional".
-                retireOverlay('Drawing the snapshot failed; the live paint carries the fall.', error);
+                retireOverlay('Drawing the overlay failed; the opacity coda carries the fall.', error);
                 return;
               }
             }
@@ -799,20 +767,23 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
           applyFrame(playhead.progress);
         };
 
-        /** Take the frozen frame, then hand it to WebGL2. Everything in here is
-         * paint: a failure retires the overlay and leaves the hold running. */
+        /** Take the frozen frame, then hand it to the best renderer the engine
+         * offers: the WebGL2 shader overlay when the stage's capability gate
+         * says so, else the 2D mosaic — the SAME snapshot and the SAME field,
+         * sliced into columns and drawn onto a canvas, a path every browser
+         * implements identically. The capture itself is no longer gated on the
+         * GPU: the fallback renderer wants the raster too, and the ultimate
+         * degrade keeps only the opacity coda. Everything in here is paint: a
+         * failure retires the overlay and leaves the hold running. */
         const arm = () => {
-          if (released || armed || overlayOff || !scene || !canWarpSignoff) return;
+          if (released || armed || overlayOff || !scene) return;
           armed = true; // BEFORE any await: onEnter/refresh/scroll-back share it
           sheet.dataset.horizonState = 'capturing';
           void (async () => {
             // Also defers past StrictMode's immediate mount → cleanup → mount.
             await document.fonts.ready;
             if (released) return;
-            const [{ captureSignoff }, { createEventHorizonWarp }] = await Promise.all([
-              import('../lib/captureSignoff'),
-              import('../three/eventHorizonWarp'),
-            ]);
+            const { captureSignoff } = await import('../lib/captureSignoff');
             if (released) return;
             // `remeasure`, NOT `prepareMeasure`. The snapshot has to be a raster of
             // the sheet's REST geometry, and `capturing` below is what pins it there
@@ -860,13 +831,40 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
               // for the whole capture, so the scene measured between the two
               // `prepareMeasure` calls is already the geometry the overlay will be
               // painted against. `resync()` at the end re-applies the reservation.
-              warp = createEventHorizonWarp(snapshot, () =>
-                retireOverlay('The overlay WebGL2 context was lost; the live paint carries the fall.'),
-              );
-              // Upload/draw must succeed BEFORE touching live DOM paint: the
+              //
+              // The renderer picks ITSELF: shader first when the stage's own gate
+              // says WebGL2 is there, mosaic otherwise — and a shader that throws
+              // on construction (context creation is the fibre hit the old
+              // `canWarpSignoff` probe kept missing) simply loses its turn, same
+              // snapshot in hand. The mosaic owns the snapshot's pixels for its
+              // slices, so the raster only goes down when the shader won.
+              let next: SignoffOverlay;
+              let renderer: 'shader' | 'mosaic';
+              if (canWarpSignoff) {
+                try {
+                  const { createEventHorizonWarp } = await import('../three/eventHorizonWarp');
+                  if (released) return;
+                  next = createEventHorizonWarp(snapshot, () =>
+                    retireOverlay('The overlay WebGL2 context was lost; the opacity coda carries the fall.'),
+                  );
+                  renderer = 'shader';
+                } catch {
+                  next = createSignoffMosaic(snapshot);
+                  renderer = 'mosaic';
+                }
+              } else {
+                next = createSignoffMosaic(snapshot);
+                renderer = 'mosaic';
+              }
+              overlay = next;
+              // First draw must succeed BEFORE touching live DOM paint: the
               // crossfade is only ever written once this frame is really there.
-              warp.draw(playhead.progress, sceneGeometry(scene));
-              sheet.appendChild(warp.canvas);
+              overlay.draw(playhead.progress, sceneGeometry(scene), {
+                invite: scene.flyers.invite,
+                cta: scene.flyers.cta,
+              });
+              sheet.appendChild(overlay.canvas);
+              sheet.dataset.horizonRenderer = renderer;
               sheet.dataset.horizonState = 'ready';
               // `prepareMeasure` zeroed the reservation for the capture, and no
               // scroll may arrive between then and now: re-apply the hold AND
@@ -874,15 +872,17 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
               // paints the restored scroll position a restored scroll may be at.
               resync();
             } finally {
-              snapshot.width = snapshot.height = 0; // GPU now owns the only copy
+              // The GPU keeps its own texture once uploaded; the 2D mosaic reads
+              // the raster every frame, so only the shader path may release it.
+              if (sheet.dataset.horizonRenderer === 'shader') snapshot.width = snapshot.height = 0;
             }
           })().catch((error: unknown) => {
-            // No snapshot, no WebGL2, a module that will not load: lose the frozen
+            // No snapshot, no renderer, a module that will not load: lose the frozen
             // frame, keep the hold, and let the next approach of the footer try
             // again. Refusing the whole scene for this is what made a missing GPU
             // look like a missing pin.
             if (!released) {
-              retireOverlay('Capturing or uploading the sign-off failed; the live paint carries the fall.', error);
+              retireOverlay('Capturing or uploading the sign-off failed; the opacity coda carries the fall.', error);
               resync();
             }
           });
@@ -955,24 +955,24 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
         // fling still arrives after the frozen frame is ready instead of catching
         // the fall mid-capture.
         //
-        // This is the ONLY place `canWarpSignoff` is consulted, and it is
-        // deliberately not the same question as the hold: a stage that never went
-        // live costs the reader the frozen frame, not the sequence.
-        if (canWarpSignoff) {
-          armTrigger = ScrollTrigger.create({
-            id: 'signoff-horizon-arm',
-            trigger: frame,
-            start: () => `bottom bottom+=${Math.max(1, Math.round((scene?.seam ?? 0) * 4))}`,
-            onEnter: arm,
-            onEnterBack: arm,
-            onRefresh: (self) => {
-              if (self.scroll() >= self.start) arm();
-            },
-          });
-          // Handles deep-link / browser-restored scroll and a stage that becomes
-          // live only after the reader has already passed the arm line.
-          if (armTrigger.scroll() >= armTrigger.start) void arm();
-        }
+        // `canWarpSignoff` deliberately does NOT gate this any more: armed or
+        // not, SOMETHING has to render the fall, and the mosaic's HTMLCanvas
+        // requirement is the one skill the engine has already proven by
+        // rasterising the snapshot itself. The flag only picks the renderer
+        // inside `arm`.
+        armTrigger = ScrollTrigger.create({
+          id: 'signoff-horizon-arm',
+          trigger: frame,
+          start: () => `bottom bottom+=${Math.max(1, Math.round((scene?.seam ?? 0) * 4))}`,
+          onEnter: arm,
+          onEnterBack: arm,
+          onRefresh: (self) => {
+            if (self.scroll() >= self.start) arm();
+          },
+        });
+        // Handles deep-link / browser-restored scroll and a stage that becomes
+        // live only after the reader has already passed the arm line.
+        if (armTrigger.scroll() >= armTrigger.start) void arm();
         resync();
 
         // The frame and the curtain are the two boxes this scene is measured
