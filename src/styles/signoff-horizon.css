@@ -7,7 +7,9 @@
    background, and the only element this file adds paint for is the overlay
    canvas (pointer-inert, aria-hidden) plus the two flyers whose crossfade it
    owns. V4: no SVG filter surfaces anywhere — the warp lives on the overlay
-   (shader or 2D mosaic), and the live flyers only ever move in opacity.
+   (shader or 2D mosaic), and the live flyers always carry the affine fall
+   (translate toward the singularity + anisotropic stretch), exchanging only
+   their opacity with the frozen frame on the mix.
    ========================================================================== */
 
 /* The frozen frame. JS owns `top`/`width`/`height`: the canvas covers the
@@ -51,10 +53,9 @@
   transform-origin: 50% 50%;
 }
 
-/* Promotion only while an activation exists: with the filters retired the
-   only thing the live rasters still pay for per frame is their opacity in the
-   crossfade — the overlay canvas's own composition is the expensive half and
-   it needs no hint.
+/* Promotion only while an activation exists: the live rasters pay for their
+   fall transform and their opacity in the crossfade per frame — the overlay
+   canvas's own composition is the expensive half and it needs no hint. */
 
    'hold' is on the list deliberately: it is the state where the overlay was
    withheld — no snapshot, a capture that timed out — and the DOM still runs
@@ -64,7 +65,7 @@
 .footer.signoff[data-horizon-state='capturing'] [data-horizon-item],
 .footer.signoff[data-horizon-state='hold'] [data-horizon-item],
 .footer.signoff[data-horizon-state='ready'] [data-horizon-item] {
-  will-change: opacity;
+  will-change: transform, opacity;
 }
 
 /* While the scene holds, the sheet must not clip what it is eating with its own

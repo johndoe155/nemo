@@ -897,12 +897,18 @@ test('one snapshot/texture; reversible playhead; geometric full consumption', as
 });
 
 /* ==========================================================================
-   Requirements 2 and 3 — spaghettification, and translation into the point,
-   rendered ON THE OVERLAY ONLY: no affine transform and (V4) no SVG filter
-   is ever written on a live flyer.
+   Requirements 2 and 3 — spaghettification, and translation into the point.
+
+   The live flyers ALWAYS carry the fall on their own geometry: the affine
+   envelope of the lens field (`flyerFrameAt` → `flyerTransform`) — a
+   translate toward the singularity plus an anisotropic stretch along the pull
+   axis. This is the motion the sequence can never lose, whatever the GPU
+   does. The overlay (shader or mosaic) adds the nonlinear curvature the
+   affine envelope cannot express, and the paint crossfades between the two on
+   the mix. (V4) no SVG filter is ever written on a live flyer.
    ======================================================================== */
 
-test('the DOM warp lives on the overlay — never an affine skew, never a filter', async ({ page }) => {
+test('the live flyers carry the fall; the overlay adds curvature; never a filter', async ({ page }) => {
   await open(page);
   await scrollProgress(page, 0);
   const rest = await readScene(page);
@@ -918,6 +924,11 @@ test('the DOM warp lives on the overlay — never an affine skew, never a filter
   // below is identical for the 2D mosaic fallback.
   await expect(page.locator(root)).toHaveAttribute('data-horizon-renderer', /^(shader|mosaic)$/);
 
+  // The singularity the invitation falls into is the parked hole's centre,
+  // above the sheet: the pull is upward for the whole fall.
+  const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    Math.hypot(a.x - b.x, a.y - b.y);
+
   for (const progress of [0.15, 0.4, 0.65, 0.85]) {
     await scrollProgress(page, progress);
     const scene = await readScene(page);
@@ -926,16 +937,19 @@ test('the DOM warp lives on the overlay — never an affine skew, never a filter
       const at = rest.flyers[index];
       expect(flyer.selector).toBe(selector);
 
-      // THE CORRECTION, asserted first: a linear skew is a transform, and the
-      // warp here provably is not one. The matrix is the identity at every
-      // playhead — the distortion lives entirely in the overlay's raster,
-      // where curvature is expressible.
-      expect(parseMatrix(flyer.transform)).toEqual([1, 0, 0, 1, 0, 0]);
+      // The affine fall is written: a non-identity transform whose translation
+      // carries the flyer's centre TOWARD the singularity (the distance to the
+      // hole's centre shrinks at every playhead, and the matrix is not the
+      // rest identity).
+      expect(parseMatrix(flyer.transform)).not.toEqual([1, 0, 0, 1, 0, 0]);
+      expect(dist(flyer.centre, scene.frame.centre)).toBeLessThan(
+        dist(at.centre, scene.frame.centre),
+      );
 
-      // V4's second rule: no SVG filter on a live flyer, EVER. The
-      // feDisplacementMap substrate renders as transparent black on engines
-      // whose feImage does not paint data-URL maps (user-verified), so it is
-      // gone for good — this assertion is the tripwire keeping it gone.
+      // V4's rule: no SVG filter on a live flyer, EVER. The feDisplacementMap
+      // substrate renders as transparent black on engines whose feImage does
+      // not paint data-URL maps (user-verified), so it is gone for good — this
+      // assertion is the tripwire keeping it gone.
       expect(flyer.filter).toBe('none');
 
       // The layout box is the rest box: the lift alone positions the flyer,
@@ -954,16 +968,16 @@ test('the DOM warp lives on the overlay — never an affine skew, never a filter
 
   // The overlay canvas tracks the sheet through the fall: same width, sheet +
   // veil of headroom, never a straggler slab over the rest box — and at the
-  // end of the fall every flyer has crossed the event horizon: not "scaled to
-  // zero" in a matrix (there is no matrix), but consumed: no visible paint of
-  // its own, no pointer target left over the hole, and the frozen frame's
-  // geometry swallowing every texel (asserted by the snapshot test above).
+  // end of the fall every flyer has crossed the event horizon: scaled to zero
+  // in its own matrix, no pointer target left over the hole, and the frozen
+  // frame's geometry swallowing every texel (asserted by the snapshot test
+  // above).
   await scrollProgress(page, 1);
   const end = await readScene(page);
   for (const index of [0, 1]) {
     const flyer = end.flyers[index];
     const at = rest.flyers[index];
-    expect(parseMatrix(flyer.transform)).toEqual([1, 0, 0, 1, 0, 0]);
+    expect(parseMatrix(flyer.transform)).not.toEqual([1, 0, 0, 1, 0, 0]);
     expect(flyer.filter).toBe('none');
     expect(flyer.offsetLeft).toBe(at.offsetLeft);
     expect(flyer.offsetTop).toBe(at.offsetTop);

@@ -17,6 +17,7 @@ import {
   consumptionTarget,
   followPlayhead,
   flyerFrameAt,
+  flyerTransform,
   holdActiveAt,
   holdDistanceAt,
   horizonRadiusAtProgress,
@@ -678,15 +679,17 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             // at any playhead lag, and why a release that lands on a still-
             // settling fall moves nothing.
 
-            // The flyers: never a transform, and (V4) NEVER A FILTER. A 2D
-            // transform on one bounding box can translate/rotate/scale/shear
-            // and nothing else, which is exactly the flat look this section
-            // kept being criticised for; and the SVG displacement stack that
-            // used to carry the warp renders void on engines whose feImage
-            // does not paint a data-URL map (user-verified three times). What
-            // remains on the live rasters is the scalar envelope
-            // `flyerFrameAt` provides, and the warp itself is rendered by the
-            // overlay — shader or mosaic — against the same snapshot.
+            // The live flyers carry the fall on their own geometry — a
+            // translate toward the singularity plus the anisotropic
+            // along/across scale of `flyerFrameAt`, the affine envelope of
+            // the lens field. This is the one motion the sequence can never
+            // lose: it needs no snapshot, no GPU and no html2canvas, so a
+            // capture that failed (or a browser with no WebGL at all) still
+            // watches the invitation fall INTO the hole instead of fade over
+            // a rigid body. (V4) the SVG displacement filter stays retired,
+            // and the overlay — shader or mosaic — still adds the nonlinear
+            // curvature this affine envelope cannot express, crossfaded in on
+            // the mix so the handoff reads as the same fall, not a dissolve.
             const geometry = sceneGeometry(current);
             const radius = horizonRadiusAtProgress(p, geometry);
             const singularity = {
@@ -702,15 +705,15 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
                 y: current.pinnedTop + box.y,
               };
               const flyer = flyerFrameAt(p, rest, singularity, radius);
-              // The layout box is the rest box at every playhead, and the
-              // exchange is scalar: when an overlay owns the fall the live DOM
-              // fades out on the mix; when there is NO overlay (renderer-less
-              // fallback) the live flyer recedes on its own — the one thing a
-              // degraded build must never do is leave the text standing rigid
-              // while the curtain scrolls over it.
-              el.style.transform = '';
+              // The layout box stays the rest box at every playhead (the fall
+              // is a transform, never layout). The paint exchange is scalar:
+              // with an overlay the live DOM fades out on the mix while the
+              // frozen frame fades in; without one the flyer stays fully
+              // visible and its own scale consumes it at the singularity —
+              // never an opacity fade over an unwarped body.
+              el.style.transform = flyerTransform(flyer);
               el.style.filter = '';
-              el.style.opacity = (overlay ? flyer.opacity : 1 - mix).toFixed(4);
+              el.style.opacity = (overlay ? flyer.opacity : 1).toFixed(4);
               el.style.pointerEvents = flyer.consumed ? 'none' : '';
             }
 
