@@ -1,6 +1,6 @@
 /* ============================================================================
-   Sign-off mosaic — the live lensing warp, rendered with drawImage and NOTHING
-   else.
+   Sign-off mosaic — the live lensing warp, rendered as a subdivided triangle
+   mesh with drawImage and NOTHING else.
 
    This is the renderer of the unarmed/fallback path, and it exists because the
    previous one — an SVG feDisplacementMap fed by feImage data URLs — provably
@@ -11,28 +11,31 @@
    (async fetch, attribute invalidation, href/xlink href) is enough: the warp
    now uses the one canvas API every browser implements identically.
 
-   THE FIELD DID NOT CHANGE. `lensFieldAt` / `lensForwardAt` from
-   lib/spaghettification.ts — the same radial-haul/tidal/frame-drag field the
-   WebGL overlay shader integrates — are evaluated at a GRID of control points
-   over the flyer's rest box (3 px columns × 8 rows), and each cell is painted
-   with one drawImage slice from the rest-pose snapshot:
+   THE FIELD DID NOT CHANGE. `lensForwardAt` from lib/spaghettification.ts —
+   the same radial-haul/tidal/frame-drag field the WebGL overlay shader
+   integrates (the shader does it per-fragment; canvas 2D has no fragment
+   stage, so this does it per-vertex) — is evaluated at the corners of a
+   `cols × rows` subdivision of the flyer's rest box, and every cell is painted
+   as TWO triangles, each affine-mapped from its source rectangle to its warped
+   quad. Neighbouring cells share warped edges, so the geometry is CONTINUOUS:
+   the word bends and elongates as one fluid sheet — no horizontal strips, no
+   per-band slices, no disconnected bars.
 
-     · the ARCH (baseline bows toward the disk) comes from column-to-column
-       differences: the middle of the word is closer to the singularity, so
-       its control points land nearer it — one continuous raster, the global
-       gradient intact, mid-air curvature no affine transform could draw;
-     · the EXPONENTIAL near-edge stretch lives in the row segmentation: a
-       cell adjacent to the horizon stretches by its own tidal radius, so the
-       top of the type strands by (R/Δ)^1.35 exactly as the shader would draw
-       it, and thins out across the pull axis;
-     · the FUNNEL and the pinch-off are the destination x converging on the
-       anchor and the slice heights collapsing to nothing at the horizon;
+     · the NON-UNIFORM STRETCH comes from the field's own derivative: the row
+       junctions nearest the singularity are hauled further along the pull axis
+       than the far ones, so the near side stretches while the far side trails —
+       the spaghettification, exactly as the shader draws it;
+     · the CURVILINEAR LENSING is the field's radial nonlinearity across the
+       columns: the midline bows toward the disk, the outer edges wrap into
+       curved field lines;
+     · the COLLAPSE is every corner landing on the singularity as the capture
+       radius swallows the grid — the mesh pinches to a point, nothing fades;
      · ONE OBJECT: the fall is of the frozen rest raster as a whole image —
        nothing is decomposed into letters, nothing can shatter.
 
-   Rotation from the frame drag is approximated per slice by a destination-x
-   shift (drawImage is axis-aligned rect→rect); the drag is kept subordinate
-   to the arch by SWIRL_TURNS, so what the eye reads is the radial story.
+   The frame drag is carried by `lensForwardAt` itself (it counter-rotates the
+   forward image), so the swirl stays subordinate to the radial story by
+   SWIRL_TURNS.
    ========================================================================== */
 
 import {
@@ -46,85 +49,95 @@ import {
   type FlyerId,
 } from './spaghettification';
 
-/** The rest column pitch, in CSS px of the sheet. 3 px balances per-slice
- * field fidelity (the arch is sampled 233 times across the 700 px headline)
- * against a frame's draw-call budget (~2.3k drawImages at the deepest
- * unfurled frame, a few ms of 2D canvas). */
-export const MOSAIC_STRIP_PX = 3;
+/** The target cell side, in CSS px of the sheet. ~16px cells over a 700×115
+ * headline is a 44×8 mesh — fine enough that the field's curvature reads as a
+ * curve, and ~700 triangles per flyer, a few ms of 2D canvas per frame. */
+export const MOSAIC_CELL_PX = 16;
 
-/** Row subdivisions per column. The exponential near/far differential lives
- * here: 8 slices over a 115 px headline puts a control point every ~14 px of
- * fall, fine enough that the (R/Δ)^1.35 curvature reads as a curve, not a
- * fan. */
-export const MOSAIC_ROWS = 8;
+/** Cells whose warped quad has collapsed below this many canvas px in BOTH
+ * axes are already inside the horizon: they would paint as sub-pixel noise. */
+const MIN_CELL_EXTENT_PX = 0.5;
 
-/** Slices whose destination height collapses below this many canvas px are
- * skipped: already inside the horizon, they would paint as sub-pixel noise. */
-const MIN_SLICE_HEIGHT_PX = 0.5;
-
-/** What one drawImage gets told (kept public for the unit tests' sake: the
- * renderer is asserted BY the calls it would make). */
-export interface MosaicSlice {
+/** One mesh cell: the source rectangle (canvas px) and the four warped corners
+ * of its destination quad (canvas px), in TL → TR → BR → BL order. */
+export interface MosaicCell {
   sx: number;
   sy: number;
   sWidth: number;
   sHeight: number;
-  dx: number;
-  dy: number;
-  dWidth: number;
-  dHeight: number;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  x3: number;
+  y3: number;
 }
 
-/** Compute the drawImage slices for ONE flyer at one playhead, in CANVAS px.
- * `geometry` is the sheet's extent; `veil` is the overlay's headroom above the
- * sheet top; `sourceScale` maps sheet CSS px → canvas px (the snapshot's own
- * rasterisation scale). Output coordinate system: overlay-box canvas px
- * (overlay origin = veil above the sheet top). Pure: given a field, returns
- * exactly the slice list the painter would draw. */
-export function mosaicSlicesForFlyer(
+/** Compute the mesh cells for ONE flyer at one playhead, in CANVAS px.
+ * `geometry`-free: `singularity` and `veil` are the sheet-local anchor and the
+ * overlay's headroom, `sourceScale` maps sheet CSS px → canvas px. Output
+ * coordinate system: overlay-box canvas px (overlay origin = veil above the
+ * sheet top). Pure: given a field, returns exactly the cell list the painter
+ * would draw. */
+export function mosaicCellsForFlyer(
   raster: LensRect,
   singularity: Point,
   field: ReturnType<typeof lensFieldAt>,
   sourceScale: number,
   veil: number,
-  out: MosaicSlice[],
+  out: MosaicCell[],
 ): number {
   const { width, height } = raster;
   if (!(width > 0) || !(height > 0) || !(sourceScale > 0)) return 0;
-  const columns = Math.max(1, Math.ceil(width / MOSAIC_STRIP_PX));
+  const cols = Math.max(1, Math.ceil(width / MOSAIC_CELL_PX));
+  const rows = Math.max(1, Math.ceil(height / MOSAIC_CELL_PX));
   let count = 0;
-  for (let c = 0; c < columns; c += 1) {
-    const sx = raster.x + MOSAIC_STRIP_PX * c;
-    const sWidth = Math.min(MOSAIC_STRIP_PX, raster.x + width - sx);
-    // The centre of the actual sub-strip (the last column is partial).
-    const cx = sx + sWidth / 2;
-    // Control points down the column: the FORWARD image of each row junction.
-    const destY = new Float64Array(MOSAIC_ROWS + 1);
-    const destX = new Float64Array(MOSAIC_ROWS + 1);
-    for (let j = 0; j <= MOSAIC_ROWS; j += 1) {
-      const py = raster.y + (height * j) / MOSAIC_ROWS;
-      const fwd = lensForwardAt(cx - singularity.x, py - singularity.y, field);
-      destX[j] = singularity.x + fwd.x;
-      destY[j] = singularity.y + fwd.y;
-    }
-    for (let j = 0; j < MOSAIC_ROWS; j += 1) {
-      const dy0 = destY[j];
-      const dy1 = destY[j + 1];
-      const span = Math.abs(dy1 - dy0) * sourceScale;
-      if (!(span >= MIN_SLICE_HEIGHT_PX)) continue;
-      const dx = (destX[j] + destX[j + 1]) / 2;
-      const dy = Math.min(dy0, dy1);
-      const slice: MosaicSlice = out[count] ?? (out[count] = {
-        sx: 0, sy: 0, sWidth: 0, sHeight: 0, dx: 0, dy: 0, dWidth: 0, dHeight: 0,
+  for (let j = 0; j < rows; j += 1) {
+    const py0 = raster.y + (height * j) / rows;
+    const py1 = raster.y + (height * (j + 1)) / rows;
+    for (let i = 0; i < cols; i += 1) {
+      const px0 = raster.x + (width * i) / cols;
+      const px1 = raster.x + (width * (i + 1)) / cols;
+      // The four corners' true forward images. A corner captured by the
+      // horizon maps to the singularity itself — the geometric pinch.
+      const c0 = lensForwardAt(px0 - singularity.x, py0 - singularity.y, field);
+      const c1 = lensForwardAt(px1 - singularity.x, py0 - singularity.y, field);
+      const c2 = lensForwardAt(px1 - singularity.x, py1 - singularity.y, field);
+      const c3 = lensForwardAt(px0 - singularity.x, py1 - singularity.y, field);
+      const mapX = (qx: number) => (singularity.x + qx) * sourceScale;
+      const mapY = (qy: number) => (singularity.y + qy + veil) * sourceScale;
+      const x0 = mapX(c0.x);
+      const y0 = mapY(c0.y);
+      const x1 = mapX(c1.x);
+      const y1 = mapY(c1.y);
+      const x2 = mapX(c2.x);
+      const y2 = mapY(c2.y);
+      const x3 = mapX(c3.x);
+      const y3 = mapY(c3.y);
+      // Inside the horizon: the whole quad has pinched to the point.
+      const extent = Math.max(
+        Math.abs(x0 - x2) + Math.abs(y0 - y2),
+        Math.abs(x1 - x3) + Math.abs(y1 - y3),
+      );
+      if (extent < MIN_CELL_EXTENT_PX) continue;
+      const cell: MosaicCell = out[count] ?? (out[count] = {
+        sx: 0, sy: 0, sWidth: 0, sHeight: 0,
+        x0: 0, y0: 0, x1: 0, y1: 0, x2: 0, y2: 0, x3: 0, y3: 0,
       });
-      slice.sx = sx * sourceScale;
-      slice.sy = (raster.y + (height * j) / MOSAIC_ROWS) * sourceScale;
-      slice.sWidth = sWidth * sourceScale;
-      slice.sHeight = (height / MOSAIC_ROWS) * sourceScale;
-      slice.dx = (dx - sWidth / 2) * sourceScale;
-      slice.dy = (dy + veil) * sourceScale;
-      slice.dWidth = sWidth * sourceScale;
-      slice.dHeight = span;
+      cell.sx = px0 * sourceScale;
+      cell.sy = py0 * sourceScale;
+      cell.sWidth = (px1 - px0) * sourceScale;
+      cell.sHeight = (py1 - py0) * sourceScale;
+      cell.x0 = x0;
+      cell.y0 = y0;
+      cell.x1 = x1;
+      cell.y1 = y1;
+      cell.x2 = x2;
+      cell.y2 = y2;
+      cell.x3 = x3;
+      cell.y3 = y3;
       count += 1;
     }
   }
@@ -134,6 +147,14 @@ export function mosaicSlicesForFlyer(
 /** The smallest canvas-2d surface the renderer needs — also the exact shape
  * the unit tests stub. */
 export interface MosaicPainter {
+  save: () => void;
+  restore: () => void;
+  beginPath: () => void;
+  moveTo: (x: number, y: number) => void;
+  lineTo: (x: number, y: number) => void;
+  closePath: () => void;
+  clip: () => void;
+  setTransform: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   clearRect: (x: number, y: number, w: number, h: number) => void;
   drawImage: (
     image: CanvasImageSource,
@@ -142,29 +163,87 @@ export interface MosaicPainter {
   ) => void;
 }
 
+/** The affine that maps the source sub-rectangle's local frame to one warped
+ * triangle, as a canvas 2D transform (a, b, c, d, e, f). The source triangle's
+ * vertices in local (u, v) space are supplied; the destination vertices are in
+ * canvas px. Solving two 2×2 systems per triangle keeps the texture mapping
+ * exact, so adjacent triangles meet without tearing. */
+function triangleTransform(
+  uA: number, vA: number, ax: number, ay: number,
+  uB: number, vB: number, bx: number, by: number,
+  uC: number, vC: number, cx: number, cy: number,
+): [number, number, number, number, number, number] | null {
+  const e1x = uB - uA;
+  const e1y = vB - vA;
+  const e2x = uC - uA;
+  const e2y = vC - vA;
+  const det = e1x * e2y - e1y * e2x;
+  if (Math.abs(det) < 1e-9) return null; // degenerate source triangle
+  const f1x = bx - ax;
+  const f1y = by - ay;
+  const f2x = cx - ax;
+  const f2y = cy - ay;
+  const a = (f1x * e2y - f2x * e1y) / det;
+  const c = (f2x * e1x - f1x * e2x) / det;
+  const b = (f1y * e2y - f2y * e1y) / det;
+  const d = (f2y * e1x - f1y * e2x) / det;
+  const e = ax - (a * uA + c * vA);
+  const f = ay - (b * uA + d * vA);
+  return [a, b, c, d, e, f];
+}
+
+/** Paint one warped triangle from the source rectangle: clip to the triangle
+ * in device space, then draw the source rect through the affine that carries
+ * its corners onto the triangle's corners. */
+function paintTriangle(
+  painter: MosaicPainter,
+  source: CanvasImageSource,
+  cell: MosaicCell,
+  ia: number, ib: number, ic: number,
+): boolean {
+  const u = [0, cell.sWidth, cell.sWidth, 0];
+  const v = [0, 0, cell.sHeight, cell.sHeight];
+  const x = [cell.x0, cell.x1, cell.x2, cell.x3];
+  const y = [cell.y0, cell.y1, cell.y2, cell.y3];
+  const m = triangleTransform(
+    u[ia], v[ia], x[ia], y[ia],
+    u[ib], v[ib], x[ib], y[ib],
+    u[ic], v[ic], x[ic], y[ic],
+  );
+  if (!m) return false;
+  painter.save();
+  painter.beginPath();
+  painter.moveTo(x[ia], y[ia]);
+  painter.lineTo(x[ib], y[ib]);
+  painter.lineTo(x[ic], y[ic]);
+  painter.closePath();
+  painter.clip();
+  painter.setTransform(m[0], m[1], m[2], m[3], m[4], m[5]);
+  painter.drawImage(source, cell.sx, cell.sy, cell.sWidth, cell.sHeight, 0, 0, cell.sWidth, cell.sHeight);
+  painter.restore();
+  return true;
+}
+
 /** Paint one flyer's fall onto a 2D context. `canvasWidth/Height` bound the
- * target so hundred-of-px-longfall slices that DID land off-canvas aren't
- * even issued. */
+ * target so cells whose quad landed entirely off-canvas are never issued. */
 export function renderLensMosaic(
   painter: MosaicPainter,
   source: CanvasImageSource,
-  raster: LensRect,
-  singularity: Point,
-  field: ReturnType<typeof lensFieldAt>,
-  sourceScale: number,
-  veil: number,
+  cells: MosaicCell[],
+  count: number,
   canvasWidth: number,
   canvasHeight: number,
 ): number {
-  const slices: MosaicSlice[] = [];
-  const count = mosaicSlicesForFlyer(raster, singularity, field, sourceScale, veil, slices);
   let painted = 0;
   for (let i = 0; i < count; i += 1) {
-    const s = slices[i];
-    if (s.dx > canvasWidth || s.dy > canvasHeight) continue;
-    if (s.dx + s.dWidth < 0 || s.dy + s.dHeight < 0) continue;
-    painter.drawImage(source, s.sx, s.sy, s.sWidth, s.sHeight, s.dx, s.dy, s.dWidth, s.dHeight);
-    painted += 1;
+    const cell = cells[i];
+    const minX = Math.min(cell.x0, cell.x1, cell.x2, cell.x3);
+    const maxX = Math.max(cell.x0, cell.x1, cell.x2, cell.x3);
+    const minY = Math.min(cell.y0, cell.y1, cell.y2, cell.y3);
+    const maxY = Math.max(cell.y0, cell.y1, cell.y2, cell.y3);
+    if (maxX < 0 || maxY < 0 || minX > canvasWidth || minY > canvasHeight) continue;
+    if (paintTriangle(painter, source, cell, 0, 1, 2)) painted += 1;
+    if (paintTriangle(painter, source, cell, 0, 2, 3)) painted += 1;
   }
   return painted;
 }
@@ -221,6 +300,7 @@ export function createSignoffMosaic(snapshot: HTMLCanvasElement): SignoffOverlay
     if (!(p > 0)) return;
     const field = lensFieldAt(clamp01(p), geometry);
     const singularity = { x: geometry.anchorX, y: geometry.anchorY };
+    const cells: MosaicCell[] = [];
     for (const id of FLYER_IDS) {
       const box = flyers[id];
       if (!box) continue;
@@ -230,17 +310,8 @@ export function createSignoffMosaic(snapshot: HTMLCanvasElement): SignoffOverlay
         width: box.width,
         height: box.height,
       };
-      renderLensMosaic(
-        ctx,
-        snapshot,
-        raster,
-        singularity,
-        field,
-        sourceScale,
-        geometry.veil,
-        canvas.width,
-        canvas.height,
-      );
+      const count = mosaicCellsForFlyer(raster, singularity, field, sourceScale, geometry.veil, cells);
+      renderLensMosaic(ctx, snapshot, cells, count, canvas.width, canvas.height);
     }
   };
 

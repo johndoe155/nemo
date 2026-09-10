@@ -1354,298 +1354,163 @@ export function flyerTransform(frame: FlyerFrame): string {
 }
 
 /* ---------------------------------------------------------------------------
-   Strands — one flyer is many independently-falling pieces.
-
-   A single affine transform on a bounding box can only ever look like a
-   skewed rectangle. Real tidal stretch that reads as cinematic decomposes the
-   object: each glyph (or button slice) is evaluated in the SAME field at its
-   own rest position, with a small playhead lag for pieces that sit farther
-   from the singularity, so the object visibly elongates into a thread.
---------------------------------------------------------------------------- */
-
-/** Playhead lag, in units of p, per pixel of extra rest-radius versus the
- * flyer's centre. Far-side glyphs trail; near-side glyphs lead. Capped so a
- * 240px headline cannot desync by more than a tenth of the fall. */
-export const STRAND_LAG_PER_PX = 0.0028;
-export const STRAND_LAG_CAP = 0.28;
-
-/** Default slice counts when the caller does not pass measured glyph boxes. */
-export const INVITE_STRANDS = 18;
-export const CTA_STRANDS = 12;
-
-export interface StrandSpec {
-  /** Piece centre in the same coordinate space as `rest` / `singularity`. */
-  rest: Point;
-}
-
-/** Playhead lag for a piece whose rest is `piece` relative to the flyer's
- * own rest centre. Nearer-to-singularity pieces lead (negative lag, clamped
- * so they never run before p = 0 in a way that changes rest); farther pieces
- * trail. */
-export function strandLagAt(piece: Point, flyerRest: Point, singularity: Point): number {
-  const pieceR = Math.hypot(singularity.x - piece.x, singularity.y - piece.y);
-  const flyerR = Math.hypot(singularity.x - flyerRest.x, singularity.y - flyerRest.y) || 1;
-  const extra = pieceR - flyerR;
-  const lag = extra * STRAND_LAG_PER_PX;
-  if (lag > STRAND_LAG_CAP) return STRAND_LAG_CAP;
-  if (lag < -STRAND_LAG_CAP) return -STRAND_LAG_CAP;
-  return lag;
-}
-
-/** The field at one strand piece. Identical to `flyerFrameAt` except the
- * playhead is shifted by that piece's lag, so the object opens into a thread
- * instead of remaining a rigid box. Opacity / consumed still follow the
- * un-lagged playhead so the parent flyer exchanges paint and retires its hit
- * target as one body. */
-export function strandPieceAt(
-  progress: number,
-  piece: Point,
-  flyerRest: Point,
-  singularity: Point,
-  horizonRadius: number,
-): FlyerFrame {
-  const lag = strandLagAt(piece, flyerRest, singularity);
-  const p = clamp01(progress);
-  const warped = flyerFrameAt(clamp01(p - lag), piece, singularity, horizonRadius);
-  const envelope = flyerFrameAt(p, flyerRest, singularity, horizonRadius);
-  return {
-    ...warped,
-    opacity: envelope.opacity,
-    consumed: envelope.consumed,
-  };
-}
-
-/** Evenly spaced piece centres across a flyer box, along the axis perpendicular
- * to the pull (so a vertical pull strands the headline left-to-right into a
- * vertical thread). `count` is the number of pieces. */
-export function strandRests(
-  flyerRest: Point,
-  singularity: Point,
-  size: { width: number; height: number },
-  count: number,
-): Point[] {
-  const n = Math.max(1, Math.floor(count));
-  const dx = singularity.x - flyerRest.x;
-  const dy = singularity.y - flyerRest.y;
-  const len = Math.hypot(dx, dy) || 1;
-  // Unit vector across the pull (screen-space, 90°).
-  const ax = -dy / len;
-  const ay = dx / len;
-  const span = Math.abs(ax) * size.width + Math.abs(ay) * size.height;
-  const half = span / 2;
-  if (n === 1) return [{ x: flyerRest.x, y: flyerRest.y }];
-  const rests: Point[] = [];
-  for (let i = 0; i < n; i += 1) {
-    const t = n === 1 ? 0 : (i / (n - 1)) * 2 - 1; // −1 … +1
-    const dist = t * half * 0.92; // stay inside the painted box
-    rests.push({ x: flyerRest.x + ax * dist, y: flyerRest.y + ay * dist });
-  }
-  return rests;
-}
-
-export function strandFramesAt(
-  progress: number,
-  flyerRest: Point,
-  singularity: Point,
-  horizonRadius: number,
-  size: { width: number; height: number },
-  count: number,
-): FlyerFrame[] {
-  return strandRests(flyerRest, singularity, size, count).map((piece) =>
-    strandPieceAt(progress, piece, flyerRest, singularity, horizonRadius),
-  );
-}
-
-/** Child-local transform once the PARENT already carries `envelope`.
- * Only the lag (extra translation) and the residual scale/rotation live here,
- * so the flyer still flies into the hole as one body — the property the live
- * scene needs — while pieces open into a thread. */
-export function strandDeltaTransform(piece: FlyerFrame, envelope: FlyerFrame): string {
-  const x = piece.x - envelope.x;
-  const y = piece.y - envelope.y;
-  const along = envelope.along > 1e-6 ? piece.along / envelope.along : piece.along;
-  const across = envelope.across > 1e-6 ? piece.across / envelope.across : piece.across;
-  const rotation = piece.rotation - envelope.rotation;
-  return (
-    `translate3d(${x.toFixed(3)}px, ${y.toFixed(3)}px, 0) ` +
-    `rotate(${rotation.toFixed(3)}deg) ` +
-    `scale(${along.toFixed(5)}, ${across.toFixed(5)}) ` +
-    `rotate(${(-rotation).toFixed(3)}deg)`
-  );
-}
-
-/* ---------------------------------------------------------------------------
-   The strand grid — a flyer warped live in the DOM as a grid of clipped cells.
+   The fluid mesh — a flyer warped live in the DOM as a grid of windowed cells.
 
    The SVG displacement lens is retired (engines sampled its feImage maps as
    transparent black, user-verified three times) and a single affine transform
-   cannot curve, so this is the DOM's own piecewise warp: the flyer's content is
-   windowed into `cols × rows` cells, every cell is evaluated in the SAME field
-   at its own rest position, and the per-cell residual is composed on top of the
-   flyer's envelope (`flyerTransform`). Adjacent cells share their edges at rest,
-   so the identity at p = 0 is exact, and every cell lands on the singularity at
-   p = 1 — the field opens the word into a thread in between and closes it back
-   into the point.
+   cannot curve, so this is the DOM's own mesh warp: the flyer's content is
+   windowed into a `cols × rows` grid of clones, each clipped to its cell, and
+   each cell's FOUR corners are displaced to the field's TRUE image of their
+   rest positions — `lensForwardAt`, the same solver the frozen frame
+   integrates — and a per-cell affine carries the cell's rectangle onto those
+   four vertices. The per-cell map is expressed through the flyer's envelope
+   so the gross fall stays the flyer's own transform (translate + anisotropic
+   stretch toward the singularity) and the mesh carries exactly the curvature
+   and the tidal differential the affine envelope cannot express.
 
-   Two ingredients make the strand read as spaghettification rather than a
-   rigid fall:
-
-     · THE AXIAL LAG. A cell nearer the singularity leads, a farther cell
-       trails — the playhead each cell is evaluated at is shifted by its signed
-       distance along the pull axis. That is what elongates the flyer along the
-       axis of the pull (the near edge runs ahead, the far edge lags), and it
-       relaxes as the horizon swallows everything, so the last frame is the
-       exact collapse, not a frozen smear.
-
-     · THE FORWARD ARCH. `lensForwardAt` is the field's true image — the same
-       solver the mosaic paints — and its deviation from the linear fall is the
-       bow that bends the baseline toward the hole. It is evaluated against the
-       UNLAGGED field, so the lag amplifies the tide without inflating the
-       geometry it is a correction to.
+   Adjacent cells share their edges at rest, so the identity at p = 0 is
+   exact; at p = 1 the envelope's scale is zero, so every cell rides the
+   singularity and the collapse is the point, never a fade. Between the two,
+   the grid is what makes the text read as a fluid sheet being drawn into the
+   well rather than a rigid card: rows nearer the singularity are hauled
+   further along the pull axis (the spaghettification) while columns bow toward
+   it (the lensing) — both are `lensForwardAt`'s honest nonlinearity. There is
+   no per-band playhead lag and no horizontal slicing: the warp is one
+   continuous field, sampled on a fine 2D mesh.
 --------------------------------------------------------------------------- */
 
-/** Playhead advance per px of signed distance along the pull axis: cells
- * nearer the singularity run ahead, farther cells trail. Windowed to zero at
- * both ends of the fall, so the identity at p = 0 and the collapse at p = 1
- * are exact. */
-export const STRAND_GRID_LAG_PER_PX = 0.0025;
+/** Default mesh density, aligned to the reference geometry (the singularity
+ * sits above the sheet, so the pull axis is vertical): the grid is finer
+ * across the pull axis than along it, so the near/far tidal differential is
+ * sampled finely enough to read as a smooth strand rather than a fan. */
+export const FLUID_GRID_COLS = 16;
+export const FLUID_GRID_ROWS = 9;
 
-/** The most a cell may desync from the flyer's own playhead. */
-export const STRAND_GRID_LAG_CAP = 0.3;
+/** Playhead advance per px of signed distance along the pull axis. The tidal
+ * field accelerates the near side of the object harder than the far side, so
+ * a vertex nearer the singularity is evaluated further along the SAME fall
+ * curve — that is what elongates the flyer along the pull axis before the
+ * contraction closes it. Windowed to zero at both ends so the identity at
+ * p = 0 and the collapse at p = 1 stay exact. */
+export const FLUID_LAG_PER_PX = 0.0025;
 
-export interface StrandResidual {
-  /** Column of the grid, left to right. */
-  col: number;
-  /** Row of the grid, top to bottom. */
-  row: number;
-  /** The CSS transform for the cell, relative to the flyer's envelope. */
-  transform: string;
-}
+/** The most a vertex may run ahead of (or trail) the flyer's own playhead. */
+export const FLUID_LAG_CAP = 0.3;
 
-/** The rest centres of a `cols × rows` grid over a flyer box, row-major, in
- * the same coordinate space as `flyerRest` (the flyer's centre). */
-export function strandGridRests(
-  flyerRest: Point,
-  size: { width: number; height: number },
-  cols: number,
-  rows: number,
-): Point[] {
-  const c = Math.max(1, Math.floor(cols));
-  const r = Math.max(1, Math.floor(rows));
-  const rests: Point[] = [];
-  for (let j = 0; j < r; j += 1) {
-    for (let i = 0; i < c; i += 1) {
-      rests.push({
-        x: flyerRest.x + (i + 0.5) * (size.width / c) - size.width / 2,
-        y: flyerRest.y + (j + 0.5) * (size.height / r) - size.height / 2,
-      });
-    }
-  }
-  return rests;
-}
-
-/** One cell's residual transform, for the strand grid. `envelope` must be the
- * flyer's own frame (`flyerFrameAt` at the flyer's centre) — the exact frame
- * the flyer element carries — so the residuals never drift from it. */
-export function strandGridResiduals(
+/** The live mesh's cell transforms, row-major: one `matrix()` per cell, in the
+ * flyer's LOCAL frame (the frame the envelope transform is applied to).
+ * `field` is the lens field at the current playhead; `envelope` is the exact
+ * frame the flyer element carries (`flyerFrameAt` at the flyer centre), so the
+ * mesh never drifts from the element it deforms.
+ *
+ * Each cell's FOUR corners are pushed through the field (`lensForwardAt`, the
+ * same solver the frozen frame integrates) with a per-corner playhead LEAD
+ * along the pull axis — the near corner runs ahead, the far corner trails —
+ * and mapped back through the envelope, then a best-fit parallelogram affine
+ * carries the cell's rest rectangle onto those four vertices. That is vertex
+ * displacement: the content inside a cell is non-uniformly stretched and
+ * sheared along the pull axis, neighbouring cells agree on their shared warped
+ * edge (opposite edges are averaged, so seams match to sub-pixel), and the
+ * grid closes onto the singularity as the field captures its vertices — one
+ * continuous sheet, never disconnected bars. */
+export function fluidVertexTransforms(
   progress: number,
   flyerRest: Point,
   singularity: Point,
-  horizonRadius: number,
+  field: LensField,
   envelope: FlyerFrame,
   size: { width: number; height: number },
   cols: number,
   rows: number,
-): StrandResidual[] {
-  const p = clamp01(progress);
+): string[] {
   const c = Math.max(1, Math.floor(cols));
-  const field: LensField = {
-    horizon: horizonRadius,
-    infall: shaderInfallAt(p),
-    gain: tidalGainAt(p),
-    swirl: swirlAt(p),
+  const r = Math.max(1, Math.floor(rows));
+  const out: string[] = new Array(c * r);
+  const cellW = size.width / c;
+  const cellH = size.height / r;
+  const p = clamp01(progress);
+  // The field is the identity at p = 0 by construction, but the grid must
+  // also be the identity while the field is closed, whatever the caller
+  // passes: an identity grid is what tiles the flyer with no seam.
+  const live = p > 0 && field.horizon > 0;
+  // The envelope's centre (translate carries the flyer's own fall).
+  const centreX = flyerRest.x + envelope.x;
+  const centreY = flyerRest.y + envelope.y;
+  const collapsed = envelope.along <= 1e-4 || envelope.across <= 1e-4;
+  // M⁻¹ = R(θ)·S(1/a, 1/b)·R(−θ): a global displacement from the envelope's
+  // centre, expressed in the flyer's LOCAL frame.
+  const theta = (envelope.rotation * Math.PI) / 180;
+  const cosine = Math.cos(theta);
+  const sine = Math.sin(theta);
+  const invAlong = collapsed ? 0 : 1 / envelope.along;
+  const invAcross = collapsed ? 0 : 1 / envelope.across;
+  const toLocal = (dx: number, dy: number): [number, number] => {
+    if (collapsed) return [0, 0]; // the envelope's scale is gone: ride the centre
+    const ux = dx * cosine + dy * sine;
+    const uy = -dx * sine + dy * cosine;
+    const sx = ux * invAlong;
+    const sy = uy * invAcross;
+    return [sx * cosine - sy * sine, sx * sine + sy * cosine];
   };
-  // The flyer centre as the envelope leaves it: the linear fall of the centre.
-  const currentCenter = { x: flyerRest.x + envelope.x, y: flyerRest.y + envelope.y };
+  // The pull axis, for the per-corner lead.
   const axisX = singularity.x - flyerRest.x;
   const axisY = singularity.y - flyerRest.y;
   const axisLen = Math.hypot(axisX, axisY) || 1;
   const ux = axisX / axisLen;
   const uy = axisY / axisLen;
-  // The differential is a window: it opens as the fall begins and closes as
-  // the horizon swallows everything, so the identity at p = 0 and the exact
-  // collapse at p = 1 are both preserved — no band ever runs before the rest
-  // pose, and none is left stranded short of the singularity.
   const window = 4 * p * (1 - p);
-  const rests = strandGridRests(flyerRest, size, c, rows);
-  const fwds = lensForwardBatchAt(
-    rests.map((rest) => ({ x: rest.x - singularity.x, y: rest.y - singularity.y })),
-    field,
-  );
-  const fallUnlagged = 1 - contractionAt(p);
-  const out: StrandResidual[] = [];
-  for (let i = 0; i < rests.length; i += 1) {
-    const rest = rests[i];
-    // Signed distance along the pull axis: POSITIVE toward the singularity,
-    // negative away. Near bands lead (their playhead runs ahead), far bands
-    // trail — that is what elongates the flyer along the axis of the pull.
-    const axialOffset = (rest.x - flyerRest.x) * ux + (rest.y - flyerRest.y) * uy;
-    const lead =
-      Math.max(-STRAND_GRID_LAG_CAP, Math.min(STRAND_GRID_LAG_CAP, axialOffset * STRAND_GRID_LAG_PER_PX)) *
-      window;
-    const piece = flyerFrameAt(clamp01(p + lead), rest, singularity, horizonRadius);
-    // The lagged linear fall, plus the field's own bow (lensForwardAt minus the
-    // unlagged linear fall): the near edge runs ahead AND the baseline arches
-    // toward the hole.
-    const linPos = {
-      x: rest.x + (singularity.x - rest.x) * piece.fall,
-      y: rest.y + (singularity.y - rest.y) * piece.fall,
-    };
-    const unlaggedLin = {
-      x: rest.x + (singularity.x - rest.x) * fallUnlagged,
-      y: rest.y + (singularity.y - rest.y) * fallUnlagged,
-    };
-    const fwd = fwds[i];
-    const pos = {
-      x: linPos.x + (singularity.x + fwd.x) - unlaggedLin.x,
-      y: linPos.y + (singularity.y + fwd.y) - unlaggedLin.y,
-    };
-    // The band lives in the flyer's LOCAL frame, which the envelope rotates and
-    // anisotropically scales (`flyerTransform`: R(θ)·S(a,b)·R(−θ)). A global
-    // displacement therefore has to be mapped back through that map's inverse
-    // before it becomes the band's own translation — otherwise the envelope's
-    // contraction crushes the strand differential and the word shrinks
-    // uniformly instead of tearing. Translation-only bands keep the windowed
-    // content rigid, which is exactly the "threads" look, and they leave the
-    // envelope to own all rotation and narrowing.
-    const dx = pos.x - currentCenter.x;
-    const dy = pos.y - currentCenter.y;
-    let x: number;
-    let y: number;
-    if (envelope.along <= 1e-4 || envelope.across <= 1e-4) {
-      // Collapsed: the envelope's scale is gone, so every band rides the flyer
-      // centre — the singularity — by cancelling its own rest offset.
-      x = -(rest.x - flyerRest.x);
-      y = -(rest.y - flyerRest.y);
-    } else {
-      const theta = (envelope.rotation * Math.PI) / 180;
-      const cosine = Math.cos(theta);
-      const sine = Math.sin(theta);
-      // M⁻¹ = R(θ)·S(1/a, 1/b)·R(−θ), applied to the global displacement.
-      const ux = dx * cosine + dy * sine;
-      const uy = -dx * sine + dy * cosine;
-      const sx = ux / envelope.along;
-      const sy = uy / envelope.across;
-      const wx = sx * cosine - sy * sine;
-      const wy = sx * sine + sy * cosine;
-      x = wx - (rest.x - flyerRest.x);
-      y = wy - (rest.y - flyerRest.y);
+  const fallNow = fallAt(p);
+  // A corner's true forward image at its own (lead-shifted) fall, plus the
+  // field's bow: the near side runs ahead AND the baseline arches toward the
+  // hole. This is the SAME decomposition the frozen frame's field implies,
+  // and the lead is what makes the object elongate instead of just shrinking.
+  const corner = (lx: number, ly: number): [number, number] => {
+    const gx = flyerRest.x + lx;
+    const gy = flyerRest.y + ly;
+    const axial = (gx - flyerRest.x) * ux + (gy - flyerRest.y) * uy;
+    const lead = Math.max(-FLUID_LAG_CAP, Math.min(FLUID_LAG_CAP, axial * FLUID_LAG_PER_PX)) * window;
+    const fallC = fallAt(clamp01(p + lead));
+    const linX = gx + (singularity.x - gx) * fallC;
+    const linY = gy + (singularity.y - gy) * fallC;
+    const fwd = lensForwardAt(gx - singularity.x, gy - singularity.y, field);
+    const unlagX = gx + (singularity.x - gx) * fallNow;
+    const unlagY = gy + (singularity.y - gy) * fallNow;
+    return toLocal(
+      linX + (singularity.x + fwd.x) - unlagX - centreX,
+      linY + (singularity.y + fwd.y) - unlagY - centreY,
+    );
+  };
+  for (let j = 0; j < r; j += 1) {
+    for (let i = 0; i < c; i += 1) {
+      const lx0 = i * cellW - size.width / 2;
+      const ly0 = j * cellH - size.height / 2;
+      const index = j * c + i;
+      if (!live) {
+        out[index] = 'matrix(1, 0, 0, 1, 0, 0)';
+        continue;
+      }
+      // The four corners' true forward images, in the flyer's local frame.
+      const w0 = corner(lx0, ly0);
+      const w1 = corner(lx0 + cellW, ly0);
+      const w2 = corner(lx0 + cellW, ly0 + cellH);
+      const w3 = corner(lx0, ly0 + cellH);
+      // Best-fit parallelogram: average the opposite edges so adjacent cells'
+      // shared warped edges agree to sub-pixel instead of parting ways.
+      const e1x = (w1[0] - w0[0] + w2[0] - w3[0]) / 2;
+      const e1y = (w1[1] - w0[1] + w2[1] - w3[1]) / 2;
+      const e2x = (w3[0] - w0[0] + w2[0] - w1[0]) / 2;
+      const e2y = (w3[1] - w0[1] + w2[1] - w1[1]) / 2;
+      // matrix(ma,mb,mc,md,me,mf) with transform-origin 0 0: a cell-local
+      // point (u,v) maps to flyer-local C0 + (ma·u + mc·v + me, mb·u + md·v + mf).
+      const ma = e1x / cellW;
+      const mb = e1y / cellW;
+      const mc = e2x / cellH;
+      const md = e2y / cellH;
+      const me = w0[0] - lx0;
+      const mf = w0[1] - ly0;
+      out[index] =
+        `matrix(${ma.toFixed(6)}, ${mb.toFixed(6)}, ${mc.toFixed(6)}, ${md.toFixed(6)}, ${me.toFixed(3)}, ${mf.toFixed(3)})`;
     }
-    out.push({
-      col: i % c,
-      row: Math.floor(i / c),
-      transform: `translate3d(${x.toFixed(3)}px, ${y.toFixed(3)}px, 0)`,
-    });
   }
   return out;
 }

@@ -38,7 +38,7 @@ stage.appendChild(regionEl);
 const slider = document.getElementById('playhead') as HTMLInputElement;
 const readout = document.getElementById('readout') as HTMLOutputElement;
 
-/** Headroom above the probe the strands are allowed to climb into — the
+/** Headroom above the probe the warp is allowed to climb into — the
  * `.signoff-horizon` veil, miniaturised. The overlay canvas sticks out of the
  * probe's box by exactly this much, upward, as production's does. */
 const VEIL = 320;

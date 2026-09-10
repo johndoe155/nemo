@@ -35,8 +35,8 @@ export { MIN_RISE };
      so the singularity's position relative to the sheet is one constant for the
      whole fall. In the reference framing the container's top edge is at the top of
      the viewport and the sheet's hem parks BELOW the fold, so the singularity lands
-     far above the sheet's own box and the overlay's veil is what gives the strands
-     room to fall upward into it.
+     far above the sheet's own box and the overlay's veil is what gives the warped
+     mesh room to fall upward into it.
 
    The third number is the one requirement 4 lives or dies on: `tail`, the
    curtain's own height in the flow. The consumption takes the sheet's height out of
@@ -59,7 +59,7 @@ export interface SignoffHorizonGeometry {
   anchorY: number;
   /** The resolved `--bh-seam` height (a `clamp()`, so never parseFloat the token). */
   seam: number;
-  /** How far the overlay extends above the sheet, so a strand pulled past the
+  /** How far the overlay extends above the sheet, so a warp pulled past the
    * sheet's top edge is not clipped mid-fall. */
   veil: number;
 }
@@ -158,7 +158,7 @@ export interface SignoffScene extends SignoffHorizonGeometry {
   collapsible: number;
 }
 
-/** Room left above the sheet for a strand that overshoots its top edge. */
+/** Room left above the sheet for the stretched mesh as it overshoots the top edge. */
 export const VEIL_MARGIN = 28;
 
 /** The variable the composition's container budget is published on — on the

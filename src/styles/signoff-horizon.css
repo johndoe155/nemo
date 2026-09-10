@@ -13,7 +13,7 @@
    ========================================================================== */
 
 /* The frozen frame. JS owns `top`/`width`/`height`: the canvas covers the
-   sheet plus the measured veil of seam above it, so a strand pulled past the
+   sheet plus the measured veil of seam above it, so the warp pulled past the
    sheet's top edge is not clipped mid-fall. Its opacity is the paint exchange
    with the live DOM, written as --horizon-mix by the effect. */
 .signoff-horizon__canvas {
@@ -45,54 +45,53 @@
   transform-origin: 50% 50%;
 }
 
-/* The strand grid — the live DOM warp. A single affine transform cannot curve
+/* The fluid mesh — the live DOM warp. A single affine transform cannot curve
    and the SVG displacement lens is retired (engines sampled its feImage maps
-   as transparent black), so the flyer's content is windowed into horizontal
-   bands, each a full clone clipped to its strip, and each band falls with its
-   own lag: the near bands lead, the far bands trail, and the word opens into
-   a thread along the axis of the pull before every band closes onto the
-   singularity. The bands are inert and aria-hidden — the real headline and
-   CTA stay mounted, focusable and nameable, and only their paint is
-   exchanged (`data-horizon-strand` stands the original content down in favour
-   of the grid). */
-.footer.signoff .horizon-strand {
+   as transparent black), so the flyer's content is windowed into a fine
+   `cols × rows` grid of clones, each clipped to its cell, and every cell's
+   corners are displaced to the field's true image of their rest positions:
+   rows nearer the singularity are hauled further along the pull axis
+   (spaghettification), columns bow toward it (lensing), and the whole grid
+   closes onto the point. The grid is inert and aria-hidden — the real
+   headline and CTA stay mounted, focusable and nameable, and only their paint
+   is exchanged (`data-horizon-fluid` stands the original content down in
+   favour of the mesh). */
+.footer.signoff .horizon-fluid-cell {
   position: absolute;
-  left: 0;
-  width: 100%;
   overflow: hidden;
   pointer-events: none;
-  transform-origin: 50% 50%;
+  /* The per-cell affine is written in the cell's own frame (its top-left
+     corner), so the origin is the corner, not the centre. */
+  transform-origin: 0 0;
   will-change: transform;
 }
 /* The whole grid is inert anyway, but pointer-events is written on the clones
    too: the cloned CTA would otherwise keep its own auto pointer, and a
-   hit-test over the consumed flyer must never land on a strand's copy of the
+   hit-test over the consumed flyer must never land on a cell's copy of the
    link. */
-.footer.signoff .horizon-strand * {
+.footer.signoff .horizon-fluid-cell * {
   pointer-events: none !important;
 }
-/* The window inside a band holds the WHOLE content at full flyer size,
-   offset so the band shows only its own strip. Percentage geometry, so the
-   grid re-flows if the flyer box ever changes. */
-.footer.signoff .horizon-strand__window {
+/* The window inside a cell holds the WHOLE content at full flyer size,
+   offset so the cell shows only its own sub-rectangle. Percentage geometry,
+   so the grid re-flows if the flyer box ever changes. */
+.footer.signoff .horizon-fluid-window {
   position: absolute;
-  left: 0;
-  width: 100%;
   display: block;
   text-align: center;
 }
 /* The CTA is centred by the (flex) `.signoff__actions`, which a plain window
    does not reproduce — a modifier restores that centring so the cloned pill
    sits exactly where the real one does. */
-.footer.signoff .horizon-strand__window--cta {
+.footer.signoff .horizon-fluid-window--cta {
   display: flex;
   align-items: center;
   justify-content: center;
 }
-/* The real content stands down while the grid paints: the original flyer
+/* The real content stands down while the mesh paints: the original flyer
    stays in the accessibility tree and the tab order, only its paint is
    exchanged. */
-.footer.signoff [data-horizon-item][data-horizon-strand='on'] > :not(.horizon-strand) {
+.footer.signoff [data-horizon-item][data-horizon-fluid='on'] > :not(.horizon-fluid-cell) {
   opacity: 0;
 }
 
@@ -113,7 +112,7 @@
 
 /* While the scene holds, the sheet must not clip what it is eating with its own
    `overflow: hidden`: the headline and the CTA leave the box on their way to the
-   singularity, and the overlay paints the strand across the seam above it.
+   singularity, and the overlay paints the stretched mesh across the seam above it.
 
    What it MUST still clip is the hem. The sheet's border box collapses as the
    void is paid back to the curtain, but the frozen frame and the live flyers
@@ -154,13 +153,13 @@
   opacity: 1 !important;
   pointer-events: auto !important;
 }
-/* The rescue restores the real content — the strand grid stands down and the
+/* The rescue restores the real content — the fluid mesh stands down and the
    original glyphs come back in place, without touching the playhead, the
    collapse or the curtain. */
-.footer.signoff:focus-within [data-horizon-item] > :not(.horizon-strand) {
+.footer.signoff:focus-within [data-horizon-item] > :not(.horizon-fluid-cell) {
   opacity: 1 !important;
 }
-.footer.signoff:focus-within .horizon-strand {
+.footer.signoff:focus-within .horizon-fluid-cell {
   opacity: 0 !important;
 }
 .footer.signoff:focus-within > .signoff-horizon__canvas {
@@ -195,13 +194,13 @@
     width: auto !important;
     height: auto !important;
   }
-  /* The real content comes back; the strand grid is hidden outright so a
+  /* The real content comes back; the fluid mesh is hidden outright so a
      policy change landing before the matchMedia revert can never leave the
-     invitation as an empty band stack. */
-  .footer.signoff [data-horizon-item] > :not(.horizon-strand) {
+     invitation as an empty cell grid. */
+  .footer.signoff [data-horizon-item] > :not(.horizon-fluid-cell) {
     opacity: 1 !important;
   }
-  .footer.signoff .horizon-strand {
+  .footer.signoff .horizon-fluid-cell {
     display: none !important;
   }
   .footer.signoff .signoff__anchor {

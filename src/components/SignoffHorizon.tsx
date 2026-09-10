@@ -21,9 +21,10 @@ import {
   holdActiveAt,
   holdDistanceAt,
   horizonRadiusAtProgress,
+  lensFieldAt,
   overlayMixAt,
   sheetHeightAt,
-  strandGridResiduals,
+  fluidVertexTransforms,
   type FlyerId,
 } from '../lib/spaghettification';
 import { createSignoffMosaic, type SignoffOverlay } from '../lib/signoffMosaic';
@@ -36,14 +37,14 @@ const FLYER_SELECTOR: Record<FlyerId, string> = {
   cta: '[data-horizon-item="cta"]',
 };
 
-/** The strand grid's band count per flyer. The singularity sits directly above
- * the sign-off, so the axis of the pull runs top-to-bottom through the type:
- * one column of horizontal bands, each falling with its own lag, is what
- * strands the word into a thread. The headline is a tall ribbon of display
- * type and gets more bands; the CTA is a short pill and needs fewer. */
-const STRAND_ROWS: Record<FlyerId, number> = {
-  invite: 10,
-  cta: 6,
+/** The fluid mesh's grid density per flyer. The singularity sits directly above
+ * the sign-off, so the pull axis runs top-to-bottom through the type; the mesh
+ * is a fine 2D grid (not horizontal bands) so the warp reads as one continuous
+ * fluid sheet being drawn into the well — no per-row slicing. The headline is
+ * a tall ribbon and gets a denser grid than the CTA's short pill. */
+const FLUID_GRID: Record<FlyerId, { cols: number; rows: number }> = {
+  invite: { cols: 16, rows: 9 },
+  cta: { cols: 8, rows: 5 },
 };
 
 const sameSize = (a: SignoffScene, b: SignoffScene) =>
@@ -222,12 +223,13 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
         let measuringMinHeight: string | null = null;
         /** The frozen frame, whichever renderer built it: the WebGL2 shader
          * overlay when the stage's capability says so, or the 2D mosaic — the
-         * SAME field, rendered as column slices out of the one-shot snapshot,
-         * on every engine with a working canvas. Never an SVG filter: three
-         * rounds of feDisplacementMap fixes (async cache, ping-pong chains,
-         * a unified coordinate space) all produced clean maps that engines
-         * then sampled as transparent black, so that substrate is gone for
-         * good and the live flyers never carry a filter again. */
+         * SAME field, rendered as a subdivided triangle mesh out of the
+         * one-shot snapshot, on every engine with a working canvas. Never an
+         * SVG filter: three rounds of feDisplacementMap fixes (async cache,
+         * ping-pong chains, a unified coordinate space) all produced clean
+         * maps that engines then sampled as transparent black, so that
+         * substrate is gone for good and the live flyers never carry a filter
+         * again. */
         let overlay: SignoffOverlay | null = null;
         let holdTrigger: ScrollTrigger | null = null;
         let armTrigger: ScrollTrigger | null = null;
@@ -245,7 +247,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
 
         /** The reservation's height. `SPACER_PAD` is the resting state, and the only
          * other writer is `applyHold` below: the element is never removed, never
-         * hidden, never animated, so it cannot strand anything when it is released.
+         * hidden, never animated, so it cannot be left mid-flight when released.
          *
          * Rounded to whole CSS pixels on purpose, and it is a rule of the MEDIUM,
          * not a style choice: scroll offsets are integers, so a box grown by a
@@ -378,56 +380,62 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             el.style.margin = '0px';
           }
         };
-        /** The strand grid — the live DOM warp. A single affine transform cannot
+        /** The fluid mesh — the live DOM warp. A single affine transform cannot
          * curve and the SVG displacement lens is retired, so the flyer's content
-         * is windowed into horizontal bands, each a clone of the real content
-         * clipped to its strip, and each band is evaluated in the SAME field at
-         * its own rest position with the near bands leading and the far bands
-         * trailing (`strandGridResiduals` in lib/spaghettification.ts). The bands
-         * are `inert` and `aria-hidden`: the ORIGINAL flyer stays mounted,
-         * focusable and nameable, and only its paint is exchanged for the grid
-         * (see the `data-horizon-strand` rules in signoff-horizon.css). */
-        const strandCells: Record<FlyerId, HTMLSpanElement[]> = { invite: [], cta: [] };
+         * is windowed into a fine `cols × rows` grid of clones, each clipped to
+         * its cell, and every cell is translated to the field's TRUE image of its
+         * rest position (`fluidVertexTransforms` in lib/spaghettification.ts, the
+         * same `lensForwardAt` solver the frozen frame integrates). The grid is
+         * inert and aria-hidden: the ORIGINAL flyer stays mounted, focusable and
+         * nameable, and only its paint is exchanged for the mesh (see the
+         * `data-horizon-fluid` rules in signoff-horizon.css). */
+        const fluidCells: Record<FlyerId, HTMLSpanElement[]> = { invite: [], cta: [] };
 
-        const removeStrands = (id: FlyerId) => {
-          for (const cell of strandCells[id]) cell.remove();
-          strandCells[id] = [];
-          delete flyerEls[id].dataset.horizonStrand;
+        const removeFluidMesh = (id: FlyerId) => {
+          for (const cell of fluidCells[id]) cell.remove();
+          fluidCells[id] = [];
+          delete flyerEls[id].dataset.horizonFluid;
         };
 
-        const ensureStrands = (id: FlyerId) => {
+        const ensureFluidMesh = (id: FlyerId) => {
           const el = flyerEls[id];
-          const rows = STRAND_ROWS[id];
-          if (strandCells[id].length === rows) return;
-          removeStrands(id);
+          const { cols, rows } = FLUID_GRID[id];
+          if (fluidCells[id].length === cols * rows) return;
+          removeFluidMesh(id);
           const source = Array.from(el.childNodes);
           const cells: HTMLSpanElement[] = [];
           for (let j = 0; j < rows; j += 1) {
-            const cell = document.createElement('span');
-            cell.className = 'horizon-strand';
-            cell.setAttribute('aria-hidden', 'true');
-            cell.setAttribute('inert', '');
-            cell.style.top = `${(j * 100) / rows}%`;
-            cell.style.height = `${100 / rows}%`;
-            const windowEl = document.createElement('span');
-            windowEl.className = `horizon-strand__window horizon-strand__window--${id}`;
-            windowEl.style.top = `${-j * 100}%`;
-            windowEl.style.height = `${rows * 100}%`;
-            for (const child of source) windowEl.appendChild(child.cloneNode(true));
-            cell.appendChild(windowEl);
-            el.appendChild(cell);
-            cells.push(cell);
+            for (let i = 0; i < cols; i += 1) {
+              const cell = document.createElement('span');
+              cell.className = 'horizon-fluid-cell';
+              cell.setAttribute('aria-hidden', 'true');
+              cell.setAttribute('inert', '');
+              cell.style.left = `${(i * 100) / cols}%`;
+              cell.style.top = `${(j * 100) / rows}%`;
+              cell.style.width = `${100 / cols}%`;
+              cell.style.height = `${100 / rows}%`;
+              const windowEl = document.createElement('span');
+              windowEl.className = `horizon-fluid-window horizon-fluid-window--${id}`;
+              windowEl.style.left = `${-i * 100}%`;
+              windowEl.style.top = `${-j * 100}%`;
+              windowEl.style.width = `${cols * 100}%`;
+              windowEl.style.height = `${rows * 100}%`;
+              for (const child of source) windowEl.appendChild(child.cloneNode(true));
+              cell.appendChild(windowEl);
+              el.appendChild(cell);
+              cells.push(cell);
+            }
           }
-          strandCells[id] = cells;
-          el.dataset.horizonStrand = 'on';
+          fluidCells[id] = cells;
+          el.dataset.horizonFluid = 'on';
         };
 
-        const removeAllStrands = () => {
-          for (const id of FLYER_IDS) removeStrands(id);
+        const removeAllFluidMeshes = () => {
+          for (const id of FLYER_IDS) removeFluidMesh(id);
         };
 
         const dropFlyers = () => {
-          removeAllStrands();
+          removeAllFluidMeshes();
           if (!lifted) return;
           lifted = false;
           anchor.style.height = '';
@@ -752,6 +760,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             // the mix so the handoff reads as the same fall, not a dissolve.
             const geometry = sceneGeometry(current);
             const radius = horizonRadiusAtProgress(p, geometry);
+            const field = lensFieldAt(p, geometry);
             const singularity = {
               x: current.sheetLeft + current.anchorX,
               y: current.pinnedTop + current.anchorY,
@@ -775,29 +784,31 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
               el.style.filter = '';
               el.style.opacity = (overlay ? flyer.opacity : 1).toFixed(4);
               el.style.pointerEvents = flyer.consumed ? 'none' : '';
-              // The strand grid is the piecewise warp the affine envelope
-              // cannot express: the word strands along the pull axis and
-              // closes onto the singularity. Off at p = 0 (the identity must
-              // be exact) and while the snapshot is being taken (html2canvas
-              // must clone the real rest pose, never the grid).
+              // The fluid mesh is the vertex displacement the affine envelope
+              // cannot express: every cell is hauled along the pull axis and
+              // bowed toward the singularity, and the whole grid closes onto
+              // the point. Off at p = 0 (the identity must be exact) and
+              // while the snapshot is being taken (html2canvas must clone the
+              // real rest pose, never the mesh).
               if (holding && !capturing && p > 0) {
-                ensureStrands(id);
-                const residuals = strandGridResiduals(
+                ensureFluidMesh(id);
+                const { cols, rows } = FLUID_GRID[id];
+                const transforms = fluidVertexTransforms(
                   p,
                   rest,
                   singularity,
-                  radius,
+                  field,
                   flyer,
                   { width: box.width, height: box.height },
-                  1,
-                  STRAND_ROWS[id],
+                  cols,
+                  rows,
                 );
-                const cells = strandCells[id];
+                const cells = fluidCells[id];
                 for (let i = 0; i < cells.length; i += 1) {
-                  cells[i].style.transform = residuals[i].transform;
+                  cells[i].style.transform = transforms[i];
                 }
-              } else if (strandCells[id].length) {
-                removeStrands(id);
+              } else if (fluidCells[id].length) {
+                removeFluidMesh(id);
               }
             }
 
@@ -857,16 +868,16 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
         /** Take the frozen frame, then hand it to the best renderer the engine
          * offers: the WebGL2 shader overlay when the stage's capability gate
          * says so, else the 2D mosaic — the SAME snapshot and the SAME field,
-         * sliced into columns and drawn onto a canvas, a path every browser
-         * implements identically. The capture itself is no longer gated on the
-         * GPU: the fallback renderer wants the raster too, and the ultimate
-         * degrade keeps only the opacity coda. Everything in here is paint: a
-         * failure retires the overlay and leaves the hold running. */
+         * drawn as a subdivided triangle mesh, a path every browser implements
+         * identically. The capture itself is no longer gated on the GPU: the
+         * fallback renderer wants the raster too, and the ultimate degrade
+         * keeps only the opacity coda. Everything in here is paint: a failure
+         * retires the overlay and leaves the hold running. */
         const arm = () => {
           if (released || armed || overlayOff || !scene) return;
           armed = true; // BEFORE any await: onEnter/refresh/scroll-back share it
           // Freeze the live paint at the rest pose for the whole clone: the
-          // snapshot has to raster the real glyphs (never the strand grid, a
+          // snapshot has to raster the real glyphs (never the fluid mesh, a
           // half-collapsed box, or half-warped text), so `applyFrame` renders
           // playhead 0 while this is set.
           capturing = true;
@@ -932,7 +943,7 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
               // on construction (context creation is the fibre hit the old
               // `canWarpSignoff` probe kept missing) simply loses its turn, same
               // snapshot in hand. The mosaic owns the snapshot's pixels for its
-              // slices, so the raster only goes down when the shader won.
+              // mesh, so the raster only goes down when the shader won.
               let next: SignoffOverlay;
               let renderer: 'shader' | 'mosaic';
               if (canWarpSignoff) {

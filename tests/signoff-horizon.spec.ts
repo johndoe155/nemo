@@ -826,7 +826,7 @@ test('one snapshot/texture; reversible playhead; geometric full consumption', as
   }
 
   // The overlay covers the sheet plus the measured veil of headroom above it,
-  // strand pulled past the sheet's top edge is not clipped mid-fall.
+  // so the warp pulled past the sheet's top edge is not clipped mid-fall.
   const canvasBox = await page.locator(overlay).boundingBox();
   const sheetBox = await page.locator(root).boundingBox();
   expect(canvasBox).not.toBeNull();
@@ -986,31 +986,36 @@ test('the live flyers carry the fall; the overlay adds curvature; never a filter
   }
 });
 
-/* The live flyers STRAND — the spaghettification is in the DOM, not just in
-   the frozen frame. The affine envelope above can only translate, rotate and
-   scale one box, so the flyer's content is windowed into horizontal bands
-   (`.horizon-strand`), each a clone clipped to its strip, each falling with
-   its own lag: the band nearer the singularity runs ahead, the far band
-   trails, and the word tears along the axis of the pull before every band
-   closes onto the point. The bands are inert and aria-hidden — the real
-   headline and CTA stay mounted, focusable and nameable. */
-test('the live flyers strand along the pull axis before the point', async ({ page }) => {
+/* The live flyers DEFORM — the spaghettification is in the DOM, not just in
+   the frozen frame. The affine envelope can only translate, rotate and scale
+   one box, so the flyer's content is windowed into a fine 2D grid
+   (`.horizon-fluid-cell`), each cell a clone clipped to its sub-rectangle,
+   each cell translated to the field's true image of its rest position: the
+   near rows are hauled further along the pull axis, the columns bow toward
+   the singularity, and the whole mesh closes onto the point. The grid is one
+   continuous sheet — no horizontal bands, no slicing — and it is inert and
+   aria-hidden: the real headline and CTA stay mounted, focusable and
+   nameable. */
+test('the live flyers deform as a fluid mesh before the point', async ({ page }) => {
   await open(page);
   await scrollProgress(page, 0);
   // At rest the flyer is the real element only: the grid does not exist yet,
   // so the identity at p = 0 is exact (no clone seam on the lift).
-  await expect(page.locator('.horizon-strand')).toHaveCount(0);
+  await expect(page.locator('.horizon-fluid-cell')).toHaveCount(0);
   const rest = await readScene(page);
   const restHeight = Object.fromEntries(rest.flyers.map((flyer) => [flyer.selector, flyer.height]));
 
   await scrollProgress(page, 0.35);
   const scene = await readScene(page);
   const hole = scene.frame.centre;
-  const bands: Record<string, number> = { [invite]: 10, [cta]: 6 };
+  const grids: Record<string, { cols: number; rows: number }> = {
+    [invite]: { cols: 16, rows: 9 },
+    [cta]: { cols: 8, rows: 5 },
+  };
   for (const flyer of scene.flyers) {
-    const rows = bands[flyer.selector];
-    const cells = page.locator(`${flyer.selector} > .horizon-strand`);
-    await expect(cells).toHaveCount(rows);
+    const { cols, rows } = grids[flyer.selector];
+    const cells = page.locator(`${flyer.selector} > .horizon-fluid-cell`);
+    await expect(cells).toHaveCount(cols * rows);
     // The clones are inert and unnamed: the real link is the only interactive,
     // nameable node, at the same playhead where its paint is exchanged.
     await expect(cells.first()).toHaveAttribute('aria-hidden', 'true');
@@ -1021,23 +1026,35 @@ test('the live flyers strand along the pull axis before the point', async ({ pag
         return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
       }),
     );
-    const near = centres[0]; // row 0 is the top strip, nearest the singularity
-    const far = centres[rows - 1];
-    // The elongation: the band span EXCEEDS the flyer's rest height, so the
-    // word visibly tears along the pull axis — a flat affine cannot do this.
-    const span = Math.abs(near.y - far.y);
-    expect(span).toBeGreaterThan(restHeight[flyer.selector] * 1.3);
-    // The near band leads: it has fallen further toward the hole's centre.
-    expect(Math.hypot(near.x - hole.x, near.y - hole.y)).toBeLessThan(
-      Math.hypot(far.x - hole.x, far.y - hole.y),
-    );
+    // Row-major: the first `cols` are the top row (nearest the singularity).
+    const topRow = centres.slice(0, cols);
+    const bottomRow = centres.slice((rows - 1) * cols);
+    const meanY = (row: Array<{ x: number; y: number }>) => row.reduce((n, c) => n + c.y, 0) / row.length;
+    const topMean = meanY(topRow);
+    const bottomMean = meanY(bottomRow);
+    // The elongation: the mesh's vertical span EXCEEDS the flyer's rest
+    // height — the word stretches along the pull axis, which a flat affine
+    // cannot do.
+    const span = Math.abs(topMean - bottomMean);
+    expect(span).toBeGreaterThan(restHeight[flyer.selector] * 1.15);
+    // The near side leads: the top row has fallen further toward the hole.
+    const topDistance = Math.hypot(topRow[Math.floor(cols / 2)].x - hole.x, topRow[Math.floor(cols / 2)].y - hole.y);
+    const bottomDistance = Math.hypot(bottomRow[Math.floor(cols / 2)].x - hole.x, bottomRow[Math.floor(cols / 2)].y - hole.y);
+    expect(topDistance).toBeLessThan(bottomDistance);
+    // Continuity: the cells tile without tearing — a cell's right edge is its
+    // right neighbour's left edge, so there is no horizontal slicing.
+    const firstBox = await cells.first().boundingBox();
+    const rightBox = await cells.nth(1).boundingBox();
+    expect(firstBox).not.toBeNull();
+    expect(rightBox).not.toBeNull();
+    expect(Math.abs(firstBox!.x + firstBox!.width - rightBox!.x)).toBeLessThan(1.5);
   }
 
-  // Full consumption: every band has closed onto the singularity, so the
-  // strands span nothing — geometric collapse, never an opacity fade.
+  // Full consumption: every cell has closed onto the singularity, so the mesh
+  // spans nothing — geometric collapse, never an opacity fade.
   await scrollProgress(page, 1);
   const consumed = await page.evaluate(() => {
-    const cells = Array.from(document.querySelectorAll<HTMLElement>('.horizon-strand'));
+    const cells = Array.from(document.querySelectorAll<HTMLElement>('.horizon-fluid-cell'));
     const hole = document.querySelector<HTMLElement>('.bh-frame')!.getBoundingClientRect();
     const centre = { x: hole.left + hole.width / 2, y: hole.top + hole.height / 2 };
     let worst = 0;
@@ -1279,8 +1296,8 @@ test('a short curtain caps the collapse instead of borrowing scroll', async ({ p
 test('the SAME real CTA keeps its tab stop, name and click at 0/50/100%', async ({ page }) => {
   await open(page);
   await scrollProgress(page, 0.5);
-  // The real link only: the strand grid clones the CTA's content into inert,
-  // aria-hidden bands, so a bare `.signoff a` would match the clones too.
+  // The real link only: the fluid mesh clones the CTA's content into inert,
+  // aria-hidden cells, so a bare `.signoff a` would match the clones too.
   const link = page.locator('.signoff [data-horizon-item="cta"] > a');
   await page.evaluate(() => {
     // The pins stay ENGAGED: this is the scene a reader actually interacts

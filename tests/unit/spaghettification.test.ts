@@ -81,15 +81,9 @@ import {
   tidalGainAt,
   titleAir,
   vacatedHeightAt,
-  strandLagAt,
-  strandPieceAt,
-  strandRests,
-  strandFramesAt,
-  strandDeltaTransform,
-  strandGridRests,
-  strandGridResiduals,
-  CTA_STRANDS,
-  INVITE_STRANDS,
+  fluidVertexTransforms,
+  FLUID_GRID_COLS,
+  FLUID_GRID_ROWS,
   type FlyerId,
   type Point,
 } from '../../src/lib/spaghettification.ts';
@@ -1425,53 +1419,6 @@ test('the release parks the reservation at the span, on a settled playhead', () 
   assert.equal(final, 1);
 });
 
-
-test('strand pieces lag by rest radius so a flyer opens into a thread', () => {
-  const flyer = FLYERS.cta;
-  const size = { width: 240, height: 48 };
-  const rests = strandRests(flyer, SINGULARITY, size, CTA_STRANDS);
-  assert.equal(rests.length, CTA_STRANDS);
-  assert.ok(INVITE_STRANDS > CTA_STRANDS);
-  const lags = rests.map((piece) => strandLagAt(piece, flyer, SINGULARITY));
-  const radii = rests.map((piece) => distance(piece, SINGULARITY));
-  const orderLag = [...lags.keys()].sort((a, b) => lags[a] - lags[b]);
-  const orderR = [...radii.keys()].sort((a, b) => radii[a] - radii[b]);
-  assert.deepEqual(orderLag, orderR, 'lag order must match rest-radius order');
-
-  const p = 0.3;
-  const R = horizonRadiusAtProgress(p, EXTENT);
-  const frames = strandFramesAt(p, flyer, SINGULARITY, R, size, CTA_STRANDS);
-  const envelope = flyerFrameAt(p, flyer, SINGULARITY, R);
-  const xs = new Set(frames.map((f) => f.x.toFixed(2)));
-  const ys = new Set(frames.map((f) => f.y.toFixed(2)));
-  assert.ok(xs.size > 1 || ys.size > 1, 'every piece sat on the same translation');
-  for (const frame of frames) {
-    assert.equal(frame.opacity, envelope.opacity);
-    assert.equal(frame.consumed, envelope.consumed);
-  }
-  const positions = frames.map((f, i) => ({
-    x: rests[i].x + f.x,
-    y: rests[i].y + f.y,
-  }));
-  const pull = { x: SINGULARITY.x - flyer.x, y: SINGULARITY.y - flyer.y };
-  const plen = Math.hypot(pull.x, pull.y) || 1;
-  const ux = pull.x / plen;
-  const uy = pull.y / plen;
-  const falls = frames.map((f) => f.fall);
-  const fallSpread = Math.max(...falls) - Math.min(...falls);
-  assert.ok(fallSpread > 0.01, `pieces shared one fall (${fallSpread}) — still a rigid box`);
-  const xspread = Math.max(...positions.map((pt) => pt.x)) - Math.min(...positions.map((pt) => pt.x));
-  const yspread = Math.max(...positions.map((pt) => pt.y)) - Math.min(...positions.map((pt) => pt.y));
-  assert.ok(xspread > 40 || yspread > 4, `piece cloud collapsed (Δx=${xspread}, Δy=${yspread})`);
-  const delta = strandDeltaTransform(frames[0], envelope);
-  assert.ok(/translate3d\(/.test(delta), 'child delta is a CSS transform');
-  const restEnv = flyerFrameAt(0, flyer, SINGULARITY, 0);
-  const restPiece = strandPieceAt(0, rests[0], flyer, SINGULARITY, 0);
-  const restDelta = strandDeltaTransform(restPiece, restEnv);
-  assert.ok(/translate3d\(0\.000px, 0\.000px, 0\)/.test(restDelta), `rest delta moved: ${restDelta}`);
-});
-
-
 /* ==========================================================================
    Requirement (critical correction) — the live warp is a displacement FIELD,
    never an affine transform. The element's raster is re-sampled per fragment
@@ -1839,20 +1786,22 @@ test('the filmstrip quantisation is exact at the ends and even between', () => {
   }
 });
 
-/* -------------------------------------------------------- the strand grid -- */
+/* ---------------------------------------------------------- the fluid mesh -- */
 
-test('the strand grid is the identity at rest, strands mid-fall, and collapses onto the singularity', () => {
+test('the fluid mesh is the identity at rest, bends and strands mid-fall, and closes onto the point', () => {
   // A self-consistent scene with the singularity directly ABOVE the flyer —
-  // the reference geometry the component feeds the grid.
+  // the reference geometry the component feeds the mesh.
   const singularity = { x: 640, y: -353.5 };
   const rest = { x: 640, y: 145 };
   const size = { width: 700, height: 115 };
   const geometry = { width: 1280, height: 383, anchorX: 640, anchorY: -353.5, veil: 381.5 };
-  const rows = 10;
+  const cols = FLUID_GRID_COLS;
+  const rows = FLUID_GRID_ROWS;
 
-  // Compose a transform list the way the DOM does: M·p + t, where M is the
-  // (rotation, scale) part of `flyerTransform`'s R(θ)·S(a,b)·R(−θ).
-  const envelopeMap = (css: string, px: number, py: number) => {
+  // Apply a `flyerTransform` string to a point in the flyer's LOCAL frame:
+  // the transform-origin is the box centre, so the map is translate + M·p with
+  // M = R(θ)·S(a,b)·R(−θ) — exactly what the DOM composes.
+  const applyEnvelope = (css: string, px: number, py: number) => {
     const t = /translate3d\((-?[\d.]+)px, (-?[\d.]+)px, 0\)/.exec(css)!;
     const r = /rotate\((-?[\d.]+)deg\)/.exec(css)!;
     const s = /scale\((-?[\d.]+), (-?[\d.]+)\)/.exec(css)!;
@@ -1869,50 +1818,81 @@ test('the strand grid is the identity at rest, strands mid-fall, and collapses o
       y: Number(t[2]) + m01 * px + m11 * py,
     };
   };
-  const bandOffset = (css: string) => {
-    const t = /translate3d\((-?[\d.]+)px, (-?[\d.]+)px, 0\)/.exec(css)!;
-    return { x: Number(t[1]), y: Number(t[2]) };
+  // A cell's per-cell affine (matrix(a,b,c,d,e,f)) maps a cell-local point
+  // (u,v) to flyer-local: C0 + (a·u + c·v + e, b·u + d·v + f), where C0 is
+  // the cell's top-left rest corner in the flyer's local frame.
+  const cellTopLeft = (i: number, j: number) => ({
+    x: i * (size.width / cols) - size.width / 2,
+    y: j * (size.height / rows) - size.height / 2,
+  });
+  const applyCell = (css: string, u: number, v: number) => {
+    const m = /^matrix\((-?[\d.]+), (-?[\d.]+), (-?[\d.]+), (-?[\d.]+), (-?[\d.]+), (-?[\d.]+)\)$/.exec(css)!;
+    const [a, b, c, d, e, f] = m.slice(1).map(Number);
+    return { x: a * u + c * v + e, y: b * u + d * v + f };
   };
-  // A band's SCREEN position: the flyer's envelope transform applied to the
-  // band's rest offset inside the flyer plus its residual translation.
+  // A cell's SCREEN position: the flyer's envelope transform applied to the
+  // cell's warped CENTRE in the flyer's local frame.
   const frameAt = (p: number) => {
     const R = horizonRadiusAtProgress(p, geometry);
     const envelope = flyerFrameAt(p, rest, singularity, R);
     const envCss = flyerTransform(envelope);
-    const rests = strandGridRests(rest, size, 1, rows);
-    const residuals = strandGridResiduals(p, rest, singularity, R, envelope, size, 1, rows);
-    return residuals.map((residual, j) => {
-      const m = bandOffset(residual.transform);
-      const screen = envelopeMap(envCss, (rests[j].x - rest.x) + m.x, (rests[j].y - rest.y) + m.y);
-      return { x: rest.x + screen.x, y: rest.y + screen.y };
-    });
+    const transforms = fluidVertexTransforms(p, rest, singularity, lensFieldAt(p, geometry), envelope, size, cols, rows);
+    const cellW = size.width / cols;
+    const cellH = size.height / rows;
+    const screens: Array<{ x: number; y: number }> = [];
+    for (let j = 0; j < rows; j += 1) {
+      for (let i = 0; i < cols; i += 1) {
+        const origin = cellTopLeft(i, j);
+        const local = applyCell(transforms[j * cols + i], cellW / 2, cellH / 2);
+        const screen = applyEnvelope(envCss, origin.x + local.x, origin.y + local.y);
+        screens.push({ x: rest.x + screen.x, y: rest.y + screen.y });
+      }
+    }
+    return screens;
   };
 
-  // Rest: every band is the identity — the grid tiles the flyer exactly, so
+  // Rest: every cell is the identity — the grid tiles the flyer exactly, so
   // nothing moves at p = 0 and the lift has no seam.
   const atRest = frameAt(0);
-  const rests0 = strandGridRests(rest, size, 1, rows);
-  const restSpan = Math.abs(rests0[0].y - rests0[rows - 1].y);
+  const cellW = size.width / cols;
+  const cellH = size.height / rows;
   for (let j = 0; j < rows; j += 1) {
-    assert.ok(Math.abs(atRest[j].x - rests0[j].x) < 1e-9, `a band's x moved at rest (${atRest[j].x})`);
-    assert.ok(Math.abs(atRest[j].y - rests0[j].y) < 1e-9, `a band's y moved at rest (${atRest[j].y})`);
+    for (let i = 0; i < cols; i += 1) {
+      const origin = cellTopLeft(i, j);
+      const local = { x: origin.x + cellW / 2, y: origin.y + cellH / 2 };
+      const screen = atRest[j * cols + i];
+      assert.ok(Math.abs(screen.x - (rest.x + local.x)) < 1e-9, `cell ${i},${j} moved at rest (x)`);
+      assert.ok(Math.abs(screen.y - (rest.y + local.y)) < 1e-9, `cell ${i},${j} moved at rest (y)`);
+    }
   }
+  const restSpan = size.height - cellH;
 
-  // Mid-fall: the near band (top, nearest the singularity) leads and the far
-  // band lags, so the vertical span EXCEEDS the rest span — the elongation,
-  // the spaghettification a flat affine transform cannot express.
-  const mid = frameAt(0.45);
-  const midSpan = Math.abs(mid[0].y - mid[rows - 1].y);
+  // Mid-fall: the near side is hauled further along the pull axis, so the
+  // vertical span EXCEEDS the rest span — the spaghettification a flat affine
+  // transform cannot express — and the midline bows toward the singularity
+  // (the lensing: columns closer to the hole land higher than the edges).
+  const mid = frameAt(0.35);
+  const topMean = mid.slice(0, cols).reduce((n, c) => n + c.y, 0) / cols;
+  const bottomMean = mid.slice((rows - 1) * cols).reduce((n, c) => n + c.y, 0) / cols;
+  const midSpan = Math.abs(topMean - bottomMean);
   assert.ok(
-    midSpan > restSpan * 1.25,
+    midSpan > restSpan * 1.15,
     `the word did not strand: ${midSpan.toFixed(1)}px vs rest ${restSpan.toFixed(1)}px`,
   );
+  const colMeanY = (i: number) => {
+    let sum = 0;
+    for (let j = 0; j < rows; j += 1) sum += mid[j * cols + i].y;
+    return sum / rows;
+  };
+  const centre = Math.floor(cols / 2);
+  const edges = (colMeanY(0) + colMeanY(cols - 1)) / 2;
+  assert.ok(edges - colMeanY(centre) > 4, `no lensing bow: ${(edges - colMeanY(centre)).toFixed(1)}px`);
 
-  // Every band ends ON the singularity — the collapse is geometric, never an
+  // Every cell ends ON the singularity — the collapse is geometric, never an
   // opacity fade.
   const end = frameAt(1);
-  for (const band of end) {
-    const d = Math.hypot(band.x - singularity.x, band.y - singularity.y);
-    assert.ok(d < 0.5, `a band ended ${d.toFixed(2)}px from the singularity`);
+  for (const cell of end) {
+    const d = Math.hypot(cell.x - singularity.x, cell.y - singularity.y);
+    assert.ok(d < 0.5, `a cell ended ${d.toFixed(2)}px from the singularity`);
   }
 });

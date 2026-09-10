@@ -2,10 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  MOSAIC_ROWS,
-  MOSAIC_STRIP_PX,
-  mosaicSlicesForFlyer,
-  type MosaicSlice,
+  MOSAIC_CELL_PX,
+  mosaicCellsForFlyer,
+  type MosaicCell,
 } from '../../src/lib/signoffMosaic.ts';
 import { lensFieldAt } from '../../src/lib/spaghettification.ts';
 
@@ -15,100 +14,103 @@ const RASTER = { x: 290, y: 30, width: 700, height: 115 };
 const S = { x: 640, y: -353.5 };
 const EXTENT = { width: 1280, height: 700, anchorX: 640, anchorY: -353.5, veil: 400 };
 
-const slicesAt = (p: number): MosaicSlice[] => {
-  const out: MosaicSlice[] = [];
-  const count = mosaicSlicesForFlyer(
-    RASTER,
-    S,
-    lensFieldAt(p, EXTENT),
-    2, // sourceScale: 2x snapshot
-    400,
-    out,
-  );
+const COLS = Math.ceil(RASTER.width / MOSAIC_CELL_PX);
+const ROWS = Math.ceil(RASTER.height / MOSAIC_CELL_PX);
+
+const cellsAt = (p: number): MosaicCell[] => {
+  const out: MosaicCell[] = [];
+  const count = mosaicCellsForFlyer(RASTER, S, lensFieldAt(p, EXTENT), 2, 400, out);
   return out.slice(0, count);
 };
 
-/** Group slices into columns (keyed by their source x). */
-const byColumns = (slices: MosaicSlice[]): Map<number, MosaicSlice[]> => {
-  const cols = new Map<number, MosaicSlice[]>();
-  for (const s of slices) {
-    const arr = cols.get(s.sx) ?? [];
-    arr.push(s);
-    cols.set(s.sx, arr);
-  }
-  for (const arr of cols.values()) arr.sort((a, b) => a.sy - b.sy);
-  return cols;
-};
+/** The mesh is row-major: cell index = row * COLS + col. */
+const byColRow = (cells: MosaicCell[]) => (col: number, row: number) => cells[row * COLS + col];
 
-test('the rest frame paints the raster exactly where it is (subsume identity)', () => {
-  const slices = slicesAt(0);
-  // At p = 0 the field is the identity: every column × row slice of the
-  // rest box is drawn, destination == source (× sourceScale, + veil on dy).
-  const expected = Math.ceil(RASTER.width / MOSAIC_STRIP_PX) * MOSAIC_ROWS;
-  assert.equal(slices.length, expected);
-  for (const s of slices) {
-    assert.ok(Math.abs(s.dx - s.sx) < 0.6, `rest x drift: ${s.dx} vs ${s.sx}`);
-    assert.ok(Math.abs(s.dy - (s.sy + 400 * 2)) < 0.6, `rest y drift: ${s.dy} vs ${s.sy}`);
-    assert.ok(Math.abs(s.dWidth - s.sWidth) < 0.6, 'rest w drift');
-    assert.ok(Math.abs(s.dHeight - s.sHeight) < 0.6, 'rest h drift');
+const midY = (cell: MosaicCell) => (cell.y0 + cell.y1 + cell.y2 + cell.y3) / 4;
+const midX = (cell: MosaicCell) => (cell.x0 + cell.x1 + cell.x2 + cell.x3) / 4;
+const cellHeight = (cell: MosaicCell) => (cell.y2 + cell.y3) / 2 - (cell.y0 + cell.y1) / 2;
+
+test('the rest frame tiles the raster exactly, and the mesh is continuous (shared edges)', () => {
+  const cells = cellsAt(0);
+  assert.equal(cells.length, COLS * ROWS);
+  for (let row = 0; row < ROWS; row += 1) {
+    for (let col = 0; col < COLS; col += 1) {
+      const cell = byColRow(cells)(col, row);
+      // Destination == source (× sourceScale, + veil on y): the identity at
+      // p = 0 is exact, so the lift has no seam.
+      assert.ok(Math.abs(cell.x0 - cell.sx) < 0.6, `rest x drift ${cell.x0} vs ${cell.sx}`);
+      assert.ok(Math.abs(cell.y0 - (cell.sy + 800)) < 0.6, `rest y drift ${cell.y0} vs ${cell.sy}`);
+      assert.ok(Math.abs(cell.x2 - (cell.sx + cell.sWidth)) < 0.6, 'rest right-edge drift');
+      assert.ok(Math.abs(cell.y2 - (cell.sy + cell.sHeight + 800)) < 0.6, 'rest bottom-edge drift');
+      // Adjacent cells share their warped edge EXACTLY — the same source
+      // junction maps to the same destination point, so the mesh reads as one
+      // continuous sheet, never disconnected strips.
+      if (col < COLS - 1) {
+        const right = byColRow(cells)(col + 1, row);
+        assert.equal(cell.x1, right.x0, `torn vertical seam at col ${col}`);
+        assert.equal(cell.y1, right.y0, `torn vertical seam at col ${col}`);
+      }
+      if (row < ROWS - 1) {
+        const below = byColRow(cells)(col, row + 1);
+        assert.equal(cell.x3, below.x0, `torn horizontal seam at row ${row}`);
+        assert.equal(cell.y3, below.y0, `torn horizontal seam at row ${row}`);
+      }
+    }
   }
 });
 
-test('mid-fall: the midline arches concentrically and the near edge leads the tide', () => {
-  // p=0.25: every column intact (nothing captured yet), arch is the honest
-  // quadratic second-difference of the column centres.
-  const slices = slicesAt(0.25);
-  const cols = byColumns(slices);
-  assert.ok([...cols.values()].some((arr) => arr.length === MOSAIC_ROWS));
-  const byX = [...cols.entries()].sort((a, b) => a[0] - b[0]);
-  const meanY = (arr: MosaicSlice[]) => arr.reduce((n, s) => n + s.dy, 0) / arr.length;
-  const mid = meanY(byX[Math.floor(byX.length / 2)][1]);
-  const edges = (meanY(byX[0][1]) + meanY(byX[byX.length - 1][1])) / 2;
+test('mid-fall: the midline arches toward the hole and the near edge stretches harder', () => {
+  // p=0.25: the midline (nearest the singularity) bows toward it — its cells
+  // land HIGHER (smaller y, the hole is above) than the columns at the edges.
+  const cells = cellsAt(0.25);
+  const meanY = (col: number) => {
+    let sum = 0;
+    for (let row = 0; row < ROWS; row += 1) sum += midY(byColRow(cells)(col, row));
+    return sum / ROWS;
+  };
+  const mid = Math.floor(COLS / 2);
+  const edges = (meanY(0) + meanY(COLS - 1)) / 2;
   assert.ok(
     edges - mid > 20,
     `midline arch ${(edges - mid).toFixed(1)}px @p=0.25, canvas units: the bow is the design's word`,
   );
-  // The near/far differential at p=0.3 (strongest intact-column tide):
-  // row 0 — the side nearest the horizon — must lose LESS of its destination
-  // height than the bottom row: it is the exponentially harder-stretched
-  // side, not a side that lost the same fraction as its opposite.
-  const near = byColumns(slicesAt(0.3));
-  const centreKey = [...near.keys()].reduce((a, b) =>
-    Math.abs(a + 1.5 - S.x * 2) < Math.abs(b + 1.5 - S.x * 2) ? a : b,
-  );
-  const col = near.get(centreKey)!;
-  assert.ok(col && col.length === MOSAIC_ROWS);
-  const topRatio = col[0].dHeight / col[0].sHeight;
-  const bottomRatio = col[col.length - 1].dHeight / col[col.length - 1].sHeight;
+
+  // p=0.3, the centre column: the top cell (nearer the horizon) keeps MORE of
+  // its height than the bottom cell — the near side is exponentially harder
+  // stretched, which is the spaghettification a flat affine cannot express.
+  const strong = cellsAt(0.3);
+  const centre = Math.floor(COLS / 2);
+  const top = cellHeight(byColRow(strong)(centre, 0));
+  const bottom = cellHeight(byColRow(strong)(centre, ROWS - 1));
   assert.ok(
-    topRatio > bottomRatio * 1.03,
-    `tide differential washed out: top ${topRatio.toFixed(2)} vs bottom ${bottomRatio.toFixed(2)}`,
+    top > bottom * 1.03,
+    `tide differential washed out: top ${top.toFixed(2)} vs bottom ${bottom.toFixed(2)}`,
   );
+
   // And everything draws strictly toward the anchor (never a stray bloom):
-  // radii in the destination canvas are all inside their sources' — the
-  // swirl rotation moves slices sideways but cannot move them outward.
+  // the warped centre of every cell sits at or inside its source radius.
   const ds = { x: S.x * 2, y: (S.y + 400) * 2 };
-  for (const s of slices) {
-    const sr = Math.hypot(s.sx + s.sWidth / 2 - S.x * 2, s.sy + s.sHeight / 2 - S.y * 2);
-    const dr = Math.hypot(s.dx + s.dWidth / 2 - ds.x, s.dy + s.dHeight / 2 - ds.y);
-    assert.ok(dr <= sr + 1, `slice bloomed outward: ${dr.toFixed(1)} > ${sr.toFixed(1)}`);
+  for (const cell of cells) {
+    const sr = Math.hypot((cell.sx + cell.sWidth / 2) - S.x * 2, (cell.sy + cell.sHeight / 2) - S.y * 2);
+    const dr = Math.hypot(midX(cell) - ds.x, midY(cell) - ds.y);
+    assert.ok(dr <= sr + 1, `cell bloomed outward: ${dr.toFixed(1)} > ${sr.toFixed(1)}`);
   }
 });
 
-test('late fall: the slices collapse onto the singularity and there is no image left to draw', () => {
-  const slices = slicesAt(0.98);
-  const full = Math.ceil(RASTER.width / MOSAIC_STRIP_PX) * MOSAIC_ROWS;
-  // Nearly everything has pinched off: surviving slices are few and thin,
-  // and every destination sits at the anchor.
-  assert.ok(
-    slices.length < full * 0.25,
-    `still ${slices.length} of ${full} slices at p=0.98`,
-  );
+test('late fall: the mesh collapses onto the singularity and there is no image left to draw', () => {
+  const cells = cellsAt(0.98);
+  // The grid has pinched toward the anchor: every surviving cell sits at the
+  // singularity and each is a thin sliver of the rest box.
   let longest = 0;
-  for (const s of slices) {
-    longest = Math.max(longest, s.dHeight);
-    const cx = s.dx + s.dWidth / 2;
-    assert.ok(Math.abs(cx - S.x * 2) < RASTER.width * 2 * 0.2, `late slice wandered to ${cx}`);
+  for (const cell of cells) {
+    const height = cellHeight(cell);
+    const width = (cell.x1 + cell.x2) / 2 - (cell.x0 + cell.x3) / 2;
+    longest = Math.max(longest, height, width);
+    assert.ok(Math.abs(midX(cell) - S.x * 2) < RASTER.width * 2 * 0.2, `late cell wandered to ${midX(cell)}`);
   }
-  assert.ok(longest < 40, `a ${longest}px slice survives at the horizon`);
+  assert.ok(longest < 40, `a ${longest}px cell survives at the horizon`);
+
+  // Full consumption is geometric: at p = 1 every vertex has been captured,
+  // so no cell survives — nothing left to draw, never an opacity fade.
+  assert.equal(cellsAt(1).length, 0, 'cells survived the horizon at p = 1');
 });
