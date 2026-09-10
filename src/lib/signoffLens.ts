@@ -30,12 +30,18 @@
      inactive filter, and only then is the CSS reference flipped onto it.
      Style recalculation is the one invalidation path every engine honours.
 
-   · TRIO, NEVER A MIX. A displacement map is only valid against the region
-     and scale it was baked with. Region (bbox units), feImage placement
-     (element-local user-space px — explicit, never the spec-default
-     subregion), scale and href are written atomically per step, into the
-     filter the client is about to be pointed at, and only across a step
-     boundary. A measured re-layout rebuilds the strip and the warm set.
+   · TRIO, NEVER A MIX, AND ONE SPACE. A displacement map is only valid
+     against the region and scale it was baked with. With filterUnits AND
+     primitiveUnits both "userSpaceOnUse" the filter region, the feImage
+     subregion, the map cells and the scale all share element-local CSS px —
+     mixing bbox-fraction regions with px primitives is exactly where engines
+     diverge on HTML elements, and a misinterpreted map is an invisible
+     flyer. Trio + href are written atomically per step, into the filter the
+     client is about to be pointed at, and only across a step boundary. And
+     the flip itself is gated on the map's decode() having resolved (`decoded`
+     below): one filmstrip step late is invisible; one void frame is "the
+     text just disappeared". A measured re-layout rebuilds both the strip and
+     the warm set.
    ========================================================================== */
 
 import {
@@ -103,6 +109,12 @@ export interface FlyerLenses {
    * cache (dropping these is what lets the feImage re-enter the async fetch
    * path). */
   keepAlive: Set<HTMLImageElement>;
+  /** URLs whose decode() has RESOLVED. A ping-pong flip is gated on
+   * membership: the client is only ever pointed at a map that provably exists
+   * as pixels. Without the gate, the freshly swapped-in chain sits mid-fetch
+   * rendering a transparent-black displacement (everything samples the void)
+   * — the lag of one filmstrip step is always a smaller defect than a void. */
+  decoded: Set<string>;
   /** The inputs the background pre-baker is working through, per flyer. */
   pending: Record<FlyerId, { raster: LensRect; singularity: Point; extent: HorizonExtent } | null>;
   /** The rAF id of the background pre-baker, 0 when idle. */
@@ -112,19 +124,24 @@ export interface FlyerLenses {
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const XLINK_NS = 'http://www.w3.org/1999/xlink';
 
 /** Filmstrip index of a playhead. */
 const stepIndexOf = (progress: number): number =>
   Math.round(clamp01(progress) * LENS_BAKE_STEPS);
 
-/** One displacement-filter chain: feImage → feDisplacementMap. */
+/** One displacement-filter chain: feImage → feDisplacementMap. ONE coordinate
+ * space for everything: with `filterUnits="userSpaceOnUse"` (and primitives
+ * likewise) the region AND the feImage placement are both element-local CSS
+ * px. Mixing bbox-fraction regions with user-space primitives is precisely
+ * where engines diverge on HTML elements, and a map pinned one interpretation
+ * away from its content is an all-transparent flyer: the wrong displacement
+ * input reads as transparent black, every output pixel samples the void, and
+ * the block does not warp — it vanishes. */
 function makeChain(id: string): LensChain {
   const filter = document.createElementNS(SVG_NS, 'filter');
   filter.setAttribute('id', id);
-  // The region comes from the content hull in the element's own box units;
-  // the primitives (the displacement scale, the feImage's placement — see
-  // `applyBake`) are painted in element-local CSS px.
-  filter.setAttribute('filterUnits', 'objectBoundingBox');
+  filter.setAttribute('filterUnits', 'userSpaceOnUse');
   filter.setAttribute('primitiveUnits', 'userSpaceOnUse');
   filter.setAttribute('color-interpolation-filters', 'sRGB');
   const image = document.createElementNS(SVG_NS, 'feImage');
@@ -176,6 +193,7 @@ export function mountFlyerLenses(host: HTMLElement): FlyerLenses {
     map: new Float32Array(LENS_MAP_SIZE * LENS_MAP_SIZE * 2),
     channels,
     keepAlive: new Set(),
+    decoded: new Set(),
     pending: {
       invite: null,
       cta: null,
@@ -233,25 +251,35 @@ function bakeOne(
   // The decode twin: an identical URL fetched through the normal HTML image
   // pipeline. The browser's image cache is keyed by the URL string, so once
   // the twin has decoded, assigning this string to the feImage's href is a
-  // cache hit — no pending fetch, no transparent-black map, no flicker.
+  // cache hit — no pending fetch, no transparent-black map, no flicker. And
+  // the client is only ever POINTED at the url after the twin's decode has
+  // proven the pixels exist (see `paintFlyerLens`): a step late, never void.
   const twin = new Image();
-  twin.src = url;
-  // decode() forces the decode ahead of first use rather than trusting the
-  // fetch alone; it is fire-and-forget because the warm <img> is itself enough
-  // on engines without it.
-  twin.decode?.().catch(() => undefined);
   lenses.keepAlive.add(twin);
+  twin.src = url; // BEFORE decode(): decode() must belong to THIS load
+  if (typeof twin.decode === 'function') {
+    twin
+      .decode()
+      .then(() => lenses.decoded.add(url))
+      .catch(() => lenses.decoded.add(url)); // a rejected decode must not deadlock the flip
+  } else {
+    // No decode API: trust the cache hit and do not gate.
+    lenses.decoded.add(url);
+  }
   return { region: snapped, scale: 2 * norm, url };
 }
 
 /** Write a baked frame's trio into the INACTIVE chain, then flip: the filter
  * the trio went into is — from the caller's next style write — the one the
  * client gets pointed at. Everything lands before the CSS reference moves,
- * so the engine never resolves a half-written chain. Region arrives in bbox
- * units, the feImage is pinned over that same hull in the element's local
- * user space (NEVER the default subregion — an un-positioned feImage is a
- * spec interpretation away from reading the map off the wrong box), the scale
- * is the map's true range, the href is the warm URL. */
+ * so the engine never resolves a half-written chain. With filterUnits and
+ * primitiveUnits BOTH "userSpaceOnUse", the filter region and the feImage's
+ * subregion are the same rectangle in the same space (element-local px:
+ * region − raster, since the raster's top-left is the element's own origin):
+ * one interpretation, zero ambiguity. The scale is the map's true range; the
+ * href is a PROVABLY DECODED url (the gate is in `paintFlyerLens`; the
+ * xlink:href twin is belt-and-braces for engines that only honour the legacy
+ * attribute on feImage — a silently unloaded map is an invisible flyer). */
 function applyBake(
   channel: FlyerLensChannel,
   stepIndex: number,
@@ -261,16 +289,21 @@ function applyBake(
   const next = channel.active === 0 ? 1 : 0;
   const chain = channel.chains[next];
   const { region } = bake;
-  chain.filter.setAttribute('x', ((region.x - raster.x) / raster.width).toFixed(4));
-  chain.filter.setAttribute('y', ((region.y - raster.y) / raster.height).toFixed(4));
-  chain.filter.setAttribute('width', (region.width / raster.width).toFixed(4));
-  chain.filter.setAttribute('height', (region.height / raster.height).toFixed(4));
-  chain.image.setAttribute('x', (region.x - raster.x).toFixed(1));
-  chain.image.setAttribute('y', (region.y - raster.y).toFixed(1));
-  chain.image.setAttribute('width', region.width.toFixed(1));
-  chain.image.setAttribute('height', region.height.toFixed(1));
+  const x = (region.x - raster.x).toFixed(1);
+  const y = (region.y - raster.y).toFixed(1);
+  const width = region.width.toFixed(1);
+  const height = region.height.toFixed(1);
+  chain.filter.setAttribute('x', x);
+  chain.filter.setAttribute('y', y);
+  chain.filter.setAttribute('width', width);
+  chain.filter.setAttribute('height', height);
+  chain.image.setAttribute('x', x);
+  chain.image.setAttribute('y', y);
+  chain.image.setAttribute('width', width);
+  chain.image.setAttribute('height', height);
   chain.displace.setAttribute('scale', bake.scale.toFixed(1));
   chain.image.setAttribute('href', bake.url);
+  chain.image.setAttributeNS(XLINK_NS, 'xlink:href', bake.url);
   channel.active = next;
   channel.applied = stepIndex;
 }
@@ -328,6 +361,7 @@ export function paintFlyerLens(
     channel.applied = -1;
     channel.cache = new Array<LensBake | null>(LENS_BAKE_STEPS + 1).fill(null);
     lenses.keepAlive.clear();
+    lenses.decoded.clear();
     lenses.pending[id] = { raster: { ...raster }, singularity: { ...singularity }, extent: { ...extent } };
     lenses.prebakeIndex = 0;
   } else if (!lenses.pending[id]) {
@@ -341,7 +375,14 @@ export function paintFlyerLens(
       if (!bake) return null;
       channel.cache[stepIndex] = bake;
     }
-    applyBake(channel, stepIndex, bake, raster);
+    // THE GATE: the flip is only ever made onto a chain whose map has
+    // PROVABLY decoded. Pointing the client at a url that is still mid-fetch
+    // paints a transparent-black displacement — every output pixel sampling
+    // the void — which is exactly how "the text just disappears the moment
+    // the animation starts" reads. One filmstrip step late is invisible; one
+    // void frame is the whole bug. The next paint re-tries (a decode of a
+    // data URL is microtasks, not frames), so the settle is immediate.
+    if (lenses.decoded.has(bake.url)) applyBake(channel, stepIndex, bake, raster);
   }
   schedulePrebake(lenses);
   return channel.active < 0 ? null : `${FLYER_LENS_ID[id]}-${channel.active === 0 ? 'a' : 'b'}`;
@@ -369,6 +410,7 @@ export function disposeFlyerLenses(lenses: FlyerLenses): void {
   }
   for (const id of FLYER_IDS) lenses.pending[id] = null;
   lenses.keepAlive.clear();
+  lenses.decoded.clear();
   lenses.svg.remove();
   lenses.canvas.width = 0;
   lenses.canvas.height = 0;

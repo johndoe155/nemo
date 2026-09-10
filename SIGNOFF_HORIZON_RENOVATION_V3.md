@@ -270,6 +270,36 @@ New `tests/unit/signoffLens.test.ts` pins the pair, the no-op-on-same-step
 rule, the flip-on-new-step rule, the strip rebuild on layout change, and the
 background pre-baker filling all 65 frames per flyer.
 
+## V3.3 — one coordinate space, and a decode gate ("disappears when it starts")
+
+The ping-pong made the flip observable — and the block then showed what the
+flip produced the instant the lens engaged: **nothing**. Two engine mechanics,
+both now closed:
+
+- **Mixed filter coordinate spaces.** The region was written in
+  objectBoundingBox fractions while `primitiveUnits="userSpaceOnUse"` pinned
+  the feImage in px — precisely the split where engines diverge on HTML
+  elements, and a map read one interpretation away from its content is an
+  all-transparent flyer. Both spaces are now `userSpaceOnUse`: filter region,
+  feImage subregion, map cells and scale all share element-local CSS px,
+  which is also the one interpretation that cannot be clamped (bbox fractions
+  below ~10% have historic engine clamps).
+- **The flip was not gated on pixels existing.** Swapping the CSS reference
+  onto a chain whose fresh data-URL map is still mid-fetch paints a
+  transparent-black displacement (−range on both channels: every output
+  pixel samples the void) — a step that arrives before its decode is a void.
+  `paintFlyerLens` now flips only when the twin's `decode()` has resolved
+  (`lenses.decoded`): one filmstrip step late is invisible, one void frame
+  is the bug. `xlink:href` is written alongside `href` for engines that only
+  honour the legacy attribute on feImage (a silently unloaded map is the same
+  void), and `twin.src` is set before `decode()` is called — the decode must
+  belong to *this* load, not the empty one.
+
+The fake-DOM suite now pins the gate itself: first paint hands back no id and
+writes nothing while the twin decodes; a same-step repaint is a strict no-op;
+a mid-decode step change keeps the last VALID chain; and a layout change
+rebuilds the strip without ever flipping mid-decode.
+
 ## Files touched
 
 `src/lib/spaghettification.ts` (lens section + retunes),

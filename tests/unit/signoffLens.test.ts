@@ -21,6 +21,7 @@ interface StubNode {
   children: StubNode[];
   classList: { add: (c: string) => void };
   setAttribute: (k: string, v: string) => void;
+  setAttributeNS: (ns: string, k: string, v: string) => void;
   append: (...nodes: StubNode[]) => void;
   remove: () => void;
 }
@@ -33,6 +34,10 @@ const mkNode = (tag: string): StubNode => {
     children: [],
     classList: { add: () => undefined },
     setAttribute(k, v) {
+      node.attrs[k] = v;
+      node.attrWrites += 1;
+    },
+    setAttributeNS(_ns, k, v) {
       node.attrs[k] = v;
       node.attrWrites += 1;
     },
@@ -111,7 +116,12 @@ const RASTER = { x: 0, y: 0, width: 100, height: 20 };
 const SINGULARITY = { x: 50, y: -60 };
 const EXTENT = { width: 200, height: 100, anchorX: 50, anchorY: -60, veil: 80 };
 
-test('the lens mounts a ping-pong PAIR per flyer and paints steps by flipping the reference', () => {
+/** Let pending twin decode()s resolve (microtasks past the async boundary). */
+const settled = async (times = 3) => {
+  for (let i = 0; i < times; i += 1) await new Promise((r) => setImmediate(r));
+};
+
+test('the lens mounts a ping-pong PAIR per flyer and paints steps by flipping the reference — only after decode', async () => {
   const restore = installFakeDom();
   try {
     const host = HOST();
@@ -122,8 +132,19 @@ test('the lens mounts a ping-pong PAIR per flyer and paints steps by flipping th
     assert.equal((invite[1].filter as never as StubNode).attrs.id, `${FLYER_LENS_ID.invite}-b`);
     assert.equal(host.svg!.children.length, 4);
 
-    // First paint at a stepped playhead: writes the trio into chain A and
-    // returns its id for the CSS flip.
+    // THE GATE: the first paint bakes the frame but its twin is still
+    // decoding, so the client is NOT flipped onto a void chain — no id, no
+    // writes beyond what the mount itself set — and the element keeps its
+    // (visible) unfiltered paint.
+    const mountWritesA = (invite[0].filter as never as StubNode).attrWrites;
+    const mountWritesB = (invite[1].filter as never as StubNode).attrWrites;
+    assert.equal(paintFlyerLens(lenses, 'invite', 0.2, RASTER, SINGULARITY, EXTENT), null);
+    assert.equal((invite[0].filter as never as StubNode).attrWrites, mountWritesA);
+    assert.equal((invite[1].filter as never as StubNode).attrWrites, mountWritesB);
+
+    // Decode settled: the SAME paint now writes the trio into chain A and
+    // hands back its id for the CSS flip.
+    await settled();
     const first = paintFlyerLens(lenses, 'invite', 0.2, RASTER, SINGULARITY, EXTENT);
     assert.equal(first, `${FLYER_LENS_ID.invite}-a`);
     const aFilter = invite[0].filter as never as StubNode;
@@ -131,12 +152,15 @@ test('the lens mounts a ping-pong PAIR per flyer and paints steps by flipping th
     const scale = parseFloat((invite[0].displace as never as StubNode).attrs.scale);
     assert.ok(scale > 0, `scale ${scale} should be positive mid-fall`);
     assert.match((invite[0].image as never as StubNode).attrs.href, /^data:image\/png/);
-    // feImage placement is ELEMENT-LOCAL px: image.x = region.x − raster.x,
-    // while the filter's bbox x is (region.x − raster.x)/width — the two must
-    // agree through the raster width (px rounding aside).
-    const bboxX = parseFloat(aFilter.attrs.x);
-    const imageX = parseFloat((invite[0].image as never as StubNode).attrs.x);
-    assert.ok(Math.abs(imageX - bboxX * RASTER.width) < 2, `map placement ${imageX} vs region ${bboxX}·w`);
+    assert.equal((invite[0].image as never as StubNode).attrs['xlink:href'], (invite[0].image as never as StubNode).attrs.href);
+
+    // ONE SPACE: with filterUnits=primitiveUnits=userSpaceOnUse the filter's
+    // region and the feImage's subregion are the same rectangle in the same
+    // element-local px — a mixed-space misread is how maps silently void out.
+    assert.equal((invite[0].image as never as StubNode).attrs.x, aFilter.attrs.x);
+    assert.equal((invite[0].image as never as StubNode).attrs.y, aFilter.attrs.y);
+    assert.equal((invite[0].image as never as StubNode).attrs.width, aFilter.attrs.width);
+    assert.equal((invite[0].image as never as StubNode).attrs.height, aFilter.attrs.height);
 
     // Same step again: NO writes at all, same id — sub-step churn is how the
     // old build flickered.
@@ -148,9 +172,15 @@ test('the lens mounts a ping-pong PAIR per flyer and paints steps by flipping th
     assert.equal((invite[0].filter as never as StubNode).attrWrites, writesA);
     assert.equal((invite[1].filter as never as StubNode).attrWrites, writesB);
 
-    // New step: the trio goes into chain B and the id FLIPS — the engine sees
-    // a different url() value, which is the invalidation that cannot be
-    // cached through.
+    // New step whose twin is still decoding: still the OLD id — a lagged
+    // valid frame, never a void one.
+    assert.equal(paintFlyerLens(lenses, 'invite', 0.35, RASTER, SINGULARITY, EXTENT), first);
+    assert.equal((invite[1].filter as never as StubNode).attrWrites, mountWritesB);
+
+    // Decoded now: the trio goes into chain B and the id FLIPS — the engine
+    // sees a different url() value, the invalidation that cannot be cached
+    // through.
+    await settled();
     const later = paintFlyerLens(lenses, 'invite', 0.35, RASTER, SINGULARITY, EXTENT);
     assert.equal(later, `${FLYER_LENS_ID.invite}-b`);
     assert.ok((invite[1].filter as never as StubNode).attrWrites > 0);
@@ -160,12 +190,13 @@ test('the lens mounts a ping-pong PAIR per flyer and paints steps by flipping th
 
     // The background pre-baker eventually fills the strip.
     flush();
+    await settled();
     const baked = lenses.channels.invite.cache.filter(Boolean).length;
     assert.equal(baked, LENS_BAKE_STEPS + 1);
 
     silenceFlyerLenses(lenses);
     assert.equal((invite[0].displace as never as StubNode).attrs.scale, '0');
-    // After a stand-down the next paint re-arms a chain cleanly.
+    // After a stand-down the next paint re-arms a decoded chain immediately.
     assert.match(String(paintFlyerLens(lenses, 'invite', 0.35, RASTER, SINGULARITY, EXTENT)), /horizon-lens-invite-[ab]/);
 
     disposeFlyerLenses(lenses);
@@ -174,24 +205,30 @@ test('the lens mounts a ping-pong PAIR per flyer and paints steps by flipping th
   }
 });
 
-test('a measured layout change rebuilds the strip and resets the ping-pong', () => {
+test('a measured layout change rebuilds the strip and still never flips mid-decode', async () => {
   const restore = installFakeDom();
   try {
     const lenses = mountFlyerLenses(HOST() as never);
+    paintFlyerLens(lenses, 'cta', 0.2, RASTER, SINGULARITY, EXTENT); // decodes…
+    await settled();
     const first = paintFlyerLens(lenses, 'cta', 0.2, RASTER, SINGULARITY, EXTENT);
     assert.equal(first, `${FLYER_LENS_ID.cta}-a`);
     flush();
+    await settled();
     assert.equal(lenses.channels.cta.cache.filter(Boolean).length, LENS_BAKE_STEPS + 1);
-    // New raster: every cached frame is invalid, and the VERY FIRST repaint
-    // must still FLIP the reference — if the id the client already points at
-    // returned unchanged, the fresh trio would depend on attribute mutation
-    // being observed, which is exactly the failure mode the ping-pong exists
-    // because of.
+    // New raster: the strip, the warm set and the decode proofs are all
+    // invalid. The first repaint bakes the step's frame but is NOT allowed to
+    // flip onto it before its decode lands — the client keeps the last VALID
+    // chain, which is exactly how "text disappears mid-animation" stays dead.
     const moved = { ...RASTER, y: RASTER.y + 4 };
+    const held = paintFlyerLens(lenses, 'cta', 0.2, moved, SINGULARITY, EXTENT);
+    assert.equal(held, first);
+    await settled();
     const flipped = paintFlyerLens(lenses, 'cta', 0.2, moved, SINGULARITY, EXTENT);
     assert.equal(flipped, `${FLYER_LENS_ID.cta}-b`);
-    assert.notEqual(flipped, first);
+    assert.notEqual(flipped, held);
     assert.equal(lenses.channels.cta.cache.filter(Boolean).length, 1);
+    disposeFlyerLenses(lenses);
   } finally {
     restore();
   }
