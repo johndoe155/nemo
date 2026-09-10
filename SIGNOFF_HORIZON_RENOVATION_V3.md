@@ -245,6 +245,31 @@ Playwright calibration corrected alongside: hash diversity across the live
 window is ≥ 2 distinct baked frames (the armed fixture stops baking past
 MIX_END, by design).
 
+## V3.2 — the ping-pong (the "completely non-motile" bug's last stand)
+
+V3.1 retired the fetch race; the block still didn't move. The remaining bug
+is the other half of the same engine reality: **attribute mutation inside a
+`filter` that a `will-change: filter` client already references is not a
+reliable invalidation path.** Engines cache the instantiated filter chain per
+client: `setAttribute` on its `feImage`/`feDisplacementMap`/region can land
+without any repaint reaching the element, so the flyer keeps whatever chain
+it was painted with first — a rigid, unwarped block. What no engine can cache
+through is a change of the *style property value itself*.
+
+So every flyer now mounts a **pair** of chains, `<base>-a` and `<base>-b`,
+and `paintFlyerLens` ping-pongs: each filmstrip step's trio (region,
+placement, scale, href — still written atomically, still warm-decoded) goes
+into the **inactive** chain, and only then does the component flip
+`el.style.filter = url(#<that chain>)`. Every baked step change is therefore
+a CSS value change; a value change forces re-resolution; the scaler never
+depends on attribute-mutation observability again. Same step in → same id
+out → zero writes, so a still playhead costs nothing; a measured re-layout
+rebuilds the strip *and still flips on the first repaint* (writing the
+currently-referenced chain would squarely re-depend on the broken path).
+New `tests/unit/signoffLens.test.ts` pins the pair, the no-op-on-same-step
+rule, the flip-on-new-step rule, the strip rebuild on layout change, and the
+background pre-baker filling all 65 frames per flyer.
+
 ## Files touched
 
 `src/lib/spaghettification.ts` (lens section + retunes),

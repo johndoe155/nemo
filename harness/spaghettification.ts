@@ -22,7 +22,6 @@ import {
   type Point,
 } from '../src/lib/spaghettification.ts';
 import {
-  FLYER_LENS_ID,
   mountFlyerLenses,
   paintFlyerLens,
   silenceFlyerLenses,
@@ -36,8 +35,8 @@ const slider = document.getElementById('playhead') as HTMLInputElement;
 const readout = document.getElementById('readout') as HTMLOutputElement;
 
 /** One lenses mount for one flyer. Production mounts both flyer channels on
- * the sheet; here the invite channel is re-used for the probe — the filter id
- * is FLYER_LENS_ID.invite, exactly what the live page paints for the headline. */
+ * the sheet; here the invite channel is re-used for the probe — the filter
+ * pair the live page paints for the headline (the `-a`/`-b` ping-pong). */
 const lenses = mountFlyerLenses(document.getElementById('stage') as HTMLElement);
 
 /** The probe's rest box and the singularity, in the probe's own local space —
@@ -108,11 +107,11 @@ function paint(): void {
     // The component's exact dance: engage the filter, let paintFlyerLens own
     // the region/scale/map (its own quantization keeps repeated scrubs from
     // re-baking below the visible step).
-    probe.style.filter = `url(#${FLYER_LENS_ID.invite})`;
-    // Same signature the component drives: the field is evaluated INSIDE the
-    // painter (quantised onto the filmstrip step); the harness's own `field`
-    // above is just the read-out's probe.
-    paintFlyerLens(lenses, 'invite', p, raster, scene.singularity, scene.extent);
+    // Same dance the component drives: bake FIRST (into the inactive chain),
+    // then flip the CSS reference onto the returned id. The harness's own
+    // `field` above is just the read-out's probe.
+    const lensId = paintFlyerLens(lenses, 'invite', p, raster, scene.singularity, scene.extent);
+    probe.style.filter = lensId ? `url(#${lensId})` : '';
     // The region overlay: the SAME rounding paintFlyerLens writes, so what
     // is drawn is what is applied. The bbox-units conversion is inside the
     // map; the overlay reads the sheet-px rect straight from lensRegionAt.

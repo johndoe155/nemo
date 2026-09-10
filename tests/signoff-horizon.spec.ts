@@ -917,17 +917,25 @@ test('the DOM warp is a lensing field over the raster — never an affine skew',
   const veil = sheetBox!.y - canvasBox!.y;
   expect(veil).toBeGreaterThan(0);
 
-  /** Read the live lens for one flyer: its filter region (bbox units), the
-   * displacement scale in px, and a fingerprint of the baked map's URL. */
-  const readLens = (id: 'invite' | 'cta') =>
-    page.evaluate((lensId) => {
-      const filterEl = document.getElementById(lensId)!;
+  /** Read the live lens for one flyer: its ACTIVE chain (the `-a`/`-b` filter
+   * the element's computed `filter` currently references — the ping-pong is
+   * the invalidation fix), its region (bbox units), the displacement scale in
+   * px, and a fingerprint of the baked map's URL. */
+  const readLens = (selector: string) =>
+    page.evaluate((sel) => {
+      const el = document.querySelector<HTMLElement>(sel)!;
+      const filterDecl = getComputedStyle(el).filter;
+      const match = /url\((['"]?)#([^'")]+)\1\)/.exec(filterDecl);
+      if (!match) return null;
+      const filterEl = document.getElementById(match[2]);
+      if (!filterEl) return null;
       const image = filterEl.querySelector('feImage')!;
       const displace = filterEl.querySelector('feDisplacementMap')!;
       const href = image.getAttribute('href') ?? '';
       let hash = 0;
       for (let i = 0; i < href.length; i += 1) hash = ((hash << 5) - hash + href.charCodeAt(i)) | 0;
       return {
+        id: match[2],
         x: parseFloat(filterEl.getAttribute('x') ?? '0'),
         y: parseFloat(filterEl.getAttribute('y') ?? '0'),
         width: parseFloat(filterEl.getAttribute('width') ?? '1'),
@@ -937,10 +945,11 @@ test('the DOM warp is a lensing field over the raster — never an affine skew',
         bytes: href.length,
         hash,
       };
-    }, `horizon-lens-${id}`);
+    }, selector);
 
-  const invites: Array<Awaited<ReturnType<typeof readLens>>> = [];
-  const ctas: Array<Awaited<ReturnType<typeof readLens>>> = [];
+  type LiveLens = NonNullable<Awaited<ReturnType<typeof readLens>>>;
+  const invites: LiveLens[] = [];
+  const ctas: LiveLens[] = [];
 
   for (const progress of [0.15, 0.4, 0.65, 0.85]) {
     await scrollProgress(page, progress);
@@ -967,26 +976,26 @@ test('the DOM warp is a lensing field over the raster — never an affine skew',
       // MIX_END = 0.38; afterwards the live layer is invisible and the filter
       // is stood down), the flyer is warped by ITS OWN displacement filter.
       const id = FLYER_IDS[index];
-      const lensData = await readLens(id);
+      const lensData = await readLens(selector);
       if (progress <= 0.15) {
-        // Engines disagree on quoting an internal url() in serialised form;
-        // the assertion that matters is WHICH filter is referenced.
-        expect(flyer.filter).toContain(`horizon-lens-${id}`);
-        expect(flyer.filter).toContain('url(');
+        // The element references ONE chain of the flyer's ping-pong pair
+        // (`#horizon-lens-<id>-[ab]`), and that chain is live, not stood down.
+        expect(lensData).not.toBeNull();
+        expect(lensData!.id).toMatch(new RegExp(`^horizon-lens-${id}-[ab]$`));
         // An identity warp (scale 0) would mean "no field present": the old
         // bug in another clothes. Mid-fall the range is tens to hundreds of
         // px; require a real, growing field — and never a bloated one.
-        expect(lensData.scale).toBeGreaterThan(0);
-        expect(lensData.scale).toBeLessThan(2200);
+        expect(lensData!.scale).toBeGreaterThan(0);
+        expect(lensData!.scale).toBeLessThan(2200);
         // The map is a re-baked PNG, not a re-used one.
-        expect(lensData.href).toBe('data:image/png;base64,');
-        expect(lensData.bytes).toBeGreaterThan(200);
+        expect(lensData!.href).toBe('data:image/png;base64,');
+        expect(lensData!.bytes).toBeGreaterThan(200);
       }
       if (progress >= 0.4) {
         // The frozen frame owns the paint: live layer fully exchanged.
         expect(flyer.opacity).toBe(0);
       }
-      (id === 'invite' ? invites : ctas).push(lensData);
+      if (lensData) (id === 'invite' ? invites : ctas).push(lensData);
     }
   }
 

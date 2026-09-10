@@ -25,7 +25,6 @@ import {
   type FlyerId,
 } from '../lib/spaghettification';
 import {
-  FLYER_LENS_ID,
   disposeFlyerLenses,
   mountFlyerLenses,
   paintFlyerLens,
@@ -730,7 +729,6 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
               // fall alone, so the lens runs to the horizon itself.
               const live = warp ? flyer.opacity > 0.015 : true;
               const on = lensOn && live;
-              el.style.filter = on ? `url(#${FLYER_LENS_ID[id]})` : '';
               if (on && lenses) {
                 const raster = {
                   x: box.x - box.width / 2,
@@ -738,7 +736,16 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
                   width: box.width,
                   height: box.height,
                 };
-                paintFlyerLens(lenses, id, p, raster, sheetSingularity, geometry);
+                // FIRST the bake into the inactive chain, THEN the style swap
+                // onto it: changing the url() the client references is the one
+                // invalidation path every engine honours (attribute mutation
+                // inside an already-referenced filter is not reliably
+                // observed — the "non-motile" bug). The paint returns the id
+                // to flip to; a half-written chain is never referenced.
+                const lensId = paintFlyerLens(lenses, id, p, raster, sheetSingularity, geometry);
+                el.style.filter = lensId ? `url(#${lensId})` : '';
+              } else {
+                el.style.filter = '';
               }
             }
 

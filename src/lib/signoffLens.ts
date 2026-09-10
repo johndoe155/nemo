@@ -3,44 +3,39 @@
 
    The math lives in `lib/spaghettification.ts` (`lensFieldAt` /
    `lensRegionAt` / `computeLensMap` / `lensBakeStep`), pure and unit-tested.
-   This module owns the DOM objects per flyer — the <svg> filter, its feImage
-   displacement map and the feDisplacementMap scale — and, since V3.1, the one
-   browser mechanic that decides whether any of it is visible at all:
+   This module owns the DOM objects per flyer — SVG displacement filters, their
+   feImage maps and their feDisplacementMap scales — and the three browser
+   mechanics that decide whether any of it is visible at all:
 
-   · feImage hrefs GO THROUGH THE ASYNC IMAGE PIPELINE. Re-assigning
-     `image.href` to a fresh data URL does not take effect on the next paint:
-     the document has to fetch (and decode) the image, and while that is
-     pending the displacement input is TRANSPARENT BLACK. Transparent black
-     reads as channel = 0, i.e. a displacement of `scale·(0 − 0.5) = −range` on
-     BOTH axes — every output pixel sampling hundreds of px up-left of itself,
-     i.e. the void, i.e. the flyer half-misplaced, streaking, or gone entirely.
-     The first live build re-baked (and re-assigned) the map on essentially
-     every scroll frame, so the whole consumption ran inside that fetch
-     pipeline: random glitchy displacement under scroll, the block
-     disappearing outright, and — whenever the pipeline won the race with a
-     stale near-rest map — a flyer that never visibly moved toward the hole at
-     all. THE FILMSTRIP is the fix: the fall is baked once as LENS_BAKE_STEPS
-     stepping frames, every data URL is kept alive AND warm-decoded in the
-     image cache by an <img> twin, and applying a frame only ever swaps in a
-     URL the browser has already decoded.
+   · feImage hrefs GO THROUGH THE ASYNC IMAGE PIPELINE (V3.1's bug). Replacing
+     `image.href` with a fresh data URL needs a fetch and a decode, and while
+     that is pending the displacement input is transparent black — `scale·(0 −
+     0.5) = −range` on both axes, every output pixel sampling the void. A scrub
+     that re-bakes per frame lives inside that race: the first live build
+     flickered, misplaced and outright lost the block. THE FILMSTRIP is the
+     fix: the fall is baked once per flyer as LENS_BAKE_STEPS frames, each data
+     URL pinned alive and pre-decoded by an <img> twin, so applying a frame is
+     always an image-cache hit.
+
+   · ATTRIBUTE MUTATION ON A REFERENCED FILTER IS NOT RELIABLY OBSERVED (the
+     remaining V3.2 bug). Engines cache the instantiated filter chain of a
+     element styled `filter: url(#x)`: with the client holding opacity/filter
+     (`will-change`), attribute writes inside the referenced <filter> —
+     feImage href, region, scale — can land without any repaint reaching the
+     client, so the flyer stays painted with the first chain it ever got,
+     which is the "completely non-motile" block. What CANNOT be cached through
+     is a change of the style property itself: `url(#x-b)` is a different
+     value from `url(#x-a)`. So every flyer mounts TWO filters and the
+     paint PING-PONGS: each filmstrip step's trio is written into the
+     inactive filter, and only then is the CSS reference flipped onto it.
+     Style recalculation is the one invalidation path every engine honours.
 
    · TRIO, NEVER A MIX. A displacement map is only valid against the region
-     and scale it was baked with. Region, feImage placement, scale and href
-     are written atomically, and only when the playhead crosses onto a new
-     filmstrip step — attribute churn on a filter re-rasterises the element.
-
-   · THE REGION STILL TRACKS THE CONTENT. Each filmstrip frame's region is the
-     hull of the rest box's forward image at that frame's playhead (`lensRegionAt`,
-     snapped to whole px), so the map's 128² cells are spent where the content
-     is, and the feImage is pinned exactly over that hull in element-local
-     user space (explicit x/y/width/height — never the spec-default subregion).
-
-   · THE SCALE IS THE MAP'S TRUE RANGE. `feDisplacementMap` displaces by
-     `scale·(C − 0.5)` per channel; the map encodes the content range (the
-     value `computeLensMap` returns) into the full 8-bit channel, so the
-     quantisation bias stays a small, uniform translation of the whole warped
-     image — never a wobble of one glyph against another, which is what the
-     continuity of the word lives on.
+     and scale it was baked with. Region (bbox units), feImage placement
+     (element-local user-space px — explicit, never the spec-default
+     subregion), scale and href are written atomically per step, into the
+     filter the client is about to be pointed at, and only across a step
+     boundary. A measured re-layout rebuilds the strip and the warm set.
    ========================================================================== */
 
 import {
@@ -57,7 +52,9 @@ import {
 } from './spaghettification';
 import { FLYER_IDS } from './spaghettification';
 
-/** Filter ids are fixed strings so the stylesheet and tests can rely on them. */
+/** Filter id BASES: the live pair per flyer is `<base>-a` and `<base>-b`
+ * (see the ping-pong note in the header). Fixed strings so the stylesheet and
+ * tests can rely on them. */
 export const FLYER_LENS_ID: Record<FlyerId, string> = {
   invite: 'horizon-lens-invite',
   cta: 'horizon-lens-cta',
@@ -74,12 +71,21 @@ interface LensBake {
   url: string;
 }
 
-export interface FlyerLensChannel {
+/** The three DOM nodes of one filter chain. */
+interface LensChain {
   filter: SVGFilterElement;
   image: SVGFEImageElement;
   displace: SVGFEDisplacementMapElement;
-  /** The filmstrip step index whose trio is currently written to the DOM, or
-   * −1 (stand-down: scale 0 written, nothing else trusted). */
+}
+
+export interface FlyerLensChannel {
+  /** The ping-pong pair: [a, b]. `active` indexes the chain the client should
+   * be pointing at; new bakes are written into the OTHER one. */
+  chains: [LensChain, LensChain];
+  /** Which chain is currently referenced by the client (−1: stand-down). */
+  active: number;
+  /** The filmstrip step index most recently WRITTEN (not necessarily the one
+   * the client paints — the caller holds the CSS reference), or −1. */
   applied: number;
   /** The raster/singularity/extent the cache below was baked for; a measured
    * layout change invalidates the whole strip. */
@@ -111,6 +117,29 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const stepIndexOf = (progress: number): number =>
   Math.round(clamp01(progress) * LENS_BAKE_STEPS);
 
+/** One displacement-filter chain: feImage → feDisplacementMap. */
+function makeChain(id: string): LensChain {
+  const filter = document.createElementNS(SVG_NS, 'filter');
+  filter.setAttribute('id', id);
+  // The region comes from the content hull in the element's own box units;
+  // the primitives (the displacement scale, the feImage's placement — see
+  // `applyBake`) are painted in element-local CSS px.
+  filter.setAttribute('filterUnits', 'objectBoundingBox');
+  filter.setAttribute('primitiveUnits', 'userSpaceOnUse');
+  filter.setAttribute('color-interpolation-filters', 'sRGB');
+  const image = document.createElementNS(SVG_NS, 'feImage');
+  image.setAttribute('result', 'map');
+  image.setAttribute('preserveAspectRatio', 'none');
+  const displace = document.createElementNS(SVG_NS, 'feDisplacementMap');
+  displace.setAttribute('in', 'SourceGraphic');
+  displace.setAttribute('in2', 'map');
+  displace.setAttribute('xChannelSelector', 'R');
+  displace.setAttribute('yChannelSelector', 'G');
+  displace.setAttribute('scale', '0');
+  filter.append(image, displace);
+  return { filter, image, displace };
+}
+
 /** Mount both flyer lenses into `host` (the sheet), replacing any previous
  * mount. The svg is a zero-size defs block; the filters' regions are set by
  * the first applied bake. Idempotent across StrictMode's double effects. */
@@ -124,29 +153,14 @@ export function mountFlyerLenses(host: HTMLElement): FlyerLenses {
   svg.classList.add('horizon-lens-defs');
   const channels = {} as Record<FlyerId, FlyerLensChannel>;
   for (const id of FLYER_IDS) {
-    const filter = document.createElementNS(SVG_NS, 'filter');
-    filter.setAttribute('id', FLYER_LENS_ID[id]);
-    // The region comes from the content hull in the element's own box units;
-    // the primitives (the displacement scale, the feImage's placement — see
-    // `applyBake`) are painted in element-local CSS px.
-    filter.setAttribute('filterUnits', 'objectBoundingBox');
-    filter.setAttribute('primitiveUnits', 'userSpaceOnUse');
-    filter.setAttribute('color-interpolation-filters', 'sRGB');
-    const image = document.createElementNS(SVG_NS, 'feImage');
-    image.setAttribute('result', 'map');
-    image.setAttribute('preserveAspectRatio', 'none');
-    const displace = document.createElementNS(SVG_NS, 'feDisplacementMap');
-    displace.setAttribute('in', 'SourceGraphic');
-    displace.setAttribute('in2', 'map');
-    displace.setAttribute('xChannelSelector', 'R');
-    displace.setAttribute('yChannelSelector', 'G');
-    displace.setAttribute('scale', '0');
-    filter.append(image, displace);
-    svg.appendChild(filter);
+    const chains: [LensChain, LensChain] = [
+      makeChain(`${FLYER_LENS_ID[id]}-a`),
+      makeChain(`${FLYER_LENS_ID[id]}-b`),
+    ];
+    svg.append(chains[0].filter, chains[1].filter);
     channels[id] = {
-      filter,
-      image,
-      displace,
+      chains,
+      active: -1,
       applied: -1,
       signature: '',
       cache: new Array<LensBake | null>(LENS_BAKE_STEPS + 1).fill(null),
@@ -230,31 +244,34 @@ function bakeOne(
   return { region: snapped, scale: 2 * norm, url };
 }
 
-/** Write a baked frame's trio to the DOM, atomically and only when it differs:
- * the filter's region in bbox units, the feImage pinned over that exact
- * region in the element's local user space (NEVER the default subregion —
- * with primitiveUnits="userSpaceOnUse" an un-positioned feImage is a spec
- * interpretation away from reading the map off the wrong box), the scale, and
- * the href. Applied only at a step boundary: attribute churn re-rasterises
- * the element, and sub-step differences are below the map's own resolution. */
+/** Write a baked frame's trio into the INACTIVE chain, then flip: the filter
+ * the trio went into is — from the caller's next style write — the one the
+ * client gets pointed at. Everything lands before the CSS reference moves,
+ * so the engine never resolves a half-written chain. Region arrives in bbox
+ * units, the feImage is pinned over that same hull in the element's local
+ * user space (NEVER the default subregion — an un-positioned feImage is a
+ * spec interpretation away from reading the map off the wrong box), the scale
+ * is the map's true range, the href is the warm URL. */
 function applyBake(
   channel: FlyerLensChannel,
   stepIndex: number,
   bake: LensBake,
   raster: LensRect,
 ): void {
-  if (channel.applied === stepIndex) return;
+  const next = channel.active === 0 ? 1 : 0;
+  const chain = channel.chains[next];
   const { region } = bake;
-  channel.filter.setAttribute('x', ((region.x - raster.x) / raster.width).toFixed(4));
-  channel.filter.setAttribute('y', ((region.y - raster.y) / raster.height).toFixed(4));
-  channel.filter.setAttribute('width', (region.width / raster.width).toFixed(4));
-  channel.filter.setAttribute('height', (region.height / raster.height).toFixed(4));
-  channel.image.setAttribute('x', (region.x - raster.x).toFixed(1));
-  channel.image.setAttribute('y', (region.y - raster.y).toFixed(1));
-  channel.image.setAttribute('width', region.width.toFixed(1));
-  channel.image.setAttribute('height', region.height.toFixed(1));
-  channel.displace.setAttribute('scale', bake.scale.toFixed(1));
-  channel.image.setAttribute('href', bake.url);
+  chain.filter.setAttribute('x', ((region.x - raster.x) / raster.width).toFixed(4));
+  chain.filter.setAttribute('y', ((region.y - raster.y) / raster.height).toFixed(4));
+  chain.filter.setAttribute('width', (region.width / raster.width).toFixed(4));
+  chain.filter.setAttribute('height', (region.height / raster.height).toFixed(4));
+  chain.image.setAttribute('x', (region.x - raster.x).toFixed(1));
+  chain.image.setAttribute('y', (region.y - raster.y).toFixed(1));
+  chain.image.setAttribute('width', region.width.toFixed(1));
+  chain.image.setAttribute('height', region.height.toFixed(1));
+  chain.displace.setAttribute('scale', bake.scale.toFixed(1));
+  chain.image.setAttribute('href', bake.url);
+  channel.active = next;
   channel.applied = stepIndex;
 }
 
@@ -289,9 +306,11 @@ function schedulePrebake(lenses: FlyerLenses): void {
   });
 }
 
-/** Paint one flyer's lens for one playhead. The playhead quantises onto the
- * filmstrip (`lensBakeStep` is the pure form of the same rule); the frame is
- * baked on demand if the background baker has not reached it yet. */
+/** Paint one flyer's lens for one playhead and return the filter id the
+ * client must reference (or null to stand the filter down). The playhead
+ * quantises onto the filmstrip; the frame is baked on demand if the
+ * background baker has not reached it yet. SAME STEP IN, NO WRITES OUT: the
+ * trio, the ping-pong and the CSS property all stand still. */
 export function paintFlyerLens(
   lenses: FlyerLenses,
   id: FlyerId,
@@ -299,7 +318,7 @@ export function paintFlyerLens(
   raster: LensRect,
   singularity: Point,
   extent: HorizonExtent,
-): boolean {
+): string | null {
   const channel = lenses.channels[id];
   const signature = signatureOf(raster, singularity, extent);
   if (channel.signature !== signature) {
@@ -315,25 +334,28 @@ export function paintFlyerLens(
     lenses.pending[id] = { raster: { ...raster }, singularity: { ...singularity }, extent: { ...extent } };
   }
   const stepIndex = stepIndexOf(progress);
-  let bake = channel.cache[stepIndex];
-  if (!bake) {
-    bake = bakeOne(lenses, stepIndex, raster, singularity, extent);
-    if (!bake) return false;
-    channel.cache[stepIndex] = bake;
+  if (channel.applied !== stepIndex) {
+    let bake = channel.cache[stepIndex];
+    if (!bake) {
+      bake = bakeOne(lenses, stepIndex, raster, singularity, extent);
+      if (!bake) return null;
+      channel.cache[stepIndex] = bake;
+    }
+    applyBake(channel, stepIndex, bake, raster);
   }
-  applyBake(channel, stepIndex, bake, raster);
   schedulePrebake(lenses);
-  return true;
+  return channel.active < 0 ? null : `${FLYER_LENS_ID[id]}-${channel.active === 0 ? 'a' : 'b'}`;
 }
 
-/** Stand the lens down mid-scene: a zero scale makes the filter a no-op
- * without removing it (a removed filter re-triggering would paint the unwarped
+/** Stand the lens down mid-scene: zero scales make both chains no-ops without
+ * removing them (a removed filter re-triggering would paint the unwarped
  * element for a frame). The strips are kept: they only go when the measured
  * signature changes or the lenses are disposed. */
 export function silenceFlyerLenses(lenses: FlyerLenses): void {
   for (const id of FLYER_IDS) {
     const channel = lenses.channels[id];
-    if (channel.applied >= 0) channel.displace.setAttribute('scale', '0');
+    for (const chain of channel.chains) chain.displace.setAttribute('scale', '0');
+    channel.active = -1;
     channel.applied = -1;
   }
 }
