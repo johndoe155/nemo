@@ -86,6 +86,8 @@ import {
   strandRests,
   strandFramesAt,
   strandDeltaTransform,
+  strandGridRests,
+  strandGridResiduals,
   CTA_STRANDS,
   INVITE_STRANDS,
   type FlyerId,
@@ -1834,5 +1836,83 @@ test('the filmstrip quantisation is exact at the ends and even between', () => {
     const q = lensBakeStep(i / LENS_BAKE_STEPS - 1e-9);
     assert.ok(q >= last - 1e-12, `not monotone at ${i}`);
     last = q;
+  }
+});
+
+/* -------------------------------------------------------- the strand grid -- */
+
+test('the strand grid is the identity at rest, strands mid-fall, and collapses onto the singularity', () => {
+  // A self-consistent scene with the singularity directly ABOVE the flyer —
+  // the reference geometry the component feeds the grid.
+  const singularity = { x: 640, y: -353.5 };
+  const rest = { x: 640, y: 145 };
+  const size = { width: 700, height: 115 };
+  const geometry = { width: 1280, height: 383, anchorX: 640, anchorY: -353.5, veil: 381.5 };
+  const rows = 10;
+
+  // Compose a transform list the way the DOM does: M·p + t, where M is the
+  // (rotation, scale) part of `flyerTransform`'s R(θ)·S(a,b)·R(−θ).
+  const envelopeMap = (css: string, px: number, py: number) => {
+    const t = /translate3d\((-?[\d.]+)px, (-?[\d.]+)px, 0\)/.exec(css)!;
+    const r = /rotate\((-?[\d.]+)deg\)/.exec(css)!;
+    const s = /scale\((-?[\d.]+), (-?[\d.]+)\)/.exec(css)!;
+    const theta = (Number(r[1]) * Math.PI) / 180;
+    const cosine = Math.cos(theta);
+    const sine = Math.sin(theta);
+    const a = Number(s[1]);
+    const b = Number(s[2]);
+    const m00 = cosine * cosine * a + sine * sine * b;
+    const m01 = cosine * sine * (a - b);
+    const m11 = sine * sine * a + cosine * cosine * b;
+    return {
+      x: Number(t[1]) + m00 * px + m01 * py,
+      y: Number(t[2]) + m01 * px + m11 * py,
+    };
+  };
+  const bandOffset = (css: string) => {
+    const t = /translate3d\((-?[\d.]+)px, (-?[\d.]+)px, 0\)/.exec(css)!;
+    return { x: Number(t[1]), y: Number(t[2]) };
+  };
+  // A band's SCREEN position: the flyer's envelope transform applied to the
+  // band's rest offset inside the flyer plus its residual translation.
+  const frameAt = (p: number) => {
+    const R = horizonRadiusAtProgress(p, geometry);
+    const envelope = flyerFrameAt(p, rest, singularity, R);
+    const envCss = flyerTransform(envelope);
+    const rests = strandGridRests(rest, size, 1, rows);
+    const residuals = strandGridResiduals(p, rest, singularity, R, envelope, size, 1, rows);
+    return residuals.map((residual, j) => {
+      const m = bandOffset(residual.transform);
+      const screen = envelopeMap(envCss, (rests[j].x - rest.x) + m.x, (rests[j].y - rest.y) + m.y);
+      return { x: rest.x + screen.x, y: rest.y + screen.y };
+    });
+  };
+
+  // Rest: every band is the identity — the grid tiles the flyer exactly, so
+  // nothing moves at p = 0 and the lift has no seam.
+  const atRest = frameAt(0);
+  const rests0 = strandGridRests(rest, size, 1, rows);
+  const restSpan = Math.abs(rests0[0].y - rests0[rows - 1].y);
+  for (let j = 0; j < rows; j += 1) {
+    assert.ok(Math.abs(atRest[j].x - rests0[j].x) < 1e-9, `a band's x moved at rest (${atRest[j].x})`);
+    assert.ok(Math.abs(atRest[j].y - rests0[j].y) < 1e-9, `a band's y moved at rest (${atRest[j].y})`);
+  }
+
+  // Mid-fall: the near band (top, nearest the singularity) leads and the far
+  // band lags, so the vertical span EXCEEDS the rest span — the elongation,
+  // the spaghettification a flat affine transform cannot express.
+  const mid = frameAt(0.45);
+  const midSpan = Math.abs(mid[0].y - mid[rows - 1].y);
+  assert.ok(
+    midSpan > restSpan * 1.25,
+    `the word did not strand: ${midSpan.toFixed(1)}px vs rest ${restSpan.toFixed(1)}px`,
+  );
+
+  // Every band ends ON the singularity — the collapse is geometric, never an
+  // opacity fade.
+  const end = frameAt(1);
+  for (const band of end) {
+    const d = Math.hypot(band.x - singularity.x, band.y - singularity.y);
+    assert.ok(d < 0.5, `a band ended ${d.toFixed(2)}px from the singularity`);
   }
 });

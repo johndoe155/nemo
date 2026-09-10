@@ -45,17 +45,60 @@
   transform-origin: 50% 50%;
 }
 
-/* Per-glyph lag on top of the parent envelope. Unused by the lens — a
-   displacement field can only warp a raster it is given whole, which is the
-   point: the word cannot shatter what it never separates. */
+/* The strand grid — the live DOM warp. A single affine transform cannot curve
+   and the SVG displacement lens is retired (engines sampled its feImage maps
+   as transparent black), so the flyer's content is windowed into horizontal
+   bands, each a full clone clipped to its strip, and each band falls with its
+   own lag: the near bands lead, the far bands trail, and the word opens into
+   a thread along the axis of the pull before every band closes onto the
+   singularity. The bands are inert and aria-hidden — the real headline and
+   CTA stay mounted, focusable and nameable, and only their paint is
+   exchanged (`data-horizon-strand` stands the original content down in favour
+   of the grid). */
 .footer.signoff .horizon-strand {
-  display: inline-block;
+  position: absolute;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  pointer-events: none;
   transform-origin: 50% 50%;
+  will-change: transform;
+}
+/* The whole grid is inert anyway, but pointer-events is written on the clones
+   too: the cloned CTA would otherwise keep its own auto pointer, and a
+   hit-test over the consumed flyer must never land on a strand's copy of the
+   link. */
+.footer.signoff .horizon-strand * {
+  pointer-events: none !important;
+}
+/* The window inside a band holds the WHOLE content at full flyer size,
+   offset so the band shows only its own strip. Percentage geometry, so the
+   grid re-flows if the flyer box ever changes. */
+.footer.signoff .horizon-strand__window {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  display: block;
+  text-align: center;
+}
+/* The CTA is centred by the (flex) `.signoff__actions`, which a plain window
+   does not reproduce — a modifier restores that centring so the cloned pill
+   sits exactly where the real one does. */
+.footer.signoff .horizon-strand__window--cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* The real content stands down while the grid paints: the original flyer
+   stays in the accessibility tree and the tab order, only its paint is
+   exchanged. */
+.footer.signoff [data-horizon-item][data-horizon-strand='on'] > :not(.horizon-strand) {
+  opacity: 0;
 }
 
 /* Promotion only while an activation exists: the live rasters pay for their
    fall transform and their opacity in the crossfade per frame — the overlay
-   canvas's own composition is the expensive half and it needs no hint. */
+   canvas's own composition is the expensive half and it needs no hint.
 
    'hold' is on the list deliberately: it is the state where the overlay was
    withheld — no snapshot, a capture that timed out — and the DOM still runs
@@ -111,8 +154,14 @@
   opacity: 1 !important;
   pointer-events: auto !important;
 }
-.footer.signoff:focus-within [data-horizon-strand] {
-  transform: none !important;
+/* The rescue restores the real content — the strand grid stands down and the
+   original glyphs come back in place, without touching the playhead, the
+   collapse or the curtain. */
+.footer.signoff:focus-within [data-horizon-item] > :not(.horizon-strand) {
+  opacity: 1 !important;
+}
+.footer.signoff:focus-within .horizon-strand {
+  opacity: 0 !important;
 }
 .footer.signoff:focus-within > .signoff-horizon__canvas {
   opacity: 0;
@@ -146,8 +195,14 @@
     width: auto !important;
     height: auto !important;
   }
-  .footer.signoff [data-horizon-strand] {
-    transform: none !important;
+  /* The real content comes back; the strand grid is hidden outright so a
+     policy change landing before the matchMedia revert can never leave the
+     invitation as an empty band stack. */
+  .footer.signoff [data-horizon-item] > :not(.horizon-strand) {
+    opacity: 1 !important;
+  }
+  .footer.signoff .horizon-strand {
+    display: none !important;
   }
   .footer.signoff .signoff__anchor {
     height: auto !important;

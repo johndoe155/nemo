@@ -23,6 +23,7 @@ import {
   horizonRadiusAtProgress,
   overlayMixAt,
   sheetHeightAt,
+  strandGridResiduals,
   type FlyerId,
 } from '../lib/spaghettification';
 import { createSignoffMosaic, type SignoffOverlay } from '../lib/signoffMosaic';
@@ -33,6 +34,16 @@ gsap.registerPlugin(ScrollTrigger);
 const FLYER_SELECTOR: Record<FlyerId, string> = {
   invite: '[data-horizon-item="invite"]',
   cta: '[data-horizon-item="cta"]',
+};
+
+/** The strand grid's band count per flyer. The singularity sits directly above
+ * the sign-off, so the axis of the pull runs top-to-bottom through the type:
+ * one column of horizontal bands, each falling with its own lag, is what
+ * strands the word into a thread. The headline is a tall ribbon of display
+ * type and gets more bands; the CTA is a short pill and needs fewer. */
+const STRAND_ROWS: Record<FlyerId, number> = {
+  invite: 10,
+  cta: 6,
 };
 
 const sameSize = (a: SignoffScene, b: SignoffScene) =>
@@ -367,7 +378,56 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             el.style.margin = '0px';
           }
         };
+        /** The strand grid — the live DOM warp. A single affine transform cannot
+         * curve and the SVG displacement lens is retired, so the flyer's content
+         * is windowed into horizontal bands, each a clone of the real content
+         * clipped to its strip, and each band is evaluated in the SAME field at
+         * its own rest position with the near bands leading and the far bands
+         * trailing (`strandGridResiduals` in lib/spaghettification.ts). The bands
+         * are `inert` and `aria-hidden`: the ORIGINAL flyer stays mounted,
+         * focusable and nameable, and only its paint is exchanged for the grid
+         * (see the `data-horizon-strand` rules in signoff-horizon.css). */
+        const strandCells: Record<FlyerId, HTMLSpanElement[]> = { invite: [], cta: [] };
+
+        const removeStrands = (id: FlyerId) => {
+          for (const cell of strandCells[id]) cell.remove();
+          strandCells[id] = [];
+          delete flyerEls[id].dataset.horizonStrand;
+        };
+
+        const ensureStrands = (id: FlyerId) => {
+          const el = flyerEls[id];
+          const rows = STRAND_ROWS[id];
+          if (strandCells[id].length === rows) return;
+          removeStrands(id);
+          const source = Array.from(el.childNodes);
+          const cells: HTMLSpanElement[] = [];
+          for (let j = 0; j < rows; j += 1) {
+            const cell = document.createElement('span');
+            cell.className = 'horizon-strand';
+            cell.setAttribute('aria-hidden', 'true');
+            cell.setAttribute('inert', '');
+            cell.style.top = `${(j * 100) / rows}%`;
+            cell.style.height = `${100 / rows}%`;
+            const windowEl = document.createElement('span');
+            windowEl.className = `horizon-strand__window horizon-strand__window--${id}`;
+            windowEl.style.top = `${-j * 100}%`;
+            windowEl.style.height = `${rows * 100}%`;
+            for (const child of source) windowEl.appendChild(child.cloneNode(true));
+            cell.appendChild(windowEl);
+            el.appendChild(cell);
+            cells.push(cell);
+          }
+          strandCells[id] = cells;
+          el.dataset.horizonStrand = 'on';
+        };
+
+        const removeAllStrands = () => {
+          for (const id of FLYER_IDS) removeStrands(id);
+        };
+
         const dropFlyers = () => {
+          removeAllStrands();
           if (!lifted) return;
           lifted = false;
           anchor.style.height = '';
@@ -715,6 +775,30 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
               el.style.filter = '';
               el.style.opacity = (overlay ? flyer.opacity : 1).toFixed(4);
               el.style.pointerEvents = flyer.consumed ? 'none' : '';
+              // The strand grid is the piecewise warp the affine envelope
+              // cannot express: the word strands along the pull axis and
+              // closes onto the singularity. Off at p = 0 (the identity must
+              // be exact) and while the snapshot is being taken (html2canvas
+              // must clone the real rest pose, never the grid).
+              if (holding && !capturing && p > 0) {
+                ensureStrands(id);
+                const residuals = strandGridResiduals(
+                  p,
+                  rest,
+                  singularity,
+                  radius,
+                  flyer,
+                  { width: box.width, height: box.height },
+                  1,
+                  STRAND_ROWS[id],
+                );
+                const cells = strandCells[id];
+                for (let i = 0; i < cells.length; i += 1) {
+                  cells[i].style.transform = residuals[i].transform;
+                }
+              } else if (strandCells[id].length) {
+                removeStrands(id);
+              }
             }
 
             // The frozen frame takes over the paint as the field takes hold —
@@ -781,6 +865,11 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
         const arm = () => {
           if (released || armed || overlayOff || !scene) return;
           armed = true; // BEFORE any await: onEnter/refresh/scroll-back share it
+          // Freeze the live paint at the rest pose for the whole clone: the
+          // snapshot has to raster the real glyphs (never the strand grid, a
+          // half-collapsed box, or half-warped text), so `applyFrame` renders
+          // playhead 0 while this is set.
+          capturing = true;
           sheet.dataset.horizonState = 'capturing';
           void (async () => {
             // Also defers past StrictMode's immediate mount → cleanup → mount.
@@ -813,6 +902,9 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             // animation, which is a worse failure than no animation at all.
             const patience = setTimeout(() => {
               abort.abort();
+              // Un-freeze before the resync so the fall resumes from the
+              // scroll instead of parking at playhead 0 after the watchdog.
+              capturing = false;
               retireOverlay('The sign-off capture did not finish in time; the live paint carries the fall.');
               resync();
             }, CAPTURE_PATIENCE_MS);
@@ -883,7 +975,9 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
             // No snapshot, no renderer, a module that will not load: lose the frozen
             // frame, keep the hold, and let the next approach of the footer try
             // again. Refusing the whole scene for this is what made a missing GPU
-            // look like a missing pin.
+            // look like a missing pin. Un-freeze first: a capture that never
+            // resolves must never leave the fall parked at playhead 0.
+            capturing = false;
             if (!released) {
               retireOverlay('Capturing or uploading the sign-off failed; the opacity coda carries the fall.', error);
               resync();

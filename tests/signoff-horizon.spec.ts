@@ -986,6 +986,71 @@ test('the live flyers carry the fall; the overlay adds curvature; never a filter
   }
 });
 
+/* The live flyers STRAND — the spaghettification is in the DOM, not just in
+   the frozen frame. The affine envelope above can only translate, rotate and
+   scale one box, so the flyer's content is windowed into horizontal bands
+   (`.horizon-strand`), each a clone clipped to its strip, each falling with
+   its own lag: the band nearer the singularity runs ahead, the far band
+   trails, and the word tears along the axis of the pull before every band
+   closes onto the point. The bands are inert and aria-hidden — the real
+   headline and CTA stay mounted, focusable and nameable. */
+test('the live flyers strand along the pull axis before the point', async ({ page }) => {
+  await open(page);
+  await scrollProgress(page, 0);
+  // At rest the flyer is the real element only: the grid does not exist yet,
+  // so the identity at p = 0 is exact (no clone seam on the lift).
+  await expect(page.locator('.horizon-strand')).toHaveCount(0);
+  const rest = await readScene(page);
+  const restHeight = Object.fromEntries(rest.flyers.map((flyer) => [flyer.selector, flyer.height]));
+
+  await scrollProgress(page, 0.35);
+  const scene = await readScene(page);
+  const hole = scene.frame.centre;
+  const bands: Record<string, number> = { [invite]: 10, [cta]: 6 };
+  for (const flyer of scene.flyers) {
+    const rows = bands[flyer.selector];
+    const cells = page.locator(`${flyer.selector} > .horizon-strand`);
+    await expect(cells).toHaveCount(rows);
+    // The clones are inert and unnamed: the real link is the only interactive,
+    // nameable node, at the same playhead where its paint is exchanged.
+    await expect(cells.first()).toHaveAttribute('aria-hidden', 'true');
+    await expect(cells.first()).toHaveAttribute('inert', '');
+    const centres = await cells.evaluateAll((els) =>
+      els.map((el) => {
+        const box = el.getBoundingClientRect();
+        return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+      }),
+    );
+    const near = centres[0]; // row 0 is the top strip, nearest the singularity
+    const far = centres[rows - 1];
+    // The elongation: the band span EXCEEDS the flyer's rest height, so the
+    // word visibly tears along the pull axis — a flat affine cannot do this.
+    const span = Math.abs(near.y - far.y);
+    expect(span).toBeGreaterThan(restHeight[flyer.selector] * 1.3);
+    // The near band leads: it has fallen further toward the hole's centre.
+    expect(Math.hypot(near.x - hole.x, near.y - hole.y)).toBeLessThan(
+      Math.hypot(far.x - hole.x, far.y - hole.y),
+    );
+  }
+
+  // Full consumption: every band has closed onto the singularity, so the
+  // strands span nothing — geometric collapse, never an opacity fade.
+  await scrollProgress(page, 1);
+  const consumed = await page.evaluate(() => {
+    const cells = Array.from(document.querySelectorAll<HTMLElement>('.horizon-strand'));
+    const hole = document.querySelector<HTMLElement>('.bh-frame')!.getBoundingClientRect();
+    const centre = { x: hole.left + hole.width / 2, y: hole.top + hole.height / 2 };
+    let worst = 0;
+    for (const cell of cells) {
+      const box = cell.getBoundingClientRect();
+      worst = Math.max(worst, Math.hypot(box.left + box.width / 2 - centre.x, box.top + box.height / 2 - centre.y));
+    }
+    return { count: cells.length, worst };
+  });
+  expect(consumed.count).toBeGreaterThan(0);
+  expect(consumed.worst).toBeLessThan(3);
+});
+
 /* ==========================================================================
    Requirement 4 — the curtain pays for exactly what the void vacates.
    ======================================================================== */
@@ -1214,7 +1279,9 @@ test('a short curtain caps the collapse instead of borrowing scroll', async ({ p
 test('the SAME real CTA keeps its tab stop, name and click at 0/50/100%', async ({ page }) => {
   await open(page);
   await scrollProgress(page, 0.5);
-  const link = page.locator('.signoff a');
+  // The real link only: the strand grid clones the CTA's content into inert,
+  // aria-hidden bands, so a bare `.signoff a` would match the clones too.
+  const link = page.locator('.signoff [data-horizon-item="cta"] > a');
   await page.evaluate(() => {
     // The pins stay ENGAGED: this is the scene a reader actually interacts
     // with, and with the screen locked the playhead only moves where the scroll
