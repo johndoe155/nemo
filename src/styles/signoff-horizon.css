@@ -137,6 +137,18 @@
   clip-path: inset(calc(-1 * var(--horizon-veil, 0px)) 0 0 0);
 }
 
+/* The CTA's hover sheen (.btn-spark) is a hard white diagonal band parked
+   off-canvas at translateX(-130%) and only ever clipped away by `.btn`'s own
+   `overflow: hidden`. The pinned rule above un-clips `.btn` so the CTA can
+   leave the sheet, which also un-clips the parked sheen — and the fluid mesh
+   clones the button (sheen included) into its cells, stretching that band
+   into the white needle trailing the fall. It is a hover affordance and the
+   consumption scene has no hover: stand it down for the hold so only the real
+   button strata fall in. */
+.footer.signoff[data-horizon-scene='pinned'] .btn-spark {
+  display: none;
+}
+
 /* ---- keyboard rescue -------------------------------------------------------
    At ANY progress, including a fully consumed sheet: focus inside the
    invitation restores the real paint, the real focus ring and the real hit
