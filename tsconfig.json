@@ -8,6 +8,14 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
+    /* `@/*` path alias — required by the shadcn/ui structure (components.json
+       aliases point every primitive at @/components/ui, @/lib/utils, …).
+       Mirrored in vite.config.ts → resolve.alias so the dev server and the
+       compiler agree on the same mapping. */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     /* src/three/blackhole/ is vendored VERBATIM from the upstream zip (see the
        PROVENANCE.md in that folder) — four plain .js files that must not be
        touched, not even to satisfy the compiler. allowJs lets tsc resolve and

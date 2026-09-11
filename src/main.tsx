@@ -12,6 +12,11 @@ import '@fontsource-variable/space-grotesk';
 import '@fontsource/michroma';
 import './assets/fonts/pp-fonts.css';
 import './styles/global.css';
+// Tailwind v4 utility layer (theme + utilities, NO preflight) behind the
+// shadcn/ui structure — components.json · @/components/ui · @/lib/utils.
+// Loaded after global.css; see the header comment in the file itself for why
+// preflight is deliberately excluded.
+import './styles/tailwind.css';
 import './styles/components.css';
 import './styles/overhaul.css';
 import './styles/audit-gaps.css';
@@ -28,8 +33,9 @@ import './styles/typography.css';
 // 04 · PILLAR 3 — cyber-luxury split-canvas rebuild (loads after typography
 // so its scoped art direction wins where tokens overlap).
 import './styles/pulls.css';
-// 3D rotunda (CircularGallery) — scoped .cg-* layer, last so its plate
-// typography wins where tokens overlap.
+// 3D rotunda section chrome — scoped .cg-* layer for the section head,
+// badges, stage frame and hint. (The sphere stage itself is the
+// self-contained Tailwind component src/components/ui/img-sphere.tsx.)
 import './styles/circular-gallery.css';
 // Rod system — suspended roster (01), skewered credit plates (06) and the
 // drilling canon-timeline rod. Loaded LAST: its scoped rules intentionally

@@ -11,10 +11,12 @@ behind a clearly-labeled demo layer — see `CAVEATS_AND_ASSUMPTIONS.md`.
 ## Quick start
 
 ```bash
-npm install
-npm run dev        # dev server (localhost:5173)
-npm run build      # tsc -b && vite build → dist/
-npm run preview    # serve the production build
+npm ci              # required — node_modules is only partially committed
+                    #   (dist/ folders were gitignored when it was snapshotted);
+                    #   `npm ci` re-extracts every package from the lockfile
+npm run dev         # dev server (localhost:5173)
+npm run build       # tsc -b && vite build → dist/
+npm run preview     # serve the production build
 ```
 
 ## What's on the page (top → bottom)
@@ -31,24 +33,30 @@ npm run preview    # serve the production build
    rarity, sorts by date/rarity; each card opens a cinematic dialog with lore,
    specs, artist credit, variant info, revenue split, and claim CTAs. The rail
    ends on the next-drop teaser with a live countdown. (Mobile: wrapping grid.)
-3. **The Persona** — in-canon chat window (mock brain) with typing indicators,
+3. **The Rotunda** — the same canon as the roster, hung on a draggable 3D
+   image sphere (`src/components/ui/img-sphere.tsx`, a self-contained
+   Tailwind component): Fibonacci-distributed plates, drag/flick with
+   momentum, ambient auto-rotation, and a tap-to-open plate spotlight. The
+   section chrome (heading, count badges, stage frame) stays on the site's
+   design-token system (`sections/Gallery.tsx` + `styles/circular-gallery.css`).
+4. **The Persona** — in-canon chat window (mock brain) with typing indicators,
    quick replies, banter threads, and guardrail disclaimers.
-4. **Holder Perks** — four trait tiers (Genesis → Legendary) with escalating
+5. **Holder Perks** — four trait tiers (Genesis → Legendary) with escalating
    early-claim windows, discounts, SKU unlocks; mock wallet verification shows
    the "VERIFIED HOLDER" badge.
-5. **POP Pulls** — interactive Proof-of-Purchase simulator: weighted rarity
+6. **POP Pulls** — interactive Proof-of-Purchase simulator: weighted rarity
    odds, holder bonus, pity on the 8th stamp, Golden Gate set bonus at 6
    distinct universes, persistent stamp card, secret-universe chase.
-6. **Store** — demo Shopify catalog with holder-gated SKUs and holder pricing.
-7. **Artists** — permanent public credits, tied to Nemoverse canon.
-8. **Lore** — core identity, the 60/40 self-funding model, stat cards, and the
+7. **Store** — demo Shopify catalog with holder-gated SKUs and holder pricing.
+8. **Artists** — permanent public credits, tied to Nemoverse canon.
+9. **Lore** — core identity, the 60/40 self-funding model, stat cards, and the
    canon timeline.
-9. **The Singularity** — a live WebGPU black hole (raymarched gravitational
-   lensing, blackbody accretion disk, procedural starfield/nebula, HDR bloom),
-   sitting in the seam between the canon timeline's last node and the closing
-   credit crawl. Bare stage, no copy: the simulation is the statement. See
-   *The black hole* below.
-10. **The Loop** — the pitch's "How It All Connects" as an orbital diagram
+10. **The Singularity** — a live WebGPU black hole (raymarched gravitational
+    lensing, blackbody accretion disk, procedural starfield/nebula, HDR bloom),
+    sitting in the seam between the canon timeline's last node and the closing
+    credit crawl. Bare stage, no copy: the simulation is the statement. See
+    *The black hole* below.
+11. **The Loop** — the pitch's "How It All Connects" as an orbital diagram
     around the Nemoverse core.
 
 ## Architecture
@@ -59,8 +67,11 @@ src/
   styles/components.css    # component rules
   lib/data.ts              # ALL content + business logic (odds, tiers, brain)
   lib/hooks.tsx            # useCountdown, useRevealText, scroll hooks
-  components/ui.tsx        # shared primitives (Reveal, Marquee, WalletButton,
-                           #   Countdown, Starfield, badges…)
+  lib/utils.ts             # cn() — the shadcn class-name helper
+  components/ui/           # shadcn-style UI primitives home:
+                           #   index.tsx — site primitives (Reveal, Marquee,
+                           #     WalletButton, Countdown, Starfield, badges…)
+                           #   img-sphere.tsx — the rotunda's 3D image sphere
   components/UniverseCard.tsx / UniverseDialog.tsx
   components/BlackHoleStage.tsx  # React mounting layer for the WebGPU sim
   components/BlackHoleStill.tsx  # CSS/SVG static frame (no-WebGPU fallback)
@@ -70,6 +81,18 @@ src/
   App.tsx / main.tsx
 public/art/                # placeholder AI-generated canon art (replaceable)
 ```
+
+**Tailwind + shadcn/ui structure:** Tailwind v4 is installed
+(`@tailwindcss/vite`) for the shadcn project structure — `components.json`
+points the CLI at `@/components/ui`, `@/lib/utils`, and the style entry
+`src/styles/tailwind.css`. That entry deliberately imports **theme + utilities
+only, without preflight** — the site's own CSS system (below) must never be
+reset — and the generated utilities are unlayered so they out-rank plain
+element resets. The `@/*` path alias is configured in both `tsconfig.json`
+and `vite.config.ts`. Note that Tailwind v4 tree-shakes: a utility or CSS
+variable only ships when something actually uses it (e.g. the shadcn
+`--background`-family tokens light up the first time a shadcn primitive that
+references them is added via `npx shadcn add`).
 
 **Theming:** every color, type, and motion value is a CSS custom property in
 `global.css:root`. Rarity/accent colors propagate via `--c` / `--card-accent`

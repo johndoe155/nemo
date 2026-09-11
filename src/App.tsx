@@ -111,8 +111,8 @@ export default function App() {
           speed="38s"
         />
         <Nemoverse />
-        {/* 3D rotunda — the same canon as the roster above, hung as a room you
-            can walk around. Placed here so the registry (specs) is read first
+        {/* 3D rotunda — the same canon as the roster above, hung on a sphere
+            you can spin. Placed here so the registry (specs) is read first
             and the art (plates) lands immediately after. */}
         <Gallery />
         <Persona />

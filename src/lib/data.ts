@@ -292,7 +292,7 @@ export const byId = (id: number) => UNIVERSES.find((u) => u.id === id);
 
 /* --------------------------- GALLERY PLATES ---------------------------- */
 /**
- * Plates for the 3D rotunda (src/components/CircularGallery.tsx).
+ * Plates for the 3D rotunda sphere (src/components/ui/img-sphere.tsx).
  *
  * Canon plates are derived from UNIVERSES — never retyped — so a rename, a new
  * drop, or a rarity change in the registry flows straight into the ring. Only

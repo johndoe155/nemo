@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { gsap } from 'gsap';
-import { useCountdown } from '../lib/hooks';
-import { KineticButton, MagneticButton, RollText } from './motion';
-import type { Rarity } from '../lib/data';
-import { RARITY } from '../lib/data';
+import { useCountdown } from '../../lib/hooks';
+import { KineticButton, MagneticButton, RollText } from '../motion';
+import type { Rarity } from '../../lib/data';
+import { RARITY } from '../../lib/data';
 
 /* ------------------------------ Verified mark ------------------------------ */
 

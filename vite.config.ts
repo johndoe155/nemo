@@ -1,12 +1,21 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 // The Hub is served behind the sandbox preview proxy; bind to 0.0.0.0
 // so the live preview can reach it. Base './' keeps asset paths relative
 // if the build is ever dropped into a sub-path (e.g. IPFS or a CDN folder).
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   base: './',
+  resolve: {
+    alias: {
+      // `@` — the shadcn convention (see components.json aliases). Mirrors
+      // the paths mapping in tsconfig.json.
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,
