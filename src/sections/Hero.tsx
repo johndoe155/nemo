@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useSpring, useTransform, useMotionValue } from 'framer-motion';
 import { Reveal } from '../components/ui';
 import { LiquidButton, GlassButton, PortalMagnetic } from '../components/PortalButton';
-import { art, UNIVERSES, UNIVERSE_DROP_ISO } from '../lib/data';
-import CardImage from '../components/CardImage';
+import { UNIVERSES, UNIVERSE_DROP_ISO } from '../lib/data';
+import NemoParticleField from '../components/NemoParticleField';
 import { useCountdown } from '../lib/hooks';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -112,9 +112,12 @@ export default function Hero() {
     return () => window.removeEventListener('mousemove', handleMove);
   }, [prefersReduced, mx, my]);
 
-  /* Background image drifts down on scroll and nudges a few px opposite the
+  /* Background layer drifts down on scroll and nudges a few px opposite the
      cursor for a subtle tilt. Both effects share the same x/y transform, so
-     they're combined into one motion value each rather than two style keys. */
+     they're combined into one motion value each rather than two style keys.
+     This is the OUTER transform: the particle field inside it runs its own
+     pointer response in canvas-local pixels and reads its position back
+     through getBoundingClientRect(), so the two compose instead of fighting. */
   const bgX = useTransform(mx, (v) => `${v * -12}px`);
   const bgY = useTransform([smooth, my], (latest) => {
     const [s, m] = latest as [number, number];
@@ -144,11 +147,15 @@ export default function Hero() {
 
   return (
     <header className="hero" ref={ref} id="top">
+      {/* The background layer. Everything inside it is the WebGL particle field
+          (components/NemoParticleField.tsx + src/three/nemo-particles/); the
+          scroll parallax and cursor nudge below are unchanged, and now move the
+          canvas instead of a photo. */}
       <motion.div
         className="hero__bg"
         style={{ scale: bgScale, y: bgY, x: bgX }}
       >
-        <CardImage src={art('hero.jpg')} alt="" sizes="100vw" eager fade={false} fetchpriority="high" />
+        <NemoParticleField hostRef={ref} />
       </motion.div>
       <div className="hero__wash" />
       <div className="hero__scanlines" />

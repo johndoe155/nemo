@@ -41,6 +41,13 @@ import './styles/circular-gallery.css';
 // drilling canon-timeline rod. Loaded LAST: its scoped rules intentionally
 // win over the base card/timeline layer they rebuild.
 import './styles/suspension.css';
+// The hero background — the WebGL particle field's own layers (breathing
+// ambience, vignette, film grain, loading veil, no-WebGL fallback). The
+// standalone concept it is ported from reset html/body and claimed the bare
+// names .vignette/.grain and the :root vars --bg/--cyan/--ink/--magenta, all of
+// which this site already uses; everything here is contained under .nemo-field
+// with --npf-* variables, so it loads anywhere without contending.
+import './styles/nemo-particles.css';
 // The singularity — the WebGPU black hole stage between the canon timeline and
 // the closing crawl: stage box, the seam gradients that dissolve the canvas
 // into the page, and the static fallback frame. Scoped to .singularity/.bh-*,

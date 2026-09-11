@@ -1,0 +1,204 @@
+/* ============================================================================
+   THE NEMOVERSE PARTICLE FIELD — hero background
+   (section: sections/Hero.tsx · glue: components/NemoParticleField.tsx ·
+    engine: src/three/nemo-particles/, ported from nemo-webgl.html)
+
+   This is the <style> block of the standalone `nemo-webgl.html` concept,
+   re-scoped for embedding. Every value is the original's; only the selectors
+   and the custom-property names changed, for one reason: the original was a
+   whole document, so it reset html/body and claimed bare class names
+   (.vignette, .grain, #fallback, .loading-overlay) plus bare :root variables
+   (--bg, --cyan, --ink, --magenta). Those all exist already in this site —
+   .vignette (overhaul.css), .grain (global.css + overhaul.css) and
+   --cyan/--ink/--magenta (global.css :root) — so a verbatim copy would have
+   restyled the whole page. Hence:
+
+     · every rule is contained under the .nemo-field wrapper
+     · every variable is renamed --npf-* and declared on that wrapper only
+     · the html/body reset and the canvas's position:fixed are gone; the
+       wrapper is absolutely positioned inside .hero__bg and the canvas is
+       sized by the engine from the hero's measured box
+
+   Layer order is the original's z-index ramp (breathe 1 · vignette 3 ·
+   grain 4 · fallback 10 · loading 20), now local to the wrapper. Because
+   .hero__bg is itself a stacking context (z-index:-2), nothing here can
+   escape above .hero__wash / .hero__content — the field is a background.
+   ========================================================================== */
+
+.nemo-field {
+  /* the standalone page's :root palette, scoped */
+  --npf-bg: #030208;
+  --npf-breathe: #12101c;
+  --npf-cyan: #5ed0f5;
+  --npf-violet: #9b8cf0;
+  --npf-magenta: #e98bd8;
+  --npf-ink: #f5f4fa;
+
+  position: absolute;
+  inset: 0;
+  /* the field paints its own opaque near-black backdrop (alpha:false context),
+     so the wrapper needs no background of its own */
+  contain: paint;
+}
+
+.nemo-field__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  /* CSS owns the display box; the engine owns canvas.width/height (drawing
+     buffer) from the hero's measured size — see resize() in the engine. */
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- ambient "breathing" background ----------------------------------
+   Pure DOM/CSS layer, does not touch the canvas, the WebGL context, or
+   any particle code. The WebGL context is opaque (alpha:false, and the
+   composite shader always writes alpha=1), so a layer placed *behind*
+   the canvas would never be visible — instead this sits just above the
+   canvas (below the vignette/grain) and uses mix-blend-mode:screen with
+   stops that are all near-black. screen(base, black)=base exactly, so
+   the pure-black outer edge and the opacity-0 resting state leave every
+   pixel untouched; only the faint off-center violet-charcoal core ever
+   lifts brightness, and only by a fraction of a percent — imperceptible
+   against particle colors, but enough to "breathe" the black backdrop.
+   The existing grain overlay (already above this layer) dithers away
+   any banding risk from the narrow color range. No layout box, no
+   canvas repaint, no JS: purely a compositor-level effect. */
+.nemo-field__breathe {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 130% 110% at 60% 38%,
+    var(--npf-breathe) 0%,
+    var(--npf-bg) 45%,
+    #000 100%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: npfBreathe 10s ease-in-out infinite;
+  will-change: opacity;
+}
+@keyframes npfBreathe {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nemo-field__breathe {
+    animation: none;
+    opacity: 0.2;
+  }
+}
+
+.nemo-field__vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background: radial-gradient(
+    ellipse 90% 80% at 62% 42%,
+    transparent 0%,
+    transparent 42%,
+    rgba(2, 1, 6, 0.62) 100%
+  );
+}
+.nemo-field__grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+}
+
+/* ---- loading overlay (shown while the four pose JSONs are fetched) ---- */
+.nemo-field__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: var(--npf-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  transition: opacity 0.55s ease;
+}
+.nemo-field__loading.is-done {
+  opacity: 0;
+  pointer-events: none;
+}
+.nemo-field__brand {
+  color: var(--npf-ink);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  font-size: 16px;
+}
+.nemo-field__brand .nemo-field__accent {
+  background: linear-gradient(90deg, var(--npf-cyan), var(--npf-violet), var(--npf-magenta));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.nemo-field__spinner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-top-color: var(--npf-cyan);
+  animation: npfLoadspin 1s linear infinite;
+}
+@keyframes npfLoadspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.nemo-field__status {
+  color: rgba(230, 230, 240, 0.6);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  line-height: 1.9;
+  text-align: center;
+  max-width: 460px;
+  font-family: ui-monospace, Menlo, monospace;
+  padding: 0 24px;
+}
+.nemo-field__status code {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: rgba(230, 230, 240, 0.85);
+  letter-spacing: 0.02em;
+}
+.nemo-field__loading.is-error .nemo-field__spinner {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nemo-field__spinner {
+    animation: none;
+  }
+}
+
+.nemo-field__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8892b0;
+  font-size: 13px;
+  z-index: 10;
+  text-align: center;
+  padding: 24px;
+  box-sizing: border-box;
+}

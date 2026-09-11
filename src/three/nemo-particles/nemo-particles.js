@@ -1,0 +1,1327 @@
+/* ============================================================================
+   nemo-particles.js — the Nemoverse WebGL particle field (hero background).
+
+   PROVENANCE
+   This file is the inline <script> of `nemo-webgl.html` (the standalone
+   full-page concept shipped in nemosite.zip at the repo root, sha256
+   9a2e1c2bb401e83bc417de6c19cca7787d7b54b47d11f9bd69e69a38d223d4cf) lifted
+   out verbatim — every shader, constant, timing value and physics term is the
+   original's. What changed is ONLY the orchestration, exactly as
+   src/three/blackhole/ + components/BlackHoleStage.tsx already do for the
+   black hole: the original was a page-load IIFE that owned the viewport and
+   never tore anything down, so it cannot live inside a React tree. See
+   PROVENANCE.md in this folder for the line-by-line list of what was adapted
+   and what was deliberately left alone (including two upstream bugs that were
+   reported rather than fixed).
+
+   The four pose JSONs live in public/nemo-particles/ and are byte-identical to
+   the zip's data/pose0.json … data/pose3.json.
+
+   SHAPE
+     createNemoParticleField(canvas, options) -> {
+       resize(cssW, cssH)  // host-driven sizing (ResizeObserver, not window)
+       setVisible(bool)    // off-screen pause
+       isReady() / isDestroyed()
+       destroy()           // full teardown: rAF, listeners, GL objects, context
+     }
+============================================================================ */
+
+export const POSE_FILE_NAMES = ['pose0.json', 'pose1.json', 'pose2.json', 'pose3.json'];
+
+/**
+ * @param {HTMLCanvasElement} canvas
+ * @param {{
+ *   baseUrl?: string,
+ *   host?: HTMLElement | null,
+ *   fetchImpl?: typeof fetch,
+ *   requestAnimationFrame?: (cb: FrameRequestCallback) => number,
+ *   cancelAnimationFrame?: (id: number) => void,
+ *   now?: () => number,
+ *   onStatus?: (text: string) => void,
+ *   onReady?: () => void,
+ *   onError?: (err: Error) => void,
+ *   onUnsupported?: () => void
+ * }} [options]
+ */
+export function createNemoParticleField(canvas, options) {
+  'use strict';
+
+  var opts = options || {};
+
+  /* -------------------------------------------------------------
+     environment plumbing (the original read these off the page)
+     ------------------------------------------------------------- */
+  var doc = canvas.ownerDocument || (typeof document !== 'undefined' ? document : null);
+  var win =
+    (doc && doc.defaultView) || (typeof window !== 'undefined' ? window : null);
+  var raf =
+    opts.requestAnimationFrame ||
+    (win && win.requestAnimationFrame
+      ? win.requestAnimationFrame.bind(win)
+      : typeof requestAnimationFrame !== 'undefined'
+        ? requestAnimationFrame
+        : null);
+  var caf =
+    opts.cancelAnimationFrame ||
+    (win && win.cancelAnimationFrame
+      ? win.cancelAnimationFrame.bind(win)
+      : typeof cancelAnimationFrame !== 'undefined'
+        ? cancelAnimationFrame
+        : null);
+  var perfNow =
+    opts.now ||
+    (win && win.performance && win.performance.now
+      ? win.performance.now.bind(win.performance)
+      : function () {
+          return Date.now();
+        });
+  var doFetch =
+    opts.fetchImpl ||
+    (typeof fetch !== 'undefined' ? fetch.bind(typeof globalThis !== 'undefined' ? globalThis : win) : null);
+  var baseUrl = opts.baseUrl == null ? 'nemo-particles' : opts.baseUrl;
+  /* Where pointer-driven interaction is captured. The original listened on
+     `window` because the whole page WAS the canvas; the hero section is the
+     equivalent surface here. pointermove/keydown stay on window (see below). */
+  var host = opts.host || canvas.parentElement;
+
+  var onStatus = opts.onStatus || function () {};
+  var onReady = opts.onReady || function () {};
+  var onError = opts.onError || function () {};
+  var onUnsupported = opts.onUnsupported || function () {};
+
+  var destroyed = false;
+
+  /* -------------------------------------------------------------
+     reduced-motion + status reporting
+     ------------------------------------------------------------- */
+  var reducedMQ = win && win.matchMedia ? win.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  var reduced = !!(reducedMQ && reducedMQ.matches);
+  function onReducedChange(e) {
+    reduced = !!e.matches;
+    if (reduced) {
+      spin = 0;
+      spinVel = 0;
+      shockAge = 1e9;
+      pendingAdvanceAt = 0;
+    }
+  }
+  if (reducedMQ && reducedMQ.addEventListener) {
+    reducedMQ.addEventListener('change', onReducedChange);
+  }
+
+  function setStatus(text) {
+    if (!destroyed) onStatus(text);
+  }
+
+  var gl =
+    canvas.getContext('webgl', { alpha: false, antialias: true }) ||
+    canvas.getContext('experimental-webgl', { alpha: false, antialias: true });
+  if (!gl) {
+    if (reducedMQ && reducedMQ.removeEventListener) reducedMQ.removeEventListener('change', onReducedChange);
+    onUnsupported();
+    return {
+      resize: function () {},
+      scheduleResize: function () {},
+      setVisible: function () {},
+      isVisible: function () {
+        return false;
+      },
+      isReady: function () {
+        return false;
+      },
+      isDestroyed: function () {
+        return true;
+      },
+      getState: function () {
+        return { n: 0, fromPose: 0, toPose: 1, reduced: reduced, width: 1, height: 1, dpr: 1, running: false };
+      },
+      destroy: function () {},
+    };
+  }
+
+  /* ---------------------------------------------------------------
+     timing constants (2.4 s morph / 5.2 s hold cycle)
+     --------------------------------------------------------------- */
+  var TRANSITION_MS = 2400;
+  var HOLD_MS = 5200;
+
+  /* ---------------------------------------------------------------
+     shader sources
+     --------------------------------------------------------------- */
+  var VS_PARTICLE = [
+    'attribute vec4 aPoseAB;', // pose0.xy, pose1.xy
+    'attribute vec4 aPoseCD;', // pose2.xy, pose3.xy
+    'attribute vec3 aColA;', // per-particle color, pose 0
+    'attribute vec3 aColB;', // pose 1
+    'attribute vec3 aColC;', // pose 2
+    'attribute vec3 aColD;', // pose 3
+    'attribute vec2 aMeta;', // seed, size
+    'attribute vec3 aDyn;', // physics offset (ox, oy) + speed (CPU spring loop)
+    'uniform vec2 uResolution;',
+    'uniform vec2 uOrigin;',
+    'uniform float uScale;',
+    'uniform float uTime;',
+    'uniform vec2 uMouse;',
+    'uniform int uFromIndex;',
+    'uniform float uT;',
+    'uniform float uReduced;',
+    'uniform float uPointBase;',
+    'uniform float uSpin;',
+    'uniform vec2 uShockCenter;',
+    'uniform float uShockRadius;',
+    'uniform float uShockStrength;',
+    'varying vec3 vColor;',
+    'float stagger(float t, float seed){',
+    '  float x = clamp((t - seed*0.35)/0.65, 0.0, 1.0);',
+    '  return x*x*(3.0-2.0*x);', // smoothstep
+    '}',
+    'void main(){',
+    '  vec2 pFrom, pTo; vec3 cFrom, cTo;',
+    '  if(uFromIndex==0){ pFrom=aPoseAB.xy; pTo=aPoseAB.zw; cFrom=aColA; cTo=aColB; }',
+    '  else if(uFromIndex==1){ pFrom=aPoseAB.zw; pTo=aPoseCD.xy; cFrom=aColB; cTo=aColC; }',
+    '  else if(uFromIndex==2){ pFrom=aPoseCD.xy; pTo=aPoseCD.zw; cFrom=aColC; cTo=aColD; }',
+    '  else { pFrom=aPoseCD.zw; pTo=aPoseAB.xy; cFrom=aColD; cTo=aColA; }',
+    '  float seed = aMeta.x;',
+    '  float ti = stagger(uT, seed);',
+    '  vec2 baseNorm = mix(pFrom, pTo, ti);',
+    '  vec2 basePx = uOrigin + baseNorm * uScale;',
+    '  vColor = mix(cFrom, cTo, ti);',
+    '  float idleAmp = 4.0 * (1.0 - uReduced);',
+    '  vec2 idle = vec2(sin(uTime*0.6+seed*6.2831853), cos(uTime*0.5+seed*7.0)) * idleAmp;',
+    '  vec2 pos = basePx + idle + aDyn.xy;',
+    '  vec2 toP = pos - uMouse;', // fluid cursor response (instant layer)
+    '  float d = length(toP);',
+    '  float R = 110.0;',
+    '  if(d < R && d > 0.0001){',
+    '    float f = (R-d)/R;',
+    '    pos += (toP/d) * f * 30.0 * (1.0 - 0.35*uReduced);',
+    '  }',
+    '  if(uShockStrength > 0.001){', // click-triggered radial shockwave ring
+    '    vec2 toS = pos - uShockCenter;',
+    '    float ds = length(toS);',
+    '    float ring = exp(-pow(ds-uShockRadius, 2.0)/(2.0*44.0*44.0));',
+    '    pos += (toS/(ds+0.001)) * ring * uShockStrength;',
+    '  }',
+    '  float depth = 0.5 + seed*0.5;', // camera spin: seed-derived pseudo-depth
+    '  vec2 rel = pos - uOrigin;',
+    '  float cs = cos(uSpin), sn = sin(uSpin);',
+    '  pos = uOrigin + vec2(rel.x*cs + sn*depth*uScale*0.16, rel.y + sn*sn*depth*uScale*0.02);',
+    '  vec2 clip = (pos/uResolution)*2.0 - 1.0;',
+    '  clip.y = -clip.y;',
+    '  gl_Position = vec4(clip, 0.0, 1.0);',
+    '  float speedBoost = min(aDyn.z*0.012, 2.0);',
+    '  gl_PointSize = (uPointBase + aMeta.y*1.8 + speedBoost) * (uResolution.y/900.0);',
+    '}',
+  ].join('\n');
+
+  var FS_POINT = [
+    'precision mediump float;',
+    'varying vec3 vColor;',
+    'void main(){',
+    '  vec2 uv = gl_PointCoord*2.0-1.0;',
+    '  float d = dot(uv,uv);',
+    '  if(d>1.0) discard;',
+    '  float falloff = smoothstep(1.0,0.0,d);',
+    '  gl_FragColor = vec4(vColor*0.92*falloff, 1.0);',
+    '}',
+  ].join('\n');
+
+  var FS_LINE = [
+    'precision mediump float;',
+    'varying vec3 vColor;',
+    'uniform float uLineAlpha;',
+    'void main(){',
+    '  gl_FragColor = vec4(vColor*0.13*uLineAlpha, 1.0);',
+    '}',
+  ].join('\n');
+
+  var VS_STAR = [
+    'attribute vec2 aPos;',
+    'attribute vec3 aRand;',
+    'uniform vec2 uResolution;',
+    'uniform float uTime;',
+    'varying float vAlpha;',
+    'void main(){',
+    '  float seed = aRand.x;',
+    '  vec2 p = aPos + vec2(sin(uTime*0.15+seed*12.9), cos(uTime*0.12+seed*7.3)) * (6.0+aRand.y*18.0);',
+    '  vec2 clip = (p/uResolution)*2.0-1.0;',
+    '  clip.y = -clip.y;',
+    '  gl_Position = vec4(clip,0.0,1.0);',
+    '  gl_PointSize = 1.0 + aRand.z*1.6;',
+    '  vAlpha = 0.22 + 0.30*sin(uTime*1.3+seed*20.0);',
+    '}',
+  ].join('\n');
+
+  var FS_STAR = [
+    'precision mediump float;',
+    'varying float vAlpha;',
+    'void main(){',
+    '  vec2 uv = gl_PointCoord*2.0-1.0;',
+    '  float d = dot(uv,uv);',
+    '  if(d>1.0) discard;',
+    '  float falloff = smoothstep(1.0,0.0,d);',
+    '  gl_FragColor = vec4(vec3(0.75,0.82,1.0)*vAlpha*falloff, 1.0);',
+    '}',
+  ].join('\n');
+
+  var VS_QUAD = [
+    'attribute vec2 aPos;',
+    'varying vec2 vUv;',
+    'void main(){',
+    '  vUv = aPos*0.5+0.5;',
+    '  gl_Position = vec4(aPos,0.0,1.0);',
+    '}',
+  ].join('\n');
+
+  var FS_BRIGHT = [
+    'precision mediump float;',
+    'varying vec2 vUv;',
+    'uniform sampler2D uTex;',
+    'void main(){',
+    '  vec3 c = texture2D(uTex, vUv).rgb;',
+    '  float lum = dot(c, vec3(0.299,0.587,0.114));',
+    '  float t = smoothstep(0.16, 0.5, lum);',
+    '  gl_FragColor = vec4(c*t*1.5, 1.0);',
+    '}',
+  ].join('\n');
+
+  var FS_BLUR = [
+    'precision mediump float;',
+    'varying vec2 vUv;',
+    'uniform sampler2D uTex;',
+    'uniform vec2 uDir;',
+    'void main(){',
+    '  vec3 sum = texture2D(uTex, vUv).rgb * 0.227027;',
+    '  vec2 o1 = uDir*1.3846153846;',
+    '  vec2 o2 = uDir*3.2307692308;',
+    '  sum += texture2D(uTex, vUv+o1).rgb * 0.3162162162;',
+    '  sum += texture2D(uTex, vUv-o1).rgb * 0.3162162162;',
+    '  sum += texture2D(uTex, vUv+o2).rgb * 0.0702702703;',
+    '  sum += texture2D(uTex, vUv-o2).rgb * 0.0702702703;',
+    '  gl_FragColor = vec4(sum, 1.0);',
+    '}',
+  ].join('\n');
+
+  var FS_COMPOSITE = [
+    'precision mediump float;',
+    'varying vec2 vUv;',
+    'uniform sampler2D uScene;',
+    'uniform sampler2D uBloom;',
+    'void main(){',
+    '  vec3 scene = texture2D(uScene, vUv).rgb;',
+    '  vec3 bloom = texture2D(uBloom, vUv).rgb;',
+    '  vec3 color = scene + bloom*0.95;',
+    '  color = color/(color+vec3(1.0));',
+    '  color = pow(color, vec3(0.9));',
+    '  gl_FragColor = vec4(color, 1.0);',
+    '}',
+  ].join('\n');
+
+  /* ---------------------------------------------------------------
+     GL helpers
+     --------------------------------------------------------------- */
+  var shaders = [];
+  var programs = [];
+  function compile(type, src) {
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.error('shader compile error:', gl.getShaderInfoLog(s));
+    }
+    shaders.push(s);
+    return s;
+  }
+  function link(vsSrc, fsSrc) {
+    var vs = compile(gl.VERTEX_SHADER, vsSrc);
+    var fs = compile(gl.FRAGMENT_SHADER, fsSrc);
+    var p = gl.createProgram();
+    gl.attachShader(p, vs);
+    gl.attachShader(p, fs);
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+      console.error('program link error:', gl.getProgramInfoLog(p));
+    }
+    programs.push(p);
+    return p;
+  }
+  // cached uniform / attrib locations per program
+  var locCache = {};
+  function L(prog, name) {
+    var key = prog.__id + ':' + name;
+    var loc = locCache[key];
+    if (loc === undefined) {
+      loc = gl.getUniformLocation(prog, name);
+      locCache[key] = loc;
+    }
+    return loc;
+  }
+  var attrCache = {};
+  function A(prog, name) {
+    var key = prog.__id + ':' + name;
+    var loc = attrCache[key];
+    if (loc === undefined) {
+      loc = gl.getAttribLocation(prog, name);
+      attrCache[key] = loc;
+    }
+    return loc;
+  }
+
+  var progPoint = link(VS_PARTICLE, FS_POINT);
+  var progLine = link(VS_PARTICLE, FS_LINE);
+  var progStar = link(VS_STAR, FS_STAR);
+  var progBright = link(VS_QUAD, FS_BRIGHT);
+  var progBlur = link(VS_QUAD, FS_BLUR);
+  var progComposite = link(VS_QUAD, FS_COMPOSITE);
+  var progId = 0;
+  [progPoint, progLine, progStar, progBright, progBlur, progComposite].forEach(function (p) {
+    p.__id = progId++;
+  });
+
+  /* ---------------------------------------------------------------
+     particle data state (filled after the four pose JSONs are fetched)
+     --------------------------------------------------------------- */
+  var N = 0;
+  var poses = []; // [{name, xs, ys, r, g, b}] Float32Arrays, per pose
+  var dataReady = false;
+
+  var vbo = gl.createBuffer();
+  var dynVbo = gl.createBuffer();
+  var dynData = null; // Float32Array(N*3): ox, oy, speed
+  var ebos = []; // per-pose edge index buffers
+  var edgeCounts = []; // per-pose edge counts
+
+  var seeds = null; // per-particle seed (stagger + physics variance)
+
+  // CPU physics state (Hooke springs with inertia)
+  var ph = null; // {px, py, vx, vy, rx, ry}
+
+  var STRIDE_F = 22; // floats per particle (4+4+3+3+3+3+2)
+
+  function buildStaticVBO() {
+    var data = new Float32Array(N * STRIDE_F);
+    var p0 = poses[0],
+      p1 = poses[1],
+      p2 = poses[2],
+      p3 = poses[3];
+    seeds = new Float32Array(N);
+    for (var i = 0; i < N; i++) {
+      var o = i * STRIDE_F;
+      data[o + 0] = p0.xs[i];
+      data[o + 1] = p0.ys[i];
+      data[o + 2] = p1.xs[i];
+      data[o + 3] = p1.ys[i];
+      data[o + 4] = p2.xs[i];
+      data[o + 5] = p2.ys[i];
+      data[o + 6] = p3.xs[i];
+      data[o + 7] = p3.ys[i];
+      data[o + 8] = p0.r[i];
+      data[o + 9] = p0.g[i];
+      data[o + 10] = p0.b[i];
+      data[o + 11] = p1.r[i];
+      data[o + 12] = p1.g[i];
+      data[o + 13] = p1.b[i];
+      data[o + 14] = p2.r[i];
+      data[o + 15] = p2.g[i];
+      data[o + 16] = p2.b[i];
+      data[o + 17] = p3.r[i];
+      data[o + 18] = p3.g[i];
+      data[o + 19] = p3.b[i];
+      data[o + 20] = Math.random();
+      data[o + 21] = Math.random() < 0.1 ? 1.0 : Math.random() * 0.4;
+      seeds[i] = data[o + 20];
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+
+    dynData = new Float32Array(N * 3);
+    gl.bindBuffer(gl.ARRAY_BUFFER, dynVbo);
+    gl.bufferData(gl.ARRAY_BUFFER, dynData, gl.DYNAMIC_DRAW);
+
+    ph = {
+      px: new Float32Array(N),
+      py: new Float32Array(N),
+      vx: new Float32Array(N),
+      vy: new Float32Array(N),
+      rx: new Float32Array(N),
+      ry: new Float32Array(N),
+    };
+    computeRest(0);
+    for (i = 0; i < N; i++) {
+      ph.px[i] = ph.rx[i];
+      ph.py[i] = ph.ry[i];
+      ph.vx[i] = 0;
+      ph.vy[i] = 0;
+    }
+  }
+
+  var STRIDE_B = STRIDE_F * 4;
+  function bindParticleAttribs(prog) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    var aAB = A(prog, 'aPoseAB');
+    var aCD = A(prog, 'aPoseCD');
+    var aColA = A(prog, 'aColA');
+    var aColB = A(prog, 'aColB');
+    var aColC = A(prog, 'aColC');
+    var aColD = A(prog, 'aColD');
+    var aM = A(prog, 'aMeta');
+    if (aAB >= 0) {
+      gl.enableVertexAttribArray(aAB);
+      gl.vertexAttribPointer(aAB, 4, gl.FLOAT, false, STRIDE_B, 0);
+    }
+    if (aCD >= 0) {
+      gl.enableVertexAttribArray(aCD);
+      gl.vertexAttribPointer(aCD, 4, gl.FLOAT, false, STRIDE_B, 16);
+    }
+    if (aColA >= 0) {
+      gl.enableVertexAttribArray(aColA);
+      gl.vertexAttribPointer(aColA, 3, gl.FLOAT, false, STRIDE_B, 32);
+    }
+    if (aColB >= 0) {
+      gl.enableVertexAttribArray(aColB);
+      gl.vertexAttribPointer(aColB, 3, gl.FLOAT, false, STRIDE_B, 44);
+    }
+    if (aColC >= 0) {
+      gl.enableVertexAttribArray(aColC);
+      gl.vertexAttribPointer(aColC, 3, gl.FLOAT, false, STRIDE_B, 56);
+    }
+    if (aColD >= 0) {
+      gl.enableVertexAttribArray(aColD);
+      gl.vertexAttribPointer(aColD, 3, gl.FLOAT, false, STRIDE_B, 68);
+    }
+    if (aM >= 0) {
+      gl.enableVertexAttribArray(aM);
+      gl.vertexAttribPointer(aM, 2, gl.FLOAT, false, STRIDE_B, 80);
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, dynVbo);
+    var aDyn = A(prog, 'aDyn');
+    if (aDyn >= 0) {
+      gl.enableVertexAttribArray(aDyn);
+      gl.vertexAttribPointer(aDyn, 3, gl.FLOAT, false, 12, 0);
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     per-pose edge generation: spatial-hash near-neighbor search
+     --------------------------------------------------------------- */
+  var EDGE_CELL = 0.07; // hash cell size (normalized units)
+  var EDGE_HUBMOD = 5; // every 5th particle acts as an edge hub
+  var EDGE_K = 2; // links per hub
+  var EDGE_MIN = 0.012; // bracket floor (normalized units)
+  var EDGE_BRACKET = 0.042; // per-hub length variety: [min, min+bracket]
+
+  function buildEdges(poseIdx) {
+    var xs = poses[poseIdx].xs,
+      ys = poses[poseIdx].ys;
+    var grid = new Map();
+    for (var i = 0; i < N; i++) {
+      var key = ((Math.floor(xs[i] / EDGE_CELL) + 64) << 16) + (Math.floor(ys[i] / EDGE_CELL) + 64);
+      var arr = grid.get(key);
+      if (!arr) {
+        arr = [];
+        grid.set(key, arr);
+      }
+      arr.push(i);
+    }
+    var seen = new Set();
+    var edges = [];
+    for (i = 0; i < N; i++) {
+      if (i % EDGE_HUBMOD !== 0) continue;
+      var h = ((i * 2654435761) >>> 0) % 5;
+      var minD = EDGE_MIN + h * 0.006;
+      var minD2 = minD * minD,
+        maxD2 = (minD + EDGE_BRACKET) * (minD + EDGE_BRACKET);
+      var cx = Math.floor(xs[i] / EDGE_CELL),
+        cy = Math.floor(ys[i] / EDGE_CELL);
+      var b0 = 1e9,
+        b1 = 1e9,
+        j0 = -1,
+        j1 = -1;
+      for (var gx = cx - 1; gx <= cx + 1; gx++) {
+        for (var gy = cy - 1; gy <= cy + 1; gy++) {
+          var cell = grid.get(((gx + 64) << 16) + (gy + 64));
+          if (!cell) continue;
+          for (var t = 0; t < cell.length; t++) {
+            var j = cell[t];
+            if (j === i) continue;
+            var dx = xs[i] - xs[j],
+              dy = ys[i] - ys[j];
+            var d2 = dx * dx + dy * dy;
+            if (d2 < minD2 || d2 > maxD2) continue;
+            if (d2 < b0) {
+              b1 = b0;
+              j1 = j0;
+              b0 = d2;
+              j0 = j;
+            } else if (d2 < b1) {
+              b1 = d2;
+              j1 = j;
+            }
+          }
+        }
+      }
+      if (j0 >= 0) {
+        var a = i < j0 ? i : j0,
+          b = i < j0 ? j0 : i;
+        var k0 = a * N + b;
+        if (!seen.has(k0)) {
+          seen.add(k0);
+          edges.push(a, b);
+        }
+      }
+      if (j1 >= 0) {
+        var a2 = i < j1 ? i : j1,
+          b2 = i < j1 ? j1 : i;
+        var k1 = a2 * N + b2;
+        if (!seen.has(k1)) {
+          seen.add(k1);
+          edges.push(a2, b2);
+        }
+      }
+    }
+    var idx = new Uint16Array(edges.length);
+    idx.set(edges);
+    var ebo = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+    ebos[poseIdx] = ebo;
+    edgeCounts[poseIdx] = edges.length / 2;
+  }
+
+  /* ---------------------------------------------------------------
+     CPU physics: Hooke springs + Gaussian cursor repulsion + vortex
+     --------------------------------------------------------------- */
+  function sstep(x) {
+    x = x < 0 ? 0 : x > 1 ? 1 : x;
+    return x * x * (3.0 - 2.0 * x);
+  }
+  function stagger(t, seed) {
+    return sstep((t - seed * 0.35) / 0.65);
+  }
+
+  var curFrom = null,
+    curTo = null; // pose array refs for the active morph
+  function computeRest(t) {
+    var fx = curFrom.xs,
+      fy = curFrom.ys,
+      tx = curTo.xs,
+      ty = curTo.ys;
+    for (var i = 0; i < N; i++) {
+      var ti = stagger(t, seeds[i]);
+      ph.rx[i] = originX + (fx[i] + (tx[i] - fx[i]) * ti) * figScale;
+      ph.ry[i] = originY + (fy[i] + (ty[i] - fy[i]) * ti) * figScale;
+    }
+  }
+
+  var K_BASE = 55,
+    DAMP_BASE = 3.2;
+  var REP_A = 2600,
+    REP_SIG = 110,
+    REP_R = 240;
+  var VORTEX = 540;
+  var SPEED_REF = 900; // speed-adaptive drag: above this speed, damping ramps up (px/s)
+  var VMAX = 2200; // hard per-particle speed cap — stacked impulses can't build orbits
+  var HEAL_DAMP = 2.6; // extra damping injected when a pose transition begins
+  var HEAL_TAU = 450; // heal-damping decay constant (ms)
+  var ENERGY_TAU = 650; // interaction-energy decay (ms) — the void heals once input stops
+
+  function physicsStep(dt) {
+    var s = seeds,
+      px = ph.px,
+      py = ph.py,
+      vx = ph.vx,
+      vy = ph.vy,
+      rx = ph.rx,
+      ry = ph.ry;
+    var pActive = pointer.active;
+    var mx = pointer.x,
+      my = pointer.y;
+    var energy = interactEnergy; // 0..1 — decays while input is idle
+    var healBoost = HEAL_DAMP * Math.exp(-healT / HEAL_TAU); // fades after each pose transition
+    var psf = 0.7 + (1.3 * Math.min(pointer.speed, 2400)) / 2400;
+    var tang = VORTEX * Math.min(pointer.speed / 1600, 1.0);
+    var R2 = REP_R * REP_R,
+      sig2 = 2 * REP_SIG * REP_SIG;
+    for (var i = 0; i < N; i++) {
+      var sd = s[i];
+      var k = K_BASE * (0.55 + 0.9 * sd); // seed-based stiffness variance
+      var damp0 = DAMP_BASE * (0.6 + 0.8 * sd); // seed-based damping variance
+      var sp = Math.sqrt(vx[i] * vx[i] + vy[i] * vy[i]);
+      // Speed-adaptive drag: slow particles keep the fluid feel, over-accelerated
+      // ones settle hard (no long ringing tails). healBoost adds transient damping
+      // right after a pose transition so the field re-forms cleanly.
+      var drag = (damp0 + healBoost) * (1.0 + sp / SPEED_REF);
+      var ax = (rx[i] - px[i]) * k - vx[i] * drag; // Hooke spring toward rest
+      var ay = (ry[i] - py[i]) * k - vy[i] * drag;
+      if (pActive && energy > 0.02) {
+        var dx = px[i] - mx,
+          dy = py[i] - my;
+        var d2 = dx * dx + dy * dy;
+        if (d2 < R2) {
+          var dd = Math.sqrt(d2) + 0.001;
+          var g = REP_A * Math.exp(-d2 / sig2) * psf * energy; // Gaussian repulsion
+          ax += (dx / dd) * g;
+          ay += (dy / dd) * g;
+          ax += (-dy / dd) * tang * energy;
+          ay += (dx / dd) * tang * energy; // vortex ∝ pointer velocity
+        }
+      }
+      vx[i] += ax * dt;
+      vy[i] += ay * dt;
+      var sp2 = Math.sqrt(vx[i] * vx[i] + vy[i] * vy[i]);
+      if (sp2 > VMAX) {
+        var scv = VMAX / sp2;
+        vx[i] *= scv;
+        vy[i] *= scv;
+        sp2 = VMAX;
+      }
+      px[i] += vx[i] * dt;
+      py[i] += vy[i] * dt;
+      var ddx = px[i] - rx[i],
+        ddy = py[i] - ry[i];
+      var m = Math.max(Math.abs(ddx), Math.abs(ddy));
+      if (m > 340) {
+        var sc = 340 / m;
+        ddx *= sc;
+        ddy *= sc;
+        px[i] = rx[i] + ddx;
+        py[i] = ry[i] + ddy;
+      }
+      dynData[i * 3] = ddx; // ox
+      dynData[i * 3 + 1] = ddy; // oy
+      dynData[i * 3 + 2] = sp2; // speed
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, dynVbo);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, dynData);
+  }
+
+  // radial shockwave impulse applied to physics velocities on click
+  function shockImpulse(cx, cy, strength) {
+    var px = ph.px,
+      py = ph.py,
+      vx = ph.vx,
+      vy = ph.vy;
+    var s2 = 2 * 95 * 95;
+    for (var i = 0; i < N; i++) {
+      var dx = px[i] - cx,
+        dy = py[i] - cy;
+      var d2 = dx * dx + dy * dy;
+      if (d2 > 260 * 260) continue;
+      var dd = Math.sqrt(d2) + 0.001;
+      var sp = Math.sqrt(vx[i] * vx[i] + vy[i] * vy[i]);
+      var imp = (strength * Math.exp(-d2 / s2)) / (1.0 + sp / 1400); // fast particles absorb less
+      vx[i] += (dx / dd) * imp;
+      vy[i] += (dy / dd) * imp;
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     data loading: Promise.all over the four pose JSONs
+     --------------------------------------------------------------- */
+  var POSE_FILES = POSE_FILE_NAMES.map(function (f) {
+    return baseUrl ? baseUrl.replace(/\/+$/, '') + '/' + f : f;
+  });
+
+  function loadData() {
+    return Promise.all(
+      POSE_FILES.map(function (f) {
+        return doFetch(f).then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status + ' for ' + f);
+          return res.json();
+        });
+      })
+    ).then(function (list) {
+      // validate schema: consistent particle count, matching array lengths
+      var ns = list.map(function (p) {
+        return p.n;
+      });
+      N = ns[0];
+      for (var k = 1; k < list.length; k++) {
+        if (ns[k] !== N) throw new Error('particle count mismatch between poses');
+      }
+      poses = list.map(function (p, idx) {
+        if (p.pos.length !== N * 2 || p.rgb.length !== N * 3) {
+          throw new Error('bad array lengths in pose' + idx);
+        }
+        var xs = new Float32Array(N),
+          ys = new Float32Array(N);
+        var r = new Float32Array(N),
+          g = new Float32Array(N),
+          b = new Float32Array(N);
+        // Orientation fix: the pose JSONs inherit the image coordinate origin
+        // (top-left, +y downward). The canvas layout is also +y downward in
+        // pixels, so without correction heads/up-facing features land at the
+        // bottom of the screen. Mirror every particle's y about the vertical
+        // center of the pose's y-range once here at load time — the shader,
+        // CPU physics rest targets, and edge generation all consume these
+        // arrays, so a single flip keeps them consistent.
+        var yMid = (p.yrange[0] + p.yrange[1]) / 2;
+        for (var i = 0; i < N; i++) {
+          xs[i] = p.pos[i * 2];
+          ys[i] = 2 * yMid - p.pos[i * 2 + 1];
+          r[i] = p.rgb[i * 3] / 255;
+          g[i] = p.rgb[i * 3 + 1] / 255;
+          b[i] = p.rgb[i * 3 + 2] / 255;
+        }
+        return { name: p.name, xs: xs, ys: ys, r: r, g: g, b: b };
+      });
+    });
+  }
+
+  /* ---------------------------------------------------------------
+     fullscreen quad
+     --------------------------------------------------------------- */
+  var quadVbo = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadVbo);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+  function drawQuad(prog, texMap, extraFn) {
+    gl.useProgram(prog);
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadVbo);
+    var aP = A(prog, 'aPos');
+    if (aP >= 0) {
+      gl.enableVertexAttribArray(aP);
+      gl.vertexAttribPointer(aP, 2, gl.FLOAT, false, 0, 0);
+    }
+    var unit = 0;
+    for (var name in texMap) {
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D, texMap[name]);
+      gl.uniform1i(L(prog, name), unit);
+      unit++;
+    }
+    if (extraFn) extraFn(prog);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  /* ---------------------------------------------------------------
+     framebuffers (bright-pass / bloom pipeline, unchanged architecture)
+     --------------------------------------------------------------- */
+  function makeFBO(w, h) {
+    w = Math.max(1, w | 0);
+    h = Math.max(1, h | 0);
+    var tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    var fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { fbo: fbo, tex: tex, w: w, h: h };
+  }
+  function freeFBO(f) {
+    if (f) {
+      gl.deleteFramebuffer(f.fbo);
+      gl.deleteTexture(f.tex);
+    }
+  }
+
+  var sceneFBO, brightFBO, blurA, blurB;
+  var W = 1,
+    H = 1,
+    DPR = 1,
+    originX = 0,
+    originY = 0,
+    figScale = 1;
+  var starVbo = gl.createBuffer();
+  var STAR_N = 140;
+
+  function buildStars() {
+    var data = new Float32Array(STAR_N * 5);
+    for (var i = 0; i < STAR_N; i++) {
+      var o = i * 5;
+      data[o + 0] = Math.random() * W;
+      data[o + 1] = Math.random() * H;
+      data[o + 2] = Math.random();
+      data[o + 3] = Math.random();
+      data[o + 4] = Math.random();
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, starVbo);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+  }
+
+  /* Sizing: the original read window.innerWidth/innerHeight and pinned the
+     canvas's CSS box in px, because it owned the viewport. Here the caller
+     (a ResizeObserver on the hero container in NemoParticleField.tsx) hands us
+     the hero's CSS box; CSS owns the display size (width/height:100%) and we
+     only set the drawing buffer, so the field tracks the hero instead of the
+     window. DPR clamp and everything downstream of it are unchanged. */
+  function resize(cssW, cssH) {
+    DPR = Math.min((win && win.devicePixelRatio) || 1, 1.5);
+    var cw = cssW,
+      ch = cssH;
+    W = Math.max(1, Math.floor(cw * DPR));
+    H = Math.max(1, Math.floor(ch * DPR));
+    canvas.width = W;
+    canvas.height = H;
+
+    freeFBO(sceneFBO);
+    freeFBO(brightFBO);
+    freeFBO(blurA);
+    freeFBO(blurB);
+    sceneFBO = makeFBO(W, H);
+    var hw = Math.max(1, Math.floor(W / 2)),
+      hh = Math.max(1, Math.floor(H / 2));
+    brightFBO = makeFBO(hw, hh);
+    blurA = makeFBO(hw, hh);
+    blurB = makeFBO(hw, hh);
+
+    figScale = H * 0.72;
+    originX = W * 0.68;
+    originY = H * 0.94 - figScale;
+
+    buildStars();
+
+    if (dataReady) {
+      // re-anchor physics to the new layout
+      computeRest(cycleTimer / TRANSITION_MS);
+      for (var i = 0; i < N; i++) {
+        ph.px[i] = ph.rx[i];
+        ph.py[i] = ph.ry[i];
+        ph.vx[i] = 0;
+        ph.vy[i] = 0;
+      }
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     interaction + pose state
+     --------------------------------------------------------------- */
+  var pointer = { x: -99999, y: -99999, active: false, speed: 0 };
+  var pvel = { x: 0, y: 0, lastT: 0 };
+
+  /* Pointer position is converted into canvas-local DEVICE pixels. The
+     original used e.clientX*DPR because its canvas was pinned to the viewport
+     origin; here the canvas sits inside a transformed (.hero__bg parallax),
+     scrolling container, so it is measured through getBoundingClientRect() —
+     which already accounts for the CSS transform — and normalised against the
+     drawing-buffer size. */
+  function toDevicePx(clientX, clientY) {
+    if (!canvas.getBoundingClientRect) return null;
+    var r = canvas.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    return [((clientX - r.left) / r.width) * W, ((clientY - r.top) / r.height) * H];
+  }
+
+  function onPointerMove(e) {
+    var p = toDevicePx(e.clientX, e.clientY);
+    var nx = p ? p[0] : -99999;
+    var ny = p ? p[1] : -99999;
+    var now = perfNow();
+    var dts = Math.max(1 / 240, (now - pvel.lastT) / 1000);
+    if (pvel.lastT > 0) {
+      var ivx = (nx - pointer.x) / dts,
+        ivy = (ny - pointer.y) / dts;
+      pvel.x += (ivx - pvel.x) * 0.35;
+      pvel.y += (ivy - pvel.y) * 0.35;
+    }
+    pointer.x = nx;
+    pointer.y = ny;
+    pointer.active = true;
+    interactEnergy = Math.min(1, interactEnergy + 0.18); // active input sustains the field
+    pvel.lastT = now;
+  }
+  function onPointerLeave() {
+    pointer.x = -99999;
+    pointer.y = -99999;
+    pointer.active = false;
+  }
+
+  var fromPose = 0,
+    toPose = 1,
+    cycleTimer = 0;
+  var spin = 0,
+    spinVel = 0,
+    spinDir = 1;
+  var shockX = 0,
+    shockY = 0,
+    shockAge = 1e9;
+  // interaction stabilization state (rapid-input & void-healing lifecycle)
+  var interactEnergy = 0; // 0..1 — gates cursor forces; decays so the void always heals
+  var lastBurst = -1e9; // last pointerdown impulse time (ms) — rapid-click energy budget
+  var pendingAdvanceAt = 0; // delayed morph-advance deadline (ms): the void forms and
+  // lingers, then the pose transition re-forms the field
+  var healT = 1e9; // ms since the last pose transition began (heal-damping window)
+
+  function jumpTo(target) {
+    if (!poses.length) return;
+    if (target === toPose && cycleTimer >= TRANSITION_MS) return; // already displaying it
+    var display = cycleTimer / TRANSITION_MS >= 0.5 ? toPose : fromPose;
+    pendingAdvanceAt = 0; // a direct jump supersedes any scheduled advance
+    fromPose = display;
+    toPose = target;
+    cycleTimer = reduced ? TRANSITION_MS : 0; // reduced motion: change is instant
+    curFrom = poses[fromPose];
+    curTo = poses[toPose];
+    healVoid(); // every pose transition re-absorbs the displaced field
+  }
+  function advance() {
+    jumpTo((toPose + 1) % 4);
+  }
+  function advancePrev() {
+    jumpTo((toPose + 3) % 4);
+  }
+
+  function healVoid() {
+    // Pose-transition heal: quell stored momentum and open the heal-damping
+    // window (physicsStep reads healT). The displaced particles then glide into
+    // the new formation as the staggered morph unfolds, closing the void.
+    if (!ph) return;
+    var vx = ph.vx,
+      vy = ph.vy;
+    for (var i = 0; i < N; i++) {
+      vx[i] *= 0.25;
+      vy[i] *= 0.25;
+    }
+    healT = 0;
+  }
+
+  function onPointerDown(e) {
+    // click / tap anywhere on the hero: shockwave + camera-spin kick. The
+    // morph advance is scheduled ~600 ms later so the void forms and lingers
+    // on impact, then the pose transition re-forms the field. Rapid inputs are
+    // rate-gated: the impulse budget refills over 600 ms, so stacked double-taps
+    // add far less energy instead of compounding.
+    var p = toDevicePx(e.clientX, e.clientY);
+    shockX = p ? p[0] : 0;
+    shockY = p ? p[1] : 0;
+    if (!reduced) {
+      var now = perfNow();
+      var burst = Math.min(1, Math.max(0.25, (now - lastBurst) / 600));
+      lastBurst = now;
+      shockAge = 0;
+      interactEnergy = 1;
+      spinVel = Math.max(-2.6, Math.min(2.6, spinVel + spinDir * 2.2 * burst));
+      spinDir = -spinDir;
+      if (dataReady) shockImpulse(shockX, shockY, 260 * burst);
+    }
+    if (dataReady) {
+      if (reduced) advance();
+      else pendingAdvanceAt = perfNow() + 600; // debounced: spam re-schedules it
+    }
+  }
+
+  /* Arrow-key pose stepping. The original bound this to the whole page because
+     the whole page was the field. Here it is kept, but only fires while the
+     hero is actually on screen, and it never steals the key from a text field,
+     listbox or other widget that owns arrow keys. */
+  function isEditingTarget(t) {
+    if (!t || !t.tagName) return false;
+    var tag = t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (t.isContentEditable) return true;
+    var role = t.getAttribute && t.getAttribute('role');
+    return role === 'textbox' || role === 'listbox' || role === 'combobox';
+  }
+  function onKeyDown(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!visible) return; // hero is off screen — the field is paused anyway
+    if (isEditingTarget(e.target)) return;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      if (dataReady) advance();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (dataReady) advancePrev();
+    }
+  }
+
+  function setCommonUniforms(prog, t, timeSec) {
+    gl.uniform2f(L(prog, 'uResolution'), W, H);
+    gl.uniform2f(L(prog, 'uOrigin'), originX, originY);
+    gl.uniform1f(L(prog, 'uScale'), figScale);
+    gl.uniform1f(L(prog, 'uTime'), timeSec);
+    gl.uniform2f(L(prog, 'uMouse'), pointer.x, pointer.y);
+    gl.uniform1i(L(prog, 'uFromIndex'), fromPose);
+    gl.uniform1f(L(prog, 'uT'), t);
+    gl.uniform1f(L(prog, 'uReduced'), reduced ? 1.0 : 0.0);
+    gl.uniform1f(L(prog, 'uSpin'), spin);
+    gl.uniform2f(L(prog, 'uShockCenter'), shockX, shockY);
+    gl.uniform1f(L(prog, 'uShockRadius'), shockRadius());
+    gl.uniform1f(L(prog, 'uShockStrength'), shockStrength());
+  }
+
+  function shockRadius() {
+    return 120 + (shockAge / 1000) * 760; // shockAge is in ms
+  }
+  function shockStrength() {
+    return shockAge < 1600 ? 46 * Math.exp((-shockAge / 1000) * 2.8) : 0;
+  }
+
+  /* ---------------------------------------------------------------
+     bloom helpers
+     --------------------------------------------------------------- */
+  function blurPass(srcTex, dst, w, h, dx, dy) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fbo);
+    gl.viewport(0, 0, w, h);
+    drawQuad(progBlur, { uTex: srcTex }, function (p) {
+      gl.uniform2f(L(p, 'uDir'), dx, dy);
+    });
+  }
+
+  /* ---------------------------------------------------------------
+     render loop
+     --------------------------------------------------------------- */
+  var lastT = perfNow();
+  var startT = lastT;
+  var rafId = 0;
+  var running = false;
+  var visible = true; // IntersectionObserver in the component drives this
+
+  function render(now) {
+    rafId = 0;
+    if (!running || destroyed) return;
+    rafId = raf(render);
+    var dt = Math.min(33, now - lastT);
+    lastT = now;
+    var timeSec = (now - startT) / 1000;
+
+    if (dataReady) {
+      if (!reduced) {
+        cycleTimer += dt;
+        if (pendingAdvanceAt && now >= pendingAdvanceAt) {
+          pendingAdvanceAt = 0;
+          advance(); // delayed pose transition — re-forms the field after the void lingers
+        }
+        if (cycleTimer > TRANSITION_MS + HOLD_MS) advance();
+      }
+      var t = Math.min(1, cycleTimer / TRANSITION_MS);
+      var te = t * t * (3.0 - 2.0 * t);
+
+      // CPU physics loop → dynamic VBO (ox, oy, speed)
+      computeRest(t);
+      pvel.x *= Math.exp((-3.2 * dt) / 1000);
+      pvel.y *= Math.exp((-3.2 * dt) / 1000);
+      pointer.speed = Math.sqrt(pvel.x * pvel.x + pvel.y * pvel.y);
+      interactEnergy *= Math.exp(-dt / ENERGY_TAU); // void heals once input stops
+      healT += dt; // heal-damping window ages
+      physicsStep(dt / 1000);
+
+      // shockwave / camera-spin state
+      if (!reduced) {
+        shockAge += dt;
+        spin += (spinVel * dt) / 1000;
+        spinVel += ((-22.0 * spin - 5.2 * spinVel) * dt) / 1000;
+      } else {
+        shockAge = 1e9;
+        spin = 0;
+        spinVel = 0;
+      }
+    }
+
+    // pass 1: scene (additive particles/lines/stars) into full-res FBO
+    gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFBO.fbo);
+    gl.viewport(0, 0, W, H);
+    gl.clearColor(3 / 255, 2 / 255, 8 / 255, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE);
+
+    gl.useProgram(progStar);
+    gl.bindBuffer(gl.ARRAY_BUFFER, starVbo);
+    var aPos = A(progStar, 'aPos');
+    var aRand = A(progStar, 'aRand');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 20, 0);
+    gl.enableVertexAttribArray(aRand);
+    gl.vertexAttribPointer(aRand, 3, gl.FLOAT, false, 20, 8);
+    gl.uniform2f(L(progStar, 'uResolution'), W, H);
+    gl.uniform1f(L(progStar, 'uTime'), timeSec);
+    gl.drawArrays(gl.POINTS, 0, STAR_N);
+
+    if (dataReady) {
+      // edges: two line draws, crossfaded with uLineAlpha during the morph
+      gl.useProgram(progLine);
+      bindParticleAttribs(progLine);
+      setCommonUniforms(progLine, t, timeSec);
+      if (te < 0.999 && edgeCounts[fromPose] > 0) {
+        gl.uniform1f(L(progLine, 'uLineAlpha'), 1.0 - te);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebos[fromPose]);
+        gl.drawElements(gl.LINES, edgeCounts[fromPose] * 2, gl.UNSIGNED_SHORT, 0);
+      }
+      if (te > 0.001 && edgeCounts[toPose] > 0) {
+        gl.uniform1f(L(progLine, 'uLineAlpha'), te);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebos[toPose]);
+        gl.drawElements(gl.LINES, edgeCounts[toPose] * 2, gl.UNSIGNED_SHORT, 0);
+      }
+
+      gl.useProgram(progPoint);
+      bindParticleAttribs(progPoint);
+      setCommonUniforms(progPoint, t, timeSec);
+      gl.uniform1f(L(progPoint, 'uPointBase'), 1.5);
+      gl.drawArrays(gl.POINTS, 0, N);
+    }
+    gl.disable(gl.BLEND);
+
+    // pass 2: bright-pass extraction (half res)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, brightFBO.fbo);
+    gl.viewport(0, 0, brightFBO.w, brightFBO.h);
+    drawQuad(progBright, { uTex: sceneFBO.tex });
+
+    // pass 3: two-iteration separable blur
+    blurPass(brightFBO.tex, blurA, brightFBO.w, brightFBO.h, 1 / brightFBO.w, 0);
+    blurPass(blurA.tex, blurB, blurA.w, blurA.h, 0, 1 / blurA.h);
+    blurPass(blurB.tex, blurA, blurB.w, blurB.h, 1 / blurB.w, 0);
+    blurPass(blurA.tex, blurB, blurA.w, blurA.h, 0, 1 / blurA.h);
+
+    // pass 4: composite scene + bloom to screen
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, W, H);
+    drawQuad(progComposite, { uScene: sceneFBO.tex, uBloom: blurB.tex });
+  }
+
+  function start() {
+    if (running || destroyed) return;
+    running = true;
+    lastT = perfNow();
+    rafId = raf(render);
+  }
+  function stop() {
+    running = false;
+    if (rafId) {
+      caf(rafId);
+      rafId = 0;
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     event wiring (was: window resize / pointermove / pointerleave /
+     pointerdown / keydown listeners that lived for the life of the page)
+     --------------------------------------------------------------- */
+  var listeners = [];
+  function on(target, type, fn, opts2) {
+    if (!target || !target.addEventListener) return;
+    target.addEventListener(type, fn, opts2);
+    listeners.push([target, type, fn, opts2]);
+  }
+
+  var resizeTimer = null;
+  /* The original debounced window 'resize' by 150 ms. That job now belongs to
+     the ResizeObserver in NemoParticleField.tsx, which calls resize() with the
+     hero's measured box — the debounce value itself carries over unchanged. */
+  function scheduleResize(cssW, cssH) {
+    if (destroyed) return;
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      resizeTimer = null;
+      if (!destroyed) resize(cssW, cssH);
+    }, 150);
+  }
+
+  on(win, 'pointermove', onPointerMove);
+  on(host, 'pointerleave', onPointerLeave);
+  on(host, 'pointercancel', onPointerLeave);
+  on(host, 'pointerdown', onPointerDown);
+  on(win, 'keydown', onKeyDown);
+
+  /* ---------------------------------------------------------------
+     teardown
+     --------------------------------------------------------------- */
+  function destroy() {
+    if (destroyed) return;
+    destroyed = true;
+    stop();
+    if (resizeTimer) {
+      clearTimeout(resizeTimer);
+      resizeTimer = null;
+    }
+    for (var i = 0; i < listeners.length; i++) {
+      var l = listeners[i];
+      if (l[0] && l[0].removeEventListener) l[0].removeEventListener(l[1], l[2], l[3]);
+    }
+    listeners.length = 0;
+    if (reducedMQ && reducedMQ.removeEventListener) reducedMQ.removeEventListener('change', onReducedChange);
+    // GL objects
+    freeFBO(sceneFBO);
+    freeFBO(brightFBO);
+    freeFBO(blurA);
+    freeFBO(blurB);
+    sceneFBO = brightFBO = blurA = blurB = null;
+    if (vbo) gl.deleteBuffer(vbo);
+    if (dynVbo) gl.deleteBuffer(dynVbo);
+    if (quadVbo) gl.deleteBuffer(quadVbo);
+    if (starVbo) gl.deleteBuffer(starVbo);
+    for (i = 0; i < ebos.length; i++) if (ebos[i]) gl.deleteBuffer(ebos[i]);
+    ebos.length = 0;
+    for (i = 0; i < programs.length; i++) gl.deleteProgram(programs[i]);
+    for (i = 0; i < shaders.length; i++) gl.deleteShader(shaders[i]);
+    // release the context (also what makes StrictMode/HMR remounts safe)
+    var loseCtx = gl.getExtension && gl.getExtension('WEBGL_lose_context');
+    if (loseCtx && loseCtx.loseContext) loseCtx.loseContext();
+    dynData = null;
+    ph = null;
+    poses = [];
+    seeds = null;
+    N = 0;
+    dataReady = false;
+  }
+
+  /* ---------------------------------------------------------------
+     boot: fetch JSONs → build buffers/edges/physics → report ready
+     --------------------------------------------------------------- */
+  loadData()
+    .then(function () {
+      if (destroyed) return; // unmounted mid-fetch: never touch the dead context
+      curFrom = poses[0];
+      curTo = poses[1];
+      buildStaticVBO();
+      for (var p = 0; p < 4; p++) buildEdges(p);
+      computeRest(0);
+      for (var i = 0; i < N; i++) {
+        ph.px[i] = ph.rx[i];
+        ph.py[i] = ph.ry[i];
+      }
+      dataReady = true;
+      setStatus('FIELD READY — ENTERING');
+      onReady();
+      lastT = perfNow();
+      startT = lastT;
+      if (visible) start();
+    })
+    .catch(function (err) {
+      if (destroyed) return;
+      console.error('particle data load failed:', err);
+      onError(err instanceof Error ? err : new Error(String(err)));
+    });
+
+  return {
+    resize: resize,
+    /** Host-driven debounced resize (150 ms, as the original's window handler). */
+    scheduleResize: scheduleResize,
+    setVisible: function (v) {
+      visible = !!v;
+      if (visible) {
+        if (dataReady) start();
+      } else {
+        stop();
+      }
+    },
+    isVisible: function () {
+      return visible;
+    },
+    isReady: function () {
+      return dataReady;
+    },
+    isDestroyed: function () {
+      return destroyed;
+    },
+    /** particle count / current pose pair — diagnostics + tests. */
+    getState: function () {
+      return {
+        n: N,
+        fromPose: fromPose,
+        toPose: toPose,
+        reduced: reduced,
+        width: W,
+        height: H,
+        dpr: DPR,
+        running: running,
+      };
+    },
+    destroy: destroy,
+  };
+}
