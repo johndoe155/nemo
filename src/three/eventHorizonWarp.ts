@@ -260,12 +260,23 @@ export function createEventHorizonWarp(
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, snapshot);
     if (gl.getError() !== gl.NO_ERROR) throw new Error('Horizon snapshot upload failed');
+    // The pinch across the pull axis MINIFIES the snapshot (the glyph strokes
+    // squeeze to a fraction of a texel). Sampling a minified texture with a
+    // bare LINEAR filter and no mipmap chain aliases the high-contrast edges:
+    // as the playhead advances, the undersampled strokes shimmer — a harsh
+    // white "glinting" streak along the compressed edge of the mesh. Build the
+    // mip chain (computed in premultiplied space, which is also what kills
+    // dark fringes) and filter trilinearly so minified texels are averaged,
+    // never sparkled. WebGL2 mipmaps non-power-of-two textures, so the
+    // snapshot's own dimensions are fine.
+    gl.generateMipmap(gl.TEXTURE_2D);
+    if (gl.getError() !== gl.NO_ERROR) throw new Error('Horizon snapshot mipmap generation failed');
 
     const uniform = (name: string) => {
       const location = gl.getUniformLocation(program!, name);
