@@ -1,0 +1,231 @@
+# Follow-up task: instant particle-first loader (precomputed data) + transparent background — v2
+
+## Context
+
+You previously integrated the 3D character model from `nemosite.zip` into `src/sections/Persona.tsx`
+(Section 02 · PILLAR 4), sitting beside `<NemoChat />`, desktop-gated. That work is done and should
+be treated as a working baseline. This document **replaces the "particle progressive loader" section
+of the prior follow-up** (v1) with a different architecture; everything else from that prior
+follow-up — the transparent-background work, and the requirement to leave layout, gating,
+dependencies, and the original model/shader fidelity untouched — still applies unless explicitly
+stated below.
+
+Before writing anything, re-familiarize yourself with what you built: find the vendored rendering
+code (wherever you placed the donor's `Model`/`Scene` logic — the `src/three/blackhole/` +
+`PROVENANCE.md` vendoring convention) and the React mounting/stage component that wraps it (e.g.
+something like `PersonaModelStage`). Confirm the current behavior still matches the original brief —
+HDR lighting, ACES tone mapping, orbit-drag, idle float, the press-and-hold shader effect
+(sweep/warp/ripple/specular/rim/flare), contact shadow, and the desktop-only gate — before you start
+changing anything.
+
+If you already built the v1 particle loader (deriving points from `model.glb` at runtime inside the
+`onLoad` callback, behind a skeleton/shimmer shown until then), that entire approach is being
+replaced by what's below — don't layer this on top of it, swap it out.
+
+## Read this before you start — a note on `model.json`
+
+The `model.json` provided alongside this brief is **not** persona geometry — it's named
+`"Torn-Paper"`, its `pos` array is 2D (`x, y` pairs only, no `z`; that's why it ships an `xrange` and
+a `yrange` but no `zrange`), and its `rgb` array is present for a different, flat asset elsewhere on
+the site. It doesn't correspond to the persona character at all.
+
+What it's useful for here is the **schema**: a small, self-describing JSON of sampled point
+positions plus their bounds, cheap enough to fetch and parse before the real asset has finished
+downloading. That's the shape this task asks you to reuse — populated with the persona's own sampled
+points, not this file's contents. Concretely: extend the schema to 3D (`pos` as flattened `x, y, z`
+triples, plus a `zrange`), and generate it from the actual `model.glb`. If anything below reads as
+inconsistent with that, or if you find a reason the existing `model.json` should be used verbatim,
+stop and flag it back to me rather than guessing.
+
+## What you're adding
+
+### 1. Precompute the persona's point cloud offline, once
+
+Move the sampling work that v1 did at runtime (inside `onLoad`) into a build-time script instead, so
+there's nothing to compute when the page actually loads — just a small file to fetch.
+
+- Write a one-off Node script (e.g. `scripts/generate-persona-points.mjs`) that loads `model.glb`
+  with `GLTFLoader`, traverses `gltf.scene`, and for every mesh uses `MeshSurfaceSampler` (`three/addons/math/MeshSurfaceSampler.js`,
+  matching the `three/addons/...` convention already used for `OrbitControls`) to `.sample()` points,
+  transformed by each mesh's `matrixWorld` so sub-meshes (body, hair, hoodie, glasses, whatever this
+  rig has) line up. Weight the point budget across meshes by surface area, not a flat per-mesh count,
+  so density looks even across the character.
+- Bake in the **static** part of normalization here — bounding-box centering and the model's rotation
+  offset — the same math your existing shared helper already does, run once instead of on every page
+  load. Do **not** bake in viewport-fit scaling; that has to happen at runtime (see §7), the same way
+  for both representations.
+- Write the result to a checked-in asset (e.g. `public/persona-points.json` or
+  `src/assets/persona-points.json`) matching `model.json`'s schema, extended to 3D:
+  `{ name, n, xrange, yrange, zrange, pos: [x0,y0,z0, x1,y1,z1, ...] }`. Carry an `rgb` array only if
+  you intend to use per-point color — the current design is unlit flat-white `PointsMaterial`, so it's
+  most likely unused; if you drop it, drop it from the schema too rather than shipping dead weight.
+- Keep the file lightweight. `model.json`'s 2D, 20k-point `pos` array alone is a couple hundred KB as
+  JSON text; 3D at full precision will be bigger. Since the entire point of this asset is to be
+  the *instant* thing, actively manage its size — round coordinates to a few decimal places, drop
+  `rgb` if unused, and/or consider a compact binary format (e.g. a raw `Float32Array` fetched as
+  `arraybuffer`) instead of JSON if the point budget you land on makes the JSON file large enough to
+  meaningfully delay first paint. This is your call, but treat the file size as a real constraint, not
+  an afterthought.
+- Document the regeneration step (script + when to re-run it) somewhere obvious — if `model.glb`
+  changes and nobody reruns the script, the precomputed cloud will silently drift out of sync with the
+  real character. Flag this as a known footgun in your report rather than trying to auto-solve it.
+
+### 2. Fetch the precomputed points as early as possible — decoupled from the section
+
+"Load once the file has downloaded" is no longer the bar; this file should already be sitting in
+memory by the time anyone scrolls to the Persona section.
+
+- Kick off the `fetch()` for `persona-points.json` from a top-level effect (app/layout mount, or a
+  `window` `load` listener), not from `PersonaModelStage`'s own mount. Cache the resulting promise in
+  a module-level singleton so the component just awaits/reads it rather than re-fetching.
+- Respect the existing desktop gate: this feature doesn't exist below the breakpoint, so don't fire
+  this fetch on mobile — that would be a new network request for an asset that never renders there,
+  which regresses the "no `model.glb`/hdr/chunk requests below the breakpoint" guarantee in spirit
+  even though this particular file is small. Gate it the same way the rest of the feature is gated.
+- The heavy asset (`model.glb`) and its downstream setup (shader patch, `ContactShadows`, materials)
+  can stay triggered from the section/component mount as before — there's no requirement to move that
+  earlier too. If you think prefetching `model.glb` itself at site-load time (in parallel with the
+  points file) is worth doing to shrink the gap further by the time the user scrolls down, that's a
+  reasonable idea but a bigger change than what's asked here — flag it rather than doing it silently.
+
+### 3. Render the particle cloud immediately — no skeleton
+
+The point cloud **is** the loading state now; there's no separate skeleton/shimmer step before it.
+
+- Remove the skeleton/shimmer indicator from v1 entirely.
+- As soon as `persona-points.json` has resolved (which, given §2, should typically already be true by
+  the time `PersonaModelStage` mounts), build a `THREE.BufferGeometry` from its `pos` array, run it
+  through the shared normalization helper (§7), and render with `THREE.Points` +
+  `new THREE.PointsMaterial({ color: 'white', size: <small>, sizeAttenuation: true })` — unlit,
+  untextured, exactly as before.
+- For the residual window before that fetch resolves (should be brief, but don't assume zero — slow
+  connections exist), render nothing rather than a placeholder box: an empty transparent canvas area
+  is preferable to reintroducing a skeleton. If you find this window is *not* brief in practice for
+  some reason, report that back rather than papering over it with a shimmer.
+- `OrbitControls` stays mounted and identically configured (damping, no zoom/pan) through this phase,
+  same as v1 — orbiting the point cloud should feel like the same object the user gets a moment later.
+
+### 4. Idle animation on the particle cloud (loading signifier)
+
+While the cloud is standing in for the real model, give it a subtle motion cue so it visibly reads as
+"still loading," not as the finished piece.
+
+- Something understated: a slow global drift/breathe (gentle scale or opacity pulse), a slight
+  per-point noise-driven jitter, or a slow independent rotation layered underneath — not on top of —
+  whatever `OrbitControls` is doing, so user-driven orbit and the idle motion don't fight each other.
+- This animation should stop or blend out cleanly at the moment of the swap to the full model (§6),
+  not cut abruptly.
+- Keep it subtle enough that it doesn't read as broken or jittery on a first glance — "signifies
+  loading," not "distracts from the character."
+
+### 5. Pointer reactivity (desktop-gated)
+
+Make the cloud mildly responsive to the pointer, distinct from the existing drag-to-orbit behavior.
+
+- On pointer *move* (hover, not drag), apply a small, subtle response — e.g. a slight parallax tilt of
+  the whole cloud toward the cursor, or a gentle displacement of nearby points — small enough that it
+  reads as ambient responsiveness, not an interactive toy. This is in addition to, not a replacement
+  for, `OrbitControls`' existing drag-to-orbit.
+- Make sure pointer-move handling doesn't interfere with `OrbitControls`' drag detection — they need
+  to coexist (hover reacts, drag still orbits).
+- This is desktop-only, consistent with the rest of the feature. Don't build touch/tap handling for
+  it — "reactive to touch from the pointer" here means mouse pointer, gated to desktop like everything
+  else in this component; there's no mobile particle stage to make reactive.
+
+### 6. Run the heavy pipeline entirely in the background, then swap
+
+The full-mesh pipeline — cloning the scene, computing bounding boxes, patching the physical
+material's shader via `onBeforeCompile`, wiring up `ContactShadows` — keeps running exactly as it does
+today, just with nothing blocking on it. Kick it off when `PersonaModelStage` mounts (loading
+`model.glb` with a plain, non-suspending `GLTFLoader`, not r3f's suspending `useLoader` — Suspense
+would block everything, including the particle cloud that's already showing). Once it's built and has
+rendered its first frame, swap to it. The particle cloud (with its idle animation and pointer
+reactivity) is what's on screen for the entire duration of that background work — there's no
+intermediate skeleton state to manage anymore.
+
+### 7. Keep both representations aligned (shared normalization helper)
+
+Factor the normalization math into one small shared helper, called from three places now instead of
+two: the offline generation script (§1, static part only — centering, rotation offset), and, at
+runtime, both the particle stage and the full-mesh stage (viewport-fit scaling, applied identically to
+each). The particle stage can read its bounds straight from `xrange`/`yrange`/`zrange` in
+`persona-points.json` rather than recomputing a bounding box; the full-mesh stage computes its bounds
+from the loaded geometry as before. If these ever drift apart, you'll see it as a jump on swap — don't
+let that happen.
+
+### 8. Be straightforward about what this does and doesn't fix
+
+Precomputing and prefetching the points file removes the "nothing visible until `model.glb` has both
+downloaded *and* been processed" gap almost entirely — the character silhouette is visible from
+essentially the moment the page is usable, well before the 29 MB file has arrived. It does **not**
+change how long the full-detail swap itself takes to arrive on a slow connection; that's still gated
+by `model.glb`'s download plus the shader/shadow setup. That's expected and fine — say so plainly in
+your report rather than overselling it.
+
+## Transparent background
+
+Unchanged from the prior follow-up — carry this forward as-is:
+
+- Delete whatever CSS background you gave the widget's wrapper for the donor's vignette/stage look
+  (the `radial-gradient(...)` treatment using its `--void`/`--studio-center`/`--studio-outer`-style
+  tokens, or whatever you named them). The wrapper should have no opaque or gradient background at
+  all.
+- The `Canvas` should already declare `gl={{ ..., alpha: true }}` from the original port — leave that
+  exactly as is; don't touch the renderer config.
+- Confirm `<Environment>` is not given a `background` prop, so drei keeps using the HDR for
+  lighting/reflections only and never paints it as a visible skybox. Don't add `background`,
+  `backgroundBlurriness`, or anything similar.
+- With no CSS background on the wrapper and no `scene.background` set, the canvas should already
+  composite transparently. Verify it, don't assume it: temporarily drop a bright test color in the DOM
+  behind the canvas, confirm it shows through, then remove the test.
+- Re-run your original verification pass after this change: HDR lighting/reflections unchanged, the
+  press-and-hold shader effect unchanged, `ContactShadows` still renders — now sitting directly against
+  the section's own background instead of inside the vignette box, which is intended — and
+  orbit/idle-float/keyboard-hold interactions all unchanged.
+
+## Verification checklist
+
+- [ ] `persona-points.json` (or whatever you named it) is fetched from a top-level effect, independent
+      of `PersonaModelStage`'s mount, and only on desktop.
+- [ ] No skeleton/shimmer exists anywhere in this flow — first paint is either nothing (transparent) or
+      the particle cloud, never a placeholder box.
+- [ ] Network tab shows one request for the precomputed points file and, separately, exactly one
+      request for `model.glb` — the particle stage and the full mesh are not derived from the same
+      runtime load anymore, but neither doubles up on its own asset.
+- [ ] The particle preview and the full model share identical camera framing, scale, and
+      orientation — no visible jump on swap.
+- [ ] The point cloud orbits via the same `OrbitControls` config as the full model (damping, no
+      zoom/pan), and the idle animation + pointer reactivity don't fight orbit-drag.
+- [ ] Idle animation is visibly present but subtle during the particle phase, and stops/blends out
+      cleanly at swap.
+- [ ] Pointer-move reactivity is present and subtle on desktop; nothing equivalent is built for touch,
+      and none of this fires below the breakpoint.
+- [ ] Canvas renders with a genuinely transparent background — confirmed with the test-color check
+      above, not just by eye.
+- [ ] Full regression pass on everything from the original integration: HDR lighting, tone mapping,
+      the complete press-and-hold effect (sweep/warp/ripple/specular/rim/flare), contact shadow, idle
+      float, orbit-drag, keyboard hold (Enter/Space), and the desktop-only gate (still no
+      `model.glb`/hdr/chunk/points-file requests below the breakpoint).
+
+## Bug-reporting protocol
+
+Same rule as before: if you hit an actual functional bug or limitation — something in the donor's
+original model/shader code that misbehaves, a genuine technical blocker in getting the swap to work
+cleanly, or a mismatch between the precomputed points and the live mesh (e.g. because `model.glb` was
+updated without rerunning the generation script) — stop and report it to me with specifics instead of
+silently changing a visual result to work around it. Ordinary implementation decisions (exact point
+count, point size, idle-animation style, pointer-reactivity strength, JSON vs. binary encoding for the
+points file, swap transition style) are yours to make.
+
+## When you're done, report back
+
+- Every file added/changed, including the new generation script and the precomputed points asset.
+- The point count / point size you settled on, the resulting file size for the points asset, and
+  roughly how it performs on a mid/low-end device if you were able to check.
+- What the idle animation does and how pointer reactivity is implemented.
+- Confirmation that `model.json`'s actual contents ("Torn-Paper," 2D) were **not** used directly, and
+  that the real persona points were generated from `model.glb` — or, if you weren't able to run the
+  generation script in this environment, say so explicitly rather than shipping placeholder data
+  silently.
+- Confirmation of each item in the verification checklist above.
+- Any bugs found, per the protocol above.
