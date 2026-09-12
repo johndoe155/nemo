@@ -7,14 +7,6 @@ import { useMediaQuery } from '../lib/singularityGate';
 const PersonaModelStage = lazy(() => import('../components/PersonaModelStage'));
 const PERSONA_DESKTOP_QUERY = '(min-width: 981px)';
 
-function ModelFallback() {
-  return (
-    <div className="persona-model persona-model--placeholder" aria-hidden="true">
-      <span className="persona-model__loader" />
-    </div>
-  );
-}
-
 class PersonaModelImportBoundary extends Component<
   { children: ReactNode },
   { failed: boolean }
@@ -54,7 +46,7 @@ function DesktopPersonaModel() {
     <div className="persona__modelslot" ref={slotRef}>
       {isDesktop && isNearViewport ? (
         <PersonaModelImportBoundary>
-          <Suspense fallback={<ModelFallback />}>
+          <Suspense fallback={null}>
             <PersonaModelStage />
           </Suspense>
         </PersonaModelImportBoundary>

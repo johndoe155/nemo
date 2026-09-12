@@ -1,23 +1,19 @@
 import { useRef, useMemo, useEffect, useState, useCallback, Suspense } from 'react';
 import * as THREE from 'three';
-import { Canvas, useFrame, useThree, useLoader } from '@react-three/fiber';
-import { OrbitControls, useProgress, Environment, ContactShadows } from '@react-three/drei';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { applyStaticModelTransform, boundsFromBox, viewportFitScale } from './normalization.js';
 
 const ASSET_BASE = `${import.meta.env.BASE_URL}models/persona-model/`;
 const MODEL_URL = `${ASSET_BASE}model.glb`;
 const ENVIRONMENT_URL = `${ASSET_BASE}studio_small_08_1k.hdr`;
-// The glTF's forward axis is -X (character faces toward local +? we measured -X).
-// Rotating the clone -90° about Y brings the face to point at the camera (front view).
-const MODEL_ROTATION_Y = -Math.PI / 2; // Front facing view matching Tripo Studio default
-
 const FLOAT_SPEED = 1.1;
 const FLOAT_AMPLITUDE_BASE = 0.08;
 
 const ORBIT_ROTATE_SPEED = 0.75;
 const ORBIT_DAMPING_FACTOR = 0.08;
 
-const VIEWPORT_FIT_FACTOR = 0.78; // Tighter bust shot framing like Tripo Studio
 const BASE_FOV = 32; 
 const MOBILE_FOV = 38;            
 
@@ -294,12 +290,10 @@ function ResponsiveRig() {
   return null;
 }
 
-function Model({ keyLightRef }) {
-  const gltf = useLoader(GLTFLoader, MODEL_URL);
-
+function Model({ keyLightRef, gltf, onFirstFrame }) {
   const fitRef = useRef();
   const floatRef = useRef();
-  const normalizedScaleRef = useRef(1);
+  const firstFrameRef = useRef(false);
 
   const floatTimeRef = useRef(0);
   const holdElapsedRef = useRef(0);
@@ -308,7 +302,7 @@ function Model({ keyLightRef }) {
 
   const holdUniforms = useRef(createHoldUniforms());
 
-  const { scene, bottomY } = useMemo(() => {
+  const { scene, bottomY, bounds } = useMemo(() => {
     const cloned = gltf.scene.clone(true);
     cloned.traverse((child) => {
       if (child.isMesh) {
@@ -363,19 +357,16 @@ function Model({ keyLightRef }) {
       });
     });
 
-    cloned.position.sub(center); 
-    cloned.rotation.y = MODEL_ROTATION_Y;
+    applyStaticModelTransform(cloned, center);
 
+    const bounds = boundsFromBox(box);
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    normalizedScaleRef.current = 1 / maxDim; 
-
-    return { scene: cloned, bottomY: -size.y / 2 / maxDim };
+    return { scene: cloned, bottomY: -size.y / 2 / maxDim, bounds };
   }, [gltf]);
 
   useFrame((state, delta) => {
     const { viewport } = state;
-    const responsiveScale = Math.min(viewport.width, viewport.height) * VIEWPORT_FIT_FACTOR;
-    fitRef.current.scale.setScalar(normalizedScaleRef.current * responsiveScale);
+    fitRef.current.scale.setScalar(viewportFitScale(viewport, bounds));
 
     if (!isHeldRef.current) {
       floatTimeRef.current += delta;
@@ -399,6 +390,11 @@ function Model({ keyLightRef }) {
       keyLightRef.current.intensity = isHeldRef.current
         ? KEY_LIGHT_INTENSITY * flux
         : KEY_LIGHT_INTENSITY;
+    }
+
+    if (!firstFrameRef.current) {
+      firstFrameRef.current = true;
+      onFirstFrame();
     }
   });
 
@@ -480,16 +476,118 @@ function Model({ keyLightRef }) {
   );
 }
 
-function Scene() {
+function ParticleCloud({ data, fullReady }) {
+  const fitRef = useRef();
+  const motionRef = useRef();
+  const materialRef = useRef();
+  const draggingRef = useRef(false);
+  const pointerTargetRef = useRef({ x: 0, y: 0 });
+  const { gl } = useThree();
+
+  const geometry = useMemo(() => {
+    const value = new THREE.BufferGeometry();
+    value.setAttribute('position', new THREE.Float32BufferAttribute(data.pos, 3));
+    return value;
+  }, [data]);
+
+  const bounds = useMemo(() => ({
+    xrange: data.xrange,
+    yrange: data.yrange,
+    zrange: data.zrange,
+  }), [data]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const onPointerMove = (event) => {
+      if (draggingRef.current) return;
+      const rect = canvas.getBoundingClientRect();
+      pointerTargetRef.current.x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+      pointerTargetRef.current.y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+    };
+    const onPointerDown = () => {
+      draggingRef.current = true;
+      pointerTargetRef.current.x = 0;
+      pointerTargetRef.current.y = 0;
+    };
+    const onPointerUp = () => {
+      draggingRef.current = false;
+    };
+    const onPointerLeave = () => {
+      draggingRef.current = false;
+      pointerTargetRef.current.x = 0;
+      pointerTargetRef.current.y = 0;
+    };
+
+    canvas.addEventListener('pointermove', onPointerMove, { passive: true });
+    canvas.addEventListener('pointerdown', onPointerDown, { passive: true });
+    window.addEventListener('pointerup', onPointerUp, { passive: true });
+    canvas.addEventListener('pointerleave', onPointerLeave, { passive: true });
+    return () => {
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointerleave', onPointerLeave);
+    };
+  }, [gl]);
+
+  useFrame((state, delta) => {
+    fitRef.current.scale.setScalar(viewportFitScale(state.viewport, bounds));
+
+    const response = 1 - Math.exp(-delta * 5);
+    const target = REDUCED_MOTION ? { x: 0, y: 0 } : pointerTargetRef.current;
+    motionRef.current.rotation.y += (target.x * 0.035 - motionRef.current.rotation.y) * response;
+    motionRef.current.rotation.x += (-target.y * 0.025 - motionRef.current.rotation.x) * response;
+
+    const breathe = REDUCED_MOTION ? 1 : 1 + Math.sin(state.clock.elapsedTime * 1.15) * 0.012;
+    motionRef.current.scale.setScalar(breathe);
+    motionRef.current.position.y = REDUCED_MOTION
+      ? 0
+      : Math.sin(state.clock.elapsedTime * 0.72) * 0.025;
+
+    if (materialRef.current) {
+      const loadingOpacity = REDUCED_MOTION
+        ? 0.82
+        : 0.76 + Math.sin(state.clock.elapsedTime * 1.15) * 0.1;
+      const targetOpacity = fullReady ? 0 : loadingOpacity;
+      materialRef.current.opacity += (targetOpacity - materialRef.current.opacity) * (1 - Math.exp(-delta * 7));
+    }
+  });
+
+  return (
+    <group ref={fitRef}>
+      <group ref={motionRef}>
+        <points geometry={geometry}>
+          <pointsMaterial
+            ref={materialRef}
+            color="white"
+            size={0.012}
+            sizeAttenuation
+            transparent
+            opacity={0.82}
+            depthWrite={false}
+          />
+        </points>
+      </group>
+    </group>
+  );
+}
+
+function Scene({ gltf, pointData, fullReady, showPoints, onFirstFrame }) {
   const keyLightRef = useRef();
 
   return (
     <>
-      {/* Local HDR studio environment: keeps the improved PBR presentation available offline. */}
-      <Environment
-        files={ENVIRONMENT_URL}
-        environmentIntensity={0.88}
-      />
+      {pointData && showPoints && <ParticleCloud data={pointData} fullReady={fullReady} />}
+
+      {/* Environment suspends independently while the prefetched points remain visible. */}
+      <Suspense fallback={null}>
+        <Environment
+          files={ENVIRONMENT_URL}
+          environmentIntensity={0.88}
+        />
+      </Suspense>
 
       {/* Restrained studio key light retained for the original held-state modulation. */}
       <directionalLight
@@ -507,29 +605,50 @@ function Scene() {
         shadow-camera-bottom={-3}
         shadow-bias={-0.0001}
       />
-
-      {/* Soft cool fill and restrained back light for material separation. */}
-      <directionalLight
-        position={[-3.5, 3.2, -4.5]}
-        intensity={1.15}
-        color="#cbd7ff"
-      />
-      <directionalLight
-        position={[2.5, 4.2, -3.5]}
-        intensity={1.4}
-        color="#eef0ff"
-      />
+      <directionalLight position={[-3.5, 3.2, -4.5]} intensity={1.15} color="#cbd7ff" />
+      <directionalLight position={[2.5, 4.2, -3.5]} intensity={1.4} color="#eef0ff" />
       <hemisphereLight args={["#d9dde2", "#1b1d20", 0.32]} />
 
-      <Suspense fallback={null}>
-        <Model keyLightRef={keyLightRef} />
-      </Suspense>
+      {gltf && <Model keyLightRef={keyLightRef} gltf={gltf} onFirstFrame={onFirstFrame} />}
     </>
   );
 }
 
+let modelPromise;
+function loadPersonaModel() {
+  modelPromise ??= new GLTFLoader().loadAsync(MODEL_URL);
+  return modelPromise;
+}
 
-export default function PersonaModelCanvas() {
+export default function PersonaModelCanvas({ pointData }) {
+  const [gltf, setGltf] = useState(null);
+  const [modelError, setModelError] = useState(null);
+  const [fullReady, setFullReady] = useState(false);
+  const [showPoints, setShowPoints] = useState(true);
+
+  useEffect(() => {
+    let live = true;
+    loadPersonaModel().then(
+      (value) => {
+        if (live) setGltf(value);
+      },
+      (error) => {
+        if (live) setModelError(error);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!fullReady) return;
+    const timer = window.setTimeout(() => setShowPoints(false), 700);
+    return () => window.clearTimeout(timer);
+  }, [fullReady]);
+
+  if (modelError) throw modelError;
+
   return (
     <Canvas
       shadows={{ type: THREE.PCFSoftShadowMap }}
@@ -554,7 +673,13 @@ export default function PersonaModelCanvas() {
         minPolarAngle={0}
         maxPolarAngle={Math.PI}
       />
-      <Scene />
+      <Scene
+        gltf={gltf}
+        pointData={pointData}
+        fullReady={fullReady}
+        showPoints={showPoints}
+        onFirstFrame={() => setFullReady(true)}
+      />
     </Canvas>
   );
 }

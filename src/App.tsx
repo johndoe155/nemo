@@ -1,4 +1,4 @@
-import { Component, type CSSProperties, type ReactNode } from 'react';
+import { Component, useEffect, type CSSProperties, type ReactNode } from 'react';
 import Nav from './sections/Nav';
 import Hero from './sections/Hero';
 import Nemoverse from './sections/Nemoverse';
@@ -27,7 +27,8 @@ import SoundToggle from './components/SoundToggle';
 import VelocityFX from './components/VelocityFX';
 import { CustomCursor } from './components/Cursor';
 import { KineticButton, useCursorGlow } from './components/motion';
-import { SingularityProvider } from './lib/singularityGate';
+import { SingularityProvider, useMediaQuery } from './lib/singularityGate';
+import { preloadPersonaPoints } from './lib/personaPoints';
 import { UNIVERSES, ARTISTS } from './lib/data';
 
 /* ---------------------------------------------------------------------------
@@ -76,6 +77,18 @@ class SectionBoundary extends Component<{ children: ReactNode }, { failed: boole
 }
 
 export default function App() {
+  const hasDesktopPersona = useMediaQuery('(min-width: 981px)');
+
+  // Start the lightweight silhouette request at app mount, well before Section
+  // 02 approaches the viewport. The singleton guarantees the lazy stage reads
+  // this same request; the desktop query guarantees mobile pays nothing.
+  useEffect(() => {
+    if (!hasDesktopPersona) return;
+    void preloadPersonaPoints().catch((error: unknown) => {
+      console.error('[persona-model] point preview failed to preload:', error);
+    });
+  }, [hasDesktopPersona]);
+
   /* Delegated cursor→bloom tracking: writes --mx/--my onto whichever
      interactive control is hovered (buttons, chips, cards, sheen surfaces)
      so every glow layer is cursor-anchored. One passive listener, rAF-batched,
