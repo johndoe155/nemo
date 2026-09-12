@@ -40,10 +40,39 @@ export default defineConfig({
         // importing three/webgpu + three/tsl verbatim and the existing pulls
         // canvases keep using WebGLRenderer. Unifying them would mean editing
         // one side or the other, which the integration brief forbids.
-        manualChunks: {
-          webgl: ['three'],
-          webgpu: ['three/webgpu', 'three/tsl'],
-          animation: ['gsap'],
+        manualChunks(id) {
+          const moduleId = id.replaceAll('\\\\', '/');
+
+          // Explicitly keep React out of the r3f chunk. If the shared runtime
+          // lands there, Rollup makes the app entry import (and therefore
+          // preload) the desktop-only Persona stack on every viewport.
+          if (
+            moduleId.includes('/node_modules/react/') ||
+            moduleId.includes('/node_modules/react-dom/') ||
+            moduleId.includes('/node_modules/scheduler/') ||
+            moduleId.includes('vite/preload-helper')
+          ) {
+            return 'framework';
+          }
+          if (
+            moduleId.includes('/node_modules/@react-three/fiber/') ||
+            moduleId.includes('/node_modules/@react-three/drei/')
+          ) {
+            return 'r3f';
+          }
+          if (
+            moduleId.endsWith('/node_modules/three/build/three.webgpu.js') ||
+            moduleId.endsWith('/node_modules/three/build/three.tsl.js')
+          ) {
+            return 'webgpu';
+          }
+          if (
+            moduleId.endsWith('/node_modules/three/build/three.module.js') ||
+            moduleId.endsWith('/node_modules/three/build/three.core.js')
+          ) {
+            return 'webgl';
+          }
+          if (moduleId.includes('/node_modules/gsap/')) return 'animation';
         },
       },
     },

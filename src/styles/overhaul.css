@@ -607,13 +607,12 @@ html[data-scene='singularity'] {
 
 /* ============================ PERSONA — SCENE ============================ */
 
-.persona__grid { align-items: start; }
-.persona__copy { z-index: 1; }
 .persona__chatwrap {
   position: relative;
   z-index: 1;
+  min-width: 0;
   /* Breathing room so the glass panel and its bloom are never crowded by the
-     copy column or the section edge. */
+     adjacent studio stage or the section edge. */
   padding-block: clamp(0.5rem, 1.6vw, 1.6rem);
 }
 @media (max-width: 980px) {
