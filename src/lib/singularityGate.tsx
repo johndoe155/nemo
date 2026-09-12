@@ -18,7 +18,10 @@ const MOBILE_QUERY = '(max-width: 768px)';
 export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 export const MOTION_QUERY = '(prefers-reduced-motion: no-preference)';
 
-function useMediaQuery(query: string): boolean {
+// Synchronous first-paint media query hook. Besides Singularity's own gate,
+// desktop-only integrations use this so a resize never briefly mounts a costly
+// renderer at a layout size where it is not allowed to exist.
+export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() =>
     typeof window === 'undefined' ? false : window.matchMedia(query).matches,
   );

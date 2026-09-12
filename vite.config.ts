@@ -42,6 +42,10 @@ export default defineConfig({
         // one side or the other, which the integration brief forbids.
         manualChunks: {
           webgl: ['three'],
+          // The desktop-gated persona stage imports these only when its slot
+          // nears the viewport. Keep r3f/drei separate from the Hub shell;
+          // it intentionally shares the classic `three` webgl chunk above.
+          r3f: ['@react-three/fiber', '@react-three/drei'],
           webgpu: ['three/webgpu', 'three/tsl'],
           animation: ['gsap'],
         },

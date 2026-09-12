@@ -1,5 +1,64 @@
+import { Component, Suspense, lazy, useRef, type ReactNode } from 'react';
+import { useInView } from 'framer-motion';
 import { Reveal, SectionHead } from '../components/ui';
 import NemoChat from '../components/NemoChat';
+import { useMediaQuery } from '../lib/singularityGate';
+
+// React.lazy does not invoke this import until its component is actually
+// rendered. PersonaModelSlot only renders it above the existing two-column
+// breakpoint, so the r3f/drei chunk cannot parse or request its 3D assets on
+// mobile/tablet.
+const PersonaModelStage = lazy(() => import('../components/PersonaModelStage'));
+const PERSONA_DESKTOP_QUERY = '(min-width: 981px)';
+
+function ModelPlaceholder({ failed = false }: { failed?: boolean }) {
+  return (
+    <div className="persona-model__placeholder" role={failed ? 'alert' : 'status'}>
+      {failed ? 'Character display unavailable.' : 'Preparing character display…'}
+    </div>
+  );
+}
+
+/** Catches a rejected lazy chunk before PersonaModelStage itself can mount. */
+class PersonaModelImportBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown): void {
+    console.error('[persona-model] stage module failed to load:', error);
+  }
+
+  render() {
+    return this.state.failed ? <ModelPlaceholder failed /> : this.props.children;
+  }
+}
+
+function PersonaModelSlot() {
+  const isDesktop = useMediaQuery(PERSONA_DESKTOP_QUERY);
+  const slotRef = useRef<HTMLDivElement>(null);
+  // The visible stage reserves its exact box immediately, but the 29 MB model
+  // and r3f module stay idle until the reader is approaching PILLAR 4.
+  const nearViewport = useInView(slotRef, { once: true, margin: '240px 0px' });
+
+  if (!isDesktop) return null;
+
+  return (
+    <div className="persona__model-slot" ref={slotRef}>
+      {nearViewport ? (
+        <PersonaModelImportBoundary>
+          <Suspense fallback={<ModelPlaceholder />}>
+            <PersonaModelStage />
+          </Suspense>
+        </PersonaModelImportBoundary>
+      ) : (
+        <ModelPlaceholder />
+      )}
+    </div>
+  );
+}
 
 export default function Persona() {
   return (
@@ -45,6 +104,7 @@ export default function Persona() {
         </div>
 
         <div className="persona__chatwrap">
+          <PersonaModelSlot />
           <NemoChat />
         </div>
       </div>

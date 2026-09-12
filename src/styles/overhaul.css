@@ -620,6 +620,153 @@ html[data-scene='singularity'] {
   .persona__chatwrap { padding-block: 0; }
 }
 
+/* The character is a desktop-only companion to the chat. The matching
+   `min-width: 981px` React gate means none of these model classes (or the r3f
+   chunk/assets behind them) exist in the one-column layout. The studio's
+   neutral vignette is intentionally the donor's exact gradient, scoped to this
+   widget rather than the donor page's viewport-sized `.stage`. */
+@media (min-width: 981px) {
+  .persona__grid {
+    grid-template-columns: minmax(16rem, 0.65fr) minmax(0, 1.35fr);
+  }
+
+  .persona__chatwrap {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(1rem, 1.75vw, 1.6rem);
+    align-items: start;
+  }
+
+  .persona__model-slot {
+    min-width: 0;
+    height: clamp(28rem, 36vw, 34rem);
+  }
+
+  .persona-model,
+  .persona-model__placeholder {
+    width: 100%;
+    height: 100%;
+    min-height: inherit;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 45%, #383b3e 0%, #18191b 60%, #121315 100%);
+  }
+
+  .persona-model {
+    position: relative;
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  }
+
+  .persona-model__canvas,
+  .persona-model__failure {
+    grid-area: 1 / 1;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .persona-model__canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .persona-model__canvas canvas {
+    display: block;
+    touch-action: none;
+  }
+
+  .persona-model__placeholder,
+  .persona-model__failure,
+  .persona-model__loading {
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    line-height: 1.55;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .persona-model__placeholder {
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 45%, #383b3e 0%, #18191b 60%, #121315 100%);
+  }
+
+  .persona-model__loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    align-content: center;
+    gap: 0.85rem;
+    pointer-events: none;
+    background: rgba(18, 19, 21, 0.72);
+    transition: opacity 0.7s ease;
+  }
+
+  .persona-model__loader {
+    width: 1.8rem;
+    height: 1.8rem;
+    border: 2px solid rgba(245, 243, 255, 0.34);
+    border-top-color: var(--magenta);
+    border-radius: 50%;
+    animation: personaModelSpin 0.85s linear infinite;
+  }
+
+  .persona-model__failure {
+    align-content: center;
+    gap: 0.9rem;
+    background: rgba(18, 19, 21, 0.9);
+  }
+
+  .persona-model__failure p {
+    margin: 0;
+  }
+
+  .persona-model__retry {
+    justify-self: center;
+    border: 1px solid rgba(255, 61, 154, 0.48);
+    border-radius: 999px;
+    padding: 0.6rem 0.85rem;
+    color: var(--ink);
+    background: rgba(255, 61, 154, 0.1);
+    font: inherit;
+    font-size: 0.58rem;
+    letter-spacing: 0.15em;
+    text-transform: inherit;
+    cursor: pointer;
+  }
+
+  .persona-model__retry:hover,
+  .persona-model__retry:focus-visible {
+    border-color: var(--magenta);
+    background: rgba(255, 61, 154, 0.2);
+  }
+
+  .persona-model__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@keyframes personaModelSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .persona-model__loader { animation-duration: 1.6s; }
+}
+
 /* ============================ FOOTER — THE SIGN-OFF ============================
    Closing statement + global site footer.
 
