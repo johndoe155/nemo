@@ -9,10 +9,19 @@ Unlike `src/three/blackhole/`, this folder is *not* byte-identical to its donor,
 and cannot be: the donor is a page-load IIFE that grabs its DOM by id, sizes off
 `window.innerWidth/innerHeight`, listens on `window` forever and never tears
 anything down. It is not a module and it has no seam to mount into. So the
-**logic** here is verbatim — every shader string, timing constant, physics term,
-threshold and draw call is the original's — and only the **orchestration** was
-rewritten, which is exactly the split `components/BlackHoleStage.tsx` already
-makes for the black hole ("The stage re-writes only that orchestration").
+**logic** here is the original's — every timing constant, physics term,
+threshold and draw call — and only the **orchestration** was rewritten, which is
+exactly the split `components/BlackHoleStage.tsx` already makes for the black
+hole ("The stage re-writes only that orchestration").
+
+**One exception, made deliberately and on instruction:** 8 of the 9 shader
+sources are still character-identical to the donor, but `VS_PARTICLE` gained a
+`uToIndex` uniform to fix the formation-loss bug documented below. Verify with:
+
+```bash
+mkdir -p /tmp/nemosite && unzip -o -q nemosite.zip -d /tmp/nemosite
+# 8 shaders identical, VS_PARTICLE differs only by the uToIndex split
+```
 
 The four pose files in `public/nemo-particles/` **are** byte-identical to the
 zip's `nemosite/data/pose0.json … pose3.json`:
@@ -63,10 +72,93 @@ Two additions, both deliberate and both flagged in the handover notes:
 * `pointercancel` is bound alongside `pointerleave`, so a touch that turns into
   a scroll releases the pointer the same way.
 
+## FIXED: the formation-loss bug (particles scatter and stay scattered)
+
+Reported in the app as: the field loses formation and looks cluttered — on first
+landing, after a click ("it affects the next one in turn"), and after leaving
+the tab and coming back. Unpredictable, and only cleared when the cycle moved to
+the next pose or the user clicked again. Present in the donor, far worse here.
+
+**Root cause.** `jumpTo()` chooses where the new morph starts from:
+
+```js
+var display = cycleTimer / TRANSITION_MS >= 0.5 ? toPose : fromPose;
+fromPose = display;
+toPose   = target;
+curFrom  = poses[fromPose];   // ← what the CPU springs target
+curTo    = poses[toPose];
+```
+
+A click does not advance immediately; it schedules `pendingAdvanceAt = now + 600`.
+So a click that lands in the **first 1.2 s of a morph** (`cycleTimer/2400 < 0.5`)
+makes `display = fromPose` while `target = toPose + 1` — a **two-step pair** such
+as `0 -> 2`. That pair is perfectly legal for the CPU physics, but the donor's
+vertex shader derived **both** endpoints from a single `uFromIndex`:
+
+```glsl
+if(uFromIndex==0){ pFrom=aPoseAB.xy; pTo=aPoseAB.zw; … }   // pose0 -> pose1, always
+```
+
+so the GPU could only ever draw `pose[i] -> pose[(i+1)%4]`. With the pair `0->2`
+the springs pulled all 20 000 particles toward **pose2** while the shader drew
+the way to **pose1** — measured on the real pose data at a 1280×900 hero:
+
+| cycleTimer after the jump | GPU-drawn vs CPU-targeted rest |
+| --- | --- |
+| 416 ms | mean 5 px, max 65 px |
+| 928 ms | mean 46 px, max 261 px |
+| 1696 ms | mean 147 px, max 452 px |
+| 2464 ms → the whole hold | **mean 169 px, max 452 px** (figure is 648 px tall) |
+
+`aDyn` — the only channel the physics has for correcting the shader — is clamped
+at ±340 px, so it could never close a 452 px gap. The second symptom is the
+wireframe: `ebos[toPose]` holds links built from **pose2** neighbourhoods, drawn
+at pose0→pose1 positions, so ~16 000 links that should average **15.7 px**
+averaged **185 px** (max 499 px) at full crossfade alpha. That is the "clutter".
+
+It cleared on the next transition because `cycleTimer ≥ TRANSITION_MS` by then,
+so `display = toPose` and the pair became adjacent again — exactly the reported
+"fixes itself on the next pose, or when I click".
+
+**Why the integration made it worse.** The vulnerable window is the first 1.2 s
+of every 7.6 s cycle, so in the donor you had to click precisely inside it. Here
+the `IntersectionObserver` pause freezes `cycleTimer` while the hero is off
+screen or the tab is hidden — leave during that window and it is *still* inside
+the window whenever you come back, so almost any click after returning breaks
+the pair. And a broken cycle can be broken again by the next click, which is the
+"affects the next one in turn" behaviour.
+
+**Fix.** `VS_PARTICLE` selects the two endpoints independently and
+`setCommonUniforms` sends the pair the physics actually has:
+
+```glsl
+uniform int uToIndex;
+if(uFromIndex==0){ pFrom=aPoseAB.xy; cFrom=aColA; } …
+if(uToIndex  ==0){ pTo  =aPoseAB.xy; cTo  =aColA; } …
+```
+
+```js
+gl.uniform1i(L(prog, 'uToIndex'), toPose);
+```
+
+Measured after the fix: the divergence is **exactly 0.0 px at every frame of
+every scenario**, and a two-step jump settles with the worst particle 1.8 px off
+its rest instead of 452 px. `jumpTo`, `advance`, `advancePrev`, the edge
+crossfade and the CPU physics are all untouched — they were already
+pair-agnostic; only the shader's hard-wired adjacency was wrong. Cost: four
+extra *uniform* branches per vertex (coherent across the warp, so a jump, not a
+divergence) and one extra uniform.
+
+Regression-pinned by two tests in `tests/unit/nemo-particles.test.ts`:
+`the GPU morphs the SAME pose pair the physics targets` (fails on the old
+pairing rule — verified) and `a two-step jump still ends with the field at rest`.
+
 ## Upstream bugs: reported, not fixed
 
 Per the integration brief's bug protocol these were **left exactly as they are**
-in `nemo-particles.js` and raised instead:
+in `nemo-particles.js` and raised instead. (A fifth reported item — the
+formation-loss bug — is *not* in this list: it was fixed on instruction and has
+its own section above.)
 
 1. **`pointerleave` on `window` is very likely dead code.** `pointerleave` does
    not bubble, so a bubble-phase listener on `window` never receives the events
@@ -96,12 +188,22 @@ in `nemo-particles.js` and raised instead:
 ## Verifying the port
 
 ```bash
-mkdir -p /tmp/nemosite && unzip -o -q nemosite.zip -d /tmp/nemosite
-# pose data must be byte-identical
-for i in 0 1 2 3; do
-  cmp /tmp/nemosite/nemosite/data/pose$i.json public/nemo-particles/pose$i.json && echo "identical: pose$i"
-done
-# the engine's logic must match the donor script token-for-token apart from the
-# orchestration lines listed above (whitespace and comments stripped)
-npm run test:unit          # 12 of these tests drive the real engine
+npm run verify:nemo-particles
+```
+
+`scripts/verify-nemo-particles.mjs` (same convention as `verify:blackhole`) runs
+in ~4 s with no browser and no GPU, and exits non-zero on any failure. It checks
+that the pose JSONs are still byte-identical to the zip, that 8 of the 9 shaders
+are still character-identical and that `VS_PARTICLE` still carries the uToIndex
+fix (and not the donor's hard-wired pairing), that all 28 numeric tuning
+constants and all 27 donor functions survived the port, and then it *runs the
+engine* headlessly through a minute of random clicks, arrow keys, tab-hide gaps
+and pause/resume, asserting on every frame that the GPU was told the same
+(from, to) pair the CPU springs were targeting. Reverting the fix makes it fail
+with `1413/3000 frames disagreed — GPU was told 0->1 while the physics targeted
+0->2`.
+
+```bash
+npm run test:unit   # 14 of these tests drive the real engine, including the
+                    # two that pin the formation-loss bug
 ```

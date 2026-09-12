@@ -492,6 +492,79 @@ test('the field pauses off screen and resumes on screen', async () => {
   f.field.destroy();
 });
 
+test('the GPU morphs the SAME pose pair the physics targets — the formation-loss bug', async () => {
+  /* THE BUG THIS PINS. jumpTo() picks `display = cycleTimer/TRANSITION >= 0.5 ?
+     toPose : fromPose`, so an advance that lands in the FIRST HALF of a morph
+     (a click does exactly that: it schedules the advance 600 ms out) produces a
+     two-step pair like 0->2. The vertex shader used to derive BOTH endpoints
+     from uFromIndex, i.e. it could only ever draw pose[i] -> pose[(i+1)%4]. The
+     CPU springs then pulled every particle toward poses[2] while the GPU drew
+     the way to poses[1] — a divergence of up to 452 px on a 648 px figure — and
+     the pose-2 edge set was drawn at pose-1 positions, so ~16 000 links that
+     should average 15.7 px averaged 185 px. The field lost formation and only
+     recovered when the NEXT transition happened to set an adjacent pair.
+     Fix: a uToIndex uniform, so the shader honours the pair the physics has. */
+  const f = await boot();
+  f.env.advance(200);
+  f.env.dispatchHost('pointerdown', { clientX: 870, clientY: 500 });
+  f.env.advance(900); // the delayed advance lands inside the early-morph window
+
+  const s = f.field.getState();
+  assert.notEqual(
+    s.toPose,
+    (s.fromPose + 1) % 4,
+    'the scenario must really produce a two-step pair, or this test proves nothing',
+  );
+
+  f.calls.length = 0;
+  f.env.tick(16);
+  const sent = new Map<string, number>();
+  for (const c of f.calls) {
+    if (c.name === 'uniform1i') {
+      sent.set((c.args[0] as { __uniform?: string }).__uniform as string, c.args[1] as number);
+    }
+  }
+  assert.equal(sent.get('uFromIndex'), s.fromPose, 'the shader is told where the morph starts');
+  assert.equal(
+    sent.get('uToIndex'),
+    s.toPose,
+    'and where it ends — which must be the pose the CPU springs are targeting',
+  );
+
+  /* The same pair must hold after the morph, into the hold, and across the
+     pause/resume that a scrolling page produces. */
+  f.env.advance(3000);
+  f.field.setVisible(false);
+  f.field.setVisible(true);
+  f.env.advance(1000);
+  f.calls.length = 0;
+  f.env.tick(16);
+  const after = new Map<string, number>();
+  for (const c of f.calls) {
+    if (c.name === 'uniform1i') {
+      after.set((c.args[0] as { __uniform?: string }).__uniform as string, c.args[1] as number);
+    }
+  }
+  const s2 = f.field.getState();
+  assert.equal(after.get('uFromIndex'), s2.fromPose);
+  assert.equal(after.get('uToIndex'), s2.toPose, 'still the same pair after a pause/resume');
+  f.field.destroy();
+});
+
+test('a two-step jump still ends with the field at rest on the pose it asked for', async () => {
+  const f = await boot();
+  f.env.advance(200);
+  f.env.dispatchHost('pointerdown', { clientX: 870, clientY: 500 });
+  f.env.advance(900);
+  assert.notEqual(f.field.getState().toPose, (f.field.getState().fromPose + 1) % 4);
+  f.env.advance(4000); // through the 2.4 s morph and into the hold
+  const dyn = lastDyn(f);
+  let max = 0;
+  for (let i = 0; i < N; i++) max = Math.max(max, Math.hypot(dyn[i * 3], dyn[i * 3 + 1]));
+  assert.ok(max < 5, `the field settled (worst particle is ${max.toFixed(1)} px off its rest)`);
+  f.field.destroy();
+});
+
 test('a failed pose fetch surfaces as an error, not a silent black canvas', async () => {
   const failing = (() =>
     Promise.resolve({ ok: false, status: 404, json: async () => ({}) })) as unknown as typeof fetch;

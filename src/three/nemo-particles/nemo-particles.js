@@ -163,6 +163,7 @@ export function createNemoParticleField(canvas, options) {
     'uniform float uTime;',
     'uniform vec2 uMouse;',
     'uniform int uFromIndex;',
+    'uniform int uToIndex;',
     'uniform float uT;',
     'uniform float uReduced;',
     'uniform float uPointBase;',
@@ -177,10 +178,24 @@ export function createNemoParticleField(canvas, options) {
     '}',
     'void main(){',
     '  vec2 pFrom, pTo; vec3 cFrom, cTo;',
-    '  if(uFromIndex==0){ pFrom=aPoseAB.xy; pTo=aPoseAB.zw; cFrom=aColA; cTo=aColB; }',
-    '  else if(uFromIndex==1){ pFrom=aPoseAB.zw; pTo=aPoseCD.xy; cFrom=aColB; cTo=aColC; }',
-    '  else if(uFromIndex==2){ pFrom=aPoseCD.xy; pTo=aPoseCD.zw; cFrom=aColC; cTo=aColD; }',
-    '  else { pFrom=aPoseCD.zw; pTo=aPoseAB.xy; cFrom=aColD; cTo=aColA; }',
+    /* FIX (2026-09-12): the donor selected BOTH endpoints from uFromIndex, so
+       the shader could only ever morph pose[i] -> pose[(i+1)%4]. jumpTo() is
+       free to pick any (fromPose, toPose) pair though — advancing during the
+       first half of a morph sets display = fromPose and target = toPose+1,
+       i.e. a two-step jump like 0 -> 2. The CPU physics then dragged every
+       particle toward poses[2] while the GPU was still drawing the way to
+       poses[1], and aDyn (= px - rest) became a permanent spurious offset:
+       the field lost formation and stayed lost until the next transition
+       happened to set an adjacent pair again. Selecting the two endpoints
+       independently makes the GPU honour the same pair the CPU targets. */
+    '  if(uFromIndex==0){ pFrom=aPoseAB.xy; cFrom=aColA; }',
+    '  else if(uFromIndex==1){ pFrom=aPoseAB.zw; cFrom=aColB; }',
+    '  else if(uFromIndex==2){ pFrom=aPoseCD.xy; cFrom=aColC; }',
+    '  else { pFrom=aPoseCD.zw; cFrom=aColD; }',
+    '  if(uToIndex==0){ pTo=aPoseAB.xy; cTo=aColA; }',
+    '  else if(uToIndex==1){ pTo=aPoseAB.zw; cTo=aColB; }',
+    '  else if(uToIndex==2){ pTo=aPoseCD.xy; cTo=aColC; }',
+    '  else { pTo=aPoseCD.zw; cTo=aColD; }',
     '  float seed = aMeta.x;',
     '  float ti = stagger(uT, seed);',
     '  vec2 baseNorm = mix(pFrom, pTo, ti);',
@@ -1037,6 +1052,10 @@ export function createNemoParticleField(canvas, options) {
     gl.uniform1f(L(prog, 'uTime'), timeSec);
     gl.uniform2f(L(prog, 'uMouse'), pointer.x, pointer.y);
     gl.uniform1i(L(prog, 'uFromIndex'), fromPose);
+    /* The pair the physics is targeting (curFrom/curTo). Sending only
+       uFromIndex is what let the GPU morph toward a different pose than the
+       CPU was pulling toward — see the FIX note in VS_PARTICLE. */
+    gl.uniform1i(L(prog, 'uToIndex'), toPose);
     gl.uniform1f(L(prog, 'uT'), t);
     gl.uniform1f(L(prog, 'uReduced'), reduced ? 1.0 : 0.0);
     gl.uniform1f(L(prog, 'uSpin'), spin);
@@ -1315,6 +1334,7 @@ export function createNemoParticleField(canvas, options) {
         n: N,
         fromPose: fromPose,
         toPose: toPose,
+        cycleTimer: cycleTimer,
         reduced: reduced,
         width: W,
         height: H,

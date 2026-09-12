@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "verify:blackhole": "node scripts/verify-blackhole.mjs",
+    "verify:nemo-particles": "node scripts/verify-nemo-particles.mjs",
     "test:unit": "node --import ./tests/unit/register-ts.mjs --test \"tests/unit/**/*.test.ts\"",
     "test": "npm run test:unit",
     "test:signoff-horizon": "playwright test"
