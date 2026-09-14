@@ -79,8 +79,9 @@ const CLOSED_EPS = 0.001; // paths.js decides "closed subpath" at 1e-3 per axis
 
 const COUNTER = {
   fontSize: 330, // display size in viewBox units
-  trackFrom: 0.012, // em tracking at 0%   (tight)
-  trackTo: 0.19, // em tracking at 100% (wide)
+  trackFrom: 0.19, // em tracking at 0%   (wide)
+  trackTo: 0.012, // em tracking at 100% (tight — the tracking contracts as
+  //                 the count climbs, then the morph departs from that frame)
   pctScale: 0.3, // the % rides at 30% of the numeral size
   pctGap: 0.075, // em gap between the numeral block and the %
   refString: '100', // layout reference: the counter's frame never jitters
@@ -725,14 +726,15 @@ export const VIEWBOX = ${VIEWBOX};
 export const FONT_SIZE = ${fmt(COUNTER.fontSize)};
 
 export const COUNTER = {
-  /** Em tracking at 0% and at 100% — the counter's expansion. */
+  /** Em tracking at 0% and at 100% — the counter's tightening: the climb
+   *  starts wide and contracts to this frame before the morph departs. */
   trackFrom: ${COUNTER.trackFrom},
   trackTo: ${COUNTER.trackTo},
   /** The string the layout is anchored to, and the string the morph departs
    *  from: the numerals' frame never jitters while the counter counts. */
   refString: '${COUNTER.refString}',
   morphString: '${COUNTER.morphString}',
-  /** Pen x after the reference string's final glyph, at full tracking. */
+  /** Pen x after the reference string's final glyph, at the 100% frame. */
   penRight: ${fmt(penRight)},
   /** Numeral baseline, art space. */
   baseline: ${fmt(baseline)},
@@ -742,7 +744,7 @@ export const COUNTER = {
   pctX: ${fmt(pctX)},
   pctY: ${fmt(pctY)},
   pctScale: ${Number(pctS.toFixed(5))},
-  /** Reference ink box of '${ref}' at full tracking (art space): the frame the
+  /** Reference ink box of '${ref}' at the 100% frame (art space): the frame the
    *  runtime layout has to reproduce — asserted in the unit tests. */
   refInk: {
     minX: ${fmt(refBox.minX)},
@@ -785,8 +787,9 @@ export const MORPH_PAIRING = {
   points: ${morphChar.length - realCount},
 } as const;
 
-/** Opening frame: the numerals at full tracking — ${realCount} real contours plus one
- *  degenerate point per remaining piece, each parked on the nearest stroke. */
+/** Opening frame: the numerals at the 100% frame — tight tracking, ${realCount} real
+ *  contours plus one degenerate point per remaining piece, each parked on the
+ *  nearest stroke. */
 export const DIGIT_MORPH_D = ${JSON.stringify(morphDigits.join(''))};
 
 /** Closing frame: the character, every subpath kept whole and refit inside

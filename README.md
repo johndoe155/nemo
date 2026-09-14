@@ -21,6 +21,20 @@ npm run preview     # serve the production build
 
 ## What's on the page (top → bottom)
 
+0. **The Loader — "the typographic morph"** — the boot sequence that owns the
+   screen for its one pass (`components/Loader.tsx`). A massive, desaturated
+   percentage counter counts 0 → 100 dead centre, set in the site's own
+   PP Neue Machina Inktrap Ultrabold (extracted to vector outlines at build
+   time — no webfont dependency at boot), and its tracking *tightens* across
+   the climb: 0.19em down to 0.012em, the block re-centred every frame so it
+   never drifts. The instant it reaches 100%, GSAP's MorphSVG snaps the
+   numerals into the character's vector paths (`public/nemo.svg`, refit to a
+   morph-safe 1,279 cubics) under an aggressive `expo.inOut`, and the ink
+   adopts the holographic gradient in the same frame; the exact 3,823-cubic
+   artwork resolves on top once the character lands. Both morph frames are
+   baked by `scripts/generate-nemo-loader.mjs` and the pairing is replayed
+   through the real plugin by `scripts/verify-nemo-loader.mjs`.
+   `prefers-reduced-motion` skips straight to the landed character.
 1. **Hero** — full-viewport key art, split-line title reveal, orbiting rings,
    parallax, live countdown badge, scroll progress rail. The CTAs are "portal
    buttons": a liquid WebGL fragment shader (cursor-reactive swirl + ripples,
@@ -73,6 +87,10 @@ src/
                            #     WalletButton, Countdown, Starfield, badges…)
                            #   img-sphere.tsx — the rotunda's 3D image sphere
   components/UniverseCard.tsx / UniverseDialog.tsx
+  components/Loader.tsx        # the boot sequence — the typographic morph
+  lib/nemoLoaderData.ts        # GENERATED — baked morph frames + type metrics
+                               #   (rebuild: npm run generate:nemo-loader)
+  lib/nemoMorph.ts             # runtime layout mirroring the generator's math
   components/BlackHoleStage.tsx  # React mounting layer for the WebGPU sim
   components/BlackHoleStill.tsx  # CSS/SVG static frame (no-WebGPU fallback)
   three/blackhole/         # the simulation, vendored VERBATIM — do not edit

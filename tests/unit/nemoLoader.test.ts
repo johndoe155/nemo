@@ -124,15 +124,22 @@ test('the count is clamped, integral and always fits the loader’s slots', () =
   }
 });
 
-test('tracking expands across the climb', () => {
-  assert.ok(TRACK_FROM > 0 && TRACK_TO > TRACK_FROM);
+test('tracking tightens across the climb', () => {
+  assert.ok(TRACK_TO > 0 && TRACK_TO < TRACK_FROM);
   assert.equal(trackingAt(0), TRACK_FROM);
   assert.equal(trackingAt(1), TRACK_TO);
   const width = (tracking: number) => {
     const frame = layoutCounter('100', tracking);
     return frame.inkMaxX - frame.inkMinX;
   };
-  assert.ok(width(TRACK_TO) > width(TRACK_FROM) + 100, 'the block widens visibly');
+  assert.ok(width(TRACK_FROM) > width(TRACK_TO) + 100, 'the block narrows visibly');
+  // The tightening is monotone: every step of the climb tracks in, never out.
+  let previous = width(trackingAt(0));
+  for (let p = 1 / 240; p <= 1.0001; p += 1 / 240) {
+    const w = width(trackingAt(p));
+    assert.ok(w < previous, 'monotone contraction');
+    previous = w;
+  }
 });
 
 test('the runtime layout reproduces the generator’s reference frame', () => {

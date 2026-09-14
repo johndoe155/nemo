@@ -18,9 +18,10 @@ gsap.registerPlugin(MorphSVGPlugin);
    THE LOADER — "the typographic morph".
 
    A massive, desaturated percentage counter counts 0 → 100 dead centre while
-   its tracking widens from 0.012em to 0.19em. At 100% the numerals are handed
-   to MorphSVG and snap into the character's vector paths under expo.inOut, and
-   the ink adopts the holographic gradient in the same frame.
+   its tracking tightens from 0.19em down to 0.012em — the climb contracts.
+   At 100% the numerals are handed to MorphSVG and snap into the character's
+   vector paths under expo.inOut, and the ink adopts the holographic gradient
+   in the same frame.
 
    Everything here is one coordinate system: the counter is drawn from the
    actual PP Neue Machina outlines (extracted at build time, so there is no
