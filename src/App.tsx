@@ -21,6 +21,9 @@ import Footer from './sections/Footer';
 import { Marquee, Starfield, ToastHost } from './components/ui';
 import Ambience from './components/Ambience';
 import FloorState from './components/FloorState';
+// The boot sequence — the typographic morph. Renders above everything for one
+// pass, then removes itself; see components/Loader.tsx.
+import Loader from './components/Loader';
 import ScrollProgress from './components/ScrollProgress';
 import SideRail from './components/SideRail';
 import SoundToggle from './components/SoundToggle';
@@ -97,6 +100,7 @@ export default function App() {
 
   return (
     <SingularityProvider>
+      <Loader />
       <a className="skip-link" href="#nemoverse" style={skipStyle}>
         Skip to the Nemoverse
       </a>

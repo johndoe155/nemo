@@ -53,6 +53,10 @@ import './styles/nemo-particles.css';
 // into the page, and the static fallback frame. Scoped to .singularity/.bh-*,
 // so it loads last without contending with anything above.
 import './styles/blackhole.css';
+// The boot sequence — the topmost fixed layer the site owns (z 600: above
+// .grain, the nav HUD and the side rail; below the custom cursor at 1000).
+// Everything is scoped to .ldr/.ldr__*, so it contends with none of the above.
+import './styles/loader.css';
 import App from './App';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
