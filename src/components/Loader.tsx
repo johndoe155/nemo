@@ -43,7 +43,7 @@ const DIGIT_SLOTS = 3; // the counter never needs more than three
 const COUNT_S = 2.15; // 0 → 100
 const PRE_SNAP_S = 0.16; // the beat at 100% before the snap
 const SNAP_S = 0.82; // the morph itself
-const LAND_HOLD_S = 0.42; // the character, alone, before the page is revealed
+const LAND_HOLD_S = 1.6; // the character, alone and settled, before the page is revealed
 
 type DigitRef = SVGGElement | null;
 
@@ -167,14 +167,17 @@ export default function Loader() {
 
     /* The ignition: the numerals are already the morph's opening frame, so the
        swap is invisible, and the ink adopts the holographic gradient in the
-       same frame the tween starts. */
+       same frame the tween starts. autoAlpha 0 took *visibility* with it when
+       the path was hidden, so it must be handed back as a pair — a bare
+       opacity write would leave the morph tweening invisibly and only the
+       late exact-art crossfade would ever show the character. */
     const ignite = () => {
       morph.classList.add('is-holo');
       for (let i = 0; i < DIGIT_SLOTS; i++) {
         const slot = slots[i];
         if (slot) slot.style.opacity = '0';
       }
-      morph.style.opacity = '1';
+      gsap.set(morph, { autoAlpha: 1 });
     };
 
     /* StrictMode mounts this effect twice: every animated property is stated
@@ -279,7 +282,10 @@ export default function Loader() {
             space are the same space — to the canvas centre. */}
         <g className="ldr__scene" transform={`translate(${COUNTER.artShiftX} ${COUNTER.artShiftY})`}>
           <g className="ldr__art" ref={artRef}>
-            <path className="ldr__morph" ref={morphRef} d={DIGIT_MORPH_D} />
+            {/* Hidden until the snap. The effect only runs after first paint,
+                so without this the baked "100" frame flashes under the live
+                counter the moment the page opens. */}
+            <path className="ldr__morph" ref={morphRef} d={DIGIT_MORPH_D} style={{ opacity: 0 }} />
 
             {exactArt && (
               <g className="ldr__exact" ref={exactRef}>
