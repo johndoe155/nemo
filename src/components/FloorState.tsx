@@ -48,6 +48,7 @@ export default function FloorState() {
     let travel = 0;
     let atFloor = false;
     let lastProgress = -1;
+    let lastWarning = '';
 
     const measure = () => {
       height = footer.getBoundingClientRect().height;
@@ -58,6 +59,22 @@ export default function FloorState() {
       travel = height > 0 && height <= viewport - 2 ? height : 0;
       root.style.setProperty('--curtain-footer-height', `${height}px`);
       root.style.setProperty('--curtain-travel', `${travel}px`);
+      /* The reveal standing down is a SILENT failure by construction: the CSS
+         degrades to an ordinary in-flow footer, so the page still looks like a
+         page — it just stops being a curtain. Say it out loud in dev, once per
+         measurement change, because the last time a rule inflated this box
+         (`#connect { padding-top }` in styles/audit-gaps.css) the whole effect
+         disappeared on every device with nothing in the console and nothing
+         else on the page to notice it by. */
+      if (import.meta.env.DEV && height > 0 && travel === 0) {
+        const warning = `[curtain] the floor is ${Math.round(height)}px tall and the viewport is ${Math.round(viewport)}px: ` +
+          'no travel, so the reveal is an ordinary in-flow footer. Anything that adds height to ' +
+          '.curtain-footer (padding included) disables the curtain.';
+        if (warning !== lastWarning) {
+          lastWarning = warning;
+          console.info(warning);
+        }
+      }
     };
 
     const write = () => {

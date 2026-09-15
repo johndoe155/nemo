@@ -128,7 +128,15 @@ async function scrollProgress(page: Page, consumption: number) {
   // it a broken hold. The window is bounded by the effect's own patience (see
   // `CAPTURE_PATIENCE_MS`), so waiting a little is never waiting forever.
   await sceneRunning(page);
-  const aim = () => page.evaluate(async (c) => {
+  // The parameter is load-bearing: `page.evaluate(fn, arg)` hands `arg` to the
+  // browser-side function, and this arrow used to be declared with NO parameter —
+  // so `aim(consumption)` silently dropped its argument, `c` arrived as
+  // `undefined`, every target computed `start + run * undefined` = NaN, and
+  // `window.scrollTo({ top: NaN })` is a no-op. Every test that needed to jump
+  // into the span therefore read the REST page and failed on a composition that
+  // had never been asked to run. `(consumption: number)` is what makes the jump
+  // happen at all.
+  const aim = (consumption: number) => page.evaluate(async (c) => {
     const ST = window.horizonFixture.ScrollTrigger;
     const sheet = document.querySelector<HTMLElement>('.footer.signoff')!;
     const read = () => {
@@ -169,7 +177,7 @@ async function scrollProgress(page: Page, consumption: number) {
         ? document.querySelector<HTMLElement>('.bh-hold')!.getBoundingClientRect().height
         : height,
     };
-  });
+  }, consumption);
   let asked = await aim(consumption);
   // A jump made INSIDE the capture window lands on a line the effect is about to
   // move back down by the reservation it had zeroed. If the reader ended up short
@@ -196,10 +204,15 @@ async function scrollProgress(page: Page, consumption: number) {
     }
   } else {
     // Zero consumption is the trigger's OWN start line, and the hold has not
-    // begun: no state, no progress, and the footer is the page's ordinary paint.
-    // (Asserting `active` here would be asserting that a trigger is inside a span
-    // it has only just reached.)
-    await expect(page.locator(root)).not.toHaveAttribute('data-horizon-state', /capturing|ready/);
+    // begun. `data-horizon-state` is deliberately NOT asserted here: the capture
+    // is armed a whole viewport ABOVE this line — by design, so that a fling
+    // arrives after the frozen frame is ready — which means 'capturing'/'ready'
+    // is exactly what a correctly-armed scene reports at the trigger line, and
+    // what the reader is looking at is the real footer either way (the paint is
+    // held at playhead 0 for the whole window). What has to be true at zero
+    // consumption is that nothing has been CONSUMED: the reservation is still at
+    // its pad and the playhead has not moved.
+    await expect(page.locator(root)).toHaveAttribute('data-horizon-progress', '0.0000');
     expect(asked.height).toBeLessThanOrEqual(1.5);
   }
 }

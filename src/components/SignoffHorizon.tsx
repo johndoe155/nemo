@@ -133,6 +133,33 @@ const triggerLine = (inset: number): string =>
 export default function SignoffHorizon({ children }: { children: ReactNode }) {
   const rootRef = useRef<HTMLElement>(null);
   const { canHoldSignoff, canWarpSignoff, frameRef, holdRef, cameraHoldRef, consumptionRef } = useSingularityGate();
+  /* THE PAINT CAPABILITY IS READ, NEVER RE-RUN ON.
+   *
+   * `canWarpSignoff` is the PAINT half of the gate (`canHoldSignoff && status ===
+   * 'live'` — see lib/singularityGate.tsx), and the stage flips it on its own
+   * schedule: 'booting' → 'live' when the renderer comes up, 'error' when the
+   * render loop or the WebGL2 context dies, 'booting' again on a retry. It is a
+   * ref, and deliberately NOT a dependency of the scene effect below, because
+   * re-running that effect is not a repaint: `release()` zeroes the reservation
+   * (`setHold(0)`), which shortens the document by a whole span, and the browser
+   * then CLAMPS the reader's scroll back to the trigger line — measured, 304px of
+   * backwards teleport from mid-span. The scene comes back up with the reader
+   * standing exactly ON the trigger line, where `holdActiveAt` is false by
+   * construction (`travelled > 0`), so nothing re-engages: the fall parks at
+   * playhead 0, the flyers go back to `position: relative` in flow, and the
+   * invitation and its CTA simply sit there while the reader scrolls past them.
+   * It only recovers when the reader scrolls again — the "pin the composition,
+   * lose the pin for a moment, get it back if you keep playing with the section"
+   * failure this section keeps being reported for.
+   *
+   * A paint flip may therefore cost the reader the OVERLAY (the retired-overlay
+   * path below already handles that: the live flyers carry the fall), never the
+   * hold, the collapse, the release or the reader's scroll position. The renderer
+   * choice is made at capture time from this ref, so a stage that comes up late
+   * still gets the shader overlay on the next approach — it just does not get to
+   * un-pin a reader who is already inside the span. */
+  const canWarpRef = useRef(canWarpSignoff);
+  canWarpRef.current = canWarpSignoff;
 
   // useLayoutEffect, not useEffect: the reservation has to be in the DOM's height
   // before ScrollTrigger measures anything (a first paint with the composition
@@ -946,7 +973,11 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
               // mesh, so the raster only goes down when the shader won.
               let next: SignoffOverlay;
               let renderer: 'shader' | 'mosaic';
-              if (canWarpSignoff) {
+              /* `canWarpRef`, not `canWarpSignoff`: the capability as it stands at
+               * CAPTURE time, without this effect having been re-run for it (see
+               * the ref's note at the top of the component — a status flip mid-span
+               * must not clamp the reader back to the trigger line). */
+              if (canWarpRef.current) {
                 try {
                   const { createEventHorizonWarp } = await import('../three/eventHorizonWarp');
                   if (released) return;
@@ -1138,7 +1169,12 @@ export default function SignoffHorizon({ children }: { children: ReactNode }) {
       clearFrameFit(frameRef.current);
       restorePaint();
     };
-  }, [canHoldSignoff, canWarpSignoff, frameRef, holdRef, cameraHoldRef, consumptionRef]);
+    // `canWarpSignoff` is deliberately ABSENT: the scene is the LAYOUT half of
+    // the gate (the hold, the collapse, the release, the reader's scroll
+    // position) and the stage's status must not be able to re-create it. The
+    // paint half is read through `canWarpRef` at capture time instead. See the
+    // ref's note at the top of the component.
+  }, [canHoldSignoff, frameRef, holdRef, cameraHoldRef, consumptionRef]);
 
   return <footer ref={rootRef} className="footer signoff" aria-label="Closing invitation">{children}</footer>;
 }

@@ -285,9 +285,23 @@
 .singularity.section {
   padding-top: clamp(9rem, var(--gap-l), 24rem);
 }
-#connect {
-  padding-top: clamp(8rem, var(--gap-l), 20rem);
-}
+/* `#connect` IS THE CURTAIN FLOOR, AND ITS HEIGHT IS A HARD BUDGET.
+   P3.14's threshold rule used to read `#connect { padding-top: clamp(8rem,
+   var(--gap-l), 20rem) }` here. That element is `.footer.curtain-footer` — the
+   bright floor the sign-off is revealed over — and the reveal is
+   `position: sticky; bottom: 0` inside `.curtain-stage`, which can only uncover
+   a floor that FITS the viewport: `components/FloorState.tsx` sets
+   `--curtain-travel` to the footer's own height when `height <= viewport - 2`,
+   and to 0 otherwise, so a footer taller than the screen has its top edge
+   permanently above the fold and the whole rig degrades into an ordinary
+   in-flow footer (which is exactly what the padding did — measured: 768.6px →
+   1088.6px at 1280×900, 752.1px → 880.1px at 375×812, travel 768.6/752.1 → 0
+   on both, i.e. the curtain silently stopped being a curtain on every device,
+   with nothing logged and nothing visibly broken except the reveal itself).
+   The space before the sign-off therefore belongs to the SIGN-OFF side of the
+   threshold, never to the floor; see `--gap-l` in global.css, still spent on
+   `#singularity`. Any padding added here must be measured against the viewport,
+   not against the story. */
 
 /* ---- P3.14 · the rotunda bleeds past the gutter: the sphere is the only
    full-viewport object on the page, and grid-breaking starts where depth

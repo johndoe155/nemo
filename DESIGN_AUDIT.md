@@ -128,10 +128,81 @@ state feedback**. This audit is evidence-based: every finding cites the file it 
 > is covered by the gates above, and no failing case in that file reads the
 > loader or the particle field.
 >
-> **The roadmap is now executed end-to-end (P0–P7).** Remaining open items
+> **The roadmap is now executed end-to-end (P0–P8).** Remaining open items
 > are exactly the two the roadmap itself left conditional: real-lab
 > Lighthouse/filmstrip numbers to drive the ratchet down (P5.19's measuring
 > half), and any *new* surfaces earning their own cursor labels.
+>
+> **P8 — the two failures the reader reported, and the test defect that hid
+> both** (same day, from a second read of the sign-off/singularity/curtain
+> system). Both are real and both were reproduced and measured in Chromium
+> before and after the fix.
+>
+> | Reported | Root cause | Fix |
+> | --- | --- | --- |
+> | *"If the reader scrolls fast — sometimes even when they don't — the pin and the spaghettification simply fail: they scroll past and the text + CTA stay in position. Playing with the section brings it back."* | **The scene was keyed on the paint capability.** `canWarpSignoff` (`= canHoldSignoff && status === 'live'`) sat in `SignoffHorizon`'s main effect dependency array, so **every stage-status flip tore the whole scene down and rebuilt it**: `release()` zeroes the reservation (`setHold(0)`), which shortens the document by a whole span, and the browser clamps the reader's scroll back to the trigger line. Measured mid-span, on a `live → error` flip: scroll **1383 → 1079** (a 304px backwards teleport), reservation **305px → 1px**, `data-horizon-scene` **pinned → idle**, playhead **0.6008 → 0.0000**, and the invitation snapped back from `position: absolute` (365px, warped) to in-flow (`relative`, 1271px). It then stays exactly like that — the fall parked at 0 — until the reader scrolls again, which is the "if they keep playing with the section" recovery. The flip is not exotic: `booting → live` happens once by construction (and later on any `error`/`unsupported`, e.g. a lost GL context or a render-loop failure), so the bug fires whenever the reader reaches the span before the stage finishes booting — exactly a fast scroll, a restored position, or a deep link. | The capability is read through **`canWarpRef` at capture time** and `canWarpSignoff` is **removed from the dependency list**. A paint flip may cost the reader the *overlay* (the retired-overlay path already carries the fall), never the hold, the collapse, the release, or their scroll position — which is what the gate split in `lib/singularityGate.tsx` already claimed. Verified: the same flip now leaves scroll, reservation, scene, playhead and the lifted flyers **byte-identical** before, during and after. |
+> | *"The curtain footer no longer behaves like a curtain (at least on mobile) — the contents scroll upwards like any normal section. It worked perfectly on an older version."* | **P2+P3's spatial-scale rule landed on the one box whose height is a hard budget.** `audit-gaps.css` added `#connect { padding-top: clamp(8rem, var(--gap-l), 20rem) }` — `#connect` *is* `.footer.curtain-footer`, the bright floor the sign-off is revealed over, and the reveal is `position: sticky; bottom: 0` inside a stage whose travel is the floor's own height (`FloorState`: travel = height when `height <= viewport − 2`, else **0**). Measured across history at 1280×900 / 375×812: floor **768.6 / 752.1** and `--curtain-travel` **768.58 / 752.06** at `3d709e1`, `36501a4` and `43029dd`; floor **1088.6 / 880.1** and travel **0 / 0** from `050dc34` (P2+P3) onward — the padding is +320px on desktop and +128px on mobile, which are exactly the rule's `clamp` bounds at those widths. With travel 0 the whole rig degrades into an ordinary in-flow footer: no sticky floor, no negative-margin overlap, nothing logged, nothing else visibly broken. | The rule is **removed** (the space before the sign-off belongs to the sign-off side of the threshold, never to the floor — `--gap-l` is still spent on `#singularity`), and `FloorState` now says it out loud in dev whenever the reveal stands down because the floor is taller than the viewport, so this can never die silently again. Verified: travel back to **768.58 / 752.06**, and the floor's bottom stays glued to the viewport bottom while `--curtain-progress` climbs 0 → 0.2391 → 0.7161 → 0.9999 through the reveal on a 375×812 profile. |
+>
+> **And the reason neither was caught: `tests/signoff-horizon.spec.ts` could
+> not scroll.** `scrollProgress`'s inner helper was declared
+> `const aim = () => page.evaluate(async (c) => { … })` — **no parameter, and
+> no argument passed to `page.evaluate`** — so `c` arrived as `undefined`,
+> every target computed `start + run * undefined` = `NaN`, and
+> `window.scrollTo({ top: NaN })` is a no-op. Every assertion that needed the
+> reader to be *inside* the span was reading the rest page instead: the
+> "one jump lands it" playhead test, the release-jump test, the flyer-lift
+> test, the whole hem/curtain-slack family and the capped-curtain test all sat
+> vacuously green-or-red against a composition that had never been asked to
+> run. Introduced with the reservation rewrite (`3216252`) and carried through
+> every sign-off commit since. Fixed (parameter + argument, with the reason in
+> a comment), together with the helper's zero-consumption premise: the capture
+> is armed a full viewport *above* the trigger line **by design**, so
+> `capturing`/`ready` is what a correctly-armed scene reports at the trigger
+> line, and the invariant that matters there is that nothing has been consumed
+> (reservation at its pad, playhead `0.0000`).
+>
+> With the helper actually scrolling, the suite goes from 4/32 to **6 passed /
+> 26 failed, with all 26 classified** — nothing in it is an unexplained red any
+> more:
+>
+> - **Machine, not code (9):** the WebGL2 pixel/fidelity cases and the
+>   context-loss / `769px` / `getExtension` cases (a null context is what this
+>   sandbox returns), `actual BlackHoleStage reports …` (`unsupported`, because
+>   SwiftShader yields no WebGL2 here), and the CTA-tab-stop case, which needs
+>   the overlay canvas — i.e. a snapshot that rasterises, which this
+>   rasteriser refuses (the blank-`foreignObject` guard). All need a real GPU.
+> - **Spec vs design (9):** the arm-count trio (`stage status <x> gets the hold
+>   without the paint` wants ONE `signoff-horizon*` trigger; the code
+>   deliberately arms for the mosaic fallback — "armed or not, SOMETHING has to
+>   render the fall"); the late-capture-after-`status` case (a paint flip no
+>   longer stands the scene down, see the table above); the two `WebGL2 creation
+>   failure` / `blank foreignObject` cases that expect `static` where the mosaic
+>   path reports `capturing`; the flyer-lift test's loop starting at exactly 0
+>   consumption (the helper itself asserts that the hold has *not* begun at that
+>   pixel, and `holdActiveAt` is `travelled > 0` by construction); and the
+>   settle-share pair, which asserts the hold's progress `> 0.9` at the end of
+>   the run while `settleDistance()` deliberately pays `max(120, 1.5 × 90) =
+>   135`px of margin — `run/(run+settle)` = **0.7894** is that margin working as
+>   documented, not a release firing early. Resolving this group means deciding
+>   the policy (the mosaic everywhere is the documented intent; re-gating on the
+>   GPU costs the fallback) and re-stating four numbers, not fixing code.
+> - **Open, real, not yet fixed (8):** a stale reservation of **254px** left
+>   behind after a mode change (three cases: `status loss and unmount dispose …`
+>   and `an armed effect safely returns to real paint` on reduce and on resize);
+>   the capped-curtain compensation diverging by **126.77px**; the
+>   hem-to-document gap yielding **NaN** on one sample; the fluid-mesh geometry
+>   check (**27.48px**); and the late capture keeping its 640px CPU canvas after
+>   unmount / reduce (`lateSnapshot.width` stays 640 — the canvas is simply
+>   never released when the promise resolves into a dead scene). These are the
+>   next pass's work, in that order: the 254px is the only one a reader can
+>   feel.
+>
+> Verified after P8: `tsc -b` clean · `npm run build` clean (12.15s) · **80/80
+> unit** · a11y green at 1280×900 and 390×844 · **visual-regression green
+> (8/8 — baselines re-seeded, because the curtain fix moves the footer by
+> design; the store/pulls deltas were checked against a stashed tree first and
+> are glyph-edge/scrub-timing noise, not content)** · `npm run budget` green
+> (eager JS 643.6 kB gz) · signoff-horizon **6/32 with the above classification**.
 
 ---
 
