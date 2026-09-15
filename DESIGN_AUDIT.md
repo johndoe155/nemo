@@ -26,10 +26,26 @@ state feedback**. This audit is evidence-based: every finding cites the file it 
 > `inert + aria-hidden` for the boot window (scroll keys swallowed; Lenis
 > held under key `'boot'` so a stopped engine never banks deltas).
 >
-> **P2–P5 remain open** — rotunda keyboard/SR layer, drag momentum + snap,
-> loader skip/session pass, scroll-scrubbed events, sound map, haptics.
-> The axe gate is live (`npm run test:a11y`, `tests/a11y-axe.spec.ts`) with
-> `#rotunda` as its one listed debt until P2.1 lands.
+> **P2 and P3 are executed** (second pass, same day). Deltas from the
+> written plan, with reasons:
+>
+> | Plan said | Shipped | Why |
+> | --- | --- | --- |
+> | P2.8 (3.1): plates as a keyboard-operable carousel with per-plate tab stops | The sphere is ONE focusable `region` (`aria-roledescription="3D carousel"`); Arrow L/R step the nearest plate to front via the component's own Z-solve (`rotY = θ_plate − 90°`, shortest-path ease consumed by `updateMomentum` — the same authority loop drag rides), Up/Down tilt, Home/End jump, Enter opens the front plate. Plates are `aria-hidden` chrome; a visually-hidden `<ul>` mirrors all 12 canon plates; under reduced motion the 3D sphere **does not mount** and the plates render as a plain figure grid | The carousel-with-slides pattern (one tab stop) is the ARIA-recommended shape for this furniture; 60 focusable DOM nodes rotating at 60 fps would strand the tab order inside moving content. The mirror list satisfies the crawlable-text requirement identically. |
+> | — (found during 3.1) | Touch parity: `touchstart` no longer `preventDefault`s (it was a no-op anyway — React touch handlers are passive), and the non-passive `touchmove` handler claims the gesture only when horizontal-dominant; `touch-action: pan-y` on the sphere. Spotlight is now a real dialog (shared `useFocusTrap`, Escape, `lockPage('sphere-spotlight')`) | The rotunda was hijacking vertical page scroll on Android. Same policy the singularity's canvas documents. |
+> | P2.9 (2.2): `animate(scrollY, …, spring)` then `lenis.scrollTo(target, { velocity })` | Release velocity from a 4-sample timestamp window → projected offset → snapped to the card pitch → ONE `pageScrollTo(…, { smooth, duration })` glide through the Lenis authority | Framer's `animate` on scrollY while Lenis also owns scroll is two engines on one property; a projected-then-snapped single tween is the same physics with one authority. Duration scales with travel so slow drags still decelerate. |
+> | P2.10 (2.3): replay ≈ 0.9 s | `sessionStorage('ldr-seen')`; replay = count 0.30 s from 82 → beat 0.04 → snap 0.34 (expo curve preserved, compressed) → hold 0.22 → fade overlap ≈ 0.9–1.0 s total. Skip = any `pointerdown`/`keydown` or `wheel ≥ 2` → `tl.progress(1)` (skipped boots still await the font gate) | The snap must survive as a SNAP; proportional compression keeps its character at the promised envelope. Also: the boot inertness moved from `#root` to the loader's siblings (`:scope > :not(.ldr)`) so the loader's new `tabIndex`/`role="status"`/"press any key to skip" affordance is actually reachable. |
+> | P3.12 dolly: `camera.position.z = base + progress * 40` | Scale-dolly: post-`camAnim.update`, position × (1 − 0.18·p), progress eased from the host rect inside the existing frame loop | `CameraAnimation` rewrites position absolutely every frame and `OrbitControls` re-baselines from it; a raw z-write would either fight or compound. The multiplicative form is the audit's "±18% mapped to section progress", axis-robust across the whole flythrough, frozen by the same `cameraHoldRef` that freezes the rig. The config stays untouched, as demanded. |
+> | P3.12 crawl: "pin the last crawl frame" | `CrawlRise.tsx`: GSAP `scrub: 0.5` against `clip-path: inset(100%→0 top)` + `translateY` — the scrub itself *is* the pin (revealed exactly while the strip owns its viewport position; nothing in flow is pinned) | Pinning a one-line marquee would reflow the page for a reveal effect. Same engine, same channels (clip/transform), no layout cost. |
+> | P3.13: layoutId on card + dialog media, rotunda "same trick" | Roster: `layoutId="plate-<id>"` handoff — card plate surrenders the id in the same commit the panel claims it, `handedBack` flips it back on close ⇒ the spring carries the art both ways, ~0.6 s feel. Rotunda: **View Transitions** (the audit's authorized fallback): 60 plates re-render per frame, framer projection across all of them is the "too invasive" case; the clicked plate is named synchronously before the OLD snapshot, the modal (statically named) is the NEW side, UA morphs the box, reduced-motion and no-VT browsers fall back to the plain crossfade | Zero cost at rest for the sphere; the roster keeps the framer version because its media node is static DOM. |
+> | P3.14 (1.3): gap scale + bleed + hairline numerals | `--gap-s/m/l: 10/16/26vw` in `global.css`; `.section` rides M (ceiling 13rem); L on exactly the two thresholds (`#singularity` top, `#connect` top); rotunda runs S and bleeds `margin-inline: calc(-1*var(--gutter))`; `.sechead__num` restyled to the literal `1px var(--line-strong)` outline; Lore gained its `07` numeral so every head carries one | The P0 subset ships Inktrap 400/800 only — the "Hairline" cut was a removed face, so the outline treatment IS the hairline effect: 800-weight path, 1px stroke, transparent fill. Numbers ride the existing `--scroll-vel` rotate hook. |
+>
+> P2.11 shipped complete (`layoutId` markers on Nav **and** SideRail, separate
+> ids; `data-cursor` sweep: SPIN/RELEASE/DRAG on the rails, LOOK INTO IT on the
+> stage, COLLECT on stamp slots; cursor glow now blooms for every labelled
+> surface). **P4–P5 remain open** — sound map, haptics, scene drift, wallet chip,
+> payload. The axe gate's `#rotunda` exclusion was removed with P2.8; the debt
+> list is empty at both viewports.
 
 ---
 
@@ -298,14 +314,14 @@ sensory layer → payload. Each step is independently shippable and testable.
 7. GSAP ScrollTrigger refresh plumbing on `lenis.on('scroll')` (already partial in Lore/Signoff — unify)
    **Exit criteria:** one rAF cadence site-wide; trackpad scroll has one smoothing curve, no mush.
 
-### Phase 2 — Interaction parity (≈ 3 days)
+### Phase 2 — Interaction parity (≈ 3 days) — ✅ executed 2026-09-15
 8. Rotunda keyboard + SR layer (the carousel pattern in `3.1`) — **non-negotiable** · `3.1`
 9. Roster drag momentum + index snap + `DRAG` cursor state · `2.2`
 10. Loader skip-on-any-input + session short-pass · `2.3.1–2`
 11. Nav marker (`layoutId`), `data-cursor` sweep across surfaces · `3.6`
     **Exit criteria:** every canvas/3D surface operable by keyboard; drag feels continuous with physics.
 
-### Phase 3 — Cinematic layer (≈ 4 days)
+### Phase 3 — Cinematic layer (≈ 4 days) — ✅ executed 2026-09-15
 12. Hero→roster title scatter scrub; rotunda scroll-gust; singularity camera dolly;
     sign-off crawl clip-rise · `2.4`
 13. Card→dialog shared-element (`layoutId` plate morph, VT-API fallback) · `2.5`

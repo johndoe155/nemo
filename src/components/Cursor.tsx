@@ -31,8 +31,11 @@ export function CustomCursor() {
       my.set(e.clientY);
       setVisible(true);
       const target = e.target as Element | null;
+      /* P2.11 — anything carrying a data-cursor label is interactive by
+         declaration; the glow blooms for it too (the roster rail and the
+         rotunda are bare divs the old list never saw). */
       const interactive = target?.closest(
-        'a, button, [role="button"], .ucard, .chip, .stamp',
+        'a, button, [role="button"], .ucard, .chip, .stamp, [data-cursor]',
       );
       setHovering(!!interactive);
       const labelled = target?.closest('[data-cursor]') as HTMLElement | null;

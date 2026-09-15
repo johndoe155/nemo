@@ -114,3 +114,33 @@ html.is-booting .nemo-field__loading {
     width: 86vmin;
   }
 }
+
+/* P2.10 — skip affordance (Loader.tsx). Fades in only after the sequence has
+   held for a beat, so the intro stays uncluttered; mono + tracked like every
+   other annotation, sitting on the bottom rule of the stage. */
+.ldr__skip {
+  position: absolute;
+  left: 50%;
+  bottom: 2.1rem;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  opacity: 0;
+  animation: ldr-skip-in 0.7s ease 1.45s forwards;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.ldr:focus-visible {
+  outline: 1px solid rgba(var(--iris-rgb, 138, 77, 255), 0.6);
+  outline-offset: -6px;
+}
+
+@keyframes ldr-skip-in {
+  to {
+    opacity: 1;
+  }
+}

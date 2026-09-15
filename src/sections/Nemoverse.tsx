@@ -32,6 +32,12 @@ export default function Nemoverse() {
   const dragBase = useRef(0);
   const dragStartX = useRef(0);
   const dragMoved = useRef(false);
+  /* P2.9 — the last few pointer positions, time-stamped: release velocity
+     for the inertia handoff (px per ms, rAF-windowed by construction). */
+  const dragSamples = useRef<{ t: number; x: number }[]>([]);
+  /* Card count mirror for the release-time snap (the list is computed below
+     this effect; the ref keeps the closure honest without a TDZ). */
+  const cardCountRef = useRef(1);
 
   const [isMobile, setIsMobile] = useState(false);
   const [maxX, setMaxX] = useState(0);
@@ -108,36 +114,63 @@ export default function Nemoverse() {
       dragBase.current = x.get();
       dragStartX.current = e.clientX;
       dragMoved.current = false;
+      dragSamples.current = [{ t: e.timeStamp, x: e.clientX }];
       dragX.set(dragBase.current);
       setIsDragging(true);
       rail.style.cursor = 'grabbing';
+      /* The custom cursor reads labels off data-cursor on every move —
+         swapping it mid-gesture is the whole "grabbed" state change. */
+      rail.setAttribute('data-cursor', 'RELEASE');
     };
     const onMove = (e: MouseEvent) => {
       if (!isDragging) return;
       const diff = e.clientX - dragStartX.current;
       if (Math.abs(diff) > 6) dragMoved.current = true;
       dragX.set(dragBase.current + diff);
+      const samples = dragSamples.current;
+      samples.push({ t: e.timeStamp, x: e.clientX });
+      // A 4-sample window (~60ms of events) reads the throw, not the start.
+      if (samples.length > 4) samples.shift();
     };
     const onUp = () => {
       if (!isDragging) return;
       setIsDragging(false);
       rail.style.cursor = '';
-      // Hand the dragged position back to the scroll-driven transform so the
-      // rail doesn't snap: solve scrollYProgress for the current dragX value.
+      rail.setAttribute('data-cursor', 'DRAG');
+      /* P2.9 — release physics. The old handoff was a dead stop: correct,
+         but the pendulum cards were still ringing from a throw the carriage
+         didn't honor. Now: project the throw (v × inertia constant), snap
+         the projection to the card grid, and hand ONE glide to the scroll
+         authority — deceleration and the magnetic settle share the same
+         easing curve the wheel uses. Under Lenis the rail rides this exact
+         scroll, so scroll→rail→pendulum stays one continuous chain. */
       if (maxX > 0) {
         const rect = rosterRef.current?.getBoundingClientRect();
         if (rect) {
+          const samples = dragSamples.current;
+          let vx = 0;
+          if (samples.length >= 2) {
+            const first = samples[0];
+            const last = samples[samples.length - 1];
+            const dt = Math.max(1, last.t - first.t);
+            vx = (last.x - first.x) / dt; // px per ms (screen-space throw)
+          }
+          const current = -dragX.get();
+          const count = cardCountRef.current; // live count, mirrored at render
+          const pitch = maxX / Math.max(1, count - 1);
+          const projected = current - vx * 240; // rail offset px (drag is 1:1)
+          const snapped = Math.round(projected / pitch) * pitch;
+          const target = Math.max(0, Math.min(maxX, snapped));
+          const frac = target / maxX;
+          const p = 0.06 + frac * 0.88; // mirror of useTransform's [0.06, 0.94]
           const startY = rect.top + window.scrollY;
           const span = rect.height - window.innerHeight;
-          const frac = Math.min(1, Math.max(0, -dragX.get() / maxX));
-          const p = 0.06 + frac * 0.88; // mirror of useTransform's [0.06, 0.94]
-          /* Same instant handoff as before, but routed through the Lenis
-             engine (pageScrollTo immediate) so its internal position
-             re-syncs to the new spot instead of reading the foreign jump
-             as user input. */
-          pageScrollTo(startY + p * span);
+          const travel = Math.abs(target - current) / maxX;
+          const duration = Math.min(1.2, 0.42 + travel * 1.5);
+          pageScrollTo(startY + p * span, { smooth: true, duration });
         }
       }
+      dragSamples.current = [];
     };
     // A drag that crossed the threshold must never open a card dialog.
     const onClickCapture = (e: MouseEvent) => {
@@ -162,6 +195,7 @@ export default function Nemoverse() {
 
   const list = visibleUniverses.filter((u) => filter === 'all' || u.rarity === filter).sort(SORTS[sort]);
   const cardCount = list.length + 1; // + DropTeaserCard
+  cardCountRef.current = cardCount;
 
   useEffect(() => {
     setActiveCard(Math.round(progress * (cardCount - 1)));
@@ -258,11 +292,16 @@ export default function Nemoverse() {
               <span className="hangrod__bar" />
               <span className="hangrod__mount hangrod__mount--r" />
             </div>
-            <motion.div className="roster__rail" ref={railRef} style={{ x: isDragging ? dragX : x, opacity: railOpacity }}>
+            <motion.div
+              className="roster__rail"
+              ref={railRef}
+              data-cursor={isDragging ? 'RELEASE' : 'DRAG'}
+              style={{ x: isDragging ? dragX : x, opacity: railOpacity }}
+            >
               <AnimatePresence mode="popLayout" initial={false}>
                 {list.map((u, i) => (
                   <HangingCard key={u.id} index={i} drive={carriage} gust={pageScroll}>
-                    <UniverseCard u={u} index={i} onClick={setSelected} />
+                    <UniverseCard u={u} index={i} onClick={setSelected} lifted={selected?.id === u.id} />
                   </HangingCard>
                 ))}
                 <HangingCard key="drop-teaser" index={list.length} drive={carriage} gust={pageScroll}>
@@ -353,7 +392,7 @@ export default function Nemoverse() {
             <AnimatePresence mode="popLayout" initial={false}>
               {list.map((u, i) => (
                 <HangingCard key={u.id} index={i} drive={mCarriage} gust={pageScroll}>
-                  <UniverseCard u={u} index={i} onClick={setSelected} />
+                  <UniverseCard u={u} index={i} onClick={setSelected} lifted={selected?.id === u.id} />
                 </HangingCard>
               ))}
               <HangingCard key="drop-teaser" index={list.length} drive={mCarriage} gust={pageScroll}>

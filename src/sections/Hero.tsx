@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { gsap } from 'gsap';
 import { motion, useScroll, useTransform, useMotionValue } from 'framer-motion';
 import { Reveal } from '../components/ui';
 import { LiquidButton, GlassButton, PortalMagnetic } from '../components/PortalButton';
@@ -81,6 +82,44 @@ function GeomSep({ reduced }: { reduced: boolean }) {
 export default function Hero() {
   const ref = useRef<HTMLElement | null>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
+
+  /* P3.12 (audit 2.4) — the handoff flings the title into the rail: line 1
+     ←, line 3 →, line 2 up, all to opacity 0, scrubbed across the first
+     40vh on the SAME range that currently just fades `contentOpacity`.
+     GSAP's translateX/translateY write the standalone CSS `translate`
+     property, so the framer entrance transforms (x/scale on the same
+     elements) are never touched — the two authorities coexist by geometry.
+     Reduced motion vetoes the whole timeline; the framer fade stays as the
+     only exit. */
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        defaults: { ease: 'none' },
+        scrollTrigger: {
+          /* The scatter rides the hero's own first 40vh — progress 0 at the
+             top of the page, so the title is whole when the site opens. */
+          trigger: ref.current,
+          start: 'top top',
+          end: '+=40vh',
+          scrub: 0.6,
+        },
+      });
+      tl.to(
+        '.hero__line--1',
+        { translateX: '-13vw', translateY: '2.5vh', opacity: 0 },
+        0,
+      )
+        .to('.hero__line--2', { translateY: '-9vh', opacity: 0 }, 0)
+        .to('.hero__line--3', { translateX: '13vw', translateY: '3vh', opacity: 0 }, 0);
+    }, el);
+    return () => ctx.revert();
+    // ref is the stable hero section container; it never swaps identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   /* Lenis owns scroll inertia (lib/scroll.ts). The old useSpring wrapper here
      stacked a second smoothing layer on top of the engine's own — exactly
      the mush the audit called out; scrollYProgress now arrives continuous by
@@ -225,7 +264,11 @@ export default function Hero() {
           )}
         </Reveal>
 
-        <h1 className="display hero__title" aria-label="One canon. Infinite versions.">
+        <h1
+          className="display hero__title"
+          aria-label="One canon. Infinite versions."
+          ref={titleRef}
+        >
           {/* Line 1 — solid ONE + extended gradient CANON + flat white period */}
           <motion.span
             className="hero__line hero__line--1"

@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '../lib/hooks';
 import { lockPage, unlockPage } from '../lib/scroll';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { KineticLink } from './motion';
 import CardImage from './CardImage';
 import type { Universe } from '../lib/data';
@@ -33,7 +33,19 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
      lib/scroll lock (Lenis frozen alongside the CSS viewport lock; the
      ~scrollbar-width layout pop that `overflow:hidden` used to cause is
      gone via scrollbar-gutter on html). */
-  useFocusTrap(true, panelRef, { onEscape: onClose });
+  /* P3.13 — the panel receives the card's plate on the shared layoutId.
+     `handedBack` flips in the same commit that unmounts the dialog: the
+     layoutId moves back to the (now un-lifted) card, and the exact same
+     spring carries the plate home — dialog closing is the morph reversed,
+     not a fade. */
+  const [handedBack, setHandedBack] = useState(false);
+  const reduce = useReducedMotion();
+  const morphing = !reduce && !handedBack;
+  const beginClose = useCallback(() => {
+    setHandedBack(true);
+    onClose();
+  }, [onClose]);
+  useFocusTrap(true, panelRef, { onEscape: beginClose });
 
   useEffect(() => {
     lockPage('dialog');
@@ -47,7 +59,7 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.35, ease: EASE }}
-      onClick={onClose}
+      onClick={beginClose}
       role="dialog"
       aria-modal="true"
       aria-label={`${u.code} — ${u.name}`}
@@ -57,18 +69,27 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
         className="dialog"
         data-lenis-prevent
         style={{ '--card-accent': accent }}
-        initial={{ opacity: 0, y: 44, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 30, scale: 0.97 }}
-        transition={{ duration: 0.5, ease: EASE }}
+        /* While the plate morph owns the motion, the panel must not double
+           the movement: entrance is opacity-only; the plate's spring IS the
+           choreography (audit 2.5 — "one 0.6 s expo-spring carries the plate
+           from rail to panel"). Without an active morph the old slide stays. */
+        initial={morphing ? { opacity: 0 } : { opacity: 0, y: 44, scale: 0.96 }}
+        animate={morphing ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: morphing ? 0 : 30, scale: morphing ? 1 : 0.97 }}
+        transition={{ duration: morphing ? 0.34 : 0.5, ease: EASE }}
         onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
       >
-        <button className="dialog__close" onClick={onClose} aria-label="Close universe detail">
+        <button className="dialog__close" onClick={beginClose} aria-label="Close universe detail">
           ✕
         </button>
 
         <div className="dialog__grid">
-          <div className="dialog__media" ref={mediaRef}>
+          <motion.div
+            className="dialog__media"
+            ref={mediaRef}
+            layoutId={reduce || handedBack ? undefined : `plate-${u.id}`}
+            transition={{ layout: { type: 'spring', stiffness: 190, damping: 27, mass: 0.9 } }}
+          >
             {u.image ? (
               <motion.div className="dialog__media-parallax" style={{ y: mediaY }}>
                 <CardImage
@@ -100,7 +121,7 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
 
           <div className="dialog__body">
             <div className="dialog__code">{u.code} · CANON ENTRY</div>

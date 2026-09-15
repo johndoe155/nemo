@@ -166,3 +166,155 @@
     transition: none;
   }
 }
+
+/* ═════════════════ P2 · INTERACTION PARITY + P3 · CINEMATIC LAYER ════════
+   Everything the P2/P3 roadmap needs that is not owned by a section file.
+   Additive pass: later in the cascade than overhaul/components, so no
+   upstream file had to be edited to say these things. */
+
+/* ---- P2.8 · rotunda: the keyboard-operated region gets a keyboard-grade
+   focus ring (the sphere root is a region, not a button — house focus
+   treatment, inset so the 600px box never grows a halo outside the stage) */
+.cg-stage--sphere [role='region']:focus-visible {
+  outline: 1px solid var(--cyan);
+  outline-offset: -4px;
+  border-radius: 18px;
+}
+
+/* ---- P2.8 · reduced-motion flat plates (Gallery.tsx REDUCE branch): the
+   rotunda as a real, crawlable grid — figures, not furniture. */
+.cg__flat {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  gap: clamp(1rem, 2.4vw, 1.8rem);
+  padding: 0;
+  margin: 0;
+}
+.cg__flat li {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+}
+.cg__flat figure {
+  margin: 0;
+}
+.cg__flat img {
+  width: 100%;
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  display: block;
+}
+.cg__flat figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.85rem 1rem 1rem;
+}
+.cg__flat figcaption b {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.86rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.cg__flat figcaption span {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- P2.10 · View-Transition morph for the plate spotlight (img-sphere):
+   the UA carries the named snapshot between plate and dialog; retune the
+   default duration onto the site's expo curve and keep both sides crisp.
+   No `@supports` needed — unknown pseudo-elements are simply ignored. */
+::view-transition-old(plate-active),
+::view-transition-new(plate-active) {
+  animation-duration: 0.45s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  mix-blend-mode: normal;
+  border-radius: 12px;
+}
+
+/* ---- P2.11 · shared layoutId markers (Nav links + SideRail dots). The
+   rails are hairline systems; the marker is one hairline, not a pill. */
+.nav__marker {
+  position: absolute;
+  left: 0.85rem;
+  right: 0.85rem;
+  bottom: 0.1rem;
+  height: 1px;
+  background: linear-gradient(90deg, var(--cyan), transparent 85%);
+}
+.nav__link.active {
+  color: var(--ink);
+}
+.siderail__dot i {
+  position: relative;
+}
+.siderail__marker {
+  position: absolute;
+  inset: -3px;
+  border: 1px solid var(--cyan);
+  border-radius: 99px;
+}
+
+/* ---- P3.14 · spatial scale — the tokens live in global.css; this is the
+   UNEVEN USAGE the audit demands: gap-l belongs to the two thresholds and
+   nowhere else; the rotunda runs tight because its stage is the air. */
+#rotunda.section {
+  padding-block: clamp(4rem, var(--gap-s), 8rem);
+}
+#singularity,
+.singularity.section {
+  padding-top: clamp(9rem, var(--gap-l), 24rem);
+}
+#connect {
+  padding-top: clamp(8rem, var(--gap-l), 20rem);
+}
+
+/* ---- P3.14 · the rotunda bleeds past the gutter: the sphere is the only
+   full-viewport object on the page, and grid-breaking starts where depth
+   already exists. Plates pass under the nav's fade (the stage box simply
+   reaches the viewport edges; nothing else reflows). */
+#rotunda .cg-stage {
+  margin-inline: calc(-1 * var(--gutter));
+  width: calc(100% + var(--gutter) * 2);
+}
+
+/* ---- P3.14 · the oversized numerals read as engraved outlines, not
+   filled type: 1px of --line-strong on transparent (audit 1.3's literal
+   treatment; the rotate hook already covers them). */
+.sechead__num {
+  -webkit-text-stroke: 1px var(--line-strong);
+  text-shadow: none;
+  top: -3.4rem;
+}
+.sechead__num.gold-num {
+  -webkit-text-stroke: 1px rgba(255, 200, 87, 0.42);
+}
+
+/* ---- P3.12 · CrawlRise wrapper: the rise starts from a hard floor line,
+   so the strip must own its clip (no descendants painting past it). */
+.crawl-rise {
+  clip-path: inset(0 0 0 0);
+  contain: paint;
+}
+@media (prefers-reduced-motion: reduce) {
+  .crawl-rise {
+    clip-path: none;
+    contain: none;
+  }
+}
+
+/* The sphere region carries the SPIN cursor label; the stage itself should
+   feel like the control surface it now is. */
+@media (prefers-reduced-motion: reduce) {
+  #rotunda .cg-hint,
+  #rotunda .cg__hint {
+    display: none;
+  }
+}

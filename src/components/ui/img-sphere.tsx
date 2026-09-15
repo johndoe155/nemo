@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
+import { motionValue, useMotionValueEvent, useVelocity, useReducedMotion, type MotionValue } from 'framer-motion';
+import { useFocusTrap } from '@/lib/hooks';
+import { lockPage, unlockPage } from '@/lib/scroll';
+
+/* MotionValue stand-in so the gust channel's hooks run unconditionally when
+   no scroll-gust is wired (DESIGN_AUDIT P3.2b). */
+const ZERO = motionValue(0);
 
 /**
  * SphereImageGrid - Interactive 3D Image Sphere Component
@@ -76,6 +83,12 @@ export interface SphereImageGridProps {
   autoRotate?: boolean;
   autoRotateSpeed?: number;
   className?: string;
+  /** Page-scroll position (px). Its velocity nudges the idle spin — the
+   *  rotunda keeps a little momentum from simply being scrolled past
+   *  (the same gust channel the hanging roster cards consume). */
+  gust?: MotionValue<number>;
+  /** Region label for assistive tech; the keyboard contract is appended. */
+  ariaLabel?: string;
 }
 
 interface RotationState {
@@ -138,8 +151,13 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   perspective = 1000,
   autoRotate = false,
   autoRotateSpeed = 0.3,
-  className = ''
+  className = '',
+  gust,
+  ariaLabel
 }) => {
+  const reduce = useReducedMotion() ?? false;
+  const reduceRef = useRef(reduce);
+  reduceRef.current = reduce;
 
   // ==========================================
   // STATE & REFS
@@ -157,12 +175,36 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   const lastMousePos = useRef<MousePosition>({ x: 0, y: 0 });
   const animationFrame = useRef<number | null>(null);
 
+  /* ---- keyboard + gust state (DESIGN_AUDIT P2.1) -------------------------
+     stepTarget: a pending rotation goal the per-frame loop eases toward —
+     the same authority loop drag and momentum already ride, so a keypress
+     can never fight a live drag (drag-start clears it).
+     gustBoost: decaying angular nudge fed by page-scroll velocity (P3.2b). */
+  const stepTarget = useRef<{ x: number | null; y: number | null }>({ x: null, y: null });
+  /* Mirror of the rotation state for the frame loop: the loop runs between
+     commits, and reading the live binding here (rather than closing over
+     state) is what keeps step-solving off the state updater. */
+  const rotationRef = useRef(rotation);
+  rotationRef.current = rotation;
+  const gustBoost = useRef(0);
+
   // ==========================================
   // COMPUTED VALUES
   // ==========================================
 
   const actualSphereRadius = sphereRadius || containerSize * 0.5;
   const baseImageSize = containerSize * baseImageScale;
+
+  /* The gust: scroll velocity (px/ms) folds into the idle spin as a damped
+     angular nudge. Reduced motion never feeds it, and a live drag or a
+     pending keyboard step swallows it (both own the rotation while active). */
+  const gustVelocity = useVelocity(gust ?? ZERO);
+  useMotionValueEvent(gustVelocity, 'change', (v) => {
+    if (reduceRef.current || isDragging) return;
+    if (stepTarget.current.x !== null || stepTarget.current.y !== null) return;
+    const clamped = Math.max(-1.4, Math.min(1.4, v * 0.5));
+    gustBoost.current = gustBoost.current * 0.6 + clamped * 0.4;
+  });
 
   // ==========================================
   // UTILITY FUNCTIONS
@@ -325,12 +367,182 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     return Math.max(-maxRotationSpeed, Math.min(maxRotationSpeed, speed));
   }, [maxRotationSpeed]);
 
+  /* Shortest signed angular delta in degrees. */
+  const deltaAngle = (from: number, to: number): number => ((to - from + 540) % 360) - 180;
+
+  /** The plate whose projected depth is greatest — the "front" plate.
+     Mirrors calculateWorldPositions' own Z solve: rotating Y to bring a
+     plate front means maximizing sin(theta − rotationY), i.e. landing
+     rotationY on theta − 90°. */
+  const frontPlateIndex = useCallback((): number => {
+    let best = 0;
+    let bestZ = -Infinity;
+    imagePositions.forEach((pos, i) => {
+      const z =
+        Math.sin(SPHERE_MATH.degreesToRadians(pos.theta - rotation.y)) *
+        Math.sin(SPHERE_MATH.degreesToRadians(pos.phi));
+      if (z > bestZ) {
+        bestZ = z;
+        best = i;
+      }
+    });
+    return best;
+  }, [imagePositions, rotation.y]);
+
+  const rotateToIndex = useCallback(
+    (index: number) => {
+      const pos = imagePositions[index];
+      if (!pos) return;
+      stepTarget.current = { x: null, y: pos.theta - 90 };
+    },
+    [imagePositions]
+  );
+
+  /* Spotlight open/close as a shared-element move (audit 2.5 — "same trick
+     for the rotunda plate spotlight", taken through its documented fallback):
+     sixty plates re-render every rotation frame, so mounting framer's layout
+     projection across all of them is exactly the "too invasive" case the
+     audit pre-authorizes View Transitions for. The trick is a name handoff:
+     the plate is named synchronously before the OLD snapshot; inside the
+     transition callback React mounts/unmounts the modal (statically named)
+     and the plate name toggles in the same synchronous pass, so each
+     snapshot holds exactly ONE named element and the UA morphs the box
+     itself — geometry included. Zero cost at rest. Feature-detected: no VT
+     (or reduced motion) is the plain swap, which the modal's own CSS
+     crossfade already animates. */
+  const lastVtNode = useRef<HTMLElement | null>(null);
+  const openFrom = useRef<string | null>(null);
+
+  const namePlate = useCallback((id: string | null) => {
+    if (id) {
+      const node =
+        containerRef.current?.querySelector<HTMLElement>(
+          `[data-plate-id="${CSS.escape(id)}"]`
+        ) ?? null;
+      if (node) {
+        node.style.viewTransitionName = 'plate-active';
+        lastVtNode.current = node;
+      }
+    } else if (lastVtNode.current) {
+      lastVtNode.current.style.viewTransitionName = '';
+      lastVtNode.current = null;
+    }
+  }, []);
+
+  const swapWithPlateMorph = useCallback(
+    (next: ImageData | null) => {
+      const doc = document as Document & {
+        startViewTransition?: (cb: () => void) => { finished: Promise<void> };
+      };
+      const openId = next ? next.id : openFrom.current;
+      if (reduceRef.current || !doc.startViewTransition || !openId) {
+        setSelectedImage(next);
+        openFrom.current = null;
+        return;
+      }
+      openFrom.current = next ? openId : null;
+      if (next) namePlate(openId); // the plate is the OLD side of the morph
+      const t = doc.startViewTransition(() => {
+        setSelectedImage(next);
+        // New snapshot, exactly one named element per direction:
+        if (next) namePlate(null);
+        else namePlate(openId);
+      });
+      // belt-and-braces: whatever the transition outcome, no plate keeps a
+      // stale name into the steady state (the rotation loop re-renders it
+      // without the property anyway; this just beats any long-running race).
+      window.setTimeout(() => namePlate(null), 900);
+      void t;
+    },
+    [namePlate]
+  );
+
+  /** Arrow Left/Right walk the plate sequence; Up/Down tilt the axis;
+     Home/End jump to first/last; Enter/Space open what faces the viewer.
+     Every move rides stepTarget — the same per-frame loop drag and
+     momentum use — so nothing ever teleports. */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!images.length) return;
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowLeft': {
+          e.preventDefault();
+          const dir = e.key === 'ArrowRight' ? 1 : -1;
+          rotateToIndex((frontPlateIndex() + dir + images.length) % images.length);
+          break;
+        }
+        case 'ArrowUp':
+        case 'ArrowDown': {
+          e.preventDefault();
+          const next = Math.max(-32, Math.min(45, rotation.x + (e.key === 'ArrowUp' ? -10 : 10)));
+          stepTarget.current = { x: next, y: null };
+          break;
+        }
+        case 'Home':
+          e.preventDefault();
+          rotateToIndex(0);
+          break;
+        case 'End':
+          e.preventDefault();
+          rotateToIndex(images.length - 1);
+          break;
+        case 'Enter':
+        case ' ': {
+          e.preventDefault();
+          const idx = frontPlateIndex();
+          if (imagePositions[idx]) swapWithPlateMorph(images[idx]);
+          break;
+        }
+        default:
+      }
+    },
+    [images, rotation.x, rotateToIndex, frontPlateIndex, imagePositions, swapWithPlateMorph]
+  );
+
   // ==========================================
   // PHYSICS & MOMENTUM
   // ==========================================
 
   const updateMomentum = useCallback(() => {
     if (isDragging) return;
+
+    /* A keyboard step owns the rotation while it settles — auto-rotation,
+       leftover flick momentum and the gust are all suppressed so the plate
+       arrives at the front and stops, on the reduce path without any ease. */
+    const stepping = stepTarget.current.x !== null || stepTarget.current.y !== null;
+
+    if (stepping) {
+      /* Solve against the rotation ref, not inside the state updater:
+         React may invoke updaters more than once (StrictMode), and a ref
+         consumption (the step is CLEAR when it lands) must not be doubled. */
+      const k = reduceRef.current ? 1 : 0.18;
+      const step = stepTarget.current;
+      const prev = rotationRef.current;
+      let x = prev.x;
+      let y = prev.y;
+      if (step.x !== null) {
+        const dx = deltaAngle(prev.x, step.x);
+        if (Math.abs(dx) < 0.35) {
+          x = step.x;
+          step.x = null;
+        } else {
+          x = prev.x + dx * k;
+        }
+      }
+      if (step.y !== null) {
+        const dy = deltaAngle(prev.y, step.y);
+        if (Math.abs(dy) < 0.35) {
+          y = step.y;
+          step.y = null;
+        } else {
+          y = prev.y + dy * k;
+        }
+      }
+      setRotation({ x: SPHERE_MATH.normalizeAngle(x), y: SPHERE_MATH.normalizeAngle(y), z: prev.z });
+      setVelocity({ x: 0, y: 0 });
+      return;
+    }
 
     setVelocity(prev => {
       const newVelocity = {
@@ -346,6 +558,13 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
       return newVelocity;
     });
 
+    /* Read + decay the gust OUTSIDE the updater (same double-invoke rule
+       as the stepping branch); the updater itself stays pure. */
+    const gust = gustBoost.current;
+    if (gust !== 0) {
+      gustBoost.current = Math.abs(gust * 0.92) < 0.01 ? 0 : gust * 0.92;
+    }
+
     setRotation(prev => {
       let newY = prev.y;
 
@@ -353,6 +572,10 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
       if (autoRotate) {
         newY += autoRotateSpeed;
       }
+
+      // Scroll-gust: a decaying nudge so the sphere reacts to being
+      // scrolled past (P3.2b) — same weak channel the roster hangs on.
+      newY += gust;
 
       // Add momentum-based rotation
       newY += clampRotationSpeed(velocity.y);
@@ -371,6 +594,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+    stepTarget.current = { x: null, y: null }; // a grab outranks a pending key-step
     setIsDragging(true);
     setVelocity({ x: 0, y: 0 });
     lastMousePos.current = { x: e.clientX, y: e.clientY };
@@ -407,8 +631,13 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   }, []);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
+    /* No preventDefault: a thumb landing on the rotunda must still be able
+       to scroll the page (the singularity section established this policy —
+       "a thumb landing mid-page scrolls the page, never the camera").
+       Horizontal intent is claimed in touchmove instead. */
     const touch = e.touches[0];
+    if (!touch) return;
+    stepTarget.current = { x: null, y: null };
     setIsDragging(true);
     setVelocity({ x: 0, y: 0 });
     lastMousePos.current = { x: touch.clientX, y: touch.clientY };
@@ -416,11 +645,16 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!isDragging) return;
-    e.preventDefault();
 
     const touch = e.touches[0];
+    if (!touch) return;
+
+    /* Claim the gesture only when it is horizontal-dominant — that IS the
+       rotate gesture. A vertical drag belongs to the page and is never
+       preventDefault'ed, so native scroll momentum survives the sphere. */
     const deltaX = touch.clientX - lastMousePos.current.x;
     const deltaY = touch.clientY - lastMousePos.current.y;
+    if (Math.abs(deltaX) > Math.abs(deltaY)) e.preventDefault();
 
     const rotationDelta = {
       x: -deltaY * dragSensitivity,
@@ -516,6 +750,8 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
       <div
         key={image.id}
         className="absolute cursor-pointer select-none transition-transform duration-200 ease-out"
+        aria-hidden="true"
+        data-plate-id={image.id}
         style={{
           width: `${imageSize}px`,
           height: `${imageSize}px`,
@@ -527,7 +763,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         }}
         onMouseEnter={() => setHoveredIndex(index)}
         onMouseLeave={() => setHoveredIndex(null)}
-        onClick={() => setSelectedImage(image)}
+        onClick={() => swapWithPlateMorph(image)}
       >
         <div className="relative w-full h-full rounded-full overflow-hidden shadow-lg border-2 border-white/20">
           <img
@@ -542,32 +778,49 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     );
   }, [worldPositions, baseImageSize, containerSize, hoveredIndex, hoverScale]);
 
+  /* Spotlight = a real dialog now (P2.1): focus trapped, Escape closes, the
+     trigger is restored on close, and the page is locked through the shared
+     lib/scroll channel so the engine freezes with the viewport. */
+  const spotlightRef = useRef<HTMLDivElement | null>(null);
+  useFocusTrap(!!selectedImage, spotlightRef, { onEscape: () => swapWithPlateMorph(null) });
+  useEffect(() => {
+    if (!selectedImage) return;
+    lockPage('sphere-spotlight');
+    return () => unlockPage('sphere-spotlight');
+  }, [selectedImage]);
+
   const renderSpotlightModal = () => {
     if (!selectedImage) return null;
 
     return (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30"
-        onClick={() => setSelectedImage(null)}
+        onClick={() => swapWithPlateMorph(null)}
+        data-lenis-prevent
         style={{
           animation: 'fadeIn 0.3s ease-out'
         }}
       >
         <div
+          ref={spotlightRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={selectedImage.title || selectedImage.alt}
           className="bg-white rounded-xl max-w-md w-full overflow-hidden"
           onClick={(e) => e.stopPropagation()}
           style={{
             animation: 'scaleIn 0.3s ease-out'
           }}
         >
-          <div className="relative aspect-square">
+          <div className="relative aspect-square" data-vt-target style={{ viewTransitionName: 'plate-active' }}>
             <img
               src={selectedImage.src}
               alt={selectedImage.alt}
               className="w-full h-full object-cover"
             />
             <button
-              onClick={() => setSelectedImage(null)}
+              onClick={() => swapWithPlateMorph(null)}
+              aria-label="Close plate"
               className="absolute top-2 right-2 w-8 h-8 bg-black bg-opacity-50 rounded-full text-white flex items-center justify-center hover:bg-opacity-70 transition-all cursor-pointer"
             >
               <X size={16} />
@@ -641,12 +894,24 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         style={{
           width: containerSize,
           height: containerSize,
-          perspective: `${perspective}px`
+          perspective: `${perspective}px`,
+          /* Vertical pans belong to the page (the singularity's touch
+             policy, applied here too). */
+          touchAction: 'pan-y'
         }}
+        role="region"
+        aria-roledescription="3D carousel"
+        aria-label={
+          ariaLabel ??
+          `Suspended plate sphere — ${images.length} plates. Left and right arrows bring the next plate to the front, up and down tilt the axis, Enter inspects the front plate.`
+        }
+        tabIndex={0}
+        data-cursor="SPIN"
+        onKeyDown={handleKeyDown}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
       >
-        <div className="relative w-full h-full" style={{ zIndex: 10 }}>
+        <div className="relative w-full h-full" style={{ zIndex: 10 }} aria-hidden="true">
           {images.map((image, index) => renderImageNode(image, index))}
         </div>
       </div>

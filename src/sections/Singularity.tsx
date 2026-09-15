@@ -72,7 +72,7 @@ export default function Singularity() {
             section and not with the footer that reads it. `cameraHoldRef` is the
             other half of "static": the box is held by the reservation, the framing
             inside it by the stage (see components/SignoffHorizon.tsx). */}
-        <div className="bh-frame" ref={frameRef}>
+        <div className="bh-frame" ref={frameRef} data-cursor="LOOK INTO IT">
           <BlackHoleStage
             onStatusChange={reportStatus}
             cameraHoldRef={cameraHoldRef}

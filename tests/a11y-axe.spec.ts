@@ -11,12 +11,12 @@ import AxeBuilder from '@axe-core/playwright';
 
    The exclusions below are deliberate debt with a named payoff in the audit
    roadmap — remove each entry when its section lands, do not add new ones:
-     · #rotunda — the 3D image sphere is drag/pointer-only until P2.1
-       (keyboard + SR layer) lands. Its plates carry no tab stops or roles
-       yet, which axe rightly flags as interactive content without semantics.
+     · (none). #rotunda was the last entry; it was removed when P2.1 landed
+       (the sphere is now a labelled region with keyboard operation, an
+       aria-hidden visual tree and a visually-hidden mirror list).
 --------------------------------------------------------------------------- */
 
-const PENDING_DEBT: readonly string[] = ['#rotunda'];
+const PENDING_DEBT: readonly string[] = [];
 
 const VIEWPORTS = [
   { width: 1280, height: 900 },

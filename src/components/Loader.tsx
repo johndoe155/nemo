@@ -47,6 +47,40 @@ const PRE_SNAP_S = 0.16; // the beat at 100% before the snap
 const SNAP_S = 0.82; // the morph itself
 const LAND_HOLD_S = 1.6; // the character, alone and settled, before the page is revealed
 
+/* ---- P2.10 (DESIGN_AUDIT 2.3): the boot is skippable, and repeat visits
+   within a session are a REPLAY — not a rerun.
+   · Any pointerdown or key during boot jumps the timeline with tl.progress(1)
+     (the .add callbacks fire synchronously: final frame renders, finish()
+     runs, and the font-gated settle rides its normal completion path — a
+     skipped boot still honors the gate). Wheel needs two notches: one is
+     trackpad inertia noise, and a reader paging early means GO.
+   · sessionStorage('ldr-seen') is read at module evaluation — exactly once,
+     before StrictMode's remount — and written at settle, the single choke
+     point both paths share. The replay enters the counter at 82 and keeps
+     the snap's hard-cut expo CHARACTER; every beat compresses together to the
+   ~0.9 s envelope the audit promises.
+   · Reduced motion never builds the sequence timeline — but "skip" stays
+     honest there too (the fade tween jumps the same way). */
+const SEEN_KEY = 'ldr-seen';
+const REDUCE =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const HAS_SEEN = (() => {
+  try {
+    return !REDUCE && window.sessionStorage.getItem(SEEN_KEY) === '1';
+  } catch {
+    return false; // storage disabled (private mode): always the full boot
+  }
+})();
+const START_P = HAS_SEEN ? 0.82 : 0;
+/* The snap SURVIVES the replay — it only compresses proportionally, so the
+   morph keeps its hard-cut expo character instead of becoming a slow ease.
+   Full envelope on repeat visits: ≈0.3 count + beat + ≈0.34 snap + a short
+   land hold + the fade's overlap ⇒ the ~0.9 s the audit promises. */
+const REPLAY = HAS_SEEN
+  ? { count: 0.3, preSnap: 0.04, snap: 0.34, hold: 0.22 }
+  : { count: COUNT_S, preSnap: PRE_SNAP_S, snap: SNAP_S, hold: LAND_HOLD_S };
+
 type DigitRef = SVGGElement | null;
 
 export default function Loader() {
@@ -65,7 +99,7 @@ export default function Loader() {
   const [exactArt, setExactArt] = useState<string[] | null>(null);
   const [gone, setGone] = useState(false);
 
-  const initialLabel = counterLabel(0);
+  const initialLabel = counterLabel(START_P);
   const initialFrame = layoutCounter(initialLabel, trackingAt(0));
 
   /* The exact artwork — 3,823 cubics — is fetched while the counter climbs and
@@ -140,12 +174,29 @@ export default function Loader() {
       'ArrowDown',
     ]);
     const rootEl = document.getElementById('root');
-    rootEl?.setAttribute('inert', '');
-    /* inert keeps the keyboard/mouse out; aria-hidden keeps the announcement
-       stream out while the screen is the loader's (the loader root is itself
-       aria-hidden — so boot reads as one intentional beat of silence instead
-       of a page nobody can touch yet). */
-    rootEl?.setAttribute('aria-hidden', 'true');
+    /* P1.6 + P2.10 (audit 2.3.3, revised): the lock lands on the loader's
+       SIBLINGS, not on #root — the root would also inert the loader's own
+       tabbable "press any key to skip" affordance, which only exists to be
+       found and read. App's providers render DOM directly under #root, so
+       the child sweep covers header/main/footer/skip-link with no leftover.
+       inert keeps the keyboard/mouse out; aria-hidden keeps the announcement
+       stream out; boot reads as one intentional beat of silence from a page
+       nobody can touch yet — with the loader itself the one live element. */
+    const bootLockTargets = rootEl
+      ? Array.from(rootEl.querySelectorAll<HTMLElement>(':scope > :not(.ldr)'))
+      : [];
+    const setBootLock = (on: boolean) => {
+      for (const el of bootLockTargets) {
+        if (on) {
+          el.setAttribute('inert', '');
+          el.setAttribute('aria-hidden', 'true');
+        } else {
+          el.removeAttribute('inert');
+          el.removeAttribute('aria-hidden');
+        }
+      }
+    };
+    setBootLock(true);
 
     const blockScroll = (event: Event) => event.preventDefault();
     const blockKey = (event: KeyboardEvent) => {
@@ -166,8 +217,14 @@ export default function Loader() {
     let done = false;
     const settle = () => {
       html.classList.remove('is-booting');
-      rootEl?.removeAttribute('inert');
-      rootEl?.removeAttribute('aria-hidden');
+      /* This run earned the replay: the next boot in this tab fast-forwards
+         the counter to 82 and settles in under a second. */
+      try {
+        window.sessionStorage.setItem(SEEN_KEY, '1');
+      } catch {
+        /* storage disabled — the full choreography plays every time */
+      }
+      setBootLock(false);
       window.removeEventListener('wheel', blockScroll);
       window.removeEventListener('touchmove', blockScroll);
       window.removeEventListener('keydown', blockKey);
@@ -185,7 +242,7 @@ export default function Loader() {
 
     /** One counter frame: numbers, tracking, block centring. */
     const render = (progress: number) => {
-      const label = counterLabel(progress);
+      const label = counterLabel(START_P + progress * (1 - START_P));
       const frame = layoutCounter(label, trackingAt(progress));
       for (let i = 0; i < DIGIT_SLOTS; i++) {
         const slot = slots[i];
@@ -238,6 +295,25 @@ export default function Loader() {
 
     const tl = gsap.timeline();
 
+    /* skip: jump to the authored end state, not past it. progress(1) runs
+       every .add callback in order — final render, resolveExact, finish —
+       and leaves nothing to drift. On the reduced path the only tween is the
+       fade, so finish() is called directly to guarantee the once-guard. */
+    let skipped = false;
+    const skip = () => {
+      if (skipped || done) return;
+      skipped = true;
+      tl.progress(1);
+      if (reduced) finish();
+    };
+    let wheels = 0;
+    const skipWheel = () => {
+      if (++wheels >= 2) skip();
+    };
+    window.addEventListener('pointerdown', skip, { capture: true });
+    window.addEventListener('keydown', skip, { capture: true });
+    window.addEventListener('wheel', skipWheel, { capture: true, passive: true });
+
     if (reduced) {
       /* No count, no morph, no snap: the character is simply there, and then
          the page is. */
@@ -257,19 +333,19 @@ export default function Loader() {
         proxy,
         {
           p: 1,
-          duration: COUNT_S,
+          duration: REPLAY.count,
           ease: 'power2.inOut',
           onUpdate: () => render(proxy.p),
         },
         0,
       )
-        .addLabel('snap', `+=${PRE_SNAP_S}`)
+        .addLabel('snap', `+=${REPLAY.preSnap}`)
         .to(pctRef.current, { autoAlpha: 0, scale: 0.82, duration: 0.24, ease: 'expo.in' }, 'snap')
         .add(ignite, 'snap')
         .to(
           morph,
           {
-            duration: SNAP_S,
+            duration: REPLAY.snap,
             ease: 'expo.inOut',
             morphSVG: { shape: CHAR_MORPH_D, shapeIndex: NO_ROTATION, map: 'complexity' },
           },
@@ -277,22 +353,24 @@ export default function Loader() {
         )
         .to(glowRef.current, { autoAlpha: 0.6, scale: 1.1, duration: 0.72, ease: 'expo.out' }, 'snap')
         .to(glowRef.current, { autoAlpha: 0.24, duration: 0.9, ease: 'power2.inOut' }, `snap+=0.6`)
-        .addLabel('land', `snap+=${SNAP_S}`)
+        .addLabel('land', `snap+=${REPLAY.snap}`)
         .add(resolveExact, 'land')
-        .to(root, { autoAlpha: 0, duration: 0.62, ease: 'power2.inOut' }, `land+=${LAND_HOLD_S}`)
+        .to(root, { autoAlpha: 0, duration: 0.62, ease: 'power2.inOut' }, `land+=${REPLAY.hold}`)
         .to(
           artRef.current,
           { scale: 1.045, duration: 0.9, ease: 'expo.out' },
-          `land+=${LAND_HOLD_S}`,
+          `land+=${REPLAY.hold}`,
         )
-        .add(finish, `land+=${LAND_HOLD_S + 0.72}`);
+        .add(finish, `land+=${REPLAY.hold + 0.72}`);
     }
 
     return () => {
+      window.removeEventListener('pointerdown', skip, { capture: true });
+      window.removeEventListener('keydown', skip, { capture: true });
+      window.removeEventListener('wheel', skipWheel, { capture: true });
       tl.kill();
       html.classList.remove('is-booting');
-      rootEl?.removeAttribute('inert');
-      rootEl?.removeAttribute('aria-hidden');
+      setBootLock(false);
       window.removeEventListener('wheel', blockScroll);
       window.removeEventListener('touchmove', blockScroll);
       window.removeEventListener('keydown', blockKey);
@@ -303,7 +381,17 @@ export default function Loader() {
   if (gone) return null;
 
   return (
-    <div className="ldr" ref={rootRef} aria-hidden="true">
+    <div
+      className="ldr"
+      ref={rootRef}
+      /* P2.10 (audit 2.3.3): the skip gesture must be discoverable — a
+         tabbing keyboard user (everything else is inert under boot) lands
+         here and hears what a key does. The artwork keeps its own
+         aria-hidden; there are no controls to announce. */
+      tabIndex={0}
+      role="status"
+      aria-label="Loading — press any key to skip"
+    >
       <div className="ldr__bg" />
       <div className="ldr__glow" ref={glowRef} />
       <svg
@@ -380,6 +468,12 @@ export default function Loader() {
           </g>
         </g>
       </svg>
+
+      {!REDUCE && (
+        <span className="ldr__skip" aria-hidden="true">
+          Click or press any key to skip
+        </span>
+      )}
     </div>
   );
 }

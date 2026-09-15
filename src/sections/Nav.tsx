@@ -67,6 +67,17 @@ export default function Nav() {
               >
                 <span className="num">{l.n}</span>
                 <RollText text={l.label} />
+                {/* P2.11 (audit 3.6) — the scrollspy `active` is a class swap
+                    where it can be a MOVEMENT: one hairline with a shared
+                    layoutId slides between links as sections cross the fold. */}
+                {active === l.href.slice(1) && (
+                  <motion.span
+                    layoutId="nav-marker"
+                    className="nav__marker"
+                    aria-hidden="true"
+                    transition={{ type: 'spring', stiffness: 420, damping: 36, mass: 0.7 }}
+                  />
+                )}
               </a>
             ))}
           </div>

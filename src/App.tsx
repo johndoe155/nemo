@@ -18,6 +18,7 @@ import Artists from './sections/Artists';
 import Lore from './sections/Lore';
 import Singularity from './sections/Singularity';
 import Footer from './sections/Footer';
+import CrawlRise from './components/CrawlRise';
 import { Marquee, Starfield, ToastHost } from './components/ui';
 import Ambience from './components/Ambience';
 import FloorState from './components/FloorState';
@@ -141,7 +142,10 @@ export default function App() {
         <Artists />
         <Lore />
         {/* The closing credit crawl — moved above the Singularity so it is
-            completely unaffected by the black hole warping effect. */}
+            completely unaffected by the black hole warping effect. P3.12
+            (audit 2.4): wrapped in the scrubbed clip-rise — the credits
+            ascend out of the dark instead of just continuing the scroll. */}
+        <CrawlRise>
         <div className="signoff__crawl">
           <Marquee
             items={[
@@ -156,6 +160,7 @@ export default function App() {
             variant="credits"
           />
         </div>
+        </CrawlRise>
         {/* THE SINGULARITY — the live WebGPU black hole. Placed in the exact
             gap between the canon timeline above (Lore, whose drilling rod ends
             on the "U-007 — THE LAST AURORA" node) and the sign-off below.

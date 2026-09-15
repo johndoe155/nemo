@@ -392,6 +392,23 @@ export default function BlackHoleStage({
     let canvas: HTMLCanvasElement | null = null;
     let resizeObs: ResizeObserver | null = null;
     let viewObs: IntersectionObserver | null = null;
+    /* P3.12 (DESIGN_AUDIT 2.4) — scroll-scrubbed dolly. The approach is
+       authored as a distance scale, not a raw position write: after the
+       cinematic camera and controls have each done their per-frame absolute
+       writes, we scale the live position by up to −18%. CameraAnimation
+       owns its path in internal state (it never reads camera.position back
+       per frame), and the OrbitControls baseline is re-set from its own
+       output every frame — so there is no feedback loop, and the vendored
+       config stays untouched, exactly as the audit demands. Reduced motion
+       vetoes the whole channel; the consumption hold freezes the framing
+       mid-scrub like it freezes the flythrough. */
+    let dollyP = 0; // eased 0..1 section progress
+    const dollyWant = () => {
+      const r = host.getBoundingClientRect();
+      const vh = window.innerHeight || 1;
+      const raw = (vh - r.top) / (vh + r.height);
+      return Math.max(0, Math.min(1, raw));
+    };
     /** Whether the last frame we wrote was a consumption excursion (as opposed
      * to the static baseline). Lets us restore the baseline exactly once on the
      * frame the hold disengages, rather than every idle frame. */
@@ -431,6 +448,14 @@ export default function BlackHoleStage({
         // and end between two renders without this effect ever re-running.
         if (!cameraHoldRef?.current) camAnim?.update(dt);
         controls?.update();
+        // Dolly: same hold semantics as the flythrough (see lifecycle block).
+        if (!reduced && camera && !cameraHoldRef?.current) {
+          dollyP += (dollyWant() - dollyP) * Math.min(1, dt * 5);
+          if (dollyP > 0.001) {
+            const k = 1 - 0.18 * dollyP;
+            camera.position.multiplyScalar(k);
+          }
+        }
         // The physical response follows the consumption playhead, not the
         // camera hold. After the invitation is gone the playhead stays at 1
         // and the hole remains agitated (grown mass, stronger lensing /

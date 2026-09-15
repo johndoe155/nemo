@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 
 /* ---------------------------------------------------------------------------
    SideRail — fixed left-edge orientation mini-rail (DESIGN_AUDIT §3.1.1).
@@ -75,7 +76,18 @@ export default function SideRail() {
           className={`siderail__dot ${active === it.id ? 'active' : ''}`}
           aria-current={active === it.id ? 'true' : undefined}
         >
-          <i aria-hidden="true" />
+          <i aria-hidden="true">
+            {/* P2.11 — the mini-rail's active state gets the same shared
+                layoutId slide as the nav (separate id: the two rails are
+                mounted simultaneously and must never hijack each other). */}
+            {active === it.id && (
+              <motion.span
+                layoutId="siderail-marker"
+                className="siderail__marker"
+                transition={{ type: 'spring', stiffness: 420, damping: 36, mass: 0.7 }}
+              />
+            )}
+          </i>
           <span className="siderail__label">
             {String(i + 1).padStart(2, '0')} · {it.label}
           </span>

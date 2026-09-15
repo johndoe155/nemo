@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useScroll } from 'framer-motion';
 import SphereImageGrid, { type ImageData } from '@/components/ui/img-sphere';
 import { ARTISTS, GALLERY_PLATES, UNIVERSES } from '../lib/data';
 
@@ -81,10 +82,20 @@ const SPHERE_RADIUS_RATIO = 3;
 
 /* -------------------------------- Section -------------------------------- */
 
+/* Reduced motion is read once at module level: the sphere's ambient spin,
+   the scroll-gust and the step easing all collapse to instant/static states
+   (the component owns the behavior; the section owns the props). */
+const REDUCE =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 export default function Gallery() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [stageBox, setStageBox] = useState({ w: 0, h: 0 });
   const [inView, setInView] = useState(false);
+  /* The page-scroll position feeds the sphere's gust channel — being
+     scrolled past nudges its spin (DESIGN_AUDIT P3.2b). */
+  const { scrollY: pageScroll } = useScroll();
 
   /* Measure the stage so the fixed-size sphere can be sized to it. */
   useEffect(() => {
@@ -169,20 +180,61 @@ export default function Gallery() {
       </div>
 
       <div ref={stageRef} className="cg-stage cg-stage--sphere">
-        {inView && stageBox.w > 0 && (
+        {!REDUCE && inView && stageBox.w > 0 && (
           <SphereImageGrid
             images={SPHERE_IMAGES}
             containerSize={containerSize}
             sphereRadius={sphereRadius}
             {...SPHERE_CONFIG}
+            autoRotate={!REDUCE && SPHERE_CONFIG.autoRotate}
+            gust={pageScroll}
+            ariaLabel={`Rotunda — ${SPHERE_IMAGES.length} plates on a drifting sphere. Left and right arrow keys bring the next plate to the front, Enter inspects it.`}
           />
         )}
       </div>
 
       <div className="shell">
-        <p className="cg__hint">
+      {REDUCE && (
+        /* P2.1 — reduced motion: the audit's verdict is literal. The 3D
+           sphere does not mount at all; the plates become a plain list of
+           real figures, in registry order, fully readable and focusable
+           without any motion or gesture. */
+        <ul className="cg__flat">
+          {GALLERY_PLATES.map((plate) => (
+            <li key={plate.code}>
+              <figure>
+                <img src={plate.image} alt={plate.alt} loading="lazy" style={{ objectPosition: plate.focus }} />
+                <figcaption>
+                  <b>{plate.code} — {plate.title}</b>
+                  <span>{plate.subtitle} · Art by {plate.credit}</span>
+                </figcaption>
+              </figure>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* P2.1 — the sphere is drag/keyboard furniture; the CANON ITSELF is
+         mirrored here as plain list content, so assistive tech and search
+         crawpers traverse all twelve plates as text, not as sixty nodes of
+         aria-hidden chrome. One entry per unique plate (the sphere repeats
+         the set to populate the globe). Skipped under REDUCE, where the
+         visible flat list IS the content. */}
+      {!REDUCE && (
+      <ul className="vh">
+        {GALLERY_PLATES.map((plate) => (
+          <li key={plate.code}>
+            {plate.code} — {plate.title}. {plate.subtitle}. Art by {plate.credit}.
+          </li>
+        ))}
+      </ul>
+      )}
+      </div>
+
+      <div className="shell">
+        <p className="cg__hint" {...(REDUCE ? { style: { display: 'none' } } : {})}>
           <span className="cg__hint-keys" aria-hidden="true" />
-          Drag · flick · tap a plate to open
+          Drag · flick · tap a plate to open — or focus the sphere and use arrows + Enter
         </p>
       </div>
     </section>

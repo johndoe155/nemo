@@ -263,6 +263,7 @@ export default function Lore() {
       <div className="shell lore__grid">
         <div className="lore__copy">
           <SectionHead
+            num="07"
             kicker="THE CORE IDENTITY"
             title={
               <>

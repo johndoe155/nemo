@@ -23,10 +23,14 @@ export default function UniverseCard({
   u,
   onClick,
   index,
+  lifted = false,
 }: {
   u: Universe;
   onClick: (u: Universe) => void;
   index?: number;
+  /** True while this card's own dialog is open: the media plate surrenders
+   *  its layoutId to the panel (P3.13 — see the media wrapper). */
+  lifted?: boolean;
 }) {
   const rarity = RARITY[u.rarity];
   const accent = rarity.color;
@@ -80,7 +84,18 @@ export default function UniverseCard({
     >
       <div className="ucard__index" aria-hidden="true">{u.code}</div>
       <span id={actId} className="vh">Open universe details</span>
-      <div className="ucard__media" style={{ position: 'relative' }}>
+      {/* P3.13 (audit 2.5) — the media plate is the SHARED ELEMENT: while the
+          card's own dialog is open it surrenders its layoutId (`plate-<id>`)
+          to the dialog panel, and framer's layout projection carries the one
+          image across the two DOM trees on a single 0.6 s expo-spring. The
+          card "becomes" the dialog instead of the dialog appearing beside a
+          copy. Reduce collapses it back to two plain renders. */}
+      <motion.div
+        className="ucard__media"
+        style={{ position: 'relative' }}
+        layoutId={lifted || reduce ? undefined : `plate-${u.id}`}
+        transition={{ layout: { type: 'spring', stiffness: 190, damping: 27, mass: 0.9 } }}
+      >
         {/* Parallax plane: skeleton + bitmap. Scrims stay outside it. */}
         <motion.div className="ucard__media-inner" style={{ x: tilt.layer.x, y: tilt.layer.y }}>
           <div
@@ -132,7 +147,7 @@ export default function UniverseCard({
           )}
         </motion.div>
         {u.status === 'sold-out' && <span className="ucard__sold">SOLD OUT · {u.minted}/{u.supply}</span>}
-      </div>
+      </motion.div>
 
       <div className="ucard__body">
         <h3 className="ucard__name" id={nameId}>{u.name}</h3>

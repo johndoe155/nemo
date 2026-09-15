@@ -179,6 +179,7 @@ function StampSlot({ index, filled, next, universe, isLatest }: SlotProps) {
       onPointerLeave={untilt}
       role="img"
       aria-label={label}
+      data-cursor="COLLECT"
     >
       {/* tilt layer (mouse-tracked springs) — kept separate from the flip
           layer so the two rotateY animations never fight each other */}
