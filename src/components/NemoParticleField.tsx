@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { createNemoParticleField } from '../three/nemo-particles/nemo-particles';
+import { settleParticleField } from '../lib/particleGate';
 import { BASE } from '../lib/data';
 
 /* ============================================================================
@@ -32,9 +33,12 @@ import { BASE } from '../lib/data';
 
    WHAT IT RENDERS
    The DOM layers the standalone page had around its canvas, in the same order:
-   canvas → fallback → breathe → loading overlay → vignette → grain. They are
-   ordinary React elements because the engine reports state through callbacks
-   instead of reaching into the document by id.
+   canvas → fallback → breathe → vignette → grain. They are ordinary React
+   elements because the engine reports state through callbacks instead of
+   reaching into the document by id. The original's loading overlay is gone —
+   boot-time loading belongs to the boot loader, which will not release the
+   page until this field reports ready (see lib/particleGate.ts); the fallback
+   survives for the one case the boot cannot express, a renderer that failed.
 
    POINTER TRACKING — TWO SYSTEMS, DELIBERATELY KEPT APART
    Hero.tsx keeps its own mousemove listener, which nudges .hero__bg a few px
@@ -55,14 +59,18 @@ const POSE_BASE = `${BASE}nemo-particles`;
  * never shows a frozen field for a frame. Same idea as the singularity stage. */
 const VIEW_MARGIN = '18% 0px';
 
-/** The original's overlay copy. Its last two lines told you to start
- * `python3 -m http.server` and open nemo-webgl.html — instructions for the
- * standalone file, not for this app, so they name the real failure instead. */
-const ERROR_COPY = {
-  title: 'COULDN’T LOAD PARTICLE DATA',
-  line: (
+/** What the field says when it cannot paint. There is NO loading overlay any
+ *  more (see lib/particleGate.ts): the boot owns the wait, so the only thing
+ *  this component ever has to surface is a terminal failure — a missing
+ *  renderer, or pose data that never arrived. A silent failure would be worse
+ *  than the overlay it replaced, so it stays as one discreet chip at the foot
+ *  of the field, never over the hero's type. */
+const FAILURE_COPY: Record<'error' | 'unsupported', React.ReactNode> = {
+  unsupported: <>WebGL isn&rsquo;t available in this preview environment.</>,
+  error: (
     <>
-      The four pose files under <code>{POSE_BASE}/pose0.json … pose3.json</code> did not arrive
+      COULDN&rsquo;T LOAD PARTICLE DATA — the pose files under{' '}
+      <code>{POSE_BASE}/pose0.json … pose3.json</code> did not arrive
     </>
   ),
 };
@@ -83,15 +91,12 @@ export default function NemoParticleField({
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState<Phase>('loading');
-  const [status, setStatus] = useState('LOADING THE FIELD');
-  const [veilGone, setVeilGone] = useState(false);
 
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
 
     let released = false;
-    let hideTimer = 0;
 
     /* The canvas is created here rather than in JSX so that unmount takes the
        context with it: a canvas element that survives a remount hands back its
@@ -101,27 +106,24 @@ export default function NemoParticleField({
     canvas.setAttribute('aria-hidden', 'true');
     stage.insertBefore(canvas, stage.firstChild);
 
+    /* Terminal states release the boot (lib/particleGate.ts). `ready` means
+       the poses are baked, so the hero can be revealed with the field already
+       painted; `error` / `unsupported` mean there is nothing left to wait for
+       and holding the boot for a renderer that does not exist would be pure
+       latency. The engine keeps narrating through onStatus, but nothing draws
+       it any more — there is no overlay to draw it in. */
+    const settleBoot = (next: Phase) => {
+      if (released) return;
+      setPhase(next);
+      settleParticleField();
+    };
+
     const field = createNemoParticleField(canvas, {
       baseUrl: POSE_BASE,
       host: hostRef?.current ?? null,
-      onStatus: (text) => {
-        if (!released) setStatus(text);
-      },
-      onReady: () => {
-        if (released) return;
-        setPhase('ready');
-        /* The overlay fades over .55s (CSS) and is then dropped from the DOM —
-           the original did the same with display:none after 700ms. */
-        hideTimer = window.setTimeout(() => {
-          if (!released) setVeilGone(true);
-        }, 700);
-      },
-      onError: () => {
-        if (!released) setPhase('error');
-      },
-      onUnsupported: () => {
-        if (!released) setPhase('unsupported');
-      },
+      onReady: () => settleBoot('ready'),
+      onError: () => settleBoot('error'),
+      onUnsupported: () => settleBoot('unsupported'),
     });
 
     /* Boot sizing — the original called resize() once, synchronously, before
@@ -147,7 +149,6 @@ export default function NemoParticleField({
 
     return () => {
       released = true;
-      if (hideTimer) window.clearTimeout(hideTimer);
       resizeObs.disconnect();
       viewObs.disconnect();
       field.destroy();
@@ -155,42 +156,18 @@ export default function NemoParticleField({
     };
   }, [hostRef]);
 
-  const showVeil = !veilGone && phase !== 'unsupported';
-
   return (
     <div className="nemo-field" ref={stageRef}>
       {/* ← the engine's <canvas> is inserted as the first child by the effect */}
 
-      {phase === 'unsupported' && (
-        <div className="nemo-field__fallback">
-          WebGL isn&rsquo;t available in this preview environment.
-        </div>
-      )}
-
-      <div className="nemo-field__breathe" aria-hidden="true" />
-
-      {showVeil && (
+      {/* No loading overlay: the boot covers the fetch (see particleGate.ts).
+          Only a terminal failure has anything left to say. */}
+      {(phase === 'error' || phase === 'unsupported') && (
         <div
-          className={`nemo-field__loading${phase === 'ready' ? ' is-done' : ''}${
-            phase === 'error' ? ' is-error' : ''
-          }`}
-          aria-hidden={phase === 'ready' || undefined}
+          className={`nemo-field__fallback${phase === 'error' ? ' is-error' : ''}`}
+          role={phase === 'error' ? 'alert' : undefined}
         >
-          <div className="nemo-field__brand">
-            NEMO<span className="nemo-field__accent">VERSE</span>
-          </div>
-          <div className="nemo-field__spinner" />
-          {phase === 'error' ? (
-            <p className="nemo-field__status" role="alert">
-              {ERROR_COPY.title}
-              <br />
-              {ERROR_COPY.line}
-            </p>
-          ) : (
-            <p className="nemo-field__status" role="status" aria-live="polite">
-              {status}
-            </p>
-          )}
+          {FAILURE_COPY[phase]}
         </div>
       )}
 

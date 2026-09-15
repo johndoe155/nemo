@@ -13,6 +13,7 @@ import {
 import { GLYPH_SCALE, counterLabel, glyphPath, layoutCounter, trackingAt } from '../lib/nemoMorph';
 import { holdScroll, releaseScroll } from '../lib/scroll';
 import { criticalFontsReady } from '../lib/fonts';
+import { particleFieldReady } from '../lib/particleGate';
 
 gsap.registerPlugin(MorphSVGPlugin);
 
@@ -49,11 +50,17 @@ const LAND_HOLD_S = 1.6; // the character, alone and settled, before the page is
 
 /* ---- P2.10 (DESIGN_AUDIT 2.3): the boot is skippable, and repeat visits
    within a session are a REPLAY — not a rerun.
-   · Any pointerdown or key during boot jumps the timeline with tl.progress(1)
-     (the .add callbacks fire synchronously: final frame renders, finish()
-     runs, and the font-gated settle rides its normal completion path — a
-     skipped boot still honors the gate). Wheel needs two notches: one is
-     trackpad inertia noise, and a reader paging early means GO.
+   · A skip jumps the timeline with tl.progress(1) (the .add callbacks fire
+     synchronously: final frame renders, finish() runs, and the font-gated
+     settle rides its normal completion path — a skipped boot still honors
+     every gate, it just grants them less patience). The gestures:
+       key            any key
+       wheel          2 notches — one is trackpad inertia noise
+       mouse / pen    press anywhere; the boot covers the page, so a click on
+                      it can only mean "get on with it"
+       touch          RELEASE, not press (P7, see the binding below): every
+                      scroll attempt starts with a touch-down, and treating
+                      that as consent is what made phones never show the count
    · sessionStorage('ldr-seen') is read at module evaluation — exactly once,
      before StrictMode's remount — and written at settle, the single choke
      point both paths share. The replay enters the counter at 82 and keeps
@@ -231,11 +238,27 @@ export default function Loader() {
       releaseScroll('boot');
       setGone(true);
     };
+    /* The third gate, after the fonts: the hero's particle field. It pulls
+       2.2 MB of pose data and the engine turns it into GPU buffers before it
+       can draw a single frame — on a cold cache that outlasts the whole
+       choreography. It used to cover that wait with a loader of its OWN, a
+       second brand-and-spinner overlay that reappeared the instant this one
+       released. Two loaders for one page. Now the field has no loading state
+       at all (see NemoParticleField.tsx): it reports ready, and the boot
+       holds the page until it does. It starts fetching at mount, in parallel
+       with the count, so on any warm cache this resolves long before the
+       timeline lands and costs nothing.
+       Capped, like the font gate, because the fetch has no timeout of its
+       own — a stalled connection must never trap the boot. A skip also earns
+       a token cap only: the reader asked to move on, and the boot is already
+       invisible by the time finish() runs, so the wait reads as a brief
+       scroll-lock. */
     const finish = () => {
       if (done) return;
       done = true;
-      void fontsReady.then(settle);
+      void Promise.all([fontsReady, particleFieldReady(skipped ? 600 : 2000)]).then(settle);
     };
+    let skipped = false;
 
     const slots = digitRefs.current;
     const paths = digitPaths.current;
@@ -298,19 +321,58 @@ export default function Loader() {
     /* skip: jump to the authored end state, not past it. progress(1) runs
        every .add callback in order — final render, resolveExact, finish —
        and leaves nothing to drift. On the reduced path the only tween is the
-       fade, so finish() is called directly to guarantee the once-guard. */
-    let skipped = false;
+       fade, so finish() is called directly to guarantee the once-guard.
+
+       P7 — WHY A TOUCH HAS TO COME BACK UP (audit 2.3, revised). This used to
+       bind `skip` straight to pointerdown. On a desktop that is harmless: the
+       wheel needs two notches, the pointer rarely presses a page it cannot
+       touch, and a click is unambiguous. On a phone it was fatal, and it is
+       the reported bug: the first thing a reader does with a new page is push
+       it — a scroll attempt, a probe — and that very first touch-down ended
+       the entire boot. Counter gone at whatever number it had reached, morph
+       never played, character snapped in from nowhere. Desktop never showed
+       it because no desktop gesture begins with a bare press.
+       So intent is now read per device: a mouse or pen press is consent (the
+       boot is the only thing on screen); a finger must lift where it landed.
+       Tap = go. Drag away = they were trying to scroll and the boot simply
+       holds the page still, which is exactly what the count is for. */
     const skip = () => {
       if (skipped || done) return;
       skipped = true;
       tl.progress(1);
       if (reduced) finish();
     };
+    const TAP_SLOP_PX = 14; // a finger that travels further was dragging, not tapping
+    let touchStart: { x: number; y: number } | null = null;
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') {
+        touchStart = { x: event.clientX, y: event.clientY };
+        return;
+      }
+      skip();
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (!touchStart) return;
+      if (Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > TAP_SLOP_PX) {
+        touchStart = null;
+      }
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      const from = touchStart;
+      touchStart = null;
+      if (from && event.pointerType === 'touch') skip();
+    };
+    const onPointerCancel = () => {
+      touchStart = null;
+    };
     let wheels = 0;
     const skipWheel = () => {
       if (++wheels >= 2) skip();
     };
-    window.addEventListener('pointerdown', skip, { capture: true });
+    window.addEventListener('pointerdown', onPointerDown, { capture: true });
+    window.addEventListener('pointermove', onPointerMove, { capture: true });
+    window.addEventListener('pointerup', onPointerUp, { capture: true });
+    window.addEventListener('pointercancel', onPointerCancel, { capture: true });
     window.addEventListener('keydown', skip, { capture: true });
     window.addEventListener('wheel', skipWheel, { capture: true, passive: true });
 
@@ -365,7 +427,10 @@ export default function Loader() {
     }
 
     return () => {
-      window.removeEventListener('pointerdown', skip, { capture: true });
+      window.removeEventListener('pointerdown', onPointerDown, { capture: true });
+      window.removeEventListener('pointermove', onPointerMove, { capture: true });
+      window.removeEventListener('pointerup', onPointerUp, { capture: true });
+      window.removeEventListener('pointercancel', onPointerCancel, { capture: true });
       window.removeEventListener('keydown', skip, { capture: true });
       window.removeEventListener('wheel', skipWheel, { capture: true });
       tl.kill();
@@ -390,7 +455,7 @@ export default function Loader() {
          aria-hidden; there are no controls to announce. */
       tabIndex={0}
       role="status"
-      aria-label="Loading — press any key to skip"
+      aria-label="Loading — tap, click or press any key to skip"
     >
       <div className="ldr__bg" />
       <div className="ldr__glow" ref={glowRef} />
@@ -471,7 +536,7 @@ export default function Loader() {
 
       {!REDUCE && (
         <span className="ldr__skip" aria-hidden="true">
-          Click or press any key to skip
+          Tap, click or press any key to skip
         </span>
       )}
     </div>

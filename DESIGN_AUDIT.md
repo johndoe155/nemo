@@ -93,7 +93,42 @@ state feedback**. This audit is evidence-based: every finding cites the file it 
 > boxes in Chromium, not by eye: a full-section text-overlap scan now returns
 > only decorative giant type and one-line-box bleed.
 >
-> **The roadmap is now executed end-to-end (P0–P6).** Remaining open items
+> **P7 is executed** (closing pass, same day) — the two defects reported
+> from a **real phone**, plus the audit record for the pass. Both were
+> invisible to every gate and to desktop: the boot looked perfect on a
+> mouse, and the second loader only appeared when the network was slow.
+>
+> | Finding | Shipped | Why |
+> | --- | --- | --- |
+> | **The mobile boot never showed the count or the morph.** Reported: on a phone the loader goes from `0%` straight to the character. Not reproducible in plain emulation — an iPhone-13 profile with no input climbs `0 → 100` and morphs exactly like desktop. It reproduces with **touch input**: `skip` was bound to `pointerdown` (capture, on `window`), and a reader's first act on a new page is to push it — a scroll attempt, a probe. That first touch-down ended the whole boot: counter vanished at whatever number it had reached, `tl.progress(1)` snapped the character in, morph never played. Desktop was shielded by accident (wheel needs two notches; no desktop gesture begins with a bare press). | Intent is read per device: a **mouse or pen press is still consent** (the boot is the only surface on screen), a **finger must lift where it landed** — tap = go, drag = they were scrolling and the boot simply holds the page still, which is exactly what the count is for. A finger that travels >14 px disarms the tap. Skip copy now reads "Tap, click or press any key to skip". | A skip gesture must be distinguishable from a page that has not responded yet. The failure mode of the old rule was total (the entire choreography, on the one device class where the count is the only feedback that anything is happening). |
+> | **The particle field painted a second loader.** `NemoParticleField` carried its own brand + spinner + status overlay for the four `pose*.json` fetches (**2.2 MB**). A CSS rule hid it while `html.is-booting` was set — so it reappeared the *instant* the boot released, and the faster the boot the more certain the flash; on a slow connection the reader sat through a second loader across the hero, under a boot that had just told them it was done. | The overlay is **deleted** — markup, spinner keyframes, brand gradient, status line and the suppression rule. Readiness now rides the boot: `lib/particleGate.ts` (the same single-report gate shape as `lib/fonts.ts`) is released by the field on every terminal state, and the loader's release awaits `Promise.all([fontsReady, particleFieldReady])`. Caps: 2 000 ms after a natural landing, 600 ms after a skip — the engine's fetch has no timeout of its own, so an uncapped wait could trap the boot forever. The field keeps one chip for the genuinely broken cases (no WebGL, pose data that never arrived), parked at the foot of the field. | Two loaders for one page was the bug; "no visual breakage" means the boot must *carry* the wait, not merely cover it. The gate resolves the moment the field reports, and the field starts fetching in parallel with the count, so on any warm cache the boot is not longer than before. |
+>
+> Verified: `tsc -b` clean · `npm run build` clean · **80/80 unit** (6 new: the
+> gate's contract — pending, capped, released, and never re-armed — plus a
+> regression guard that fails if a field loader is ever re-added) · a11y green
+> at 1280×900 and 390×844 · visual-regression green (8/8, hero pixel-identical
+> to the P6 baseline) · `npm run budget` green (eager JS 643.6 kB gz). The
+> mobile fix was verified with **real touch events** (`Input.dispatchTouchEvent`:
+> touchStart → 7 moves → touchEnd, the actual scroll gesture), not with a
+> simulated tap: the counter climbs through the gesture to `100`, the morph
+> plays, the boot releases. A deliberate tap still skips, and a desktop click
+> still skips.
+>
+> **`tests/signoff-horizon.spec.ts` is red in the sandbox this pass was made in
+> — 28 of its 32 tests — and that is not this pass's doing.** The same tests
+> fail the same way against the **base commit** (`a5f8a32`, before any of this
+> session's work): `stage status booting gets the hold without the paint`
+> expects ONE `signoff-horizon*` ScrollTrigger and gets two, the late-capture
+> trio wants `lateSnapshot.width === 0` and gets `640`, and the WebGL2 pixel /
+> snapshot-fidelity cases cannot agree with a CPU port under software
+> rasterisation. They exercise the black-hole and sign-off capture fixtures and
+> want a machine with a real GL frame budget; the suite was NOT re-verified
+> here, and should be treated as machine-dependent until it runs somewhere with
+> a GPU. Everything the pass touched — the boot, the field, the stylesheet —
+> is covered by the gates above, and no failing case in that file reads the
+> loader or the particle field.
+>
+> **The roadmap is now executed end-to-end (P0–P7).** Remaining open items
 > are exactly the two the roadmap itself left conditional: real-lab
 > Lighthouse/filmstrip numbers to drive the ratchet down (P5.19's measuring
 > half), and any *new* surfaces earning their own cursor labels.
@@ -113,9 +148,10 @@ state feedback**. This audit is evidence-based: every finding cites the file it 
 | Art pipeline (AVIF 540/840/full + LQIP blur-up) | `scripts/generate-art-variants.sh`, `CardImage` | Strong |
 | Motion perf policy (framer owns transform; no shadow/gdrift transitions on cards) | README, `motion.css` | Strong |
 
-Measured build (`npm run build`, clean `tsc -b`):
-CSS **194.4 kB** (38.5 gzip) · `index` JS **484 kB** (167.6 gzip) · `three` classic chunk
-**736 kB** · `three/webgpu` chunk **659 kB** · **25 self-hosted woff2 faces (~1.9 MB on disk)**.
+Measured build (`npm run build`, clean `tsc -b`; re-measured at P7):
+CSS **197.5 kB** (39.5 gzip) · `index` JS **520 kB** (179.9 gzip) · `three` classic chunk
+**736 kB** · `three/webgpu` chunk **659 kB** · **25 self-hosted woff2 faces (~1.9 MB on disk)** ·
+eager JS total **643.6 kB gz**, `npm run budget` green.
 
 ---
 
@@ -237,6 +273,9 @@ protects). And there is no `sessionStorage` bypass, while wallet/pulls/sound all
 1. `skip()` — any `pointerdown`, `keydown` (Space/PageDown/Escape/arrows) or `wheel ≥ 2` during
    boot jumps the timeline with `tween.progress(1)` and runs `finish()`. Award sites earn
    cinematic by *letting you leave*.
+   *(A bare `pointerdown` turned out to be too generous a reading of intent on touch — see
+   **P7** below: a phone's first touch-down is a scroll attempt, and it was killing the whole
+   sequence. A mouse or pen press still skips; a finger now has to lift where it landed.)*
 2. `sessionStorage.setItem('ldr-seen','1')` on finish; boot replays in `0.9 s` (count fast-forwards
    from 82, morph keeps its snap) on repeat visits. Keep full skip under reduced motion.
 3. During boot add `main, footer, nav { inert: true }`-style blocking: `html.is-booting body

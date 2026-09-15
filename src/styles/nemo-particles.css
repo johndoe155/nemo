@@ -120,81 +120,15 @@
   mix-blend-mode: overlay;
 }
 
-/* ---- loading overlay (shown while the four pose JSONs are fetched) ---- */
-.nemo-field__loading {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  background: var(--npf-bg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 26px;
-  transition: opacity 0.55s ease;
-}
-.nemo-field__loading.is-done {
-  opacity: 0;
-  pointer-events: none;
-}
-.nemo-field__brand {
-  color: var(--npf-ink);
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  font-size: 16px;
-}
-.nemo-field__brand .nemo-field__accent {
-  background: linear-gradient(90deg, var(--npf-cyan), var(--npf-violet), var(--npf-magenta));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.nemo-field__spinner {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.12);
-  border-top-color: var(--npf-cyan);
-  animation: npfLoadspin 1s linear infinite;
-}
-@keyframes npfLoadspin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-.nemo-field__status {
-  color: rgba(230, 230, 240, 0.6);
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  line-height: 1.9;
-  text-align: center;
-  max-width: 460px;
-  font-family: ui-monospace, Menlo, monospace;
-  padding: 0 24px;
-}
-.nemo-field__status code {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 2px 7px;
-  border-radius: 6px;
-  color: rgba(230, 230, 240, 0.85);
-  letter-spacing: 0.02em;
-}
-.nemo-field__loading.is-error .nemo-field__spinner {
-  display: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .nemo-field__spinner {
-    animation: none;
-  }
-}
-
-/* No-WebGL notice. It used to be centred across the whole field, which put
-   it directly behind the hero headline — the one surface that must stay
-   clean (and `z-index: 10` inside the field still loses to the hero content,
-   so it read as smudged type under the title rather than as a message).
-   It parks at the foot of the field as a small glass chip: legible, honest
-   about the missing renderer, and out of the type's way. */
+/* Terminal-failure chip — no WebGL, or pose data that never arrived. It is
+   the field's ONLY overlay now: loading is the boot loader's job (see
+   lib/particleGate.ts; the field's own loading overlay was deleted because
+   it painted a second loader across the hero the moment the boot released).
+   It used to be centred across the whole field, which put it directly behind
+   the hero headline — the one surface that must stay clean (and `z-index: 10`
+   inside the field still loses to the hero content, so it read as smudged
+   type under the title rather than as a message). It parks at the foot of the
+   field as a small glass chip: legible, honest, and out of the type's way. */
 .nemo-field__fallback {
   position: absolute;
   left: 50%;
@@ -219,4 +153,11 @@
   z-index: 10;
   text-align: center;
   box-sizing: border-box;
+}
+.nemo-field__fallback.is-error {
+  color: #f0c9a8;
+  border-color: rgba(240, 180, 120, 0.34);
+  background: rgba(24, 12, 6, 0.72);
+  letter-spacing: 0.12em;
+  text-transform: none;
 }
