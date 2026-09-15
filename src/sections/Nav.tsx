@@ -83,7 +83,7 @@ export default function Nav() {
           </div>
 
           <div className="nav__cta-desktop">
-            <WalletButton connected={wallet.connected} onConnect={wallet.connect} compact />
+            <WalletButton connected={wallet.connected} onConnect={wallet.connect} onReset={wallet.disconnect} compact />
           </div>
 
           <Magnetic preset="chrome" className="nav__burger-mag">
@@ -131,7 +131,7 @@ export default function Nav() {
               </motion.a>
             ))}
             <div className="mmenu__foot" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <WalletButton connected={wallet.connected} onConnect={wallet.connect} />
+              <WalletButton connected={wallet.connected} onConnect={wallet.connect} onReset={wallet.disconnect} />
               <span>ONE CANON · INFINITE VERSIONS</span>
             </div>
           </motion.div>

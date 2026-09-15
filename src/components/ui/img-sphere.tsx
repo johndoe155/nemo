@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { motionValue, useMotionValueEvent, useVelocity, useReducedMotion, type MotionValue } from 'framer-motion';
 import { useFocusTrap } from '@/lib/hooks';
 import { lockPage, unlockPage } from '@/lib/scroll';
+import { haptic, HAPTIC } from '@/lib/haptics';
 
 /* MotionValue stand-in so the gust channel's hooks run unconditionally when
    no scroll-gust is wired (DESIGN_AUDIT P3.2b). */
@@ -441,6 +442,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         return;
       }
       openFrom.current = next ? openId : null;
+      if (next) haptic(HAPTIC.dialogOpen); // same beat as the roster dialog (P4.16)
       if (next) namePlate(openId); // the plate is the OLD side of the morph
       const t = doc.startViewTransition(() => {
         setSelectedImage(next);
@@ -749,7 +751,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     return (
       <div
         key={image.id}
-        className="absolute cursor-pointer select-none transition-transform duration-200 ease-out"
+        className="absolute sphere-plate cursor-pointer select-none transition-transform duration-200 ease-out"
         aria-hidden="true"
         data-plate-id={image.id}
         style={{

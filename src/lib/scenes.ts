@@ -199,6 +199,35 @@ export const SECTION_SCENE: Record<string, SceneId> = {
 };
 
 /* ---------------------------------------------------------------------------
+   SCENE_TINTS — the district palette promoted into the CSS shell
+   (DESIGN_AUDIT 1.4 / P4.17).
+
+   The WebGL ambience always lerped its shader uniforms per district; the
+   CSS shell below it was static. These two variables close that gap:
+   `--scene-bg` retints the page ground (navy→ember around the black hole,
+   cool cyan around the persona's transmission, warm gold ingress in the
+   vault) and `--scene-line` carries the same temperature into card hairlines.
+   No new hues — every value is a temperature lean of colours the system
+   already ships (--void, the --bh-* hexes, the house accents), and the
+   deltas are single-digit luminance on purpose: luxury dark UIs get depth
+   from temperature drift, not from alpha.
+
+   Written by observeScenes' apply() — the same call that stamps
+   data-scene — so the CSS shell, the shader and the no-WebGL fallback
+   cannot drift apart: one scene authority, three renderers.
+--------------------------------------------------------------------------- */
+export const SCENE_TINTS: Record<SceneId, { bg: string; line: string }> = {
+  arrival: { bg: '#07060f', line: 'rgba(214, 205, 255, 0.10)' }, // iris-leaning
+  registry: { bg: '#05070d', line: 'rgba(200, 232, 255, 0.10)' }, // cooler, archival
+  signal: { bg: '#050a10', line: 'rgba(196, 238, 255, 0.10)' }, // cyan cast
+  arsenal: { bg: '#080610', line: 'rgba(216, 200, 255, 0.10)' }, // iris charge
+  vault: { bg: '#0a0806', line: 'rgba(255, 228, 176, 0.10)' }, // warm gold ingress
+  constellation: { bg: '#0a0510', line: 'rgba(255, 206, 232, 0.10)' }, // magenta-led
+  abyss: { bg: '#040409', line: 'rgba(196, 208, 236, 0.08)' }, // deeper than the void
+  singularity: { bg: '#080b12', line: 'rgba(232, 214, 198, 0.09)' }, // meets the canvas sky
+};
+
+/* ---------------------------------------------------------------------------
    sceneVec — flatten a scene to the 20-float layout the shader loop lerps:
      [ r·g, g·g, b·g, x, y, rad ] × 3 fields, then [ vig, warm ].
    Gain is premultiplied into the colour so the shader adds one vec3 per
@@ -239,6 +268,11 @@ export function observeScenes(onScene?: (id: SceneId) => void): () => void {
     if (id === current) return;
     current = id;
     root.dataset.scene = id;
+    /* 1.4 — the CSS shell reads the district too: the transition lives on
+       the consumers (audit-gaps.css), this writes the target values. */
+    const tint = SCENE_TINTS[id];
+    root.style.setProperty('--scene-bg', tint.bg);
+    root.style.setProperty('--scene-line', tint.line);
     onScene?.(id);
   };
 
@@ -278,5 +312,7 @@ export function observeScenes(onScene?: (id: SceneId) => void): () => void {
   return () => {
     io.disconnect();
     delete root.dataset.scene;
+    root.style.removeProperty('--scene-bg');
+    root.style.removeProperty('--scene-line');
   };
 }

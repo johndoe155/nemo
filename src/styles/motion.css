@@ -281,3 +281,28 @@
     background-position: 100% 100%;
   }
 }
+
+
+/* ---- P4.16 (audit 3.5) · press-state parity for coarse pointers ---------
+   .perk, .product (store) and the rotunda plates carry a hover tilt on
+   fine pointers; the equivalent under touch is a 0.985 press scale plus
+   the bloom half-lit. `scale` is the INDEPENDENT CSS property (house rule:
+   framer owns `transform` on these nodes), so the press never fights the
+   tilt springs — and :active is free where a whileTap prop would mean
+   converting hot-path divs to motion components. */
+@media (pointer: coarse) {
+  .perk,
+  .product,
+  .sphere-plate {
+    transition: scale 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .perk:active,
+  .product:active,
+  .sphere-plate:active {
+    scale: 0.985;
+  }
+  .perk.sheen:active::after,
+  .product.sheen:active::after {
+    opacity: 0.5;
+  }
+}

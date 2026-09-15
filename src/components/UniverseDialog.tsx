@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '../lib/hooks';
 import { lockPage, unlockPage } from '../lib/scroll';
+import { haptic, HAPTIC } from '../lib/haptics';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { KineticLink } from './motion';
 import CardImage from './CardImage';
@@ -49,6 +50,9 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
 
   useEffect(() => {
     lockPage('dialog');
+    /* P4.16 (audit 3.5): the dialog-open beat reaches the hand as well as
+       the eye — one util, feature-detected, silent where there is no motor. */
+    haptic(HAPTIC.dialogOpen);
     return () => unlockPage('dialog');
   }, []);
 

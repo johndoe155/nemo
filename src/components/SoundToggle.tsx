@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { attractTick, confirmTick } from '../lib/sound';
+import { attractTick, confirmTick, setSoundEnabled } from '../lib/sound';
 import { MagneticButton, RollText } from './motion';
 
 /* ---------------------------------------------------------------------------
@@ -20,10 +20,17 @@ export default function SoundToggle() {
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     setSupported(true);
+    let stored = false;
     try {
-      setEnabled(window.localStorage.getItem(STORAGE_KEY) === 'on');
+      stored = window.localStorage.getItem(STORAGE_KEY) === 'on';
     } catch {
       /* storage unavailable — stay off */
+    }
+    if (stored) {
+      setEnabled(true);
+      /* re-armed preference, no gesture yet: the engine creates the context
+         suspended and starts the gravity bed on the first pointerdown. */
+      setSoundEnabled(true);
     }
   }, []);
 
@@ -51,6 +58,9 @@ export default function SoundToggle() {
   const toggle = () => {
     const next = !enabled;
     setEnabled(next);
+    /* the toggle click IS the gesture: the engine may create + run the
+       context right here. */
+    setSoundEnabled(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next ? 'on' : 'off');
     } catch {

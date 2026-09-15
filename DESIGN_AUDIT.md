@@ -43,9 +43,29 @@ state feedback**. This audit is evidence-based: every finding cites the file it 
 > P2.11 shipped complete (`layoutId` markers on Nav **and** SideRail, separate
 > ids; `data-cursor` sweep: SPIN/RELEASE/DRAG on the rails, LOOK INTO IT on the
 > stage, COLLECT on stamp slots; cursor glow now blooms for every labelled
-> surface). **P4–P5 remain open** — sound map, haptics, scene drift, wallet chip,
-> payload. The axe gate's `#rotunda` exclusion was removed with P2.8; the debt
+> surface). The axe gate's `#rotunda` exclusion was removed with P2.8; the debt
 > list is empty at both viewports.
+>
+> **P4 and P5 are executed** (third pass, same day). Deltas from the written
+> plan, with reasons:
+>
+> | Plan said | Shipped | Why |
+> | --- | --- | --- |
+> | 3.4: extend the two-blip engine with a diegetic map, `sound.ts` registry `{ event: {freq, dur, type, filter} }` | `SOUND` table owns every voice (attract/confirm carried over at their original numbers); `rodRing(speed)` maps |carriage velocity| px/ms through base+perUnit→cap, computed from the same MotionValue `HangingCard` differentiates; `stampThud`/`pullWhoosh` fire at `usePullEngine`'s phase transitions, the thud **before** the reveal frame; the near-miss (secret/legendary one pull before pity) inserts the 2-frame hesitation + rising glissando. Components import zero numbers. | Autoplay policy respected structurally: the toggle click is the only gesture that may create the context; a persisted preference re-arms suspended and starts the bed on the first real pointerdown. |
+> | 3.4: gravity swell "updated from the Lenis/scroll channel at 10 Hz, not per-frame; zero cost off-axis" | Gain = f(distance to `#singularity`'s rect), two detuned sines (52/47.3 Hz) inside the 40–60 Hz window; the bed subscribes to a scroll tick **emitted by `lib/scroll`** (the authority stays ignorant of audio; sound owns the subscriber set) and self-throttles at 100 ms. "Zero cost" taken literally: outside `FAR_VH` the oscillators are stopped and nodes disconnected — a single throttled watcher re-arms on return. | A muted-but-running bed is still a running bed. The emit lives on native `window.scroll` so it fires with or without Lenis. |
+> | 3.5: `whileTap={{ scale: 0.985 }}` on perk/store/plate cards + bloom at 0.5 | The CSS equivalent under `(pointer: coarse)`: `:active { scale: 0.985 }` + `::after` bloom opacity 0.5 in `motion.css` — `scale` is the independent property, so presses never fight the framer `transform` authority, and the rotunda's sixty hot-path divs needed no motion-component conversion | Same feel, zero JS. The audit's own house rule (independent properties) pointed here. |
+> | 3.5: "one util, four call sites" | `lib/haptics.ts` with the audit's exact patterns (8 / [4,24,10] / 6) and the pattern table exported as `HAPTIC` (registry discipline shared with sound); sites: pull stamp, legendary/secret reveal, roster dialog open, rotunda spotlight open. Feature-detect is `'vibrate' in navigator`, which is iOS-honest by construction. | — |
+> | 1.4: "expose `--scene-bg`/`--scene-line` custom properties that Ambience writes to `html` per district" | `SCENE_TINTS` map in `scenes.ts`, written by `observeScenes.apply()` — the call that already stamps `data-scene` and feeds the shader — so the CSS shell, the WebGL ambience and the no-WebGL fallback cannot drift: one scene authority, three renderers. `body` rides `--scene-bg` on a 1.6 s linear ease; card hairlines ride `--scene-line`; reduced motion kills the transitions. | Writing inside Ambience itself would leave the no-WebGL path untinted. Values are temperature leans of the existing palette (the `--bh-*` hexes for navy/ember) — "do not add new hues" honored literally. |
+> | 1.4: luminance steps `--void-2`/`--void-3` for card wells | Added; `background-color` only overrides on `.ucard`/`.card` (void-2) and `.npx__slot`/`#rotunda .cg-stage` (void-3) — the gradient layers stay, the wells gain a navy floor under the white haze instead of more alpha | — |
+> | 3.7: `DEMO WALLET` chip, 10 px, gold outline, reset action | `WalletButton`'s connected branch grows the chip beside the address when `onReset` is passed; Nav×2 + Perks pass `wallet.disconnect` (clears `ocu-wallet` — the persisted state the audit named). Hidden under 860 px where the nav keeps one clean CTA; the section-level button still carries it. | — |
+> | P5.19: "Lighthouse (mobile, throttled), WebPageTest filmstrip" | Measurement that a sandbox can make HONEST became a permanent gate instead: `scripts/budget.mjs` (`npm run budget`, post-build) parses `dist/index.html`'s eager graph (entry + modulepreload), gzips exactly those assets, hard-fails if `captureSignoff`/`html2canvas` ever enter it, and ratchets total eager JS at the measured 643 kB +3%. Lighthouse numbers from a sandboxed CPU would be theater — the payload graph is reproducible, so that is what is pinned. | Measured at 2026-09-15: framework 47 + animation 53 + entry 175 + webgl 186 + webgpu 182 (kB gz). Both three chunks ARE eager by the README's documented, accepted trade; the budget encodes THAT policy rather than inventing a new one, and the ratchet is where future P5 gains register. |
+> | P5.19: "move html2canvas behind a dynamic import at the exact moment the signoff plate enters the second viewport, not merely idle" | Verified already true in this tree, to the letter: `captureSignoff.ts` (which statically pulls html2canvas) is imported at exactly one site — inside `SignoffHorizon`'s `arm()`, behind ScrollTrigger id `signoff-horizon-arm`, armed at `bottom bottom+=4·seam` (~1.3 viewports of lead at 1280×900, per the measured 641 px seam) — and the build keeps it a 205 kB lazy island. The budget gate now guards the property against regression. | The `arm` line's comment argues the lead distance is load-bearing for fast flings; re-tuning it to a literal viewport count would trade a real race for a wording match. Roadmap outcome kept, mechanism left standing. |
+> | P5.20: "consider a motion-safe Playwright visual-regression suite" | Shipped: `tests/visual-regression.spec.ts` (8 cases — hero, roster head, rotunda flat (proves P2.1's reduce branch), pulls idle, store, dialog open, footer, plus a boot-skip assertion), extending the signoff-horizon pattern: determinism by frozen `Date.now`/seeded `Math.random`/`getAnimations().pause()` after a settle wait, under `reducedMotion: 'reduce'`. Deliberately NOT `page.clock` — the clock API fakes rAF too and would strand every entrance mid-tween; deliberately NOT the 3D interiors — engine behaviour already belongs to the fixture suites. Baselines seed on CI with `--update-snapshots`; `npm run test:visual`. | The boot-skip affordance shipped in P2.10 is what makes deterministic entry possible at all — the suite is the first consumer of that. |
+>
+> **The roadmap is now executed end-to-end (P0–P5).** Remaining open items
+> are exactly the two the roadmap itself left conditional: real-lab
+> Lighthouse/filmstrip numbers to drive the ratchet down (P5.19's measuring
+> half), and any *new* surfaces earning their own cursor labels.
 
 ---
 
@@ -330,13 +350,13 @@ sensory layer → payload. Each step is independently shippable and testable.
     reduced-motion-vetoed, all frame-budgeted (transform/opacity/`clip-path` only — respect
     the motion.css rules block).
 
-### Phase 4 — Sensory & depth (≈ 3 days)
+### Phase 4 — Sensory & depth (≈ 3 days) — ✅ executed 2026-09-15
 15. Sound registry: rod ring / gravity swell / stamp thud + near-miss · `3.4`
 16. Haptics util + `whileTap` parity on touch · `3.5`
 17. Scene-global background drift from `lib/scenes.ts` into CSS custom properties · `1.4`
 18. Demo-wallet chip + reset · `3.7`
 
-### Phase 5 — Payload & proof (ongoing)
+### Phase 5 — Payload & proof (ongoing) — ✅ executed 2026-09-15 (code + gate; lab numbers still due)
 19. Measure first: Lighthouse (mobile, throttled), WebPageTest filmstrip. The two three-builds
     trade is documented and accepted (`README`); attack the rest — `html2canvas` (204 kB chunk)
     is capture-only for the Sign-off: move behind a dynamic import at the exact moment the

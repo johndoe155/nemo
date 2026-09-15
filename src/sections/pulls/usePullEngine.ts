@@ -9,6 +9,8 @@
    ========================================================================== */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { nearMissGliss, pullWhoosh, stampThud } from '../../lib/sound';
+import { haptic, HAPTIC } from '../../lib/haptics';
 import { useMockWallet } from '../../components/ui';
 import type { Rarity, Universe } from '../../lib/data';
 import {
@@ -118,6 +120,11 @@ export function usePullEngine() {
     if (phase === 'spinning') return;
     setPhase('spinning');
     setResult(null);
+    /* P4.15 (audit 3.4): audio belongs to the ENGINE's phase transitions,
+       not the components' effect charts — whoosh as the reel starts, thud
+       at `result` BEFORE the reveal frame, so the ear gets the event one
+       beat early and the body gets it as haptics (3.5). */
+    pullWhoosh();
 
     const spin = window.setInterval(() => setSpinIdx((i) => (i + 1) % spinPool.length), 80);
     const finish = window.setTimeout(() => {
@@ -125,11 +132,27 @@ export function usePullEngine() {
       const r = rollRarity(odds);
       const u = universeForPull(r);
       const mintNo = String(Math.floor(Math.random() * Math.max(1, u.supply)) + 1).padStart(3, '0');
-      setResult({ u, r, mintNo });
-      setPhase('done');
-      setPulls((p) => [...p, { uid: String(u.id), ts: Date.now(), rarity: r }]);
-      if (r === 'secret') setSecretUnlocked(true);
-      setFlash((f) => f + 1);
+      const reveal = () => {
+        setResult({ u, r, mintNo });
+        setPhase('done');
+        setPulls((p) => [...p, { uid: String(u.id), ts: Date.now(), rarity: r }]);
+        if (r === 'secret') setSecretUnlocked(true);
+        setFlash((f) => f + 1);
+      };
+      /* The casino cue: an unguaranteed secret/legendary — landed ONE slot
+         before pity would have handed it over. 2-frame hesitation (the reel
+         almost stops short) + the rising glissando under it. */
+      const nearMiss =
+        (r === 'secret' || r === 'legendary') && stamps === STAMP_SLOTS - 2;
+      stampThud();
+      haptic(HAPTIC.stamp);
+      if (r === 'legendary' || r === 'secret') haptic([...HAPTIC.reveal]);
+      if (nearMiss) {
+        nearMissGliss();
+        requestAnimationFrame(() => requestAnimationFrame(reveal));
+      } else {
+        reveal();
+      }
     }, 1900);
     timers.current.push(finish);
   };

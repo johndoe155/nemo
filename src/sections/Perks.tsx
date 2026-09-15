@@ -81,7 +81,7 @@ export default function Perks() {
                   VERIFIED HOLDER · <code>{MOCK_ADDRESS}</code> · GENESIS · LEGENDARY TRAIT
                 </motion.span>
               )}
-              <WalletButton connected={wallet.connected} onConnect={wallet.connect} />
+              <WalletButton connected={wallet.connected} onConnect={wallet.connect} onReset={wallet.disconnect} />
             </div>
           </div>
         </Reveal>

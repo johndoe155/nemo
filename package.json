@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "The Nemoverse \u2014 Hub frontend. One canon, infinite versions.",
+  "description": "The Nemoverse — Hub frontend. One canon, infinite versions.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -17,7 +17,9 @@
     "test": "npm run test:unit",
     "test:signoff-horizon": "playwright test",
     "generate:fonts": "node scripts/subset-fonts.mjs",
-    "test:a11y": "playwright test a11y-axe.spec.ts"
+    "test:a11y": "playwright test a11y-axe.spec.ts",
+    "budget": "node scripts/budget.mjs",
+    "test:visual": "playwright test visual-regression.spec.ts"
   },
   "dependencies": {
     "@fontsource-variable/space-grotesk": "^5.1.0",

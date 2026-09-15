@@ -29,6 +29,7 @@
 --------------------------------------------------------------------------- */
 
 import Lenis from 'lenis';
+import { emitScrollTick } from './sound';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -157,6 +158,12 @@ export function initSmoothScroll(): void {
   /* ScrollTrigger keeps its own native-scroll listener, but under Lenis the
      authoritative beat is the instance's — drive updates from there. */
   lenis.on('scroll', () => ScrollTrigger.update());
+
+  /* Sound's cadence source (DESIGN_AUDIT 3.4: the gravity bed updates at
+     10 Hz off the scroll channel, never per-frame). Native 'scroll' fires
+     whether or not Lenis exists — one passive listener, self-throttled by
+     its consumers; the engine stays ignorant of what listens. */
+  window.addEventListener('scroll', emitScrollTick, { passive: true });
 
   /* A refresh is violent for measured layouts: GSAP records the scroll,
      jumps to 0, repositions every trigger, then jumps back. The old code

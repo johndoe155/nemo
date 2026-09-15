@@ -9,6 +9,7 @@ import type { Rarity, Universe } from '../lib/data';
 import { RARITY, UNIVERSE_DROP_ISO, UNIVERSES, visibleUniverses } from '../lib/data';
 import { useCountdown, useCountUp } from '../lib/hooks';
 import { pageScrollTo } from '../lib/scroll';
+import { rodRing } from '../lib/sound';
 
 const SORTS: Record<SortMode, (a: Universe, b: Universe) => number> = {
   newest: (a, b) => new Date(b.released).getTime() - new Date(a.released).getTime(),
@@ -89,6 +90,23 @@ export default function Nemoverse() {
   useMotionValueEvent(dragX, 'change', (v) => {
     if (isDragging) carriage.set(v);
   });
+  /* P4.15 (audit 3.4): |carriage velocity|, smoothed over the last few
+     events — "how hard the rod is being yanked". Same source the pendulums
+     feel; the rod ring reads it so the press sounds like the motion it
+     interrupted. */
+  const carriageSpeed = useRef(0);
+  const lastCarriage = useRef({ v: 0, t: 0 });
+  useMotionValueEvent(carriage, 'change', (v) => {
+    const now = performance.now();
+    const dt = now - lastCarriage.current.t;
+    if (dt > 0 && dt < 120) {
+      const inst = Math.abs(v - lastCarriage.current.v) / dt; // px per ms
+      carriageSpeed.current = carriageSpeed.current * 0.65 + inst * 0.35;
+    } else {
+      carriageSpeed.current = 0;
+    }
+    lastCarriage.current = { v, t: now };
+  });
 
   /* Mobile carriage — the touch rack's own scroll position. Native momentum
      scrolling keeps firing scroll events as it decays, so useVelocity reads a
@@ -118,6 +136,13 @@ export default function Nemoverse() {
       dragX.set(dragBase.current);
       setIsDragging(true);
       rail.style.cursor = 'grabbing';
+      /* The grab of a still-moving rail is a rod struck mid-swing: a short
+         filtered noise burst, pitched by the yank (registry owns the map;
+         0.05 px/ms floor = below walking-speed drift). Fresh timestamp
+         check so an idle rail never rings on stale velocity. */
+      if (performance.now() - lastCarriage.current.t < 120 && carriageSpeed.current > 0.05) {
+        rodRing(carriageSpeed.current);
+      }
       /* The custom cursor reads labels off data-cursor on every move —
          swapping it mid-gesture is the whole "grabbed" state change. */
       rail.setAttribute('data-cursor', 'RELEASE');

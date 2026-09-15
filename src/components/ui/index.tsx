@@ -345,26 +345,42 @@ export function useMockWallet() {
 export function WalletButton({
   connected,
   onConnect,
+  onReset,
   compact,
   label = 'CONNECT WALLET',
 }: {
   connected: boolean;
   onConnect: () => void;
+  /** P4.18 (audit 3.7): honest-demo parity — clears the persisted mock
+   *  state so the "connected" demo doesn't haunt a client's browser tab. */
+  onReset?: () => void;
   compact?: boolean;
   label?: string;
 }) {
   if (connected) {
     return (
-      <MagneticButton
-        className={`btn btn-ghost ${compact ? 'nav__cta' : ''}`}
-        preset={compact ? 'chrome' : 'pill'}
-        onClick={onConnect}
-        title="Demo state — disconnects this mock session"
-        data-cursor="UNLINK"
-      >
-        <span className="pulse-dot" style={{ width: 7, height: 7 }} />
-        <span className="btn__txt">{MOCK_ADDRESS}</span>
-      </MagneticButton>
+      <span className="wallet-connected">
+        <MagneticButton
+          className={`btn btn-ghost ${compact ? 'nav__cta' : ''}`}
+          preset={compact ? 'chrome' : 'pill'}
+          onClick={onConnect}
+          title="Demo state — disconnects this mock session"
+          data-cursor="UNLINK"
+        >
+          <span className="pulse-dot" style={{ width: 7, height: 7 }} />
+          <span className="btn__txt">{MOCK_ADDRESS}</span>
+        </MagneticButton>
+        {onReset && (
+          <button
+            type="button"
+            className="wallet-chip"
+            onClick={onReset}
+            title="The wallet is a demo mock — this clears its stored state"
+          >
+            DEMO WALLET · RESET
+          </button>
+        )}
+      </span>
     );
   }
   return (

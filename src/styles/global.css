@@ -12,6 +12,13 @@
   /* ---- Palette ---- */
   --void: #05050a;
   --abyss: #0a0a16;
+  /* P4.17 (audit 1.4): the void is not one value any more — two luminance
+     steps below it own the card wells (temperature, not alpha), and the
+     per-district tints written by lib/scenes.ts default to the plain void. */
+  --void-2: #090a13;
+  --void-3: #0d0f1b;
+  --scene-bg: var(--void);
+  --scene-line: var(--line);
   --panel: rgba(255, 255, 255, 0.032);
   --line: rgba(255, 255, 255, 0.09);
   --line-strong: rgba(255, 255, 255, 0.18);
@@ -216,7 +223,11 @@ html.lenis body {
 }
 
 body {
-  background: var(--void);
+  /* The page ground drifts with the district (lib/scenes.ts writes
+     --scene-bg; the long linear ease is what makes it "temperature drift"
+     rather than a theme swap). */
+  background-color: var(--scene-bg);
+  transition: background-color 1.6s linear;
   color: var(--ink);
   font-family: var(--font-body);
   font-size: var(--fs-body);

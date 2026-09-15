@@ -318,3 +318,79 @@
     display: none;
   }
 }
+
+/* ═══════════════════════ P4 · SENSORY & DEPTH (1.4 / 3.5 / 3.7) ═══════════
+   Scene-global temperature in the CSS shell, touch press parity, and the
+   honest-demo wallet chip. Additive pass — see the file header. */
+
+/* ---- P4.17 · the district tints reach the surfaces that frame content ---
+   body carries --scene-bg; hairlines and card wells follow it at the same
+   tempo. background-color only (the gradient layers stay) — the wells gain
+   a navy floor under the white haze instead of more alpha. */
+.ucard,
+.card,
+.dialog,
+.soundtoggle,
+.npx__slot {
+  transition:
+    background-color 1.6s linear,
+    border-color 1.6s linear;
+}
+.ucard,
+.card {
+  background-color: var(--void-2);
+}
+.npx__slot,
+#rotunda .cg-stage {
+  background-color: var(--void-3);
+}
+.ucard,
+.card,
+.dialog,
+#rotunda .cg-stage {
+  border-color: var(--scene-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .ucard,
+  .card,
+  .dialog,
+  .soundtoggle,
+  .npx__slot,
+  #rotunda .cg-stage {
+    transition: none;
+  }
+}
+
+/* ---- P4.18 · DEMO WALLET chip: 10 px, gold outline, one action. The
+   README's honesty pass deserves UI parity — the chip labels the mock AND
+   hands back the reset, so a client demo never inherits a stale "connected". */
+.wallet-connected {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.wallet-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: transparent;
+  border: 1px solid rgba(255, 200, 87, 0.55);
+  border-radius: 99px;
+  padding: 0.32rem 0.6rem;
+  cursor: pointer;
+  transition: background 0.3s var(--ease-expo), border-color 0.3s var(--ease-expo);
+  white-space: nowrap;
+}
+.wallet-chip:hover {
+  background: rgba(255, 200, 87, 0.08);
+  border-color: var(--gold);
+}
+@media (max-width: 860px) {
+  .wallet-connected .wallet-chip {
+    display: none; /* the nav keeps one clean CTA; reset lives with the section */
+  }
+}
