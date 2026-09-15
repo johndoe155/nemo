@@ -4,8 +4,8 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Reveal, SectionHead } from '../components/ui';
 import { useTilt } from '../components/motion';
-import { LORE_STATS, LORE_TIMELINE } from '../lib/data';
-import { useCountUp } from '../lib/hooks';
+import { LORE_STATS, LORE_TIMELINE, UNIVERSE_DROP_ISO } from '../lib/data';
+import { useCountdown, useCountUp } from '../lib/hooks';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -13,7 +13,13 @@ gsap.registerPlugin(ScrollTrigger);
    type) — the rod itself is colour-agnostic and never reads one of them. */
 const NODE_HUES = ['var(--gold)', 'var(--iris)', 'var(--cyan)', 'var(--iris)', 'var(--magenta)'];
 
-function LoreStat({ value, suffix, label, note, delay }: (typeof LORE_STATS)[number] & { delay: number }) {
+function LoreStat({
+  value,
+  suffix,
+  label,
+  note,
+  delay,
+}: (typeof LORE_STATS)[number] & { delay: number }) {
   const { ref, val } = useCountUp(value, { duration: 1400 });
   const tilt = useTilt<HTMLDivElement>({ maxDeg: 1.2, lift: 0 });
   return (
@@ -258,12 +264,17 @@ function CanonTimeline() {
 }
 
 export default function Lore() {
+  /* The section's single drop countdown. Declared here (not inside LoreStat)
+     so the grid runs ONE timer no matter how many tiles carry a number, and
+     the NEXT DROP tile always reports the same figure as the hero ticker. */
+  const drop = useCountdown(UNIVERSE_DROP_ISO);
+
   return (
     <section className="section lore" id="lore">
       <div className="shell lore__grid">
         <div className="lore__copy">
           <SectionHead
-            num="07"
+            num="08"
             kicker="THE CORE IDENTITY"
             title={
               <>
@@ -297,8 +308,18 @@ export default function Lore() {
           </Reveal>
 
           <div className="lore__stats">
+            {/* ONE countdown for the whole grid (not one timer per tile): the
+                flagged NEXT DROP card renders the same clock the hero ticker
+                and the roster teaser read, so the three can never disagree.
+                Before this the tile carried a baked-in "6D" that matched
+                neither the live countdown nor the drop date. */}
             {LORE_STATS.map((s, i) => (
-              <LoreStat key={s.label} {...s} delay={0.08 + i * 0.05} />
+              <LoreStat
+                key={s.label}
+                {...s}
+                value={s.clock ? Number(drop.d) : s.value}
+                delay={0.08 + i * 0.05}
+              />
             ))}
           </div>
         </div>

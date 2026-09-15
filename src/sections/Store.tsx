@@ -33,7 +33,14 @@ function ProductCard({
         style={tilt.style}
         {...tilt.handlers}
       >
-        <div className="product__media" style={{ position: 'relative' }}>
+        {/* NB: no inline `position` here. The stylesheet owns it —
+            `.product__media` is `relative` for the stacked cards and
+            `.store__hero .product__media` flips it to `absolute; inset: 0`
+            so the hero art bleeds to the card edge. An inline
+            `position: relative` used to sit on this element and silently
+            beat the hero rule, collapsing the media box to 0×0 and leaving
+            the featured product as a bare gradient. */}
+        <div className="product__media">
           {/* Image shimmer skeleton — retired via DOM when the bitmap lands */}
           <div
             className="product-skeleton"
@@ -46,12 +53,17 @@ function ProductCard({
             }}
             aria-hidden="true"
           />
-          <span className="badge tag" style={{ '--c': 'var(--cyan)' }}>
-            {p.kind.split('·')[0].trim()}
-          </span>
-          {p.gated && (
+          {/* A gated SKU's kind already reads "HOLDER-EXCLUSIVE SKU", so the
+              cyan kind badge would print the same fact twice — and at phone
+              widths the two badges collide on their shared 10px row. The
+              gated chip wins the corner it needs. */}
+          {p.gated ? (
             <span className="badge gated-tag" style={{ '--c': 'var(--gold)' }}>
               HOLDER SKU
+            </span>
+          ) : (
+            <span className="badge tag" style={{ '--c': 'var(--cyan)' }}>
+              {p.kind.split('·')[0].trim()}
             </span>
           )}
           <CardImage
@@ -66,7 +78,12 @@ function ProductCard({
             }}
           />
         </div>
-        {hero && <div className="scrim" />}
+        {/* NB: no `.scrim` element here — the hero's legibility comes from
+            `.store__hero::after` in overhaul.css, which owns the gradient and
+            can never fall out of sync with the copy sitting on it. The bare
+            `<div className="scrim" />` that used to sit here had no rule
+            anywhere (only `.ucard__media .scrim` exists) and rendered as an
+            empty flex child. */}
         <div className="store__body">
           <span className="product__sku">{p.sku}</span>
           <h3 className="product__name">{p.name}</h3>
@@ -110,8 +127,8 @@ export default function Store() {
     <section className="section store section--tall" id="store">
       <div className="shell">
         <SectionHead
-          num="05"
-          kicker="05 · DIRECT SHOPIFY INTEGRATION"
+          num="06"
+          kicker="06 · DIRECT SHOPIFY INTEGRATION"
           title={
             <>
               The <span className="txt-grad">storefront</span>, wired into the Nemoverse

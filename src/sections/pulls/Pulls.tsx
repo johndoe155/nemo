@@ -47,8 +47,8 @@ export default function Pulls() {
       <div className="shell npx__shell">
         <SectionHead
           center
-          num="04"
-          kicker="04 · PILLAR 3 — PROOF-OF-PURCHASE COLLECTIBLES"
+          num="05"
+          kicker="05 · PILLAR 3 — PROOF-OF-PURCHASE COLLECTIBLES"
           title={
             <>
               Every purchase <em className="npx__serif">pulls a piece</em> of the Nemoverse

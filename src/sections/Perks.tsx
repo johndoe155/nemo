@@ -38,8 +38,8 @@ export default function Perks() {
     <section className="section perks" id="perks">
       <div className="shell">
         <SectionHead
-          num="03"
-          kicker="03 · PILLAR 2 — TOKEN-GATED PERKS"
+          num="04"
+          kicker="04 · PILLAR 2 — TOKEN-GATED PERKS"
           kickerGold
           title={
             <>

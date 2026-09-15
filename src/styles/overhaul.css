@@ -542,8 +542,26 @@ html[data-scene='singularity'] {
   overflow: hidden;
   min-height: 520px;
   display: flex;
-  align-items: flex-end;
+  /* `.card` sets `flex-direction: column`, and that is the right axis here —
+     but `align-items: flex-end` on a COLUMN flex box aligns horizontally, so
+     the copy sat top-right over the brightest part of the art instead of on
+     the bottom scrim the `::after` gradient below paints. Anchor the content
+     to the bottom explicitly and let it span the card. */
+  flex-direction: column;
+  justify-content: flex-end;
   padding: 2rem;
+}
+.store__hero .product__media picture {
+  /* `.store__hero .product__media` is `position: absolute; inset: 0`, which
+     takes `picture` out of flow. The base `.product__media picture` rule
+     (components.css) sizes it with `height: 100%`, and `inset: 0` here makes
+     the stretch explicit rather than inherited — the hero art must fill the
+     whole card, not sit at its natural aspect inside it. */
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
 }
 .store__hero img {
   position: absolute;
@@ -551,15 +569,26 @@ html[data-scene='singularity'] {
   width: 100%; height: 100%;
   object-fit: cover;
 }
+/* The copy rides the bottom of the card, so the scrim has to be deep enough
+   THERE to hold AA over whatever art the client drops in — the placeholder
+   key art is bright gold exactly where the name and price sit. Two stops:
+   a soft lift from the middle, then a near-opaque floor. */
 .store__hero::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 30%, rgba(5, 5, 10, 0.92) 92%);
+  background: linear-gradient(
+    180deg,
+    transparent 26%,
+    rgba(5, 5, 10, 0.62) 58%,
+    rgba(5, 5, 10, 0.94) 86%,
+    rgba(5, 5, 10, 0.97) 100%
+  );
 }
 .store__hero .store__body {
   position: relative;
   z-index: 2;
+  width: 100%;
 }
 .store__hero .product__media {
   position: absolute;
@@ -567,7 +596,18 @@ html[data-scene='singularity'] {
   aspect-ratio: auto;
   border-radius: 0;
 }
-.store__hero .product__name { font-size: clamp(1.4rem, 1rem + 1.4vw, 2.2rem); max-width: 22rem; }
+/* The hero is the featured piece, not a grid cell — the base rule's 2-line
+   clamp exists to keep a column of cards even, and here it cut the product
+   name off mid-word ("…FINE…") on the one card that is supposed to sell it.
+   Let the hero name run its full length at display size. */
+.store__hero .product__name {
+  font-size: clamp(1.4rem, 1rem + 1.4vw, 2.2rem);
+  max-width: 22rem;
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  min-height: 0;
+}
 .store__stack {
   display: grid;
   grid-template-columns: 1fr;

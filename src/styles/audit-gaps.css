@@ -51,6 +51,19 @@
   transition: opacity 0.25s ease, translate 0.25s ease;
   pointer-events: none;
   white-space: nowrap;
+  /* The rail is a FIXED overlay, so its label lands on top of whatever the
+     column underneath happens to be — at 1440px, "04 · HOLDER PERKS" struck
+     through the perks grid's "15% DISCOUNT AUTO-APPLIED AT CHECKOUT" line,
+     and the same class of collision waits anywhere content reaches the left
+     edge. The label is a glass chip rather than bare text: it stays legible
+     over copy instead of fighting it, and it fades in over the content it
+     momentarily covers. The rail is chrome, not a reading surface. */
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(5, 5, 10, 0.82);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 .siderail__dot:hover .siderail__label,
 .siderail__dot:focus-visible .siderail__label,

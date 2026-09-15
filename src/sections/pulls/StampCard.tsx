@@ -92,7 +92,17 @@ export default function StampCard({
             <b>{stamps}</b>/{STAMP_SLOTS}
           </span>
         </div>
-        <div className="npx__progress-track" role="progressbar" aria-valuenow={stamps} aria-valuemax={STAMP_SLOTS}>
+        {/* A progressbar needs an accessible NAME, not just values — axe
+            `aria-progressbar-name`. It reads against the visible tabular
+            "n / 8" beside it, so the name states the same thing in words. */}
+        <div
+          className="npx__progress-track"
+          role="progressbar"
+          aria-label={`Set progress — ${stamps} of ${STAMP_SLOTS} distinct universes collected`}
+          aria-valuenow={stamps}
+          aria-valuemin={0}
+          aria-valuemax={STAMP_SLOTS}
+        >
           <i style={{ ['--p' as string]: stamps / STAMP_SLOTS }} />
           <span className="npx__progress-ticks" aria-hidden="true">
             {Array.from({ length: STAMP_SLOTS }, (_, i) => (

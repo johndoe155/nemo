@@ -64,14 +64,50 @@ export const ARTISTS: Artist[] = [
   { name: 'Ingrid Solvane', handle: '@ingridsolvane', initials: 'IS', hue: ['#7dffb0', '#3fe8ff'], quote: '“He walks where the lights end. I only followed.”' },
 ];
 
-export const UNIVERSE_DROP_ISO = '2026-08-22T17:00:00Z';
+/* ------------------------------ DROP CLOCK ------------------------------
+   The canon drop date is 2026-08-22T17:00Z. A demo cannot hardcode a date:
+   the moment it passes, the page starts contradicting itself — the hero
+   ticker and the roster teaser flip to "U-007 IS LIVE · NOW MINTING" while
+   the Lore stat still counts down to it and U-007's own card and dialog stay
+   `status: 'upcoming'` with 0/100 minted.
 
-/** Drop label derived from the ISO so it can never drift (same pattern as
-    Nemoverse.tsx DROP_LABEL — the footer marquee/caption used to hardcode
-    "AUG 22" and went stale). */
+   So the drop clock ROLLS. While the canon date is still ahead it is used
+   verbatim; once it passes, the target rolls forward to keep the next drop
+   four days out. Every consumer (hero ticker, teaser countdown, dialog,
+   Lore stat, persona brain) derives from these two exports, so the whole
+   page holds one consistent story at any date without further edits — and
+   the moment the data layer marks U-007 `live`, the countdown retires
+   itself everywhere at once.
+
+   To pin a real launch date instead, set CANON_DROP_ISO to it and delete
+   the roll: DROP_ISO = CANON_DROP_ISO. */
+const CANON_DROP_ISO = '2026-08-22T17:00:00Z';
+const DAY_MS = 86_400_000;
+/** Days from "now" the placeholder countdown sits at when the canon date has passed. */
+const ROLL_DAYS = 4;
+
+function rollDropIso(): string {
+  const canon = new Date(CANON_DROP_ISO).getTime();
+  if (Number.isNaN(canon)) return CANON_DROP_ISO;
+  if (canon - Date.now() > 0) return CANON_DROP_ISO;
+  return new Date(Date.now() + ROLL_DAYS * DAY_MS).toISOString();
+}
+
+export const UNIVERSE_DROP_ISO = rollDropIso();
+
+/** Short label ("AUG 22") derived from the live ISO so the hero copy, the
+    teaser card and the Lore stat can never drift from the countdown. */
 export const DROP_LABEL = new Date(UNIVERSE_DROP_ISO)
   .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   .toUpperCase();
+
+/** Long label ("AUGUST 22") for prose — the persona brain writes sentences,
+    and "august 22" should follow the roll instead of going stale. */
+export const DROP_LABEL_LONG = new Date(UNIVERSE_DROP_ISO)
+  .toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+  .toLowerCase();
+
+
 
 export interface FooterNavGroup {
   label: string;
@@ -288,6 +324,24 @@ export const UNIVERSES: Universe[] = [
 ];
 
 export const visibleUniverses = UNIVERSES.filter((u) => u.status !== 'secret');
+
+/* ------------------------- CANON FACT LINES ------------------------------
+   One formatter for every sentence that quotes a live count, so no line of
+   copy can disagree with a card, a chip or the registry. Declared here, after
+   the collections it measures — the persona brain and the Lore stat cards
+   further down the file both read it. */
+const numberWord = (n: number) =>
+  ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n] ?? String(n);
+
+export const CANON_TALLY = {
+  universes: visibleUniverses.length,
+  secrets: UNIVERSES.length - visibleUniverses.length,
+  artists: ARTISTS.length,
+};
+const tallyLine = `${numberWord(CANON_TALLY.universes)} registered universes and ${numberWord(
+  CANON_TALLY.secrets,
+)} that don’t want to be known`;
+const artistLine = `${numberWord(CANON_TALLY.artists)} canon artists so far`;
 export const byId = (id: number) => UNIVERSES.find((u) => u.id === id);
 
 /* --------------------------- GALLERY PLATES ---------------------------- */
@@ -547,7 +601,7 @@ export interface ChatRule {
 }
 
 export const PERSONA_GREETING =
-  'you’ve reached NEMO — the wanderer between. i know all seven registered universes and two that don’t want to be known. ask me anything in canon.';
+  `you’ve reached NEMO — the wanderer between. i know all ${tallyLine}. ask me anything in canon.`;
 
 export const CHAT_RULES: ChatRule[] = [
   {
@@ -584,7 +638,7 @@ export const CHAT_RULES: ChatRule[] = [
   },
   {
     match: /(who|artist|drew|made|painted|commissioned)\b/i,
-    reply: ['seven canon artists so far, credited permanently on the hub and in each piece’s metadata. every brush writes a new law of physics for me.'],
+    reply: [`${artistLine}, credited permanently on the hub and in each piece’s metadata. every brush writes a new law of physics for me.`],
   },
   {
     match: /(secret|hidden|locked|encrypted|009|008)/i,
@@ -613,7 +667,7 @@ export const CHAT_RULES: ChatRule[] = [
 ];
 
 export const CHAT_FALLBACKS = [
-  'the nemoverse has seven registered universes and two that don’t want to be known. ask me about #002, or about the drop on august 22.',
+  `the nemoverse has ${tallyLine}. ask me about #002, or about the drop on ${DROP_LABEL_LONG}.`,
   'i only speak in canon. ask me about a universe — any universe.',
   'somewhere, a version of you is asking a version of me a better question.',
 ];
@@ -669,12 +723,23 @@ export function universeForPull(rarity: Rarity): Universe {
 
 /* ------------------------------ STATS / LORE ------------------------------ */
 
-export const LORE_STATS = [
-  { value: 7, suffix: '', label: 'REGISTERED UNIVERSES', note: '2 encrypted' },
-  { value: 7, suffix: '', label: 'CANON ARTISTS', note: 'credited forever' },
-  { value: 1050, suffix: '', label: 'TOTAL SUPPLY', note: 'across all runs' },
+export interface LoreStatDef {
+  value: number;
+  suffix: string;
+  label: string;
+  note: string;
+  /** This tile renders the LIVE drop countdown as its number, so the Lore
+      card, the hero ticker and the roster teaser can never quote different
+      figures. Lore.tsx owns the hook; the flag only marks which tile. */
+  clock?: boolean;
+}
+
+export const LORE_STATS: LoreStatDef[] = [
+  { value: visibleUniverses.length, suffix: '', label: 'REGISTERED UNIVERSES', note: `${UNIVERSES.length - visibleUniverses.length} encrypted` },
+  { value: ARTISTS.length, suffix: '', label: 'CANON ARTISTS', note: 'credited forever' },
+  { value: UNIVERSES.reduce((s, u) => s + u.supply, 0), suffix: '', label: 'TOTAL SUPPLY', note: 'across all runs' },
   { value: 1214, suffix: '', label: 'HOLDERS', note: 'genesis NFT' },
-  { value: 6, suffix: 'D', label: 'NEXT DROP', note: 'U-007 · aug 22' },
+  { value: 0, suffix: 'D', label: 'NEXT DROP', note: `U-007 · ${DROP_LABEL.toLowerCase()}`, clock: true },
 ];
 
 export const LORE_TIMELINE = [

@@ -62,8 +62,8 @@ export default function Persona() {
       <div className="shell persona__layout">
         <div className="persona__head">
           <SectionHead
-            num="02"
-            kicker="02 · PILLAR 4 — THE AI PERSONA"
+            num="03"
+            kicker="03 · PILLAR 4 — THE AI PERSONA"
             title={
               <>
                 The voice that <span className="txt-grad">teases</span> every universe

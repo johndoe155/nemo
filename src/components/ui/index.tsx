@@ -397,13 +397,18 @@ export function WalletButton({
 
 /* ------------------------------ Rarity badge ------------------------------ */
 
-export function RarityBadge({ rarity, small }: { rarity: Rarity; small?: boolean }) {
+export function RarityBadge({
+  rarity,
+  small,
+  className = 'badge',
+}: {
+  rarity: Rarity;
+  small?: boolean;
+  className?: string;
+}) {
   const r = RARITY[rarity];
   return (
-    <span
-      className={small ? 'badge' : 'badge'}
-      style={{ '--c': r.color, fontSize: small ? '0.56rem' : undefined }}
-    >
+    <span className={className} style={{ '--c': r.color, fontSize: small ? '0.56rem' : undefined }}>
       {r.label}
     </span>
   );

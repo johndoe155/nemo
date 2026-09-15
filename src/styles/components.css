@@ -504,7 +504,12 @@
 .roster__counter {
   position: absolute;
   bottom: 2rem;
-  left: var(--gutter);
+  /* Clears the SOUND toggle, which is FIXED to the bottom-left corner
+     (left 1.1rem, 40px tall) and used to cut the "SCROLL TO TRAVERSE"
+     label in half on every desktop viewport. The floor is a fixed length
+     because the toggle is a fixed-size element — the gutter alone is not
+     wide enough to clear it at any width. */
+  left: max(var(--gutter), 10.75rem);
   z-index: 5;
   font-family: var(--font-mono);
   font-size: var(--fs-mono);
@@ -517,11 +522,21 @@
 .roster__progress {
   width: 140px;
 }
+/* The hint lives in the CENTRE of the bottom line, not the right corner.
+   `.roster__controls` (arrows) and `.roster__minimap` are pinned to the
+   right gutter at the same baseline, and the SOUND toggle is fixed to the
+   bottom-left — the old `right: var(--gutter)` put this label underneath
+   the arrows and struck the text through. Centring it uses the dead space
+   between the counter and the controls, and the width cap keeps it clear of
+   both at every desktop width. */
 .roster__hint {
   position: absolute;
+  left: 50%;
+  translate: -50% 0;
   bottom: 2rem;
-  right: var(--gutter);
   z-index: 5;
+  max-width: 22vw;
+  text-align: center;
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.3em;
@@ -529,6 +544,7 @@
   text-transform: uppercase;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.6rem;
 }
 .roster__hint .arr {
@@ -1231,8 +1247,18 @@
   grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
   gap: 1.1rem;
   margin-top: 2.6rem;
+  /* Each card is wrapped in a `<Reveal>` motion.div, so the GRID ITEM is the
+     wrapper — it stretches to the row height, but the `.perk` inside it used
+     to size to its own content, leaving the tier row with ragged bottoms (a
+     46px spread at 1440px: 231 / 185 / 217 / 239). The cards must read as one
+     comparable row, so the wrapper passes its stretched height down. */
+  align-items: stretch;
+}
+.perks__grid > .reveal-root {
+  height: 100%;
 }
 .perk {
+  height: 100%;
   padding: 1.6rem 1.5rem 1.5rem;
   /* Lift/tilt is owned by useTilt springs on the element (see Perks.tsx);
      the old `transform: translateY(-6px)` hover never actually rendered —
@@ -1389,6 +1415,15 @@
   top: 10px;
   left: 10px;
   z-index: 3;
+  /* Both badges are pinned to the same 10px row. At phone widths the left
+     one had no width ceiling, so a long kind ("HOLDER-EXCLUSIVE SKU",
+     224px at 390px viewport) ran straight under the gated chip anchored
+     131px from the right. Cap it against the right badge instead of
+     letting the two collide. */
+  max-width: calc(100% - 8.5rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .product__media .gated-tag {
   position: absolute;

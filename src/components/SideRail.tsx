@@ -43,6 +43,9 @@ export default function SideRail() {
               return;
             }
           }
+          /* Matches useScrollspy: with no section in the band the rail must
+             clear, not keep the last dot lit. */
+          setActive('');
         },
         { rootMargin: '-38% 0px -56% 0px' },
       );

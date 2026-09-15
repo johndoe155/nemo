@@ -6,7 +6,7 @@ import UniverseDialog from '../components/UniverseDialog';
 import { Countdown, Reveal, SortDropdown, type SortMode } from '../components/ui';
 import { KineticLink, Magnetic, MagneticButton, RollText } from '../components/motion';
 import type { Rarity, Universe } from '../lib/data';
-import { RARITY, UNIVERSE_DROP_ISO, UNIVERSES, visibleUniverses } from '../lib/data';
+import { DROP_LABEL, RARITY, UNIVERSE_DROP_ISO, UNIVERSES, visibleUniverses } from '../lib/data';
 import { useCountdown, useCountUp } from '../lib/hooks';
 import { pageScrollTo } from '../lib/scroll';
 import { rodRing } from '../lib/sound';
@@ -336,7 +336,18 @@ export default function Nemoverse() {
             </motion.div>
             <div className="roster__counter">
               <span>SCROLL TO TRAVERSE</span>
-              <div className="progress roster__progress" aria-label="roster progress">
+              {/* `aria-label` is prohibited on a bare div (axe
+                  `aria-prohibited-attr`) — a container has no role to name.
+                  As a progressbar it gains the role the label implies, and
+                  the value was already sitting right there in the counter. */}
+              <div
+                className="progress roster__progress"
+                role="progressbar"
+                aria-label="Roster position"
+                aria-valuenow={Math.round(progress * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
                 <i style={{ ['--p' as string]: progress }} />
               </div>
               <span>
@@ -451,13 +462,6 @@ function StatTicker({ value, label }: { value: number; label: string }) {
 }
 
 /* ---- Teaser card pinned to the end of the rail: the next drop ---- */
-
-/* Date label derives from the drop ISO — the hardcoded "AUG 22" drifted
-   from the live countdown whenever the data moved. */
-const DROP_LABEL = new Date(UNIVERSE_DROP_ISO)
-  .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  .toUpperCase()
-  .replace(' ', ' ');
 
 function DropTeaserCard() {
   const t = useCountdown(UNIVERSE_DROP_ISO);

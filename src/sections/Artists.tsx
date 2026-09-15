@@ -164,8 +164,8 @@ export default function Artists() {
     <section className="section artists" id="artists">
       <div className="shell">
         <SectionHead
-          num="06"
-          kicker="06 · PERMANENT PUBLIC CREDITS"
+          num="07"
+          kicker="07 · PERMANENT PUBLIC CREDITS"
           kickerGold
           title={
             <>

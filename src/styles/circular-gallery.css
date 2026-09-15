@@ -67,6 +67,12 @@
 .cg__badge {
   gap: 0.5rem;
   padding: 0.42rem 0.8rem;
+  /* The base `.badge` paints its LABEL in the raw accent, which puts iris
+     (#8a4dff) at 4.01:1 on the badge's own 12% tint — under AA for 10px
+     text (axe `color-contrast`). Mixing the accent toward ink keeps the hue
+     legible as itself at 0.62rem while the dot, border and glow keep the
+     pure accent, so the badge still reads as its colour. */
+  color: color-mix(in srgb, var(--c, var(--gold)) 50%, var(--ink));
 }
 
 .cg__badge b {

@@ -1489,14 +1489,28 @@
 
 /* --------------------------- floating holo chips --------------------------- */
 
+/* The chips used to be absolutely positioned at the stage's edges, floating
+   over the 3D canvas. At every width wide enough to mount the tilt that put
+   them straight on top of real content — `.is-b` landed across the stamp
+   ledger's "NEXT PULL / LANDS HERE" label, `.is-c` across the Golden Gate
+   bonus copy — because the stage box is not the visible plate's box: the
+   tilt and the stamp card overflow it.
+
+   They are now a real row in flow, BELOW the stage: nothing can be covered
+   at any width, the float animation still reads, and the reduced-motion and
+   ≤1120px branches (which used to hide them outright) keep them visible. */
 .npx__float-chips {
-  position: absolute;
-  inset: 0;
+  position: relative;
   z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
   pointer-events: none;
 }
 .npx__float-chip {
-  position: absolute;
+  position: relative;
   font-family: var(--font-accent);
   font-weight: 600;
   font-size: 0.54rem;
@@ -1512,23 +1526,19 @@
   box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.8);
   animation: npxChipFloat 7s ease-in-out infinite;
 }
+/* Depth hints survive as animation phase + a little z-lift now that the
+   chips no longer overhang the perspective box. */
 .npx__float-chip.is-a {
-  top: 6%;
-  right: -1.5%;
   transform: translateZ(60px);
   animation-delay: -1.2s;
 }
 .npx__float-chip.is-b {
-  top: 46%;
-  left: -2.5%;
   transform: translateZ(90px);
   color: rgba(159, 236, 255, 0.85);
   border-color: rgba(63, 232, 255, 0.3);
   animation-delay: -3.4s;
 }
 .npx__float-chip.is-c {
-  bottom: 3%;
-  right: 2%;
   transform: translateZ(46px);
   animation-delay: -5.1s;
 }
@@ -1567,8 +1577,10 @@
     transform: none;
     animation: none;
   }
+  /* The tilted stage is off below this width, so the chips lose their
+     perspective cues but keep their content — no longer hidden. */
   .npx__float-chips {
-    display: none;
+    margin-top: 0.9rem;
   }
 }
 @media (max-width: 620px) {

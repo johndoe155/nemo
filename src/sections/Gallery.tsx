@@ -27,9 +27,9 @@ interface GalleryBadge {
 }
 
 const ROTUNDA_BADGES: GalleryBadge[] = [
-  { label: 'PLATES IN ROTATION', count: GALLERY_PLATES.length, accent: '#3fe8ff' },
-  { label: 'REGISTERED UNIVERSES', count: UNIVERSES.length, accent: '#8a4dff' },
-  { label: 'CANON ARTISTS', count: ARTISTS.length, accent: '#ffc857' },
+  { label: 'PLATES IN ROTATION', count: GALLERY_PLATES.length, accent: 'var(--cyan)' },
+  { label: 'REGISTERED UNIVERSES', count: UNIVERSES.length, accent: 'var(--iris)' },
+  { label: 'CANON ARTISTS', count: ARTISTS.length, accent: 'var(--gold)' },
 ];
 
 /* ------------------------------ Sphere data ------------------------------- */

@@ -3,7 +3,7 @@ import { gsap } from 'gsap';
 import { motion, useScroll, useTransform, useMotionValue } from 'framer-motion';
 import { Reveal } from '../components/ui';
 import { LiquidButton, GlassButton, PortalMagnetic } from '../components/PortalButton';
-import { DROP_LABEL, UNIVERSES, UNIVERSE_DROP_ISO } from '../lib/data';
+import { DROP_LABEL, UNIVERSES, UNIVERSE_DROP_ISO, visibleUniverses } from '../lib/data';
 import NemoParticleField from '../components/NemoParticleField';
 import { useCountdown } from '../lib/hooks';
 
@@ -313,7 +313,7 @@ export default function Hero() {
 
         <Reveal delay={0.62}>
           <p className="hero__lede">
-            One character. <em>Seven registered universes</em> — each commissioned from a different
+            One character. <em>{visibleUniverses.length} registered universes</em> — each commissioned from a different
             artist, numbered, canonized, and minted as a limited run. Holders enter new universes
             first. Every purchase pulls a piece from the Nemoverse. The persona keeps it alive
             between drops.

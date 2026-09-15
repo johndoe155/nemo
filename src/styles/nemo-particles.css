@@ -189,16 +189,34 @@
   }
 }
 
+/* No-WebGL notice. It used to be centred across the whole field, which put
+   it directly behind the hero headline — the one surface that must stay
+   clean (and `z-index: 10` inside the field still loses to the hero content,
+   so it read as smudged type under the title rather than as a message).
+   It parks at the foot of the field as a small glass chip: legible, honest
+   about the missing renderer, and out of the type's way. */
 .nemo-field__fallback {
   position: absolute;
-  inset: 0;
-  display: flex;
+  left: 50%;
+  bottom: 1.6rem;
+  translate: -50% 0;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  color: #8892b0;
-  font-size: 13px;
+  gap: 0.5rem;
+  max-width: min(30rem, calc(100% - 2rem));
+  color: #a7b2cc;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  padding: 0.5rem 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(5, 5, 10, 0.7);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   z-index: 10;
   text-align: center;
-  padding: 24px;
   box-sizing: border-box;
 }
