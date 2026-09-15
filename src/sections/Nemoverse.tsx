@@ -8,6 +8,7 @@ import { KineticLink, Magnetic, MagneticButton, RollText } from '../components/m
 import type { Rarity, Universe } from '../lib/data';
 import { RARITY, UNIVERSE_DROP_ISO, UNIVERSES, visibleUniverses } from '../lib/data';
 import { useCountdown, useCountUp } from '../lib/hooks';
+import { pageScrollTo } from '../lib/scroll';
 
 const SORTS: Record<SortMode, (a: Universe, b: Universe) => number> = {
   newest: (a, b) => new Date(b.released).getTime() - new Date(a.released).getTime(),
@@ -130,7 +131,11 @@ export default function Nemoverse() {
           const span = rect.height - window.innerHeight;
           const frac = Math.min(1, Math.max(0, -dragX.get() / maxX));
           const p = 0.06 + frac * 0.88; // mirror of useTransform's [0.06, 0.94]
-          window.scrollTo({ top: startY + p * span, behavior: 'auto' });
+          /* Same instant handoff as before, but routed through the Lenis
+             engine (pageScrollTo immediate) so its internal position
+             re-syncs to the new spot instead of reading the foreign jump
+             as user input. */
+          pageScrollTo(startY + p * span);
         }
       }
     };
@@ -171,7 +176,9 @@ export default function Nemoverse() {
     const endY = rect.bottom + window.scrollY;
     const range = Math.max(0, endY - startY - window.innerHeight);
     const frac = cardCount <= 1 ? 0 : Math.min(1, Math.max(0, index / (cardCount - 1)));
-    window.scrollTo({ top: startY + range * frac, behavior: 'smooth' });
+    /* Animated card-jump through the scroll authority — same curve the
+       wheel uses, so a nav jump and a hand-spun scroll feel identical. */
+    pageScrollTo(startY + range * frac, { smooth: true, duration: 0.9 });
   };
 
   const totalMinted = UNIVERSES.reduce((s, u) => s + u.minted, 0);

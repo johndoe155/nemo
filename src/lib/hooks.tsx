@@ -232,5 +232,59 @@ export function useScrollspy(ids: string[]): string {
   return active;
 }
 
+/* ---------------------------------------------------------------------------
+   useFocusTrap — the WAI-ARIA dialog pattern in one hook (DESIGN_AUDIT
+   P0.3). UniverseDialog hand-rolled this; the mobile menu needed the same
+   guarantees, so the behavior now lives here once: focus moves into the
+   container on open, Tab cycles inside it, Escape routes to the owner, and
+   the previously focused element is restored on close. Page scroll is NOT
+   part of this hook — locks go through lib/scroll.ts (lockPage/unlockPage),
+   which keeps Lenis's position frozen alongside the CSS lock.
+--------------------------------------------------------------------------- */
+
+const TRAP_FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
+export function useFocusTrap(
+  active: boolean,
+  containerRef: { current: HTMLElement | null },
+  opts: { onEscape?: () => void } = {},
+) {
+  useEffect(() => {
+    if (!active) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    container.setAttribute('tabindex', '-1');
+    container.focus();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        opts.onEscape?.();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const focusables = Array.from(container.querySelectorAll<HTMLElement>(TRAP_FOCUSABLE));
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      previouslyFocused?.focus?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+}
+
 /* Re-export what consumers may want directly */
 export { motion, useScroll, useTransform, useSpring, useMotionValueEvent };

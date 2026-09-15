@@ -128,6 +128,48 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- MICRO-LABEL DIM PASS (DESIGN_AUDIT P0.2) ----------------------------
+   --ink-faint used to sit at 0.38 alpha (≈3.2:1 on void — below AA for the
+   10–12px metadata it paints). The token is now 0.56 (≈6:1) and these
+   tracked Space Grotesk labels take their "quiet" from the font's 300–700
+   weight axis instead of from failing contrast: lighter stroke, readable
+   text. One list, exactly the rules that combined `--font-mono` with
+   `--ink-faint` in components/overhaul/suspension/blackhole — children with
+   explicit weights (.ucard__meta b, telemetry <b>) are untouched by the
+   cascade, so emphasis hierarchy inside each cluster survives verbatim. */
+.mmenu .mmenu__foot,
+.hero__hint,
+.hero__telemetry,
+.mv__stat span,
+.lorestat span,
+.roster__counter,
+.roster__hint,
+.ucard__meta,
+.ucard__lock p,
+.dialog__spec span,
+.dialog__artist .who span,
+.dialog__split,
+.persona__cap,
+.product__sku,
+.product__price .eth,
+.store__foot,
+.artistcard__body .credit,
+.feedcard__who .h,
+.feedcard__who time,
+.feedcard__body .threadline,
+.feedcard__meta,
+.feed__foot,
+.countdown__cell span,
+.bh-stage__note,
+.signoff__stats,
+.signoff__social-handle,
+.roster__minimap button span,
+.mrail__hint,
+.creditcard__idx,
+.creditcard__codes {
+  font-weight: 300;
+}
+
 .btn,
 .chip,
 .sort-dd__trigger,

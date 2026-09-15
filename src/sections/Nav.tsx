@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { WalletButton, useMockWallet } from '../components/ui';
 import { Magnetic, RollText } from '../components/motion';
-import { useScrollspy } from '../lib/hooks';
+import { useFocusTrap, useScrollspy } from '../lib/hooks';
+import { lockPage, unlockPage } from '../lib/scroll';
 import { LOGO_SRC } from '../lib/assets';
 
 const LINKS = [
@@ -20,6 +21,7 @@ const SECTION_IDS = LINKS.map((l) => l.href.slice(1));
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const wallet = useMockWallet();
   const active = useScrollspy(SECTION_IDS);
 
@@ -30,12 +32,19 @@ export default function Nav() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  /* P0.3 — the menu now holds real dialog behavior (shared useFocusTrap:
+     Tab cycling, Escape-to-close, focus returned to the burger on exit) and
+     locks the page through lib/scroll, so Lenis freezes with the viewport
+     instead of banking wheel deltas behind the overlay. The old direct
+     body-overflow toggle also popped the layout ~scrollbar-width on open;
+     `scrollbar-gutter: stable` on html removes that class of jump for the
+     menu and the dialog in one stroke. */
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
+    if (open) lockPage('menu');
+    else unlockPage('menu');
+    return () => unlockPage('menu');
   }, [open]);
+  useFocusTrap(open, menuRef, { onEscape: () => setOpen(false) });
 
   return (
     <>
@@ -89,6 +98,10 @@ export default function Nav() {
         {open && (
           <motion.div
             className="mmenu"
+            ref={menuRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site menu"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

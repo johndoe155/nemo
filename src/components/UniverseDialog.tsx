@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react';
+import { useFocusTrap } from '../lib/hooks';
+import { lockPage, unlockPage } from '../lib/scroll';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { KineticLink } from './motion';
 import CardImage from './CardImage';
@@ -7,16 +9,12 @@ import { RARITY } from '../lib/data';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
-
 export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: () => void }) {
   const rarity = RARITY[u.rarity];
   const accent = rarity.color;
   const soldPct = u.supply ? Math.round((u.minted / u.supply) * 100) : 0;
   const panelRef = useRef<HTMLDivElement | null>(null);
   const mediaRef = useRef<HTMLDivElement | null>(null);
-  const restoreRef = useRef<HTMLElement | null>(null);
 
   /* Subtle media parallax tied to the panel's internal scroll: the art
      drifts ±3% against the copy when the dialog content overflows. The
@@ -29,37 +27,18 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
   });
   const mediaY = useTransform(scrollYProgress, [0, 1], ['-3%', '3%']);
 
+  /* P0.3 — the hand-rolled trap and lock now live in shared primitives, so
+     this dialog and the mobile menu can never drift apart again: same
+     focus cycle, same Escape, same return-to-trigger on close, same
+     lib/scroll lock (Lenis frozen alongside the CSS viewport lock; the
+     ~scrollbar-width layout pop that `overflow:hidden` used to cause is
+     gone via scrollbar-gutter on html). */
+  useFocusTrap(true, panelRef, { onEscape: onClose });
+
   useEffect(() => {
-    restoreRef.current = document.activeElement as HTMLElement | null;
-    const panel = panelRef.current;
-    if (panel) {
-      panel.setAttribute('tabindex', '-1');
-      panel.focus();
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'Tab' && panel) {
-        const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
-        if (focusables.length === 0) return;
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
-      restoreRef.current?.focus?.();
-    };
-  }, [onClose]);
+    lockPage('dialog');
+    return () => unlockPage('dialog');
+  }, []);
 
   return (
     <motion.div
@@ -76,6 +55,7 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
       <motion.div
         ref={panelRef}
         className="dialog"
+        data-lenis-prevent
         style={{ '--card-accent': accent }}
         initial={{ opacity: 0, y: 44, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}

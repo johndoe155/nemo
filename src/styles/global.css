@@ -17,7 +17,15 @@
   --line-strong: rgba(255, 255, 255, 0.18);
   --ink: #f5f3ff;
   --ink-dim: rgba(245, 243, 255, 0.66);
-  --ink-faint: rgba(245, 243, 255, 0.38);
+  /* ---- ink-faint is a TEXT token — AA-correct by construction. -----------
+     It was rgba(...,0.38) ≈ 3.2:1 on void while applied to ~50 places of
+     10–12px tracked metadata: below AA for small text. The "dim" read is
+     now bought with weight, not with alpha (see the micro-label pass in
+     typography.css); the perceptual ghost survives, the contrast doesn't
+     fail an audit. The old value lives on as --ink-faint-decor for the few
+     consumers that paint non-text (hairlines, tick ghosts). */
+  --ink-faint: rgba(245, 243, 255, 0.56);
+  --ink-faint-decor: rgba(245, 243, 255, 0.38);
   --iris: #8a4dff;
   --iris-deep: #5b2bd6;
   --cyan: #3fe8ff;
@@ -164,11 +172,39 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  /* SCROLL AUTHORITY (DESIGN_AUDIT P1) — scroll position is animated by
+     Lenis (lib/scroll.ts), which drives the whole page from one rAF cadence
+     on the GSAP ticker. `scroll-behavior: smooth` is gone on purpose:
+     CSS smoothing double-eases Lenis's programmatic scrolls (options
+     `behavior: auto` resolves through scroll-behavior, so every scrollTo
+     Lenis makes would re-enter a native smooth animation — the mushiness
+     this rule used to cause, and the fight SignoffHorizon's refresh guard
+     used to choreograph around). Anchor links route through the click
+     handler in lib/scroll.ts, which owns the easing and the offset. */
   -webkit-text-size-adjust: 100%;
+  /* Reserve the scrollbar lane once, forever — dialog/menu scroll-locks
+     (overflow:hidden on body) no longer change the layout width on open. */
+  scrollbar-gutter: stable;
   /* Framer-motion dev check: scroll container must be non-static to compute
      element offsets against window scroll correctly. */
   position: relative;
+}
+
+/* Lenis base CSS — the classes it toggles itself (html.lenis / -smooth /
+   -stopped). `.lenis-stopped` deliberately gets NO overflow rule: clamping
+   the root scroller while held (boot, dialog locks) would flatten a
+   restored scroll position to 0 — the exact failure the boot sequence
+   guards against. The hold is behavioral (no wheel consumption, no
+   animation), not positional. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
 }
 
 body {

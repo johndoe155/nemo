@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, useScroll, useSpring, useTransform, useMotionValue } from 'framer-motion';
+import { motion, useScroll, useTransform, useMotionValue } from 'framer-motion';
 import { Reveal } from '../components/ui';
 import { LiquidButton, GlassButton, PortalMagnetic } from '../components/PortalButton';
-import { UNIVERSES, UNIVERSE_DROP_ISO } from '../lib/data';
+import { DROP_LABEL, UNIVERSES, UNIVERSE_DROP_ISO } from '../lib/data';
 import NemoParticleField from '../components/NemoParticleField';
 import { useCountdown } from '../lib/hooks';
 
@@ -81,7 +81,12 @@ function GeomSep({ reduced }: { reduced: boolean }) {
 export default function Hero() {
   const ref = useRef<HTMLElement | null>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
-  const smooth = useSpring(scrollYProgress, { stiffness: 70, damping: 20, mass: 0.4 });
+  /* Lenis owns scroll inertia (lib/scroll.ts). The old useSpring wrapper here
+     stacked a second smoothing layer on top of the engine's own — exactly
+     the mush the audit called out; scrollYProgress now arrives continuous by
+     construction, so it is consumed raw. The name stays `smooth` for the
+     transform block below. */
+  const smooth = scrollYProgress;
 
   const bgScale = useTransform(smooth, [0, 1], [1.12, 1.3]);
   const contentY = useTransform(smooth, [0, 1], [0, -90]);
@@ -183,12 +188,16 @@ export default function Hero() {
 
       <motion.div className="shell hero__content" style={{ y: contentY, opacity: contentOpacity }}>
         <Reveal delay={0.05}>
+          {/* P0.4 — the ticker is DECORATION: its text mutates every second
+              (d/h countdown), so it used to re-announce itself through
+              role="status" on a live region — permanent SR spam. The visual
+              marquee is now aria-hidden and the announcement is a separate,
+              static line: one polite status sentence that only changes when
+              the situation changes, and a one-shot assertive alert the frame
+              the drop goes live. */}
           <span
             className={`hero__badge hero__marquee${t.done ? ' live-pill' : ''}${marqueePaused ? ' is-paused' : ''}`}
-            role="status"
-            aria-live="polite"
-            aria-label={statusLine}
-            tabIndex={0}
+            aria-hidden="true"
             onPointerDown={() => setMarqueePaused(true)}
             onPointerUp={() => setMarqueePaused(false)}
             onPointerLeave={() => setMarqueePaused(false)}
@@ -204,6 +213,16 @@ export default function Hero() {
               </span>
             </span>
           </span>
+          <span className="vh" role="status">
+            {t.done
+              ? 'The Nemoverse is live. Universe U-007 is in the registry.'
+              : `The Nemoverse is live. Next drop: U-007, ${DROP_LABEL}.`}
+          </span>
+          {t.done && (
+            <span className="vh" role="alert">
+              U-007 drop is live now.
+            </span>
+          )}
         </Reveal>
 
         <h1 className="display hero__title" aria-label="One canon. Infinite versions.">

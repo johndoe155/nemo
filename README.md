@@ -17,6 +17,8 @@ npm ci              # required — node_modules is only partially committed
 npm run dev         # dev server (localhost:5173)
 npm run build       # tsc -b && vite build → dist/
 npm run preview     # serve the production build
+npm run generate:fonts  # regenerate the 9-face subset font layer (scripts/subset-fonts.mjs)
+npm run test:a11y   # axe-core WCAG gate over the whole page (desktop + mobile)
 ```
 
 ## What's on the page (top → bottom)
@@ -77,6 +79,8 @@ npm run preview     # serve the production build
 
 ```
 src/
+  lib/scroll.ts            # THE scroll authority (Lenis + holds/locks/pageScrollTo)
+  lib/fonts.ts             # critical-font gate awaited by the boot loader
   styles/global.css        # design tokens + system layer (edit tokens here)
   styles/components.css    # component rules
   lib/data.ts              # ALL content + business logic (odds, tiers, brain)
@@ -112,6 +116,18 @@ variable only ships when something actually uses it (e.g. the shadcn
 `--background`-family tokens light up the first time a shadcn primitive that
 references them is added via `npx shadcn add`).
 
+**Fonts:** the webfont layer is GENERATED — `scripts/subset-fonts.mjs` emits
+`src/assets/fonts/pp-fonts.css` and the nine subsetted faces in
+`src/assets/fonts/subset/` from the Pangram Pangram originals on disk. Only
+faces a full CSS audit proved reachable ship (25 → 9), each subset to the
+codepoints this site paints with (Latin + arrows + geometric shapes +
+dingbats), `unicode-range` mirrored, and the `ss01–ss03` stylistic sets
+preserved. The originals stay in the repo (the loader's outline generator
+reads them). Preload tags are deliberately NOT in `index.html` — src-CSS font
+assets are content-hashed at build and the site deploys with `base: './'`, so
+the boot gate replaces the preload's guarantee with a stronger one (no swap
+at handoff, ever).
+
 **Theming:** every color, type, and motion value is a CSS custom property in
 `global.css:root`. Rarity/accent colors propagate via `--c` / `--card-accent`
 style tokens.
@@ -138,6 +154,20 @@ products) in `src/lib/data.ts` — the UI renders whatever the data layer says.
 420vh pinned horizontal roster (desktop/tablet), marquee tickers, sheen
 sweeps, word-level reveals, film grain, and a drifting starfield canvas.
 `prefers-reduced-motion` collapses all of it.
+
+**Scroll authority (`lib/scroll.ts`):** Lenis is the ONE scroller. Wheel input
+is smoothed by the engine (touch stays native), its raf rides the GSAP ticker
+(one rAF cadence for the whole page), ScrollTrigger updates come off
+`lenis.on('scroll')`, and anchor links glide through one delegated handler.
+Anything that MOVES the page (nav anchors, the footer rewind, the roster's
+`goToCard`, the drag→scroll handoff) goes through `pageScrollTo`; readers keep
+subscribing to native scroll events. Modal surfaces (dialog, mobile menu,
+boot loader) freeze the engine through `holdScroll`/`lockPage` keys, so a
+locked viewport can never bank wheel deltas into a jump on unlock — and
+`scroll-behavior: smooth` is gone from `html` for good (Lenis's programmatic
+scrolls resolve through it; two smoothing layers on one position = mush).
+The boot loader additionally swallows scroll keys, marks `#root` inert, and
+releases only after the critical font faces land (`lib/fonts.ts`, capped).
 
 **Rod system (`styles/suspension.css`):** three sections share one piece of
 structural furniture — a rod — and one vocabulary of rods, cords, grommets and

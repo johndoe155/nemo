@@ -1,0 +1,333 @@
+# THE NEMOVERSE — Design Audit & Awwwards Elevation Roadmap
+
+**Pass:** v3 · 2026-09-15 · audit against the working tree at `36501a4`
+**Verdict up front:** this is not a template site. The glyph-morph loader, the pendulum
+roster, the WebGPU singularity, the rod furniture system, and the token discipline are
+already award-tier *craft*. What separates it from Site of the Day is no longer assets —
+it's **scroll authority, input parity, typographic first-paint, and the last 10% of
+state feedback**. This audit is evidence-based: every finding cites the file it lives in.
+
+> ## Execution status — 2026-09-15
+>
+> **P0 and P1 are executed** (this pass). Deltas from the written plan, with reasons:
+>
+> | Plan said | Shipped | Why |
+> | --- | --- | --- |
+> | `<link rel="preload">` ×3 in `index.html` | Critical-font **gate inside the loader** (`lib/fonts.ts` awaited by `Loader.tsx`, capped 1.5 s) | src-CSS font assets are content-hashed at build and the site deploys `base:'./'` — a static preload tag 404s in one of the two environments. Gating the handoff removes the swap itself, which is strictly the stronger guarantee. |
+> | `size-adjust` fallback faces | Deliberately omitted | The gate makes fallback paint invisible for the critical moment; shipping metric overrides for `local()` families (Arial/Helvetica) can't be measured in this pipeline, and invented numbers would *cause* drift. |
+> | fontkit subsetting | `subset-font` (harfbuzz-wasm) via new `scripts/subset-fonts.mjs`, which now **generates `pp-fonts.css` itself** | fontkit's `createSubset().encode()` is a PDF-embedder (emits raw CFF/naive-sfnt, no WOFF2 brotli container). harfbuzz preserves the `ss01–ss03` feature tables the hero uses; every face round-trips through fontkit as a build gate. |
+> | `--ink-faint` → `.56` + hairline pass | Token → `rgba(245,243,255,0.56)` (≈6:1 on void) + `--ink-faint-decor` keeps the old value; the 30 mono-family dim labels take the lightness from Space Grotesk's real **300 weight** (`typography.css` micro-label pass) | The micro-label clusters all resolve to `--font-mono` (Grotesk 300–700 axis), not Montreal — so the "lighter, not dimmer" move happens on the variable weight axis, exactly one selector list. |
+> | Lenis "desktop only" leaning | Instance runs for all pointers; engine gates itself: wheel smoothing + `respectReducedMotion` (1:1 under reduce), touch stays **native** (1.x default), anchor glide + `pageScrollTo` unified everywhere | One implementation path for hold/lock/scrollTo incl. reduced motion; mobile momentum and every horizontal track are behaviorally untouched. |
+> | Refresh-freeze "already partial — unify" | `ScrollTrigger.refreshInit/refresh` → `holdScroll('st-refresh')/releaseScroll` in `lib/scroll.ts` | SignoffHorizon's bespoke `scroll-behavior` save/restore guard becomes vestigial (kept; harmless) and every *other* refresh is protected for free. |
+>
+> Extra inside P1's spirit: `ScrollProgress` lost its chase-spring (same
+> double-smoothing crime as the hero's), the Footer rewind now rides the
+> anchor channel instead of a raw `window.scrollTo`, and `#root` goes
+> `inert + aria-hidden` for the boot window (scroll keys swallowed; Lenis
+> held under key `'boot'` so a stopped engine never banks deltas).
+>
+> **P2–P5 remain open** — rotunda keyboard/SR layer, drag momentum + snap,
+> loader skip/session pass, scroll-scrubbed events, sound map, haptics.
+> The axe gate is live (`npm run test:a11y`, `tests/a11y-axe.spec.ts`) with
+> `#rotunda` as its one listed debt until P2.1 lands.
+
+---
+
+## Verified baseline (do not regress)
+
+| System | Where | Status |
+| --- | --- | --- |
+| Boot morph (Machina outlines → vector character, build-baked) | `components/Loader.tsx`, `lib/nemoMorph.ts` | Excellent |
+| Semantic type tokens (5 roles, legacy aliases) | `styles/global.css` | Excellent |
+| Pinned horizontal roster + underdamped pendulum cards | `sections/Nemoverse.tsx`, `components/HangingCard.tsx` | Excellent |
+| Rod furniture (3 rigs, one vocabulary) | `styles/suspension.css` | Excellent |
+| WebGPU black hole + graceful degradation + seam | `components/BlackHoleStage.tsx`, `styles/blackhole.css` | Excellent |
+| Reduced-motion (36 files), focus-visible, skip link, dialog focus trap | global | Strong |
+| Art pipeline (AVIF 540/840/full + LQIP blur-up) | `scripts/generate-art-variants.sh`, `CardImage` | Strong |
+| Motion perf policy (framer owns transform; no shadow/gdrift transitions on cards) | README, `motion.css` | Strong |
+
+Measured build (`npm run build`, clean `tsc -b`):
+CSS **194.4 kB** (38.5 gzip) · `index` JS **484 kB** (167.6 gzip) · `three` classic chunk
+**736 kB** · `three/webgpu` chunk **659 kB** · **25 self-hosted woff2 faces (~1.9 MB on disk)**.
+
+---
+
+## 1 · Aesthetic & Spatial Elevation
+
+### 1.1 · Typography ships 25 faces and preloads zero — the loader exists to show the type, then FOUTs it
+`pp-fonts.css` declares 10 Montreal + 6 Plain + 6 Inktrap + 2 Text faces (with full italics),
+no `unicode-range`, and `index.html` has **no `<link rel="preload">`**. The boot morph is
+build-extracted outlines (no webfont dependency), but the instant the loader hands off,
+the H1 — the one moment the whole sequence built toward — renders in fallback and swaps.
+Three rules in the entire codebase use italic; ~12 of 25 faces are dead weight in `dist/`.
+
+**Fix (one day, highest-leverage typographic win in the repo):**
+1. Preload exactly three faces in `index.html`: `machina-inktrap-ultrabold-normal`,
+   `machina-plain-regular-normal`, `montreal-regular-normal` (the roles the hero + nav
+   actually paint with), `crossorigin`.
+2. Delete the italic cuts of **both Machina families** (display faces are uppercase in
+   every consumer); keep one Montreal italic for `<em>`.
+3. `fontkit` is already a devDependency — extend `scripts/` to subset the display faces
+   to `U+0020-007E + punctuation` (all-caps for Machina). Expect 50 kB → 12–18 kB per face.
+4. Declare `size-adjust`/`ascent-override` on the local fallback so swap shifts < 1%.
+
+### 1.2 · `--ink-faint` fails WCAG on the exact text that carries the "technical HUD" aesthetic
+`rgba(245,243,255,.38)` on `--void` computes to **≈ 3.2 : 1** — under AA for small text — and
+it is applied **38 times across `components.css` + 12 more in the other layers**, almost all of it
+at 10–12 px tracked metadata (kickers, specs, card indices). The HUD look is *dim*, not *invisible*.
+
+**Fix:** split the token into `--ink-faint` (bump to `rgba(245,243,255,.56)` ≈ 4.6 : 1) for text,
+and a new `--hairline-faint` for decorative uses. Then pair the contrast lift with the thing that
+actually buys the "dim" look: letter-spacing is already wide; add optical weight by dropping these
+labels to Montreal **Hairline** (a face you ship and barely use) rather than lowering alpha.
+Auditing target: 0 text instances below 4.5 : 1; sweep with axe-core in CI (see §4).
+
+### 1.3 · Uniform section grammar flattens the scroll story
+Every section follows `shell → SectionHead → grid`. The roster's 420vh pin is the only
+structural *event*. On a page of eleven sections, two events read as monotony.
+
+**Fixes, in order of budget:**
+- **Vertical dynamic range:** define a section-gap scale in `global.css` —
+  `--gap-s: 10vw; --gap-m: 16vw; --gap-l: 26vw` — and *use it unevenly*: `--gap-l` only
+  before the Singularity and the Sign-off. Negative space is what makes the black hole land.
+- **Bleed the rotunda** (`#rotunda`): the 3D sphere is the only full-viewport object; give it
+  `margin-inline: calc(-1 * var(--gutter))` and let plates pass under the nav fade. Grid-breaking
+  starts where depth already exists.
+- **Editorial layering:** the pinned rail gets a `roster__ghost` watermark; every `SectionHead`
+  should get a corresponding oversized `sechead__num` set in Machina Inktrap **Hairline outline**
+  (`-webkit-text-stroke: 1px var(--line-strong); color: transparent`), scroll-rotated by the
+  existing `--scroll-vel` hook (the mechanism is already in `audit-gaps.css` — extend the selector list).
+- **Optical alignment:** tracked-uppercase kickers and card copy need hanging-punctuation:
+  `hanging-punctuation: first allow-end` where supported + manual `text-indent: -0.35em` on
+  quote/paren starts in dialog lore. Left edges of mixed punctuation currently read ragged.
+
+### 1.4 · Palette depth: the void is one value
+`--void: #05050A` is absolute black-ish everywhere; `--abyss` exists but is rarely used.
+Luxury dark UIs get depth from *temperature drift*, not from alpha.
+
+**Fix:** promote the existing scene system (`lib/scenes.ts` already has `singularity`/`abyss`
+districts for the WebGL ambience) into the CSS shell: expose `--scene-bg` / `--scene-line`
+custom properties that `Ambience` writes to `html` per district, so the page background subtly
+shifts navy→ember around the black hole and iris→cyan around the persona — the seam treatment
+(`blackhole.css`) already proves the technique works locally; globalize it.
+Reserve one *non-negotiable* accent surface — gold — exactly as-is: rarity and "money moments"
+only. Do not add new hues; add **luminance steps** (`--void-2`, `--void-3` for card wells).
+
+---
+
+## 2 · Motion & Interaction Architecture
+
+### 2.1 · Scroll has six owners and no single authority — adopt Lenis
+Current listeners: Nav scroll state, `ScrollProgress`, `VelocityFX`, `useScrollspy`,
+Nemoverse mobile carriage, plus framer's `useScroll` (which *also* runs a `useSpring` on the
+hero) and GSAP `ScrollTrigger` (drilling rod, SignoffHorizon). Add `html { scroll-behavior: smooth }`
+and anchor jumps, and you get **stacked smoothing** — a spring riding on a native inertial
+animation riding on separate rAF reads. Trackpad scroll feels mushy; nav anchor jumps and
+scrubbed triggers fire on different frames.
+
+**Fix (the single highest-impact motion change):**
+```ts
+// lib/scroll.ts — one authority
+import Lenis from 'lenis';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+export function initScroll() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+  const lenis = new Lenis({ lerp: 0.09, wheelMultiplier: 1, touchMultiplier: 1.4 });
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add((t) => lenis.raf(t * 1000));
+  gsap.ticker.lagSmoothing(0);
+  return lenis; // Nav/ScrollProgress/VelocityFX subscribe to lenis.on('scroll'), not window
+}
+```
+Remove `scroll-behavior: smooth` from `global.css` (Lenis owns anchor easing now; give
+`nav__link` clicks `lenis.scrollTo(target, { offset: -var(--nav-h) })`). For framer consumers,
+feed `window.scrollY` unchanged — framer reads native position which Lenis animates, so all
+`useScroll` scrubs stay valid, but they now share Lenis's frame pacing. Kill the hero's
+`useSpring` wrapper (double smoothing — the spring existed to hide native scroll quantization).
+
+### 2.2 · The roster drag dies on release — the one place physics must win
+`Nemoverse.tsx` onUp: the dragged offset is solved back into `scrollYProgress` via a bare
+`window.scrollTo` — correct handoff, **zero momentum**. The cards are underdamped pendulums
+(34–52 stiffness, 5.6–7.1 damping per README) but the carriage that drives them stops dead.
+The physics vocabulary breaks exactly where the eye is.
+
+**Fix:** track pointer velocity (last 4 `pointermove` deltas, rAF-windowed), then on release run
+a spring on a *motion value that feeds the scroll position*: `animate(scrollY, target + vel*k,
+{ type:'spring', stiffness: 90, damping: 20 })` (framer's `animate` imperative API), with
+magnetic snap: after inertia decays below ~2 px/f, spring to `nearestCardIndex * cardPitch`.
+With Lenis this becomes `lenis.scrollTo(target, { velocity })` in one line. Add the `DRAG`
+cursor label + `grabbing` state on the custom cursor (it currently flips only `data-hover`).
+
+### 2.3 · The boot lock is 4.1 s, unconditional, keyboard-permeable, and repeats forever
+Loader timeline: 2.15 s count + 0.16 s beat + 0.82 s snap + **1.6 s hold** ≈ 4.1 s minimum, every
+visit, no skip. It blocks `wheel`/`touchmove` but not **keyboard** scroll (PageDown/arrows
+still drive the page underneath, desyncing ScrollTrigger measurements the comment explicitly
+protects). And there is no `sessionStorage` bypass, while wallet/pulls/sound all persist state.
+
+**Fix, three small changes:**
+1. `skip()` — any `pointerdown`, `keydown` (Space/PageDown/Escape/arrows) or `wheel ≥ 2` during
+   boot jumps the timeline with `tween.progress(1)` and runs `finish()`. Award sites earn
+   cinematic by *letting you leave*.
+2. `sessionStorage.setItem('ldr-seen','1')` on finish; boot replays in `0.9 s` (count fast-forwards
+   from 82, morph keeps its snap) on repeat visits. Keep full skip under reduced motion.
+3. During boot add `main, footer, nav { inert: true }`-style blocking: `html.is-booting body
+   { overflow: clip }` is not viable (breaks sticky rigs — their comment explains why), so also
+   `addEventListener('keydown', blockScroll)` and `.preventDefault()` tab-focus escape
+   (the loader wrapper gets `tabIndex={0} aria-label="Loading — press any key to skip"`).
+
+### 2.4 · Scroll-driven timelines to add (all glue-side, nothing vendored)
+- **Hero → roster handoff:** scrub the hero's three title lines *apart* (line 1 ←, line 3 →,
+  line 2 up, opacity→0) across the first 40vh while the particle field's `hero__bg` scale
+  continues — the title literally gets flung into the rail. GSAP timeline, `scrub: 0.6`,
+  bound to the same range that currently just fades `contentOpacity`.
+- **Singularity dolly:** `BlackHoleStage.tsx` already owns camera orchestration (it starts
+  `CameraAnimation` itself). Add a scroll-scrubbed `camera.position.z` offset (±18%) mapped to
+  section progress so approaching the hole *pulls you in*; veto under reduced motion. One
+  `lenis.on('scroll')` → `camera.position.z = base + progress * 40`. The config stays untouched.
+- **Rotunda scroll-coupled spin:** `img-sphere.tsx` has drag + auto-rotate; add a scroll-enter
+  impulse (velocity of the section's `scrollYProgress` → angular velocity decay) so the sphere
+  "keeps spinning" from being scrolled past — same gust channel the hanging cards already use
+  (`gust={pageScroll}` pattern is proven on desktop and mobile).
+- **Sign-off crawl:** pin the last crawl frame with a scrubbed `translateY` against `clip-path:
+  inset()` so credits *rise out of the void* rather than ending. Mechanism exists in
+  `signoff-horizon.css` (GSAP-driven) — extend, don't rebuild.
+
+### 2.5 · Shared-element transitions where DOM already repeats content
+The roster card and the dialog show the **same art + code + rarity** — right now that's two
+disconnected renders. `framer-motion` is v11: give `UniverseCard`'s media and `UniverseDialog`'s
+media the same `layoutId={`plate-${u.id}`}`, open the dialog from `event.target`-anchored state,
+and let one 0.6 s expo-spring carry the plate from rail to panel. The card *becomes* the dialog.
+Same trick for the rotunda plate spotlight (currently an independent fade). If layout animation
+proves too invasive across the hanging-card springs, fall back to the **View Transitions API**
+(`startViewTransition` behind feature-detect; swap→crossfade fallback) — zero coupling to either
+tree's transform authority.
+
+---
+
+## 3 · UX Craftsmanship & Sensory Polish
+
+### 3.1 · The rotunda is mouse-only — the single worst credibility gap in the app
+`img-sphere.tsx`: **zero** `tabIndex`, `role`, `aria`, keyboard handling (verified). The Rotunda is
+the canonical "wow" feature; a keyboard user gets a static image they can't operate and an SR user
+gets nothing. Awwwards' own jury feedback loop runs on this.
+
+**Fix:** `role="region" aria-roledescription="3D carousel"`, `tabIndex={0}`, `aria-label="Rotunda —
+9 universes. Arrow keys rotate, Enter inspects."`; `ArrowLeft/Right` = step one plate to front
+(reuse the drag release's snap math), `Enter` = open the plate's spotlight, `Home/End` = first/last.
+Mirror plates as a visually-hidden `<ul>` of real links (the roster's hrefs) so the section is
+crawlable. Under reduced motion, auto-rotation must stop and plates become a plain list.
+
+### 3.2 · Mobile menu has no Escape, no focus trap, and pops the scrollbar
+`Nav.tsx` closes only by ✕/link tap. The dialog got a real trap (`UniverseDialog.tsx` L34–52);
+the menu didn't. Both set `body.style.overflow='hidden'` without `scrollbar-gutter: stable` or
+padding compensation — ~15 px layout jump on open, on desktop widths where the menu is even
+secondary (marginal, but it's visible).
+
+**Fix:** extract the dialog's trap into `useFocusTrap(open)` in `lib/hooks.tsx`, share it with the
+menu + rotunda spotlight; add `Escape → close`; globally add `html { scrollbar-gutter: stable }`
+and delete the manual padding math forever.
+
+### 3.3 · Countdown live-region spam
+The hero badge is `role="status" aria-live="polite"` wrapping a marquee whose text contains
+`D-xx H-xx`, re-rendered every second by `useCountdown`. Screen readers will read the counter
+constantly. **Fix:** `aria-live="off"` on the visual ticker; place one polite live node with the
+static sentence and a second `assertive` one only at `t.done`. 10 lines.
+
+### 3.4 · Sensory map — extend the existing sound engine into a diegetic one
+`lib/sound.ts` ships two oscillator blips. The page's metaphors are *metal, gravity, ink*:
+- **Rod ring** — on card press while the roster is dragging: short filtered noise burst,
+  frequency mapped to `|carriage velocity|` (the same value `HangingCard` consumes).
+- **Gravity swell** — gain = f(distance to `.singularity` section rect), a 40–60 Hz sine bed,
+  updated from the Lenis/scroll channel at 10 Hz, not per-frame. Zero cost off-axis.
+- **Stamp thud** — pull resolves (the pull canvas already gates by IntersectionObserver;
+  the audio trigger belongs in `usePullEngine` phase transitions, *before* the reveal frame for
+  anticipation: whoosh at `spinning`, thud at `result`).
+- **Near-miss tension** — 2-frame hesitation + a rising glissando when RNG landed secret/legendary
+  one slot away from pity — this is the casino cue, cheap to build on the existing blip().
+All behind the current opt-in toggle; keep lazy AudioContext (it is), and add a
+`sound.ts` registry `{ event: {freq, dur, type, filter} }` so tuning stays out of components.
+
+### 3.5 · Tactile parity: haptics + press states
+`navigator.vibrate` appears **zero** times. On coarse pointers where the cursor glow and magnets
+don't exist, touch gets no physical channel back:
+- `vibrate(8)` on pull stamp, `vibrate([4, 24, 10])` on legendary/secret reveal, `vibrate(6)` on
+  dialog open. Feature-detect `('vibrate' in navigator)` — silent on iOS. One util, four call sites.
+- Press states: `.perk`, store cards and rotunda plates have tilt on hover (framer `useTilt`) —
+  on `touch` devices the equivalent is `whileTap={{ scale: 0.985 }}` + the bloom pseudo-element
+  opacity set to 0.5. The `.pk` registry in `motion.css` should carry it for all three, per card.
+
+### 3.6 · Micro-feedback inventory (small, but each is visible in a screen recording)
+- **Nav:** scrollspy `active` is a class swap; add a shared `layoutId="nav-marker"` bar that
+  *slides between* links (2 lines in `Nav.tsx`, and the section count in `SideRail` gets the
+  same treatment).
+- **Chips:** filter changes reflow the rail instantly — animate `maxX` measurement
+  (`animate(railWidth, …)`) so re-sort visibly *rethreads* instead of snapping.
+- **Dialog:** add `scrollbar-width: thin` + gradient thumb on `.dialog__body` (chat already has
+  it — `nemo-chat.css` L272 — inconsistency, not absence).
+- **Toast:** "ADDED TO CART · DEMO" is right; add the rarity hue of the *current* universe
+  context via `--card-accent` so the toast belongs to wherever the user is standing.
+- **Cursor label:** extend `data-cursor` to rotunda ("SPIN"), singularity ("LOOK INTO IT"),
+  stamp card ("COLLECT") — the mechanism exists; only three surfaces carry labels today.
+
+### 3.7 · Honest-demo affordances
+Store mints gated SKUs behind a mock wallet that persists in `localStorage` forever once
+"connected" — for a demo pitched at clients, add a `DEMO WALLET` chip (10 px, `--gold` outline)
+beside the connected address with a reset action. The README's honesty pass deserves UI parity.
+
+---
+
+## 4 · Prioritized Execution Roadmap
+
+**Ordering logic:** first paint → scroll authority → input parity → physics continuity →
+sensory layer → payload. Each step is independently shippable and testable.
+
+### Phase 0 — First-paint & integrity (≈ 2 days)
+1. Font preloads (3 faces) + subsetting script via `fontkit` + drop unused italics · `1.1`
+2. `--ink-faint` split + Hairline treatment for micro-text + axe-core CI gate
+  (`@axe-core/playwright`, budget: 0 serious on the 1280×900 + 390×844 matrix) · `1.2`
+3. `scrollbar-gutter: stable` + shared `useFocusTrap` wired into mmenu + `Escape` closes menu · `3.2`
+4. Countdown live-region restructure · `3.3`
+   **Exit criteria:** H1 paints in Machina on first visit; axe green; no layout pop on dialog/menu open.
+
+### Phase 1 — Scroll authority (≈ 3 days)
+5. Lenis integration + remove `scroll-behavior:smooth` + hero `useSpring` removal +
+   all six scroll consumers onto the single channel · `2.1`
+6. `html.is-booting` → full input inertness (keydown + tab-trap) · `2.3.3`
+7. GSAP ScrollTrigger refresh plumbing on `lenis.on('scroll')` (already partial in Lore/Signoff — unify)
+   **Exit criteria:** one rAF cadence site-wide; trackpad scroll has one smoothing curve, no mush.
+
+### Phase 2 — Interaction parity (≈ 3 days)
+8. Rotunda keyboard + SR layer (the carousel pattern in `3.1`) — **non-negotiable** · `3.1`
+9. Roster drag momentum + index snap + `DRAG` cursor state · `2.2`
+10. Loader skip-on-any-input + session short-pass · `2.3.1–2`
+11. Nav marker (`layoutId`), `data-cursor` sweep across surfaces · `3.6`
+    **Exit criteria:** every canvas/3D surface operable by keyboard; drag feels continuous with physics.
+
+### Phase 3 — Cinematic layer (≈ 4 days)
+12. Hero→roster title scatter scrub; rotunda scroll-gust; singularity camera dolly;
+    sign-off crawl clip-rise · `2.4`
+13. Card→dialog shared-element (`layoutId` plate morph, VT-API fallback) · `2.5`
+14. `--gap-s/m/l` spatial scale + rotunda bleed + outlined oversized section numerals · `1.3`
+    **Exit criteria:** three scroll-scrubbed "events" per viewport-height of scroll, all
+    reduced-motion-vetoed, all frame-budgeted (transform/opacity/`clip-path` only — respect
+    the motion.css rules block).
+
+### Phase 4 — Sensory & depth (≈ 3 days)
+15. Sound registry: rod ring / gravity swell / stamp thud + near-miss · `3.4`
+16. Haptics util + `whileTap` parity on touch · `3.5`
+17. Scene-global background drift from `lib/scenes.ts` into CSS custom properties · `1.4`
+18. Demo-wallet chip + reset · `3.7`
+
+### Phase 5 — Payload & proof (ongoing)
+19. Measure first: Lighthouse (mobile, throttled), WebPageTest filmstrip. The two three-builds
+    trade is documented and accepted (`README`); attack the rest — `html2canvas` (204 kB chunk)
+    is capture-only for the Sign-off: move behind a dynamic import at the exact moment the
+    signoff plate enters the second viewport, not merely idle.
+20. Consider a `motion-safe` Playwright visual-regression suite (extend `tests/signoff-horizon.spec.ts`
+    pattern: fixed clock, scroll-to-section, pixel diff) so this level of craft survives future edits.
+
+**Budget verdict:** ~15–18 engineer-days takes a 9 to a 10. The assets are done; this list is
+entirely *conduction* — one scroll authority, one input model, one typographic first beat,
+one physics vocabulary. That's the difference between beautiful and inevitable.

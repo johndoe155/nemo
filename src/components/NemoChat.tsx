@@ -291,6 +291,7 @@ export default function NemoChat() {
 
         <motion.div
           className="nchat__log"
+          data-lenis-prevent
           ref={logRef}
           variants={rowVariants}
           role="log"

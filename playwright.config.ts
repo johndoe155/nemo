@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: 'signoff-horizon.spec.ts',
+  testMatch: '**/*.spec.ts',
   fullyParallel: false, // deterministic GPU/context-budget checks
   workers: 1,
   timeout: 45_000,

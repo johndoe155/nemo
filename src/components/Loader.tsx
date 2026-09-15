@@ -11,6 +11,8 @@ import {
   VIEWBOX,
 } from '../lib/nemoLoaderData';
 import { GLYPH_SCALE, counterLabel, glyphPath, layoutCounter, trackingAt } from '../lib/nemoMorph';
+import { holdScroll, releaseScroll } from '../lib/scroll';
+import { criticalFontsReady } from '../lib/fonts';
 
 gsap.registerPlugin(MorphSVGPlugin);
 
@@ -116,22 +118,66 @@ export default function Loader() {
     const html = document.documentElement;
     html.classList.add('is-booting');
 
-    /* The page must not scroll out from under the loader. Blocking the two
-       gesture streams keeps the scroll position (and every ScrollTrigger
-       measuring from it) untouched — unlike an overflow lock, which would
-       clamp a restored scroll position on reload. */
+    /* Inertness (DESIGN_AUDIT P1.6). The page must not scroll out from under
+       the loader. Blocking the two gesture streams keeps the scroll position
+       (and every ScrollTrigger measuring from it) untouched — unlike an
+       overflow lock, which would clamp a restored scroll position on reload.
+       The gap this closes: keyboard. Arrows/Space/PageDown still drove the
+       page (and the wheel blocker is powerless against them), desyncing the
+       very measurements this whole guard exists for. So: scroll keys are
+       swallowed, the page subtree is `inert` (the loader itself owns no
+       controls, so nothing legitimate is lost to it), and — when the Lenis
+       engine exists — a 'boot' hold freezes it, so a stopped-but-listening
+       instance can't bank wheel deltas into a jump the moment it wakes. */
+    const SCROLL_KEYS = new Set([
+      ' ',
+      'Spacebar',
+      'PageUp',
+      'PageDown',
+      'Home',
+      'End',
+      'ArrowUp',
+      'ArrowDown',
+    ]);
+    const rootEl = document.getElementById('root');
+    rootEl?.setAttribute('inert', '');
+    /* inert keeps the keyboard/mouse out; aria-hidden keeps the announcement
+       stream out while the screen is the loader's (the loader root is itself
+       aria-hidden — so boot reads as one intentional beat of silence instead
+       of a page nobody can touch yet). */
+    rootEl?.setAttribute('aria-hidden', 'true');
+
     const blockScroll = (event: Event) => event.preventDefault();
+    const blockKey = (event: KeyboardEvent) => {
+      if (SCROLL_KEYS.has(event.key)) event.preventDefault();
+    };
     window.addEventListener('wheel', blockScroll, { passive: false });
     window.addEventListener('touchmove', blockScroll, { passive: false });
+    window.addEventListener('keydown', blockKey);
+    holdScroll('boot');
+
+    /* The critical-font gate (DESIGN_AUDIT P0.1): the counter is vector-
+       baked and needs no webfont, but the handoff does — release the boot
+       only once the faces the hero paints with are ready, capped at 1.5s
+       so a cold network can never trap the sequence. No FOUT, no timeout
+       gamble, no preload tags fighting content-hashed asset URLs. */
+    const fontsReady = criticalFontsReady();
 
     let done = false;
+    const settle = () => {
+      html.classList.remove('is-booting');
+      rootEl?.removeAttribute('inert');
+      rootEl?.removeAttribute('aria-hidden');
+      window.removeEventListener('wheel', blockScroll);
+      window.removeEventListener('touchmove', blockScroll);
+      window.removeEventListener('keydown', blockKey);
+      releaseScroll('boot');
+      setGone(true);
+    };
     const finish = () => {
       if (done) return;
       done = true;
-      html.classList.remove('is-booting');
-      window.removeEventListener('wheel', blockScroll);
-      window.removeEventListener('touchmove', blockScroll);
-      setGone(true);
+      void fontsReady.then(settle);
     };
 
     const slots = digitRefs.current;
@@ -245,8 +291,12 @@ export default function Loader() {
     return () => {
       tl.kill();
       html.classList.remove('is-booting');
+      rootEl?.removeAttribute('inert');
+      rootEl?.removeAttribute('aria-hidden');
       window.removeEventListener('wheel', blockScroll);
       window.removeEventListener('touchmove', blockScroll);
+      window.removeEventListener('keydown', blockKey);
+      releaseScroll('boot');
     };
   }, [resolveExact]);
 

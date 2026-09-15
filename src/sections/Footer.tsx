@@ -240,7 +240,11 @@ export default function Footer() {
         <span>© 2026 THE NEMOVERSE · CONCEPT PITCH DEMO</span>
         <span>NEMOVERSE PROTOCOL v0.1.0</span>
         <Magnetic preset="pill" radius={100} strength={0.18} max={14}>
-          <a href="#top" className="curtain-footer__rewind" onClick={() => window.scrollTo({ top: 0, behavior: 'auto' })}>BACK TO TOP ↑</a>
+          {/* Rewind rides the same anchor channel as every #id on the page
+              (lib/scroll.ts) — Lenis owns the easing, the raw scrollTo was a
+              competing animation author. Without JS the native href jump
+              still lands. */}
+          <a href="#top" className="curtain-footer__rewind">BACK TO TOP ↑</a>
         </Magnetic>
       </div>
       </footer>
