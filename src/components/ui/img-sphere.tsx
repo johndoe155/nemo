@@ -39,10 +39,6 @@ const ZERO = motionValue(0);
  * ```
  */
 
-// ==========================================
-// TYPES & INTERFACES
-// ==========================================
-
 export interface Position3D {
   x: number;
   y: number;
@@ -108,10 +104,6 @@ interface MousePosition {
   y: number;
 }
 
-// ==========================================
-// CONSTANTS & CONFIGURATION
-// ==========================================
-
 const SPHERE_MATH = {
   degreesToRadians: (degrees: number): number => degrees * (Math.PI / 180),
   radiansToDegrees: (radians: number): number => radians * (180 / Math.PI),
@@ -136,10 +128,6 @@ const SPHERE_MATH = {
   }
 };
 
-// ==========================================
-// MAIN COMPONENT
-// ==========================================
-
 const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   images = [],
   containerSize = 400,
@@ -159,10 +147,6 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   const reduce = useReducedMotion() ?? false;
   const reduceRef = useRef(reduce);
   reduceRef.current = reduce;
-
-  // ==========================================
-  // STATE & REFS
-  // ==========================================
 
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const [rotation, setRotation] = useState<RotationState>({ x: 15, y: 15, z: 0 });
@@ -189,10 +173,6 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   rotationRef.current = rotation;
   const gustBoost = useRef(0);
 
-  // ==========================================
-  // COMPUTED VALUES
-  // ==========================================
-
   const actualSphereRadius = sphereRadius || containerSize * 0.5;
   const baseImageSize = containerSize * baseImageScale;
 
@@ -207,25 +187,18 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     gustBoost.current = gustBoost.current * 0.6 + clamped * 0.4;
   });
 
-  // ==========================================
-  // UTILITY FUNCTIONS
-  // ==========================================
-
   const generateSpherePositions = useCallback((): SphericalPosition[] => {
     const positions: SphericalPosition[] = [];
     const imageCount = images.length;
 
-    // Use Fibonacci sphere distribution for even coverage
     const goldenRatio = (1 + Math.sqrt(5)) / 2;
     const angleIncrement = 2 * Math.PI / goldenRatio;
 
     for (let i = 0; i < imageCount; i++) {
-      // Fibonacci sphere distribution
       const t = i / imageCount;
       const inclination = Math.acos(1 - 2 * t);
       const azimuth = angleIncrement * i;
 
-      // Convert to degrees and focus on front hemisphere
       let phi = inclination * (180 / Math.PI);
       let theta = (azimuth * (180 / Math.PI)) % 360;
 
@@ -237,10 +210,8 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         phi = Math.min(175, phi + poleBonus); // Reach closer to bottom pole (165° maximum)
       }
 
-      // Map to fuller vertical range - covers poles but avoids extremes
       phi = 15 + (phi / 180) * 150; // Map to 15-165 degrees for pole coverage with stability
 
-      // Add slight randomization to prevent perfect patterns
       const randomOffset = (Math.random() - 0.5) * 20;
       theta = (theta + randomOffset) % 360;
       phi = Math.max(0, Math.min(180, phi + (Math.random() - 0.5) * 10));
@@ -257,24 +228,20 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
 
   const calculateWorldPositions = useCallback((): WorldPosition[] => {
     const positions = imagePositions.map((pos, index) => {
-      // Apply rotation using proper 3D rotation matrices
       const thetaRad = SPHERE_MATH.degreesToRadians(pos.theta);
       const phiRad = SPHERE_MATH.degreesToRadians(pos.phi);
       const rotXRad = SPHERE_MATH.degreesToRadians(rotation.x);
       const rotYRad = SPHERE_MATH.degreesToRadians(rotation.y);
 
-      // Initial position on sphere
       let x = pos.radius * Math.sin(phiRad) * Math.cos(thetaRad);
       let y = pos.radius * Math.cos(phiRad);
       let z = pos.radius * Math.sin(phiRad) * Math.sin(thetaRad);
 
-      // Apply Y-axis rotation (horizontal drag)
       const x1 = x * Math.cos(rotYRad) + z * Math.sin(rotYRad);
       const z1 = -x * Math.sin(rotYRad) + z * Math.cos(rotYRad);
       x = x1;
       z = z1;
 
-      // Apply X-axis rotation (vertical drag)
       const y2 = y * Math.cos(rotXRad) - z * Math.sin(rotXRad);
       const z2 = y * Math.sin(rotXRad) + z * Math.cos(rotXRad);
       y = y2;
@@ -282,31 +249,24 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
 
       const worldPos: Position3D = { x, y, z };
 
-      // Calculate visibility with smooth fade zones
       const fadeZoneStart = -10;  // Start fading out
       const fadeZoneEnd = -30;    // Completely hidden
       const isVisible = worldPos.z > fadeZoneEnd;
 
-      // Calculate fade opacity based on Z position
       let fadeOpacity = 1;
       if (worldPos.z <= fadeZoneStart) {
-        // Linear fade from 1 to 0 as Z goes from fadeZoneStart to fadeZoneEnd
         fadeOpacity = Math.max(0, (worldPos.z - fadeZoneEnd) / (fadeZoneStart - fadeZoneEnd));
       }
 
-      // Check if this image originated from a pole position
       const isPoleImage = pos.phi < 30 || pos.phi > 150; // Images from extreme angles
 
-      // Calculate distance from center for scaling (in 2D screen space)
       const distanceFromCenter = Math.sqrt(worldPos.x * worldPos.x + worldPos.y * worldPos.y);
       const maxDistance = actualSphereRadius;
       const distanceRatio = Math.min(distanceFromCenter / maxDistance, 1);
 
-      // Scale based on distance from center - be more forgiving for pole images
       const distancePenalty = isPoleImage ? 0.4 : 0.7; // Less penalty for pole images
       const centerScale = Math.max(0.3, 1 - distanceRatio * distancePenalty);
 
-      // Also consider Z-depth for additional scaling
       const depthScale = (worldPos.z + actualSphereRadius) / (2 * actualSphereRadius);
       const scale = centerScale * Math.max(0.5, 0.8 + depthScale * 0.3);
 
@@ -320,7 +280,6 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
       };
     });
 
-    // Apply collision detection to prevent overlaps
     const adjustedPositions = [...positions];
 
     for (let i = 0; i < adjustedPositions.length; i++) {
@@ -330,7 +289,6 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
       let adjustedScale = pos.scale;
       const imageSize = baseImageSize * adjustedScale;
 
-      // Check for overlaps with other visible images
       for (let j = 0; j < adjustedPositions.length; j++) {
         if (i === j) continue;
 
@@ -339,16 +297,13 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
 
         const otherSize = baseImageSize * other.scale;
 
-        // Calculate 2D distance between images on screen
         const dx = pos.x - other.x;
         const dy = pos.y - other.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Minimum distance to prevent overlap (with more generous padding)
         const minDistance = (imageSize + otherSize) / 2 + 25;
 
         if (distance < minDistance && distance > 0) {
-          // More aggressive scale reduction to prevent overlap
           const overlap = minDistance - distance;
           const reductionFactor = Math.max(0.4, 1 - (overlap / minDistance) * 0.6);
           adjustedScale = Math.min(adjustedScale, adjustedScale * reductionFactor);
@@ -502,10 +457,6 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     [images, rotation.x, rotateToIndex, frontPlateIndex, imagePositions, swapWithPlateMorph]
   );
 
-  // ==========================================
-  // PHYSICS & MOMENTUM
-  // ==========================================
-
   const updateMomentum = useCallback(() => {
     if (isDragging) return;
 
@@ -589,10 +540,6 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
       };
     });
   }, [isDragging, momentumDecay, velocity, clampRotationSpeed, autoRotate, autoRotateSpeed]);
-
-  // ==========================================
-  // EVENT HANDLERS
-  // ==========================================
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -681,10 +628,6 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     setIsDragging(false);
   }, []);
 
-  // ==========================================
-  // EFFECTS & LIFECYCLE
-  // ==========================================
-
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -716,11 +659,9 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // Mouse events
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
 
-    // Touch events
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd);
 
@@ -732,11 +673,6 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     };
   }, [isMounted, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
-  // ==========================================
-  // RENDER HELPERS
-  // ==========================================
-
-  // Calculate world positions once per render
   const worldPositions = calculateWorldPositions();
 
   const renderImageNode = useCallback((image: ImageData, index: number) => {
@@ -844,10 +780,6 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     );
   };
 
-  // ==========================================
-  // EARLY RETURNS
-  // ==========================================
-
   if (!isMounted) {
     return (
       <div
@@ -872,10 +804,6 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
       </div>
     );
   }
-
-  // ==========================================
-  // MAIN RENDER
-  // ==========================================
 
   return (
     <>
