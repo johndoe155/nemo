@@ -2560,6 +2560,30 @@ html[data-quality='low'] .rv__art-bloom { display: none; }
   }
 }
 
+/* ---- Touch has no hover -------------------------------------------------
+   The archive artifacts reveal their catalogue data on approach. On a
+   pointer with no hover state there IS no approach — a tap opens the
+   inspection window instead — so on those devices the revealed state has to
+   be the resting state, or the lore, the edition, the badges and the supply
+   bar are simply never seen.
+
+   The hero's telemetry (.enc__meta) is deliberately NOT in this list: the
+   overhaul's whole argument is that it stays out of the way at rest. */
+@media (hover: none) {
+  .ucard__lore,
+  .ucard__meta,
+  .ucard__badges,
+  .ucard__sold,
+  .ucard__index {
+    opacity: 1;
+    translate: 0 0;
+    max-height: none;
+  }
+  .ucard__lore {
+    margin-top: 0.7rem;
+  }
+}
+
 /* No-JS guard: the chapter layer defaults to a neutral, fully legible state
    and CSS alone carries the composition. */
 html:not([data-chapter]) {
