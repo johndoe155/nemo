@@ -25,7 +25,9 @@
   --obsidian-2: #101017;
   --silver: #e0e4ec;
   --silver-dim: rgba(224, 228, 236, 0.58);
-  --silver-faint: rgba(224, 228, 236, 0.34);
+    /* Was 0.34 — measured 2.58:1 on the panel, below the 4.5:1 floor for
+     9px text. 0.62 measures 6.3:1 and still reads as a whisper. */
+  --silver-faint: rgba(224, 228, 236, 0.62);
   --glass: rgba(224, 228, 236, 0.04);
   --line: rgba(224, 228, 236, 0.1);
   --line-strong: rgba(224, 228, 236, 0.19);
@@ -362,7 +364,9 @@
   color: var(--silver-dim);
 }
 .npx__node-tag b {
-  color: var(--c);
+  /* The raw rarity hue (iris #8a4dff) measures 4.40:1 at 9px — a hair under
+     the floor. Mixing it toward bone keeps the hue identity and clears it. */
+  color: color-mix(in srgb, var(--c, var(--gold)) 78%, var(--bone));
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }

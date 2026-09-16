@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import { WalletButton, useMockWallet } from './ui';
-import { useChapter, useQuality } from '../lib/ChapterProvider';
+import { useChapter, useQuality, isBehindResume, readResume } from '../lib/ChapterProvider';
 import { CHAPTERS, CHAPTER_ANCHOR, CHAPTER_ORDER } from '../lib/chapters';
 import { useFocusTrap } from '../lib/hooks';
+import { useInterfaceSound } from '../lib/useInterfaceSound';
 import { lockPage, unlockPage } from '../lib/scroll';
 import { LOGO_SRC } from '../lib/assets';
 
@@ -41,6 +42,11 @@ export default function ArchiveIndex() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [sheet, setSheet] = useState(false);
+  /* Read once per open, not per render: the stored chapter is a snapshot of
+     the last session, and re-reading it on every render would make the
+     "continue" row flicker as you move through the page. */
+  const [resume, setResume] = useState<ReturnType<typeof readResume>>(null);
+  const { supported: soundSupported, enabled: soundOn, toggle: toggleSound } = useInterfaceSound();
   const lastY = useRef(0);
   const barRef = useRef<HTMLElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
@@ -71,6 +77,11 @@ export default function ArchiveIndex() {
     return () => unlockPage('menu');
   }, [sheet]);
   useFocusTrap(sheet, sheetRef, { onEscape: () => setSheet(false) });
+
+  const openSheet = useCallback(() => {
+    setResume(readResume());
+    setSheet(true);
+  }, []);
 
   const onBarEnter = useCallback(() => {
     if (window.matchMedia('(hover: hover)').matches) setOpen(true);
@@ -129,7 +140,7 @@ export default function ArchiveIndex() {
               className="idx__toggle"
               aria-expanded={sheet}
               aria-label={sheet ? 'Close the archive index' : 'Open the archive index'}
-              onClick={() => setSheet((v) => !v)}
+              onClick={() => (sheet ? setSheet(false) : openSheet())}
             >
               <span className="idx__toggle-glyph" aria-hidden="true" />
               INDEX
@@ -195,6 +206,27 @@ export default function ArchiveIndex() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: EASE }}
           >
+            {/* Resume — only offered when the stored chapter is NOT the one
+                you are already reading, which is exactly the "I reloaded and
+                lost my place" case. */}
+            {resume && resume !== 'wake' && isBehindResume(chapter) && (
+              <motion.a
+                href={`#${CHAPTER_ANCHOR[resume]}`}
+                className="idxsheet__resume"
+                onClick={() => setSheet(false)}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: EASE }}
+              >
+                <span className="idxsheet__resume-label">CONTINUE FROM</span>
+                <span className="idxsheet__resume-chapter">
+                  <i>{CHAPTERS[resume].numeral}</i>
+                  {CHAPTERS[resume].title}
+                </span>
+                <span className="idxsheet__resume-intent">{CHAPTERS[resume].intent}</span>
+              </motion.a>
+            )}
+
             {CHAPTER_ORDER.filter((id) => id !== 'wake').map((id, i) => {
               const c = CHAPTERS[id];
               return (
@@ -219,6 +251,19 @@ export default function ArchiveIndex() {
                 onConnect={wallet.connect}
                 onReset={wallet.disconnect}
               />
+              {/* The sound switch lives here on phones, where the dock has
+                  been reduced to a single button. Same hook, same state. */}
+              {soundSupported && (
+                <button
+                  type="button"
+                  className="idxsheet__sound"
+                  data-on={soundOn ? 'true' : 'false'}
+                  onClick={toggleSound}
+                  aria-pressed={soundOn}
+                >
+                  SOUND {soundOn ? 'ON' : 'OFF'}
+                </button>
+              )}
             </div>
             <p className="idxsheet__foot">ONE CANON · INFINITE VERSIONS</p>
           </motion.div>

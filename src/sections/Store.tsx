@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 
 import { RevealArt, RevealLine, RevealMeta, RevealPlate, RevealText } from '../components/reveal';
-import { Reveal, SectionHead, toast, useMockWallet } from '../components/ui';
+import { DemoTag, Reveal, SectionHead, toast, useMockWallet } from '../components/ui';
 import { KineticButton } from '../components/motion';
 import CardImage from '../components/CardImage';
 import type { Product } from '../lib/data';
@@ -144,6 +144,9 @@ export default function Store() {
                     ${heroProduct.price}
                     <em>{wallet.connected ? 'HOLDER −25%' : 'USD'}</em>
                   </span>
+                  {/* Simulated checkout: say so next to the money, not in a
+                      footnote nobody reads. */}
+                  <DemoTag label="DEMO CHECKOUT" />
                   <KineticButton
                     className="btn btn-primary"
                     label={gated ? 'CONNECT TO VIEW' : 'ADD TO CART'}

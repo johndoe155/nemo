@@ -2100,6 +2100,10 @@ html.at-floor .grain {
 .footer-mask-link {
   display: block;
   width: fit-content;
+  /* WCAG 2.5.8 — the line box alone is ~20px, under the 24px floor. The
+     vertical rhythm is preserved by pulling the same amount back out of the
+     gap below (see .footer-mask-link + .footer-mask-link). */
+  padding-block: 0.2rem;
   color: var(--curtain-ink);
   font-family: var(--font-heading);
   font-size: clamp(1rem, 1rem + 0.25vw, 1.25rem);
@@ -2195,6 +2199,9 @@ html.at-floor .grain {
 .curtain-footer__rewind {
   color: var(--curtain-ink);
   white-space: nowrap;
+  /* WCAG 2.5.8: the raw line box is 12px tall. Padding is the target. */
+  display: inline-block;
+  padding-block: 0.5rem;
 }
 
 .curtain-footer__rewind:hover,

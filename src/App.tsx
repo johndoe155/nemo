@@ -32,7 +32,7 @@ import Dock from './components/Dock';
 import { CustomCursor } from './components/Cursor';
 import { ChapterSeam } from './components/reveal';
 import { KineticButton, useCursorGlow } from './components/motion';
-import { useMediaQuery } from './lib/singularityGate';
+import { SingularityProvider, useMediaQuery } from './lib/singularityGate';
 import { ChapterProvider } from './lib/ChapterProvider';
 import { preloadPersonaPoints } from './lib/personaPoints';
 import { UNIVERSES, ARTISTS } from './lib/data';
@@ -113,6 +113,12 @@ export default function App() {
   useCursorGlow();
 
   return (
+    /* SingularityProvider OUTSIDE ChapterProvider: the black-hole gate is a
+       hardware/context budget concern (how many WebGL contexts the page may
+       hold), not a narrative one, and both the Singularity section and the
+       footer's sign-off horizon reach for it. Dropping it takes the whole
+       tree down — useSingularityGate throws rather than returning null. */
+    <SingularityProvider>
     <ChapterProvider>
       <Loader />
       <a className="skip-link" href="#nemoverse" style={skipStyle}>
@@ -210,6 +216,7 @@ export default function App() {
       <Footer />
       <ToastHost />
     </ChapterProvider>
+    </SingularityProvider>
   );
 }
 

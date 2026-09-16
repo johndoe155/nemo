@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { gsap } from 'gsap';
+
+/* Asking for force3D per-tween WORKS (CSSPlugin applies it) but gsap-core
+   never sees a property tween for it and logs "Invalid property force3D …
+   Missing plugin?" on every mount. Configuring it once on the core reaches
+   the identical translate3d() matrix with no warning. */
+gsap.config({ force3D: true });
 import { useCountdown } from '../../lib/hooks';
 import { KineticButton, MagneticButton, RollText } from '../motion';
 import type { Rarity } from '../../lib/data';
-import { RARITY } from '../../lib/data';
+import { IS_DEMO, RARITY } from '../../lib/data';
 
 /* ------------------------------ Verified mark ------------------------------ */
 
@@ -189,7 +195,7 @@ export function Marquee({
     const VEL_GAIN = 3; // ×(1 + |v|·gain), |v|≤1 → up to ×4
     const VEL_MAX = 5;
 
-    gsap.set(track, { xPercent: -50, force3D: true });
+    gsap.set(track, { xPercent: -50 });
     const crawl = gsap.to(track, {
       xPercent: 0,
       duration: baseSec,
@@ -342,6 +348,16 @@ export function useMockWallet() {
   return { connected, connect, disconnect };
 }
 
+/* One honest marker for simulated money. Rendered next to the balance and
+   beside any checkout control while lib/data.ts's IS_DEMO is true — i.e.
+   until real Shopify / wallet credentials exist. It is deliberately NOT a
+   warning: no alarm colour, no modal, just the archive labelling its own
+   state. */
+export function DemoTag({ label = 'DEMO' }: { label?: string }) {
+  if (!IS_DEMO) return null;
+  return <span className="demo-tag">{label}</span>;
+}
+
 export function WalletButton({
   connected,
   onConnect,
@@ -360,6 +376,7 @@ export function WalletButton({
   if (connected) {
     return (
       <span className="wallet-connected">
+        <DemoTag />
         <MagneticButton
           className={`btn btn-ghost ${compact ? 'nav__cta' : ''}`}
           preset={compact ? 'chrome' : 'pill'}

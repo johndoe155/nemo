@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import { UNIVERSES } from '../lib/data';
 import { useChapter, useQuality } from '../lib/ChapterProvider';
-import { attractTick, confirmTick, setSoundEnabled } from '../lib/sound';
+import { attractTick, confirmTick } from '../lib/sound';
+import { useInterfaceSound } from '../lib/useInterfaceSound';
 import { pageScrollTo } from '../lib/scroll';
 
 /* ============================================================================
@@ -26,30 +27,16 @@ import { pageScrollTo } from '../lib/scroll';
    and it never blocks pointer events outside its own buttons.
    ========================================================================== */
 
-const STORAGE_KEY = 'ocu:sound';
 const ATTRACT_TARGETS = 'a, button, [role="button"], .ucard, .chip, .plate-row, .rung';
 const CONFIRM_TARGETS = 'a, button, [role="button"]';
 
 export default function Dock() {
   const { chapter, meta } = useChapter();
   const quality = useQuality();
-  const [enabled, setEnabled] = useState(false);
-  const [supported, setSupported] = useState(false);
-
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    setSupported(true);
-    let stored = false;
-    try {
-      stored = window.localStorage.getItem(STORAGE_KEY) === 'on';
-    } catch {
-      /* storage unavailable — stay off */
-    }
-    if (stored) {
-      setEnabled(true);
-      setSoundEnabled(true);
-    }
-  }, []);
+  /* Shared with the mobile chapter sheet (see lib/useInterfaceSound): on
+     phones the dock shrinks to a single RETURN button and the sound switch
+     moves into the sheet, so the two must never hold separate states. */
+  const { supported, enabled, toggle } = useInterfaceSound();
 
   useEffect(() => {
     if (!enabled) return;
@@ -70,19 +57,6 @@ export default function Dock() {
     };
   }, [enabled]);
 
-  const toggle = () => {
-    const next = !enabled;
-    setEnabled(next);
-    setSoundEnabled(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next ? 'on' : 'off');
-    } catch {
-      /* noop */
-    }
-    if (next) confirmTick();
-    window.dispatchEvent(new CustomEvent('ocu:sound', { detail: { enabled: next } }));
-  };
-
   const chapterStatus = STATUS[chapter];
 
   return (
@@ -95,10 +69,13 @@ export default function Dock() {
         </p>
       )}
 
+      {/* On phones the dock is one button. The sound switch moves into the
+          chapter sheet, which is already the place you go to change how the
+          page behaves — and it keeps the bottom-right corner clear. */}
       {supported && (
         <button
           type="button"
-          className="dock__btn"
+          className="dock__btn dock__btn--sound"
           data-on={enabled ? 'true' : 'false'}
           onClick={toggle}
           aria-pressed={enabled}

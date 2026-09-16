@@ -44,7 +44,15 @@
        what turned a cheap rotation into a full re-raster of every card.
    ========================================================================== */
 
-import { useCallback, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useRef,
+  type CSSProperties,
+  type MutableRefObject,
+  type ReactNode,
+} from 'react';
 import {
   motion,
   useMotionValue,
@@ -124,15 +132,15 @@ export interface HangingCardProps {
   style?: CSSProperties;
 }
 
-export default function HangingCard({
-  children,
-  drive,
-  gust,
-  index = 0,
-  cord,
-  className = '',
-  style,
-}: HangingCardProps) {
+/* forwardRef is not optional here: the roster renders these inside
+   <AnimatePresence mode="popLayout">, and PopChild measures every child by
+   attaching a ref to it. A plain function component cannot receive one, so
+   React warns and the projection silently measures nothing — which is why
+   the rack jumps instead of reflowing when the filter or sort changes. */
+const HangingCard = forwardRef<HTMLDivElement, HangingCardProps>(function HangingCard(
+  { children, drive, gust, index = 0, cord, className = '', style },
+  forwardedRef,
+) {
   const reduce = useReducedMotion();
 
   /* ---- carriage velocity delta → swing target ---------------------------- */
@@ -204,6 +212,15 @@ export default function HangingCard({
      rack is visibly alive on touch devices, where there is no hover and the
      carriage may be standing still. Fires on entry in either direction. */
   const wrap = useRef<HTMLDivElement | null>(null);
+  /* One node, two owners: framer's PopChild and the gust observer below. */
+  const attach = useCallback(
+    (node: HTMLDivElement | null) => {
+      wrap.current = node;
+      if (typeof forwardedRef === 'function') forwardedRef(node);
+      else if (forwardedRef) (forwardedRef as MutableRefObject<HTMLDivElement | null>).current = node;
+    },
+    [forwardedRef],
+  );
   useEffect(() => {
     if (reduce) return;
     const el = wrap.current;
@@ -224,7 +241,7 @@ export default function HangingCard({
 
   return (
     <motion.div
-      ref={wrap}
+      ref={attach}
       className={`hang ${className}`.trim()}
       style={{
         ['--cord' as string]: `${drop}px`,
@@ -272,4 +289,6 @@ export default function HangingCard({
       </motion.div>
     </motion.div>
   );
-}
+});
+
+export default HangingCard;

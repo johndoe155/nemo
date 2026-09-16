@@ -903,7 +903,10 @@ section[id] {
   padding: 0.34rem 0.7rem;
   border-radius: 6px;
   border: 1px solid color-mix(in srgb, var(--c, var(--gold)) 55%, transparent);
-  color: var(--c, var(--gold));
+  /* The LABEL is mixed toward bone: the raw accent (iris #8a4dff) measured
+     4.16:1 on the card. The dot below keeps the accent undiluted, so the
+     rarity is still read from the hue. */
+  color: color-mix(in srgb, var(--c, var(--gold)) 78%, var(--bone));
   background: color-mix(in srgb, var(--c, var(--gold)) 12%, transparent);
   box-shadow: 0 0 18px -8px color-mix(in srgb, var(--c, var(--gold)) 80%, transparent);
 }

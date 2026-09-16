@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { motionValue, useMotionValueEvent, useVelocity, useReducedMotion, type MotionValue } from 'framer-motion';
 import { useFocusTrap } from '@/lib/hooks';
@@ -762,12 +763,18 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   const renderSpotlightModal = () => {
     if (!selectedImage) return null;
 
-    return (
+    /* PORTALLED, like the universe dialog. <main> is a stacking context
+       (`z-index: 1`), so a fixed child mounted inside the rotunda could never
+       paint above the archive bar (z-index 100) — and `z-50` (50) was below it
+       even in the root context, which put the close button behind the bar.
+       The inline zIndex matches .dialog-backdrop's layer. */
+    return createPortal(
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30"
+        className="fixed inset-0 flex items-center justify-center p-4 bg-black/30"
         onClick={() => swapWithPlateMorph(null)}
         data-lenis-prevent
         style={{
+          zIndex: 110,
           animation: 'fadeIn 0.3s ease-out'
         }}
       >
@@ -791,7 +798,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
             <button
               onClick={() => swapWithPlateMorph(null)}
               aria-label="Close plate"
-              className="absolute top-2 right-2 w-8 h-8 bg-black bg-opacity-50 rounded-full text-white flex items-center justify-center hover:bg-opacity-70 transition-all cursor-pointer"
+              className="absolute top-2 right-2 w-8 h-8 bg-black/50 rounded-full text-white flex items-center justify-center hover:bg-black/70 transition-all cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -808,7 +815,8 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
             </div>
           )}
         </div>
-      </div>
+      </div>,
+      document.body,
     );
   };
 

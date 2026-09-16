@@ -682,6 +682,21 @@ export const QUICK_REPLIES = [
   'Take me to #007',
 ];
 
+/* ---------------------------------------------------------------------------
+   IS_DEMO — the wallet balance, the pull ledger and the Shopify checkout are
+   all simulated. Nothing on the page said so, and a visitor had no way to
+   tell a mock balance from a real one.
+
+   One flag drives every "DEMO" marker. It flips itself off the moment real
+   credentials are configured, so the markers disappear from a live build
+   without anyone remembering to delete them:
+
+       VITE_SHOPIFY_DOMAIN   your-store.myshopify.com
+       VITE_WALLET_ADDRESS   the treasury address holders verify against
+--------------------------------------------------------------------------- */
+export const IS_DEMO =
+  !import.meta.env.VITE_SHOPIFY_DOMAIN && !import.meta.env.VITE_WALLET_ADDRESS;
+
 /* ------------------------------ PULL LOGIC ------------------------------ */
 
 export const STAMP_SLOTS = 8;

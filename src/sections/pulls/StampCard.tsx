@@ -15,7 +15,7 @@
      spark burst. No rotating beams.
    ========================================================================== */
 
-import { useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   motion,
   useMotionValue,
@@ -49,21 +49,90 @@ export default function StampCard({
 }: StampCardProps) {
   const uids = Array.from(distinct);
 
+  /* ---- the receipt ------------------------------------------------------
+     The ritual ended in a local stamp card with no way to take it anywhere.
+     A text receipt can be pasted into a message, a ticket or a note; it
+     needs no canvas, no WebGL and no async export, and it degrades to
+     "select and copy" on the oldest clipboard API. */
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<number>(0);
+
+  /* The copied-flash timer outlives the click that started it. Without this
+     cleanup an unmount inside the 2.2 s window leaves a live timeout holding
+     a reference to this component's setter. */
+  useEffect(() => () => window.clearTimeout(copyTimer.current), []);
+
+  const receipt = useCallback(() => {
+    const lines = [
+      'NEMOVERSE — PROOF OF PURCHASE',
+      `STAMPS ${stamps}/${STAMP_SLOTS} DISTINCT ${distinct.size}`,
+      ...pulls
+        .slice()
+        .reverse()
+        .slice(0, 8)
+        .map((p, i) => {
+          const u = UNIVERSES.find((x) => String(x.id) === p.uid);
+          const rarity = RARITY[p.rarity as keyof typeof RARITY];
+          return `  ${String(i + 1).padStart(2, '0')}  ${u?.code ?? p.uid}  ${(rarity?.label ?? p.rarity).toUpperCase()}  ${u?.name ?? ''}`;
+        }),
+      bonusReached ? 'GOLDEN GATE — OPEN' : `GOLDEN GATE — ${SET_BONUS_AT - distinct.size} MORE`,
+      'ONE CANON · INFINITE VERSIONS',
+    ];
+    return lines.join('\n');
+  }, [stamps, distinct, pulls, bonusReached]);
+
+  const copyReceipt = useCallback(async () => {
+    const text = receipt();
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      /* No clipboard permission — fall back to a selection the visitor can
+         copy themselves rather than failing silently. */
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+      } catch {
+        /* nothing more we can do */
+      }
+      ta.remove();
+    }
+    setCopied(true);
+    window.clearTimeout(copyTimer.current);
+    copyTimer.current = window.setTimeout(() => setCopied(false), 2200);
+  }, [receipt]);
+
   return (
     <div className="npx__stampcard">
       <div className="npx__stampcard-head">
         <span className="npx__plate-kicker">
           <i aria-hidden="true" /> STAMP CARD — PROOF OF PURCHASE
         </span>
-        <MagneticButton
-          type="button"
-          preset="chrome"
-          className="npx__ghostbtn"
-          onClick={onReset}
-          disabled={phase === 'spinning' || pulls.length === 0}
-        >
-          <RollText text="⟲ RESET ARCHIVE" />
-        </MagneticButton>
+        <div className="npx__stampcard-actions">
+          <MagneticButton
+            type="button"
+            preset="chrome"
+            className="npx__ghostbtn"
+            onClick={copyReceipt}
+            disabled={pulls.length === 0}
+            aria-label="Copy your proof-of-purchase receipt to the clipboard"
+          >
+            <RollText text={copied ? '✓ RECEIPT COPIED' : '⧉ COPY RECEIPT'} />
+          </MagneticButton>
+          <MagneticButton
+            type="button"
+            preset="chrome"
+            className="npx__ghostbtn"
+            onClick={onReset}
+            disabled={phase === 'spinning' || pulls.length === 0}
+          >
+            <RollText text="⟲ RESET ARCHIVE" />
+          </MagneticButton>
+        </div>
       </div>
 
       <div className="npx__slots">

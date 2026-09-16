@@ -484,7 +484,8 @@
   font-family: var(--font-mono);
   font-size: 0.55rem;
   letter-spacing: 0.24em;
-  color: rgba(245, 243, 255, 0.34);
+  /* was 0.34 → 2.82:1. Matches .nchat__note's legibility floor. */
+  color: rgba(245, 243, 255, 0.62);
 }
 
 /* The rail bleeds to the panel edges and dissolves under a gradient mask —
@@ -714,7 +715,8 @@
   margin: 0 4px;
 }
 .nchat__count {
-  color: rgba(245, 243, 255, 0.42);
+  /* was 0.42 → 3.76:1 on the panel. */
+  color: rgba(245, 243, 255, 0.62);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

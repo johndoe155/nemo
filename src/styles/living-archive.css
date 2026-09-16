@@ -455,7 +455,26 @@ body.custom-cursor textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: clamp(0.75rem, 1.6vw, 1.5rem);
+  min-width: 0;
+}
+/* SIZING CONTRACT — the bar must never be able to push its own controls out
+   of the viewport. Measured at 1280: brand 150 + list ~1008 + right 361 was
+   332px wider than the bar, so the wallet and the INDEX toggle sat off-screen
+   (and body{overflow-x:clip} hid the overflow instead of scrolling to it).
+   The wordmark and the controls are fixed; the chapter list is the only
+   member allowed to shrink, and it clips rather than overflowing. */
+.idx__brand {
+  flex: 0 0 auto;
+}
+.idx__bar > nav {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.idx__right {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 /* Rest: the bar is a hairline with the wordmark on it. */
@@ -495,10 +514,13 @@ body.custom-cursor textarea {
 .idx__list {
   display: flex;
   align-items: center;
-  gap: clamp(0.9rem, 1.8vw, 2rem);
+  gap: clamp(0.5rem, 1vw, 1.05rem);
   list-style: none;
   margin: 0;
-  padding: 0;
+  /* Room for the active chapter's marker + tick, which sit BELOW the link's
+     own box — without it the clipping above would cut them off. */
+  padding: 0 0 8px;
+  min-width: 0;
 }
 
 .idx__chapter {
@@ -507,9 +529,9 @@ body.custom-cursor textarea {
   align-items: baseline;
   gap: 0.5rem;
   padding: 0.5rem 0;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 600;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--bone) 56%, transparent);
   transition: color 0.4s var(--ease-expo);
@@ -517,8 +539,8 @@ body.custom-cursor textarea {
 }
 .idx__chapter i {
   font-style: normal;
-  font-size: 0.5625rem;
-  letter-spacing: 0.16em;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
   color: color-mix(in srgb, var(--bone) 56%, transparent);
   font-variant-numeric: tabular-nums;
 }
@@ -817,6 +839,12 @@ body.custom-cursor textarea {
     right: 1rem;
     bottom: 1rem;
   }
+  /* One floating control in the corner, not two: the sound switch moves into
+     the chapter sheet, which is where you already go to change how the page
+     behaves. (See .idxsheet__sound — same hook, same state.) */
+  .dock__btn--sound {
+    display: none;
+  }
   .dock__status { display: none; }
 }
 
@@ -912,7 +940,10 @@ html[data-silence='true'] .enc__light::before { animation-play-state: paused; }
 
 @media (max-width: 1080px) {
   .enc__plate {
-    grid-template-columns: 1fr;
+    /* minmax(0, 1fr), NOT 1fr: a bare `1fr` floors the track at the item's
+       min-content, and the mark's nowrap flex row reported 544px inside a
+       341px bar — the track blew out and carried the line off-screen. */
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       'mark'
       'title'
@@ -929,12 +960,18 @@ html[data-silence='true'] .enc__light::before { animation-play-state: paused; }
   display: flex;
   align-items: center;
   gap: 0.85rem;
+  min-width: 0;
   font-family: var(--font-accent);
   font-size: var(--fs-kicker);
   font-weight: 600;
   letter-spacing: 0.32em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--bone) 62%, transparent);
+}
+/* The label is its own flex item so it can wrap: a bare text node becomes an
+   anonymous item whose min-content floor is what blew the track out. */
+.enc__mark-text {
+  min-width: 0;
 }
 .enc__mark-dot {
   position: relative;
@@ -1048,10 +1085,13 @@ html[data-silence='true'] .enc__light::before { animation-play-state: paused; }
   flex-wrap: wrap;
   padding-top: 0.6rem;
 }
+/* WCAG 2.5.8 — a 10px tracked uppercase line is only ~17px tall, well under
+   the 24px minimum target. The padding is the target; the text does not move. */
 .enc__invite {
   display: inline-flex;
   align-items: center;
   gap: 0.7rem;
+  padding-block: 0.45rem;
   font-family: var(--font-accent);
   font-size: 0.625rem;
   font-weight: 600;
@@ -2323,12 +2363,25 @@ html[data-silence='true'] .ritual__seal::before { animation-play-state: paused; 
   font-style: normal;
   transition: flex-basis 0.8s var(--ease-expo);
 }
+/* The artist's segment carries DARK ink, so its fill has to be genuinely
+   gold: the old stops were 42%/18% gold over --void-2, which lands as a dark
+   olive and put #100c02 text at 1.01:1 — invisible. Mixing against --void-2
+   instead of `transparent` makes the blend opaque, so the contrast is a
+   fixed number rather than a function of whatever is behind it. */
 .canon__split-bar i:first-child {
-  background: linear-gradient(100deg, color-mix(in srgb, var(--gold) 42%, transparent), color-mix(in srgb, var(--gold) 18%, transparent));
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--gold) 88%, var(--void-2)),
+    color-mix(in srgb, var(--gold) 64%, var(--void-2))
+  );
   color: #100c02;
 }
 .canon__split-bar i:last-child {
-  background: linear-gradient(100deg, color-mix(in srgb, var(--cyan) 20%, transparent), color-mix(in srgb, var(--cyan) 8%, transparent));
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--cyan) 22%, var(--void-2)),
+    color-mix(in srgb, var(--cyan) 10%, var(--void-2))
+  );
   color: color-mix(in srgb, var(--bone) 86%, transparent);
 }
 .canon__split-legend {
@@ -2420,9 +2473,13 @@ html.at-floor .idxsignal {
 html[data-chapter='return'] .la-wash {
   opacity: calc(var(--chapter-glow, 0.16) * 0.9);
 }
+/* The curtain footer is the ONE surface on the page with a light ground
+   (--curtain-paper #f4f4f5). Every colour in the RETURN chapter therefore
+   comes from the --curtain-* tokens, never from bone/cyan: bone on paper
+   measures 1.03:1 and the closing statement was invisible. */
 html[data-chapter='return'] .curtain-footer__wordmark {
-  color: color-mix(in srgb, var(--bone) 90%, transparent);
-  -webkit-text-stroke: 1px color-mix(in srgb, var(--bone) 56%, transparent);
+  color: var(--curtain-ink);
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--curtain-ink) 56%, transparent);
 }
 /* One closing statement at maximum scale. */
 .return__statement {
@@ -2432,7 +2489,7 @@ html[data-chapter='return'] .curtain-footer__wordmark {
   font-size: clamp(2rem, 1rem + 7vw, 7rem);
   line-height: 0.98;
   letter-spacing: -0.02em;
-  color: var(--bone);
+  color: var(--curtain-ink);
   text-align: center;
   max-width: 20ch;
   margin-inline: auto;
@@ -2442,12 +2499,14 @@ html[data-chapter='return'] .curtain-footer__wordmark {
   display: inline-flex;
   align-items: center;
   gap: 0.9rem;
+  /* 24px minimum target — see .enc__invite. */
+  padding-top: 0.55rem;
   font-family: var(--font-accent);
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--cyan) 88%, var(--bone));
+  color: var(--curtain-accent);
 }
 .return__loop i {
   font-style: normal;
@@ -2582,6 +2641,14 @@ html[data-quality='low'] .rv__art-bloom { display: none; }
   .ucard__lore {
     margin-top: 0.7rem;
   }
+  /* The hero's telemetry is revealed on approach — and a touch screen has no
+     approach. Rather than let touch visitors never see the registry figures
+     at all, they rest visible there. The desktop behaviour (hidden until the
+     pointer arrives) is unchanged. */
+  .enc__meta {
+    opacity: 1;
+    translate: 0 0;
+  }
 }
 
 /* No-JS guard: the chapter layer defaults to a neutral, fully legible state
@@ -2642,9 +2709,15 @@ html:not([data-chapter]) {
   pointer-events: auto;
 }
 
-@media (max-width: 1080px) {
-  .idx__status { display: none; }
+/* The right group degrades in order of importance: the wallet goes first
+   (it lives in the sheet too), then the status readout. The INDEX toggle is
+   never allowed to disappear. Thresholds are measured, not guessed: at 1440
+   the bar is 1310 and the full group needs 1281. */
+@media (max-width: 1439px) {
   .idx__wallet { display: none; }
+}
+@media (max-width: 1100px) {
+  .idx__status { display: none; }
 }
 @media (max-width: 560px) {
   .idx__toggle {
@@ -3114,7 +3187,7 @@ html:not([data-chapter]) {
   font-family: var(--font-body-text);
   font-size: var(--fs-lead);
   line-height: 1.62;
-  color: color-mix(in srgb, var(--bone) 62%, transparent);
+  color: var(--curtain-muted);
   max-width: 44ch;
   margin-top: 1.2rem;
 }
@@ -3127,12 +3200,12 @@ html:not([data-chapter]) {
 .return__loop {
   margin-top: 1.6rem;
   padding-bottom: 0.35rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--cyan) 34%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--curtain-accent) 34%, transparent);
   transition: border-color 0.5s var(--ease-expo), color 0.5s var(--ease-expo);
 }
 .return__loop:hover,
 .return__loop:focus-visible {
-  border-color: color-mix(in srgb, var(--cyan) 90%, transparent);
+  border-color: color-mix(in srgb, var(--curtain-accent) 90%, transparent);
 }
 
 /* The credits: navigation columns and signals read as a film's end credits,
@@ -3148,18 +3221,19 @@ html:not([data-chapter]) {
   font-weight: 700;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  color: var(--curtain-muted);
   margin-bottom: 0.6rem;
   padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--line);
+  /* --line is a DARK-theme hairline; on paper it disappears. */
+  border-bottom: 1px solid color-mix(in srgb, var(--curtain-ink) 18%, transparent);
 }
 .curtain-footer__label span {
-  color: color-mix(in srgb, var(--cyan) 72%, var(--bone));
+  color: var(--curtain-accent);
   margin-right: 0.6rem;
 }
 .curtain-footer__prose,
 .curtain-footer__meta {
-  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  color: var(--curtain-muted);
   font-family: var(--font-body-text);
 }
 .curtain-footer__meta {
@@ -3174,7 +3248,7 @@ html:not([data-chapter]) {
   font-weight: 700;
   letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--cyan) 74%, var(--bone));
+  color: var(--curtain-accent);
   margin-bottom: 1rem;
 }
 
@@ -3253,4 +3327,127 @@ html:not([data-chapter]) {
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--bone) 62%, transparent);
+}
+
+
+/* ============================================================================
+   THE THREE EXTRAS — demo honesty, resume, and a focus ring you can see
+   ----------------------------------------------------------------------------
+
+   · .demo-tag    the wallet balance and the checkout are simulated. Until
+                  real credentials exist the page says so, quietly, exactly
+                  where money is implied.
+   · resume       a reload drops you at chapter I with no way back, so the
+                  sheet offers one "continue from" row when it matters.
+   · focus        the rotunda's sphere is a real tab stop with arrow-key
+                  control, but its focus ring was invisible — a keyboard
+                  user could be inside the carousel and not know it.
+========================================================================== */
+
+.demo-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+  padding: 0.28rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--gold) 42%, transparent);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--gold) 82%, var(--bone));
+  white-space: nowrap;
+  user-select: none;
+}
+/* On the light curtain floor gold-on-paper would vanish; use the ink. */
+.curtain-footer .demo-tag,
+.return .demo-tag {
+  border-color: color-mix(in srgb, var(--curtain-ink) 30%, transparent);
+  background: color-mix(in srgb, var(--curtain-ink) 6%, transparent);
+  color: var(--curtain-ink);
+}
+
+/* ---- the resume row ---------------------------------------------------- */
+.idxsheet__resume {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 0 1.35rem;
+  margin-bottom: 0.6rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--bone) 12%, transparent);
+}
+.idxsheet__resume-label {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 78%, var(--bone));
+}
+.idxsheet__resume-chapter {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.4rem, 5vw, 2.1rem);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--bone);
+}
+.idxsheet__resume-chapter i {
+  font-style: normal;
+  font-family: var(--font-accent);
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  color: var(--chapter-accent, var(--cyan));
+}
+.idxsheet__resume-intent {
+  font-family: var(--font-body-text);
+  font-size: 0.82rem;
+  color: color-mix(in srgb, var(--bone) 62%, transparent);
+}
+
+/* ---- the sound switch inside the sheet -------------------------------- */
+.idxsheet__sound {
+  align-self: flex-start;
+  margin-top: 0.9rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--chapter-accent, var(--cyan)) 26%, transparent);
+  border-radius: var(--r-pill);
+  background: transparent;
+  font-family: var(--font-accent);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 74%, transparent);
+  transition: color 0.35s var(--ease-expo), border-color 0.35s var(--ease-expo),
+    background-color 0.35s var(--ease-expo);
+}
+.idxsheet__sound[data-on='true'] {
+  color: var(--bone);
+  border-color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 62%, transparent);
+  background: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 10%, transparent);
+}
+
+/* ---- the stamp card's two actions -------------------------------------- */
+.npx__stampcard-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+/* ---- a focus ring the rotunda's sphere can actually show --------------- */
+/* The sphere is a real tab stop (role=region, tabIndex=0) with arrow-key
+   plate control and Enter to inspect — but nothing drew a ring, so a
+   keyboard user could be inside the carousel with no idea. */
+[aria-roledescription='3D carousel']:focus-visible {
+  outline: 2px solid var(--chapter-accent, var(--cyan));
+  outline-offset: 6px;
+  border-radius: 12px;
 }

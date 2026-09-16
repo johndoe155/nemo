@@ -44,14 +44,23 @@ export function useCountdown(targetIso: string): TimeLeft {
       const target = new Date(targetIso).getTime();
 
       const tick = () => {
+        /* A hidden tab must not re-render three subtrees every second. The
+           timer keeps running (realigned, not stopped) so the figures are
+           correct the instant the tab is shown again — but nothing is
+           broadcast while nobody can see it. */
+        const hidden =
+          typeof document !== 'undefined' && document.visibilityState === 'hidden';
+        if (!hidden) clock?.subs.forEach((fn) => fn());
+
         const diff = target - Date.now();
-        clock?.subs.forEach((fn) => fn());
         if (diff <= 0) {
           /* Reached the drop: one final broadcast already happened, stop. */
           clock && (clock.timer = 0);
           return;
         }
-        const delay = Math.max(250, Math.min(1000, diff % 1000 || 1000));
+        const delay = hidden
+          ? 1000
+          : Math.max(250, Math.min(1000, diff % 1000 || 1000));
         clock && (clock.timer = window.setTimeout(tick, delay));
       };
 
@@ -62,8 +71,18 @@ export function useCountdown(targetIso: string): TimeLeft {
     const active = clock;
     active.subs.add(onTick);
 
+    /* Coming back to the tab: repaint immediately rather than waiting out the
+       rest of the (up to one second) sleep. Declared out here so the cleanup
+       below can always remove it, whichever branch created the clock. */
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      active.subs.forEach((fn) => fn());
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
     return () => {
       active.subs.delete(onTick);
+      document.removeEventListener('visibilitychange', onVisible);
       if (active.subs.size === 0) {
         window.clearTimeout(active.timer);
         clocks.delete(targetIso);

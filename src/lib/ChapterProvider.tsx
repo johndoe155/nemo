@@ -141,6 +141,14 @@ export function ChapterProvider({ children }: { children: ReactNode }) {
     });
   }, [booted]);
 
+  /* Mirror the reading position. Skipped while the boot holds `wake`, so a
+     reload never offers to resume from a chapter that was never read — and
+     note this runs AFTER the snapshot above was taken at module load. */
+  useEffect(() => {
+    if (!booted || chapter === 'wake') return;
+    writeResume(chapter);
+  }, [booted, chapter]);
+
   /* ---- Cursor vocabulary -------------------------------------------------- */
   const setCursor = useCallback((mode: CursorMode) => setCursorOverride(mode), []);
   const clearCursor = useCallback(() => setCursorOverride(null), []);
@@ -177,6 +185,53 @@ export function ChapterProvider({ children }: { children: ReactNode }) {
 }
 
 /* --------------------------------- hooks --------------------------------- */
+
+/* ---------------------------------------------------------------------------
+   READING POSITION — "resume where you left off"
+
+   Ten chapters is a long scroll, and a reload drops the visitor back at the
+   top with no way back to where they were. The chapter is mirrored into
+   sessionStorage (NOT localStorage: a new tab should start the story again)
+   so the archive index can offer a single "continue from" link.
+
+   Writes are throttled to chapter changes only — a handful per session.
+--------------------------------------------------------------------------- */
+
+export const RESUME_KEY = 'ocu:chapter';
+
+/* The snapshot has to be taken at MODULE EVALUATION, before React renders
+   anything. Read lazily instead and it is already too late: the boot resolves
+   to `encounter` and writes that over the stored chapter within a frame of
+   mount, so the visitor's place was destroyed by the very reload that was
+   supposed to restore it. */
+let resumeSnapshot: ChapterId | null = null;
+try {
+  const raw =
+    typeof window !== 'undefined' ? window.sessionStorage.getItem(RESUME_KEY) : null;
+  if (raw && raw in CHAPTERS) resumeSnapshot = raw as ChapterId;
+} catch {
+  /* storage unavailable — the prompt simply never appears */
+}
+
+export function writeResume(id: ChapterId): void {
+  try {
+    window.sessionStorage.setItem(RESUME_KEY, id);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+/** Where the visitor left off, as of the start of this session. */
+export function readResume(): ChapterId | null {
+  return resumeSnapshot;
+}
+
+/** True while the visitor is EARLIER in the story than where they left off —
+    the only case in which "continue from" means anything. */
+export function isBehindResume(current: ChapterId): boolean {
+  if (!resumeSnapshot) return false;
+  return CHAPTER_ORDER.indexOf(resumeSnapshot) > CHAPTER_ORDER.indexOf(current);
+}
 
 export function useChapter(): ChapterState {
   const ctx = useContext(ChapterCtx);

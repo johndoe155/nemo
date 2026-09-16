@@ -1,5 +1,15 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+/* ScrollTrigger is not auto-registered on import — gsap only knows about it
+   after registerPlugin(). CrawlRise used to rely on SignoffHorizon having
+   registered it as a side effect of ITS import, which made the crawl work or
+   not depending on module evaluation order: if this component ever mounted
+   first, `scrollTrigger` would be an unknown property and the timeline would
+   simply play once, leaving the credits stuck open. Register it here, where
+   it is used. */
+gsap.registerPlugin(ScrollTrigger);
 
 /* ---------------------------------------------------------------------------
    CrawlRise — P3.12 (DESIGN_AUDIT 2.4, "sign-off crawl").

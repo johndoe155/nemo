@@ -135,7 +135,7 @@ export default function Hero() {
             permanently-scrolling ticker as the hero's first read. */}
         <RevealLine className="enc__mark" at={0} hold={!booted}>
           <span className="enc__mark-dot" aria-hidden="true" />
-          LIVING ARCHIVE · CANON REGISTRY
+          <span className="enc__mark-text">LIVING ARCHIVE · CANON REGISTRY</span>
         </RevealLine>
 
         {/* The telemetry — relocated to the edge, revealed on approach. */}

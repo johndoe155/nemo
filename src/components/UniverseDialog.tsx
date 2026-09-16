@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useFocusTrap } from '../lib/hooks';
 import { lockPage, unlockPage } from '../lib/scroll';
 import { haptic, HAPTIC } from '../lib/haptics';
@@ -35,10 +36,11 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
      ~scrollbar-width layout pop that `overflow:hidden` used to cause is
      gone via scrollbar-gutter on html). */
   /* P3.13 — the panel receives the card's plate on the shared layoutId.
-     `handedBack` flips in the same commit that unmounts the dialog: the
-     layoutId moves back to the (now un-lifted) card, and the exact same
-     spring carries the plate home — dialog closing is the morph reversed,
-     not a fade. */
+     `handedBack` flips in the same commit that unmounts the dialog so the
+     panel stops morphing and takes its plain slide-down exit; the plate
+     itself holds `plate-<id>` straight through the exit (see the media
+     wrapper) and Framer's spring carries it home into the un-lifted card —
+     dialog closing is the morph reversed, not a fade. */
   const [handedBack, setHandedBack] = useState(false);
   const reduce = useReducedMotion();
   const morphing = !reduce && !handedBack;
@@ -56,7 +58,16 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
     return () => unlockPage('dialog');
   }, []);
 
-  return (
+  /* RENDERED IN A PORTAL.
+     <main> is `position: relative; z-index: 1`, which makes it a stacking
+     context. A `position: fixed` child can never paint outside the context of
+     its nearest stacking ancestor, so an overlay mounted inside a section was
+     capped at z-index 1 no matter how large its own z-index — it rendered
+     UNDER the archive bar (z-index 100) and every one of its controls in the
+     overlapping band became unclickable (the close button sits at the top of
+     the panel, squarely behind the bar). Portalling to <body> lifts the
+     overlay into the root stacking context where z-index 110 means 110. */
+  return createPortal(
     <motion.div
       className="dialog-backdrop"
       initial={{ opacity: 0 }}
@@ -91,7 +102,18 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
           <motion.div
             className="dialog__media"
             ref={mediaRef}
-            layoutId={reduce || handedBack ? undefined : `plate-${u.id}`}
+            /* MUST stay stable for the whole exit.
+               The original code dropped the layoutId the moment `handedBack`
+               flipped (`reduce || handedBack`), handing `plate-<id>` back to
+               the un-lifted card in the same commit. Framer's shared-layout
+               projection then had an exiting node whose layoutId vanished
+               mid-flight: the crossfade never resolved, `safeToRemove` was
+               never called, and AnimatePresence kept the modal mounted
+               FOREVER — invisible at opacity 0 but still holding the page
+               scroll lock and the focus trap, i.e. the site froze on every
+               universe close. Keeping the id through the exit lets Framer
+               crossfade the panel plate back into the card and complete. */
+            layoutId={reduce ? undefined : `plate-${u.id}`}
             transition={{ layout: { type: 'spring', stiffness: 190, damping: 27, mass: 0.9 } }}
           >
             {u.image ? (
@@ -261,6 +283,7 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
           </div>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 }

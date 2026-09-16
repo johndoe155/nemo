@@ -1,8 +1,12 @@
 /* ============================================================================
    PORTAL BUTTONS — hero CTA overhaul
    Companion CSS for components/PortalButton.tsx. Loaded last so it wins over
-   the shared .btn tokens; scoped to .hero__ctas so the rest of the site's
-   buttons are untouched.
+   the shared .btn tokens. The selectors are scoped to the component's OWN
+   .portal-btn* classes, not to a page-level wrapper: the hero's CTA row used
+   to be `.hero__ctas`, and when it was re-composed the scope stopped
+   matching — .pk-liquid lost `position: absolute` and became an in-flow
+   300px block, doubling the button's width. .portal-btn* is only ever
+   emitted by components/PortalButton.tsx, so nothing else is affected.
 ============================================================================ */
 
 /* ---------- magnetic wrapper ---------- */
@@ -14,7 +18,7 @@
 
 /* ---------- shared button chrome ---------- */
 
-.hero__ctas .portal-btn {
+.portal-btn {
   /* typographic tension fix: looser block → inviting kinetic label */
   letter-spacing: 0.12em;
   font-size: clamp(0.72rem, 0.66rem + 0.32vw, 0.84rem);
@@ -24,18 +28,18 @@
     filter 0.35s var(--ease-expo), border-color 0.35s var(--ease-expo),
     background 0.35s var(--ease-expo);
 }
-.hero__ctas .portal-btn:hover {
+.portal-btn:hover {
   /* movement is owned by the GSAP magnetic spring now */
   transform: none;
   filter: none;
 }
-.hero__ctas .portal-btn:active {
+.portal-btn:active {
   transform: scale(0.965);
 }
-.hero__ctas .portal-btn .btn-spark {
+.portal-btn .btn-spark {
   z-index: 2;
 }
-.hero__ctas .portal-btn:focus-visible {
+.portal-btn:focus-visible {
   outline: 1px solid var(--cyan);
   outline-offset: 3px;
 }
@@ -47,12 +51,12 @@
 
 /* ---------- PRIMARY — liquid WebGL surface ---------- */
 
-.hero__ctas .portal-btn--liquid {
+.portal-btn--liquid {
   /* fallback while the shader boots / when WebGL is unavailable */
   background: var(--grad-primary);
   animation: pk-breathe 5s var(--ease-expo) infinite alternate;
 }
-.hero__ctas .portal-btn--liquid .pk-liquid {
+.portal-btn--liquid .pk-liquid {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -61,12 +65,12 @@
   display: block;
   pointer-events: none;
 }
-.hero__ctas .portal-btn--liquid.no-webgl .pk-liquid {
+.portal-btn--liquid.no-webgl .pk-liquid {
   display: none;
 }
 /* dynamic blend mode: exclusion inverts the label against the shifting
    liquid beneath — contrast is computed by the shader's own palette */
-.hero__ctas .portal-btn--liquid .pk-layer {
+.portal-btn--liquid .pk-layer {
   mix-blend-mode: exclusion;
   color: #fff;
   text-shadow: 0 0 14px rgba(5, 5, 12, 0.55);
@@ -82,7 +86,7 @@
 }
 
 /* click-state chromatic aberration — RGB split flash on the boundaries */
-.hero__ctas .portal-btn--liquid.is-burst {
+.portal-btn--liquid.is-burst {
   animation: pk-breathe 5s var(--ease-expo) infinite alternate, pk-burst 0.46s var(--ease-expo);
 }
 @keyframes pk-burst {
@@ -100,13 +104,13 @@
     filter: none;
   }
 }
-.hero__ctas .portal-btn--liquid.is-burst .pk-char-in {
+.portal-btn--liquid.is-burst .pk-char-in {
   text-shadow: -2px 0 rgba(255, 61, 154, 0.95), 2px 0 rgba(63, 232, 255, 0.95);
 }
 
 /* ---------- SECONDARY — refractive glassmorphism ---------- */
 
-.hero__ctas .portal-btn--glass {
+.portal-btn--glass {
   border: 1px solid transparent;
   letter-spacing: 0.16em;
   /* 1px inner border: translucent white→transparent gradient, animated;
@@ -139,7 +143,7 @@
 }
 /* re-assert the glass layers on hover — .btn-ghost:hover would otherwise
    replace the fill and rim with its flat tint */
-.hero__ctas .portal-btn--glass:hover {
+.portal-btn--glass:hover {
   border-color: transparent;
   background:
     linear-gradient(180deg, rgba(20, 20, 36, 0.26), rgba(8, 8, 18, 0.44)) padding-box,
@@ -158,7 +162,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 /* frosted sheen sweep across the pane */
-.hero__ctas .portal-btn--glass::after {
+.portal-btn--glass::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -168,12 +172,12 @@
   transition: transform 0.9s var(--ease-swift);
   pointer-events: none;
 }
-.hero__ctas .portal-btn--glass:hover::after {
+.portal-btn--glass:hover::after {
   transform: translateX(130%);
 }
 /* dynamic blend mode: difference keeps the label readable as the blurred
    scene behind the glass shifts */
-.hero__ctas .portal-btn--glass .pk-layer {
+.portal-btn--glass .pk-layer {
   mix-blend-mode: difference;
   color: #fff;
   text-shadow: 0 0 12px rgba(5, 5, 12, 0.4);
@@ -186,15 +190,15 @@
 /* ---------- reduced motion: everything freezes, labels stay put ---------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .hero__ctas .portal-btn--liquid,
-  .hero__ctas .portal-btn--glass,
-  .hero__ctas .portal-btn--liquid.is-burst {
+  .portal-btn--liquid,
+  .portal-btn--glass,
+  .portal-btn--liquid.is-burst {
     animation: none;
   }
-  .hero__ctas .portal-btn--glass::after {
+  .portal-btn--glass::after {
     display: none;
   }
-  .hero__ctas .portal-btn:hover {
+  .portal-btn:hover {
     transform: none;
   }
 }

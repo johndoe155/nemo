@@ -12,7 +12,18 @@
      re-render of the parent grid on every decode).
 ============================================================================ */
 
+import type { ImgHTMLAttributes } from 'react';
+
 import { ART_LQIP, ART_SRCSET } from '../lib/art-variants';
+
+/* React 18 has no mapping for the camelCase `fetchPriority` prop: it warns
+   ("React does not recognize the prop on a DOM element") and DROPS it, so
+   the LCP hint never reached the network layer. The lowercase spelling is
+   passed through to the DOM untouched. React 19 accepts the camelCase form;
+   when this app moves to 19 this cast can go back to a plain prop. */
+type ImgWithPriority = ImgHTMLAttributes<HTMLImageElement> & {
+  fetchpriority?: 'high' | 'auto' | 'low';
+};
 
 export default function CardImage({
   src,
@@ -41,6 +52,9 @@ export default function CardImage({
   const name = src.split('/').pop() ?? '';
   const srcset = ART_SRCSET[name];
   const lqip = ART_LQIP[name];
+  const priority: ImgWithPriority = {
+    fetchpriority: fetchpriority ?? (eager ? 'high' : 'auto'),
+  };
 
   return (
     <picture>
@@ -51,7 +65,7 @@ export default function CardImage({
         className={className}
         loading={eager ? 'eager' : 'lazy'}
         decoding="async"
-        fetchPriority={fetchpriority ?? (eager ? 'high' : 'auto')}
+        {...priority}
         onLoad={(e) => {
           if (fade) e.currentTarget.style.opacity = '1';
           onLoaded?.(e.currentTarget);
