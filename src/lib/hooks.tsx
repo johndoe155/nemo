@@ -3,6 +3,14 @@ import { motion, useMotionValueEvent, useScroll, useSpring, useTransform } from 
 
 /* ---------------------------------------------------------------------------
    useCountdown — precise target-time countdown with tick alignment.
+
+   ONE timer per target, shared by every caller. The hero ticker, the archive
+   door and the canon timeline all count the same drop, and three independent
+   setInterval-style loops meant three React re-renders of three subtrees
+   every second, forever, whether or not any of them is on screen — and three
+   chances for two of them to disagree by a frame. Subscribers share one
+   self-rescheduling timeout (the alignment maths is unchanged); the timer is
+   torn down when the last subscriber for a target goes away.
 --------------------------------------------------------------------------- */
 
 export interface TimeLeft {
@@ -15,22 +23,55 @@ export interface TimeLeft {
 
 const pad = (n: number) => String(Math.max(0, n)).padStart(2, '0');
 
+interface CountdownClock {
+  timer: number;
+  subs: Set<() => void>;
+}
+const clocks = new Map<string, CountdownClock>();
+
 export function useCountdown(targetIso: string): TimeLeft {
-  const [now, setNow] = useState(() => Date.now());
+  /* A counter, not a timestamp: the clock owns the time, this only marks the
+     component dirty. Reading Date.now() during render keeps every subscriber
+     on the same frame instead of on the frame its own setState landed. */
+  const [, bump] = useState(0);
 
   useEffect(() => {
-    const target = new Date(targetIso).getTime();
-    const tick = () => {
-      setNow(Date.now());
-      const diff = target - Date.now();
-      const delay = Math.max(250, Math.min(1000, diff % 1000 || 1000));
-      timer = window.setTimeout(tick, delay);
+    let clock = clocks.get(targetIso);
+
+    if (!clock) {
+      clock = { timer: 0, subs: new Set() };
+      clocks.set(targetIso, clock);
+      const target = new Date(targetIso).getTime();
+
+      const tick = () => {
+        const diff = target - Date.now();
+        clock?.subs.forEach((fn) => fn());
+        if (diff <= 0) {
+          /* Reached the drop: one final broadcast already happened, stop. */
+          clock && (clock.timer = 0);
+          return;
+        }
+        const delay = Math.max(250, Math.min(1000, diff % 1000 || 1000));
+        clock && (clock.timer = window.setTimeout(tick, delay));
+      };
+
+      clock.timer = window.setTimeout(tick, 0);
+    }
+
+    const onTick = () => bump((n) => n + 1);
+    const active = clock;
+    active.subs.add(onTick);
+
+    return () => {
+      active.subs.delete(onTick);
+      if (active.subs.size === 0) {
+        window.clearTimeout(active.timer);
+        clocks.delete(targetIso);
+      }
     };
-    let timer = window.setTimeout(tick, 0);
-    return () => window.clearTimeout(timer);
   }, [targetIso]);
 
-  const diff = new Date(targetIso).getTime() - now;
+  const diff = new Date(targetIso).getTime() - Date.now();
   if (diff <= 0) return { d: '00', h: '00', m: '00', s: '00', done: true };
   const d = Math.floor(diff / 86_400_000);
   const h = Math.floor((diff % 86_400_000) / 3_600_000);
