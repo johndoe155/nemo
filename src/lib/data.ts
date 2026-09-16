@@ -672,12 +672,14 @@ export const CHAT_FALLBACKS = [
   'somewhere, a version of you is asking a version of me a better question.',
 ];
 
+/* The overhaul asked for FEWER, more emotionally specific prompts. Five
+   functional queries ("when is the next drop?") made the persona read as a
+   helpdesk; three invitations make it read as a character who noticed you.
+   Every one of these is answerable by lib/data.ts's canned brain. */
 export const QUICK_REPLIES = [
-  'Tell me about #004',
-  'When is the next drop?',
-  'Who drew #005?',
-  'Any secrets?',
-  'Banter with yourself',
+  'What are you hiding?',
+  'Who hurt you?',
+  'Take me to #007',
 ];
 
 /* ------------------------------ PULL LOGIC ------------------------------ */

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
-import { SectionHead } from '../components/ui';
+import { RevealLine, RevealMeta, RevealText } from '../components/reveal';
 import { ARTISTS, UNIVERSES } from '../lib/data';
 
 /* ============================================================================
-   06 · PERMANENT PUBLIC CREDITS — the credit rod
+   07 · AUTHORSHIP — the credit rod and the permanent ledger
 
    ONE centred spine, ONE column. The masonry is replaced by a vertical rod
    running the exact centre of the section's Y-axis (masked so it fades in at
@@ -163,29 +163,54 @@ export default function Artists() {
   return (
     <section className="section artists" id="artists">
       <div className="shell">
-        <SectionHead
-          num="07"
-          kicker="07 · PERMANENT PUBLIC CREDITS"
-          kickerGold
-          title={
-            <>
+        {/* The house head: one kicker line, one dominant typographic
+            gesture, one reading layer. The gold thread is provenance — it is
+            the only hue allowed to speak in this chapter. */}
+        <div className="authorship__head">
+          <RevealLine at={0}>
+            <span className="kicker">07 · AUTHORSHIP — PERMANENT PUBLIC CREDITS</span>
+          </RevealLine>
+          <RevealText at={0.06}>
+            <h2 className="display authorship__title">
               Every universe, <span className="txt-gold">credited forever</span>
-            </>
-          }
-          sub={
-            <>
+            </h2>
+          </RevealText>
+          <RevealText at={0.2}>
+            <p className="authorship__sub">
               The artists behind the Nemoverse are credited publicly on the Hub and in each
-              piece's own metadata. The spotlight is tied directly to Nemoverse credits — the
-              collection is only as strong as its canon.
-            </>
-          }
-        />
+              piece&rsquo;s own metadata. The spotlight is tied directly to Nemoverse credits —
+              the collection is only as strong as its canon.
+            </p>
+          </RevealText>
+        </div>
 
         <div className="credits">
           <span className="credits__rod" aria-hidden="true" />
           {ARTISTS.map((a, i) => (
             <CreditPlate key={a.name} a={a} i={i} n={ARTISTS.length} />
           ))}
+        </div>
+
+        {/* The receipt. Not a footer, not a CTA — the archive stating, in its
+            own notation, what the rod above it just proved. */}
+        <div className="authorship__ledger">
+          <RevealLine at={0}>
+            <span className="authorship__ledger-label">PERMANENT PUBLIC RECORD</span>
+          </RevealLine>
+          <RevealMeta at={0.1} className="authorship__ledger-row">
+            <span>
+              ARTISTS <b>{String(ARTISTS.length).padStart(2, '0')}</b>
+            </span>
+            <span>
+              UNIVERSES CREDITED <b>{String(UNIVERSES.length).padStart(2, '0')}</b>
+            </span>
+            <span>
+              ATTRIBUTION <b>ON-CHAIN · PUBLIC</b>
+            </span>
+            <span>
+              REVOCABLE <b>NEVER</b>
+            </span>
+          </RevealMeta>
         </div>
       </div>
     </section>

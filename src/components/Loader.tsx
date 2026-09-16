@@ -12,6 +12,7 @@ import {
 } from '../lib/nemoLoaderData';
 import { GLYPH_SCALE, counterLabel, glyphPath, layoutCounter, trackingAt } from '../lib/nemoMorph';
 import { holdScroll, releaseScroll } from '../lib/scroll';
+import { useBootState } from '../lib/ChapterProvider';
 import { criticalFontsReady } from '../lib/fonts';
 import { particleFieldReady } from '../lib/particleGate';
 
@@ -91,6 +92,11 @@ const REPLAY = HAS_SEEN
 type DigitRef = SVGGElement | null;
 
 export default function Loader() {
+  /* The boot is chapter 01 — WAKE. It HOLDS that chapter until the sequence
+     releases, which is why the archive is dark and grain-heavy while the
+     counter climbs, and why the hero resolves into chapter 02 the instant
+     the character lands. */
+  const { markBooted } = useBootState();
   const rootRef = useRef<HTMLDivElement>(null);
   const artRef = useRef<SVGGElement>(null);
   const morphRef = useRef<SVGPathElement>(null);
@@ -237,6 +243,11 @@ export default function Loader() {
       window.removeEventListener('keydown', blockKey);
       releaseScroll('boot');
       setGone(true);
+      /* The handoff: the boot's residual light is the hero's first light
+         source, and the chapter controller is released from `wake` in the
+         same commit — so the page does not fade to a neutral state and then
+         to the hero, it resolves straight into chapter 02. */
+      markBooted();
     };
     /* The third gate, after the fonts: the hero's particle field. It pulls
        2.2 MB of pose data and the engine turns it into GPU buffers before it
@@ -447,7 +458,7 @@ export default function Loader() {
 
   return (
     <div
-      className="ldr"
+      className="ldr ldr--wake"
       ref={rootRef}
       /* P2.10 (audit 2.3.3): the skip gesture must be discoverable — a
          tabbing keyboard user (everything else is inert under boot) lands
@@ -459,6 +470,20 @@ export default function Loader() {
     >
       <div className="ldr__bg" />
       <div className="ldr__glow" ref={glowRef} />
+
+      {/* THE WAKE. Sparse coordinates resolve first — the archive does not
+          announce itself, it registers a visitor. Four marks, no copy. */}
+      <div className="ldr__marks" aria-hidden="true">
+        <span>ARC · 00:00:0{1 + (Date.now() % 4)}</span>
+        <span>N 06°31' · E 003°22'</span>
+        <span>REGISTRY · COLD</span>
+        <span>SEQ · {String((Date.now() % 9000) + 1000)}</span>
+      </div>
+
+      {/* The signal trace. One hairline that runs the height of the boot and
+          continues past it into the hero: the loader does not fade out, it
+          hands a line over. */}
+      <span className="ldr__trace" aria-hidden="true" />
       <svg
         className="ldr__stage"
         viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}

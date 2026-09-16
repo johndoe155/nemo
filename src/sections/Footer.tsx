@@ -182,11 +182,18 @@ export default function Footer() {
             <span>OF THE VOID.</span>
           </h2>
         </div>
+        {/* 10 · RETURN — one closing statement at maximum scale, then the
+            loop. The end of the film is the beginning of the next cycle, so
+            the only action the footer offers is re-entry. */}
         <div className="curtain-footer__statement">
-          <p>One canon character. Infinite versions. A living archive for the people who keep looking.</p>
-          <a className="curtain-footer__cta" href="#nemoverse">
-            <KineticLabel label="EXPLORE THE UNIVERSES" swap="ENTER THE VOID" open={false} />
-            <span aria-hidden="true">↗</span>
+          <h3 className="return__statement">The end is another threshold.</h3>
+          <p className="return__prose">
+            One canon character. Infinite versions. A living archive for the people who keep
+            looking.
+          </p>
+          <a className="return__loop" href="#nemoverse" data-cursor-mode="enter">
+            RE-ENTER THE ARCHIVE
+            <i aria-hidden="true">↑</i>
           </a>
         </div>
       </div>
@@ -244,7 +251,9 @@ export default function Footer() {
               (lib/scroll.ts) — Lenis owns the easing, the raw scrollTo was a
               competing animation author. Without JS the native href jump
               still lands. */}
-          <a href="#top" className="curtain-footer__rewind">BACK TO TOP ↑</a>
+          <a href="#top" className="curtain-footer__rewind" data-cursor-mode="enter">
+            BEGIN AGAIN ↑
+          </a>
         </Magnetic>
       </div>
       </footer>

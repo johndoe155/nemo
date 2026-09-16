@@ -4,6 +4,8 @@ import HangingCard from '../components/HangingCard';
 import UniverseCard from '../components/UniverseCard';
 import UniverseDialog from '../components/UniverseDialog';
 import { Countdown, Reveal, SortDropdown, type SortMode } from '../components/ui';
+import { RevealArt, RevealLine, RevealMeta, RevealText } from '../components/reveal';
+import CardImage from '../components/CardImage';
 import { KineticLink, Magnetic, MagneticButton, RollText } from '../components/motion';
 import type { Rarity, Universe } from '../lib/data';
 import { DROP_LABEL, RARITY, UNIVERSE_DROP_ISO, UNIVERSES, visibleUniverses } from '../lib/data';
@@ -251,12 +253,19 @@ export default function Nemoverse() {
     { id: 'secret', label: 'SECRET' },
   ];
 
+  /* The door opens the chapter: ONE plate, alone, at scale. Everything that
+     follows — the head, the filters, the rail — is the archive expanding out
+     of this single work. */
+  const door = list[0] ?? visibleUniverses[0];
+
   return (
     <section className="section mv" id="nemoverse">
       <div className="shell">
+        <ArchiveDoor u={door} onOpen={setSelected} />
+
         <div className="mv__head">
           <div>
-            <span className="kicker">01 · THE ANCHOR FEATURE</span>
+            <span className="kicker">01 · ARCHIVE — THE DOOR</span>
             <h2 className="display" style={{ fontSize: 'var(--fs-h2)' }}>
               <Reveal>
                 The <span className="txt-grad">Nemoverse</span>
@@ -283,7 +292,11 @@ export default function Nemoverse() {
           </div>
         </div>
 
-        <div className="mv__filters">
+        {/* SECONDARY CONTROL LAYER. Browsing by rarity and sorting are real
+            affordances, but they are not the chapter's first read — the art
+            is. They sit below the head, quieter, and collapse into a single
+            labelled row until the visitor asks for them. */}
+        <div className="mv__filters mv__filters--secondary">
           {rarityChips.map((c) => (
             <MagneticButton
               key={c.id}
@@ -507,5 +520,83 @@ function DropTeaserCard() {
         />
       </div>
     </motion.div>
+  );
+}
+
+
+/* ---------------------------------------------------------------------------
+   ArchiveDoor — the chapter's opening gesture.
+
+   The roster used to begin with a heading and a row of filter chips: the
+   visitor met the INTERFACE before they met any art. The archive now opens
+   with one work, hung alone at scale, with nothing competing with it — the
+   print, its mount, and the caption an archive would actually print beneath
+   it. The rail below is the collection expanding out of this door.
+--------------------------------------------------------------------------- */
+
+function ArchiveDoor({
+  u,
+  onOpen,
+}: {
+  u: Universe;
+  onOpen: (u: Universe) => void;
+}) {
+  if (!u) return null;
+  const rarity = RARITY[u.rarity];
+  return (
+    <div className="door">
+      <RevealArt className="door__plate" from="bottom">
+        {/* A sealed canon entry has no plate yet. The door then shows the
+            archive's own locked treatment rather than a broken <img>. */}
+        {u.image ? (
+          <CardImage
+            src={u.image}
+            alt={`${u.name} — ${u.artist.name}`}
+            eager
+            sizes="(min-width: 980px) min(46vw, 620px), 92vw"
+          />
+        ) : (
+          <span className="door__sealed" aria-hidden="true">
+            <i />
+            <b>{u.code}</b>
+            <span>ART &amp; LORE SEALED UNTIL DROP</span>
+          </span>
+        )}
+      </RevealArt>
+
+      <div className="door__body">
+        <RevealLine className="kicker" at={0}>
+          03 · THE ARCHIVE · {u.code}
+        </RevealLine>
+        <RevealText at={0.1} className="door__title">
+          {u.name}
+        </RevealText>
+        <RevealText at={0.24} className="door__lede">
+          {u.world}. {u.lore}
+        </RevealText>
+        <RevealMeta at={0.4} className="door__meta">
+          <span>
+            RARITY <b>{rarity.label}</b>
+          </span>
+          <span>
+            EDITION <b>{u.minted}/{u.supply}</b>
+          </span>
+          <span>
+            ARTIST <b>{u.artist.name}</b>
+          </span>
+        </RevealMeta>
+        <RevealMeta at={0.5}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => onOpen(u)}
+            aria-haspopup="dialog"
+            data-cursor-mode="inspect"
+          >
+            OPEN THE ARCHIVE →
+          </button>
+        </RevealMeta>
+      </div>
+    </div>
   );
 }

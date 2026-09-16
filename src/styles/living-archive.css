@@ -1,0 +1,3232 @@
+/* ============================================================================
+   THE LIVING ARCHIVE — the art-direction layer
+   ----------------------------------------------------------------------------
+   Loaded LAST (see main.tsx) so it wins where it overlaps the component and
+   overhaul layers, exactly like suspension.css and blackhole.css already do.
+
+   The site already had every cinematic ingredient — ambient shader, particle
+   field, black hole, glass, grain, magnetic controls. What it did not have
+   was AUTHORSHIP: a single set of decisions about when each ingredient is
+   allowed to speak. This file is those decisions.
+
+   It is organised as the blueprint's nine milestones:
+
+     01 · ATMOSPHERE       grain, vignette, glow, silence — chapter-driven
+     02 · REVEAL GRAMMAR   .rv* — five moves, nothing else
+     03 · SEAMS            .seam — the pressure change between chapters
+     04 · CURSOR           .cursor* — five states
+     05 · CHROME           the archive index + the unified system rail
+     06 · ENCOUNTER        the hero, recomposed
+     07 · ARCHIVE          artifacts, plates, the inspection mode
+     08 · ROOMS            rotunda, persona, access, commerce, authorship,
+                           canon — one authored gesture each
+     09 · COLLAPSE/RETURN  anticipation, silence, the loop
+   ========================================================================== */
+
+/* ============================================================================
+   01 · ATMOSPHERE — the page's breathing, authored per chapter
+   ----------------------------------------------------------------------------
+   Three global layers read --chapter-* and nothing else:
+     · grain    — film grain. Its STRENGTH is narrative: heavy while the
+                  archive is dormant (wake/canon/collapse), light while it is
+                  awake and talking (encounter/commerce).
+     · vignette — how hard the frame closes in.
+     · tint     — how much "material" the typography is allowed to be.
+   All three are opacity/transform channels only: no layout, no filter.
+   ========================================================================== */
+
+/* Film grain is NARRATIVE, not decoration: heavy while the archive is dormant
+   (wake 0.9, canon 0.7, collapse 0.85) and light while it is awake and
+   talking (encounter 0.55, commerce 0.42). The 0.1 multiplier is calibrated so
+   the heaviest chapter lands at roughly double the old flat 0.05 — present,
+   never noisy. */
+.grain {
+  /* chapter grain × the curtain reveal's chrome fade (see overhaul.css) */
+  opacity: calc(0.1 * var(--chapter-grain, 0.6) * var(--curtain-chrome-opacity, 1));
+  transition: opacity 1.8s linear;
+}
+
+/* The frame. The old .vignette was a fixed decoration inside the ambience
+   layer; this is the authored frame, keyed to the chapter, and it sits above
+   the ambience but below every control. */
+.la-frame {
+  position: fixed;
+  inset: 0;
+  /* Above the content it frames, below the grain (120) and the chrome (210+). */
+  /* The house stack, respected: above every section (max 7) and above the
+     rotunda's spotlight overlay (50), BELOW the universe dialog (110) and the
+     toasts (300). A vignette sitting on top of an inspection window would be
+     a bug, not an atmosphere. */
+  z-index: 105;
+  pointer-events: none;
+  /* chapter vignette × the curtain reveal's chrome fade */
+  opacity: calc(var(--chapter-vignette, 0.6) * var(--curtain-chrome-opacity, 1));
+  background:
+    radial-gradient(
+      130% 92% at 50% 46%,
+      transparent 38%,
+      rgba(0, 0, 0, 0.42) 78%,
+      rgba(0, 0, 0, 0.86) 100%
+    );
+  transition: opacity 1.6s linear;
+}
+
+/* The light. A single, very soft wash in the chapter's accent, sitting under
+   everything: the archive has a temperature, not a decoration. */
+.la-wash {
+  position: fixed;
+  inset: 0;
+  /* BEHIND the content, immediately above the ambience (-3): a screen blend
+     painted over the page would lighten the typography it is meant to sit
+     under. */
+  z-index: -2;
+  pointer-events: none;
+  opacity: calc(var(--chapter-glow, 0.4) * 0.5 * var(--curtain-chrome-opacity, 1));
+  background:
+    radial-gradient(
+      90% 60% at 22% 12%,
+      color-mix(in srgb, var(--chapter-accent) 16%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      80% 60% at 84% 88%,
+      color-mix(in srgb, var(--chapter-accent-2) 13%, transparent),
+      transparent 66%
+    );
+  transition: opacity 1.8s linear, background 1.8s linear;
+  mix-blend-mode: screen;
+}
+
+/* SILENCE. Chapters flagged `silence` in lib/chapters.ts stop the decorative
+   clocks: the ambient CSS loops, the marquees and the drifting gradients all
+   hold. Motion is re-earned the moment the visitor leaves the chapter. */
+html[data-silence='true'] .kicker::before,
+html[data-silence='true'] .txt-grad,
+html[data-silence='true'] .txt-gold,
+html[data-silence='true'] .btn-primary::after,
+html[data-silence='true'] .btn-gold::after,
+html[data-silence='true'] .btn-ghost,
+html[data-silence='true'] .marquee__track {
+  animation-play-state: paused;
+}
+
+/* ---- Typographic intensity ------------------------------------------------
+   --chapter-tint drives how much MATERIAL the type is: gradient ink, chroma
+   split, and stroke weight all scale with it, so a chapter that should read
+   as printed (Canon, Authorship) simply is, without a second class. */
+.txt-grad,
+.txt-gold {
+  opacity: calc(0.55 + 0.45 * var(--chapter-tint, 1));
+}
+
+/* Bone is the printed voice. Anything that must read as an archive marking
+   rather than a UI label opts in here. */
+.txt-bone {
+  color: var(--bone);
+}
+
+/* ============================================================================
+   02 · REVEAL GRAMMAR — five moves, nothing else
+   ----------------------------------------------------------------------------
+   The components in components/reveal.tsx own the motion; this owns the
+   resting states and the two decorative pieces (the art bloom, the seam).
+   ========================================================================== */
+
+.rv {
+  position: relative;
+  will-change: transform, opacity;
+}
+
+/* Text reveal — the mask. The type arrives from behind a clip so the line
+   reads as being uncovered rather than as sliding. */
+.rv--text {
+  display: block;
+}
+
+/* Tracked metadata line. --rv-track is the element's authored tracking; the
+   entrance tightens INTO it, so a component never has to restate it. */
+.rv--line {
+  --rv-track: 0.28em;
+  display: block;
+  font-family: var(--font-accent);
+  text-transform: uppercase;
+}
+
+/* Art reveal — the plate and its single sweep of light. */
+.rv--art {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.rv__art-inner {
+  position: relative;
+  z-index: 0;
+}
+.rv__art-bloom {
+  position: absolute;
+  inset: -20% -40%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in srgb, var(--chapter-accent, var(--cyan)) 24%, transparent) 48%,
+    rgba(255, 255, 255, 0.16) 52%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+}
+
+/* Plate/card settle — surfaces have weight, so the shadow is authored to
+   arrive with them rather than being switched on afterwards. */
+.rv--plate {
+  transform-style: preserve-3d;
+  perspective: 1400px;
+}
+
+/* ============================================================================
+   03 · SEAMS — the pressure change between chapters
+   ----------------------------------------------------------------------------
+   Not a rule, not a divider: a short band where the outgoing chapter's accent
+   bleeds out and the incoming one's resolves in. Masked at both edges so it
+   is never read as a hairline across the page.
+   ========================================================================== */
+
+.seam {
+  position: relative;
+  height: clamp(9rem, 16vh, 15rem);
+  margin-block: clamp(2rem, 5vw, 5.5rem);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  --seam-from: var(--cyan);
+  --seam-to: var(--ultraviolet);
+}
+
+.seam__band {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--seam-from) 12%, transparent) 34%,
+    color-mix(in srgb, var(--seam-to) 16%, transparent) 62%,
+    transparent 100%
+  );
+  opacity: 0;
+  transform: scaleY(0.7);
+  transform-origin: 50% 50%;
+  transition: opacity 1.6s var(--ease-expo), transform 2s var(--ease-expo);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
+}
+.seam[data-lit='true'] .seam__band {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.seam__line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(var(--max), 100% - var(--gutter) * 2);
+  height: 1px;
+  translate: -50% -50%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--seam-from) 40%, transparent) 22%,
+    color-mix(in srgb, var(--seam-to) 70%, transparent) 50%,
+    color-mix(in srgb, var(--seam-from) 40%, transparent) 78%,
+    transparent
+  );
+  opacity: 0.35;
+  transform: scaleX(0.2);
+  transform-origin: 50% 50%;
+  transition: transform 1.8s var(--ease-expo), opacity 1.2s var(--ease-expo);
+}
+.seam[data-lit='true'] .seam__line {
+  opacity: 0.7;
+  transform: scaleX(1);
+}
+
+/* The seam's printed notation — an archival aside, not a heading. */
+.seam__label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-family: var(--font-accent);
+  font-size: var(--fs-kicker);
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--seam-to) 72%, var(--bone));
+  opacity: 0;
+  translate: 0 8px;
+  transition: opacity 1.2s var(--ease-expo) 0.2s, translate 1.2s var(--ease-expo) 0.2s;
+}
+.seam__label i {
+  width: 1.6rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.6;
+}
+.seam[data-lit='true'] .seam__label {
+  opacity: 0.92;
+  translate: 0 0;
+}
+
+/* ============================================================================
+   04 · CURSOR — five states, one element
+   ----------------------------------------------------------------------------
+   Each state is a transform + opacity on the same ring. No per-component
+   cursor art anywhere on the page.
+   ========================================================================== */
+
+.cursor {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.cursor__ring,
+.cursor__dot,
+.cursor__label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  translate: -50% -50%;
+}
+
+.cursor__ring {
+  width: 46px;
+  height: 46px;
+  border: 1px solid color-mix(in srgb, var(--chapter-accent, var(--cyan)) 78%, transparent);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  /* the ring's own light — the point and the ring share one hue */
+  box-shadow:
+    0 0 18px -4px color-mix(in srgb, var(--chapter-accent, var(--cyan)) 55%, transparent),
+    inset 0 0 12px -6px color-mix(in srgb, var(--chapter-accent, var(--cyan)) 60%, transparent);
+}
+
+.cursor__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bone);
+  box-shadow: 0 0 12px 1px color-mix(in srgb, var(--chapter-accent, var(--cyan)) 70%, transparent);
+}
+
+/* inspect — the framing reticle: the ring squares off and grows four ticks */
+.cursor__tick {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border: 1px solid currentColor;
+  color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 85%, transparent);
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-expo);
+}
+.cursor__tick--tl { top: -4px; left: -4px; border-right: none; border-bottom: none; }
+.cursor__tick--tr { top: -4px; right: -4px; border-left: none; border-bottom: none; }
+.cursor__tick--bl { bottom: -4px; left: -4px; border-right: none; border-top: none; }
+.cursor__tick--br { bottom: -4px; right: -4px; border-left: none; border-top: none; }
+.cursor[data-mode='inspect'] .cursor__tick { opacity: 1; }
+
+/* enter — the portal aperture: an inner ring that opens on approach */
+.cursor__iris {
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--chapter-accent-2, var(--ultraviolet)) 55%, transparent),
+    transparent 70%
+  );
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 0.4s var(--ease-expo), transform 0.5s var(--ease-expo);
+}
+.cursor[data-mode='enter'] .cursor__iris {
+  opacity: 0.9;
+  transform: scale(1);
+}
+
+.cursor__label {
+  margin-top: 34px;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--r-xs);
+  background: rgba(3, 3, 10, 0.72);
+  border: 1px solid color-mix(in srgb, var(--chapter-accent, var(--cyan)) 34%, transparent);
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--bone);
+}
+
+/* The old cursor nodes are retired — keep the selectors inert so any straggler
+   import cannot paint a second cursor on top of this one. */
+.cursor-glow,
+.cursor-dot,
+.cursor-label {
+  display: none;
+}
+
+body.custom-cursor,
+body.custom-cursor a,
+body.custom-cursor button,
+body.custom-cursor [role='button'] {
+  cursor: none;
+}
+/* Text is never read through a custom cursor. */
+body.custom-cursor p,
+body.custom-cursor h1,
+body.custom-cursor h2,
+body.custom-cursor h3,
+body.custom-cursor li,
+body.custom-cursor input,
+body.custom-cursor textarea {
+  cursor: auto;
+}
+
+/* ============================================================================
+   05 · CHROME — the archive index, and one system dock
+   ----------------------------------------------------------------------------
+   The old chrome was four independent floating systems competing for the
+   same corners: a persistent top bar with seven links, a left mini-rail with
+   a dot per section, a bottom-right sound pill, and a scroll progress HUD.
+
+   It is now two things:
+
+     · the INDEX (top) — a hairline at rest, holding the wordmark and one
+       status glyph. It opens into the full chapter list on interaction, on
+       scroll reversal, or on keyboard focus. The active chapter is a light
+       state on a single vertical signal line, not a highlighted link.
+     · the DOCK (bottom right) — one stack: sound, the chapter's own status
+       glyph, and the rewind. Everything that used to float is either in here
+       or gone.
+
+   The section rail survives as an instrument (it answers "how far through
+   the archive am I"), but it is quieter: a thin signal line that only labels
+   the chapter you are actually in.
+   ========================================================================== */
+
+/* The old floating chrome (a persistent seven-link bar, a left dot rail, a
+   bottom-right sound pill and a top HUD progress bar) has been REPLACED, not
+   hidden: sections/Nav.tsx, components/SideRail.tsx,
+   components/SoundToggle.tsx and components/ScrollProgress.tsx are deleted,
+   and their four jobs are now the archive index and the system dock. These
+   selectors stay inert as a guard, so a stale import can never paint a
+   second bar on top of the new one. */
+.nav,
+.siderail,
+.soundtoggle,
+.scrollprog {
+  display: none;
+}
+
+/* ---- The index ---------------------------------------------------------- */
+
+.idx {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* exactly where the nav used to be (100): above the page, below the
+     universe dialog's backdrop (110) */
+  z-index: 100;
+  font-family: var(--font-accent);
+  transition: transform 0.6s var(--ease-expo), background-color 0.6s var(--ease-expo),
+    border-color 0.6s var(--ease-expo);
+  border-bottom: 1px solid transparent;
+}
+
+.idx__bar {
+  width: min(var(--max), 100% - var(--gutter) * 2);
+  margin-inline: auto;
+  height: var(--nav-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+/* Rest: the bar is a hairline with the wordmark on it. */
+.idx[data-open='false'] {
+  background: transparent;
+}
+.idx[data-open='true'],
+.idx[data-scrolled='true'] {
+  background: color-mix(in srgb, var(--void-core) 78%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-bottom-color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 16%, transparent);
+}
+
+.idx__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.92rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bone);
+}
+.idx__brand img {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--chapter-accent, var(--cyan)) 55%, transparent));
+}
+.idx__brand b {
+  font-weight: 800;
+  color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 82%, var(--bone));
+}
+
+/* The open state: the full chapter list. */
+.idx__list {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.9rem, 1.8vw, 2rem);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.idx__chapter {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  transition: color 0.4s var(--ease-expo);
+  white-space: nowrap;
+}
+.idx__chapter i {
+  font-style: normal;
+  font-size: 0.5625rem;
+  letter-spacing: 0.16em;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+.idx__chapter:hover,
+.idx__chapter:focus-visible {
+  color: var(--bone);
+}
+.idx__chapter[data-active='true'] {
+  color: var(--bone);
+}
+.idx__chapter[data-active='true'] i {
+  color: var(--chapter-accent, var(--cyan));
+}
+
+/* The active chapter is a LIGHT STATE on the signal line, not an underline. */
+.idx__chapter::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1px;
+  background: var(--chapter-accent, var(--cyan));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.6s var(--ease-expo);
+}
+.idx__chapter[data-active='true']::after {
+  transform: scaleX(1);
+}
+/* A second, brighter tick marks the chapter you are about to enter. */
+.idx__chapter[data-active='true']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -5px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--chapter-accent, var(--cyan));
+  box-shadow: 0 0 8px 1px color-mix(in srgb, var(--chapter-accent, var(--cyan)) 80%, transparent);
+}
+
+.idx__right {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.idx__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--chapter-accent, var(--cyan)) 24%, transparent);
+  border-radius: var(--r-pill);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 78%, transparent);
+  background: rgba(255, 255, 255, 0.02);
+  transition: color 0.35s var(--ease-expo), border-color 0.35s var(--ease-expo),
+    background-color 0.35s var(--ease-expo);
+}
+.idx__toggle:hover,
+.idx__toggle:focus-visible {
+  color: var(--bone);
+  border-color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 62%, transparent);
+  background: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 8%, transparent);
+}
+.idx__toggle-glyph {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  flex: none;
+}
+.idx__toggle-glyph::before,
+.idx__toggle-glyph::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+}
+.idx__toggle-glyph::after {
+  inset: auto;
+  inset: 3px;
+  background: currentColor;
+  opacity: 0.85;
+}
+
+/* The signal line — the vertical rail of chapters. It is an instrument: it
+   shows where you are in the archive, it never shouts. */
+.idxsignal {
+  position: fixed;
+  left: calc(var(--gutter) * 0.42);
+  top: 50%;
+  translate: 0 -50%;
+  z-index: 80;
+  /* Explicit width: a fixed, shrink-to-fit column whose children are
+     width:100% has nothing to measure against. */
+  width: 2.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  align-items: center;
+}
+/* The rail is ABSOLUTE against the column, not a flex child: as a flex child
+   its content height is zero (nothing in flow), and a zero-height rail would
+   leave the marker no distance to travel. */
+.idxsignal__rail {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  translate: -50% 0;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 255, 255, 0.14) 12%,
+    rgba(255, 255, 255, 0.14) 88%,
+    transparent
+  );
+}
+.idxsignal__marker {
+  position: absolute;
+  left: -1px;
+  top: 0;
+  width: 3px;
+  height: 2.2rem;
+  border-radius: 2px;
+  background: var(--chapter-accent, var(--cyan));
+  box-shadow: 0 0 12px 0 color-mix(in srgb, var(--chapter-accent, var(--cyan)) 70%, transparent);
+}
+.idxsignal__item {
+  display: block;
+  width: 100%;
+  padding: 0;
+  text-align: center;
+}
+.idxsignal__num {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  transition: color 0.5s var(--ease-expo);
+  font-variant-numeric: tabular-nums;
+}
+.idxsignal__item[data-active='true'] .idxsignal__num {
+  color: var(--chapter-accent, var(--cyan));
+}
+
+/* The mobile chapter selector — a full-screen sheet of large type. */
+.idxsheet {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: calc(var(--nav-h) + 2rem) var(--gutter) 3rem;
+  background: color-mix(in srgb, var(--void-core) 94%, transparent);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  overflow-y: auto;
+}
+.idxsheet__chapter {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--bone);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.6rem, 8vw, 2.6rem);
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+.idxsheet__chapter i {
+  font-family: var(--font-accent);
+  font-style: normal;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+.idxsheet__chapter[data-active='true'] {
+  color: var(--chapter-accent, var(--cyan));
+}
+.idxsheet__foot {
+  margin-top: 2rem;
+  font-family: var(--font-accent);
+  font-size: 0.625rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+
+/* ---- The system dock ---------------------------------------------------- */
+
+.dock {
+  position: fixed;
+  right: calc(var(--gutter) * 0.5);
+  bottom: 1.5rem;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.dock__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.62rem 1rem;
+  border-radius: var(--r-pill);
+  border: 1px solid color-mix(in srgb, var(--chapter-accent, var(--cyan)) 22%, transparent);
+  background: color-mix(in srgb, var(--void-core) 62%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 74%, transparent);
+  transition: color 0.35s var(--ease-expo), border-color 0.35s var(--ease-expo),
+    background-color 0.35s var(--ease-expo);
+}
+.dock__btn:hover,
+.dock__btn:focus-visible {
+  color: var(--bone);
+  border-color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 60%, transparent);
+  background: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 10%, transparent);
+}
+.dock__btn[data-on='true'] {
+  color: var(--chapter-accent, var(--cyan));
+  border-color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 55%, transparent);
+}
+
+/* The sound wave, redrawn as three instrument bars. */
+.dock__wave {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+.dock__wave i {
+  width: 2px;
+  height: 3px;
+  background: currentColor;
+  border-radius: 1px;
+  transition: height 0.3s var(--ease-expo);
+}
+.dock__btn[data-on='true'] .dock__wave i {
+  animation: dockWave 1.4s ease-in-out infinite;
+}
+.dock__wave i:nth-child(2) { animation-delay: -0.45s; }
+.dock__wave i:nth-child(3) { animation-delay: -0.9s; }
+@keyframes dockWave {
+  0%, 100% { height: 3px; }
+  50% { height: 11px; }
+}
+
+/* The chapter's own status glyph — one line of live metadata, and the only
+   hover-revealed telemetry on the page. */
+.dock__status {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  padding-right: 0.4rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.dock__status b {
+  color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 85%, var(--bone));
+  font-weight: 700;
+}
+
+@media (max-width: 1080px) {
+  .idx__list { display: none; }
+  .idxsignal { display: none; }
+}
+@media (max-width: 560px) {
+  .dock {
+    right: 1rem;
+    bottom: 1rem;
+  }
+  .dock__status { display: none; }
+}
+
+/* ============================================================================
+   06 · ENCOUNTER — the hero, recomposed
+   ----------------------------------------------------------------------------
+   It was a dashboard: a title, a ticker, a sub-block, a lede, two CTAs, a
+   scroll hint, a telemetry column, a watermark, a countdown and a progress
+   bar, all visible at once.
+
+   It is now a composition with one focal point:
+
+     · the art field is the gravitational centre and owns the frame
+     · the title is asymmetric — it does not sit on the art's centre
+     · ONE primary action (a portal aperture, not a button)
+     · ONE secondary invitation (a quiet line)
+     · telemetry is retired to the edge and revealed on approach
+     · the closing notation is printed, not animated
+
+   On scroll the whole plate shears and folds into the archive instead of
+   simply fading: the hero is not left behind, it is consumed.
+   ========================================================================== */
+
+.hero {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  overflow: clip;
+  /* the fold: the hero shears into the archive over its own exit */
+  --hero-exit: 0;
+}
+
+/* The art field drifts independently of the typography — two speeds, one
+   frame. This is the counter-motion the blueprint asks for. */
+.hero__bg {
+  z-index: 0;
+  transform-origin: 50% 45%;
+}
+
+/* A single overhead light: the residue of the boot sequence is the hero's
+   first light source, and it stays as one soft column rather than a wash. */
+.enc__light {
+  position: absolute;
+  left: 50%;
+  top: -12%;
+  z-index: 0;
+  width: min(1200px, 120vw);
+  height: 120%;
+  translate: -50% 0;
+  pointer-events: none;
+  /* The FOLD owns this element's transform + opacity. The breath is a CHILD
+     (::before) so a running animation can never override the fold — the one
+     transform-authority rule the whole page follows. */
+  opacity: calc((0.45 + 0.55 * var(--chapter-glow, 0.6)) * (1 - var(--enc-fold, 0)));
+  transform: scale(calc(1 - var(--enc-fold, 0) * 0.5));
+}
+.enc__light::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    58% 46% at 50% 34%,
+    color-mix(in srgb, var(--chapter-accent-2, var(--ultraviolet)) 26%, transparent),
+    transparent 68%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  animation: encBreath 15s ease-in-out infinite;
+}
+@keyframes encBreath {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.04); }
+}
+html[data-silence='true'] .enc__light::before { animation-play-state: paused; }
+
+/* ---- The plate ---------------------------------------------------------- */
+
+.enc__plate {
+  position: relative;
+  z-index: 3;
+  width: min(var(--max), 100% - var(--gutter) * 2);
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+  grid-template-areas:
+    'mark meta'
+    'title title'
+    'lede lede'
+    'act act';
+  gap: clamp(1rem, 2vw, 2rem) clamp(2rem, 5vw, 6rem);
+  align-items: end;
+}
+
+@media (max-width: 1080px) {
+  .enc__plate {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'mark'
+      'title'
+      'lede'
+      'act'
+      'meta';
+  }
+}
+
+/* The archive marking — one printed line, top-left. This replaces the old
+   always-scrolling ticker as the hero's first read. */
+.enc__mark {
+  grid-area: mark;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-family: var(--font-accent);
+  font-size: var(--fs-kicker);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 62%, transparent);
+}
+.enc__mark-dot {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--chapter-accent, var(--cyan));
+  box-shadow: 0 0 10px 1px color-mix(in srgb, var(--chapter-accent, var(--cyan)) 75%, transparent);
+  flex: none;
+}
+.enc__mark-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 50%, transparent);
+  animation: encPing 3.4s var(--ease-expo) infinite;
+}
+@keyframes encPing {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  70%, 100% { transform: scale(2.1); opacity: 0; }
+}
+
+/* The telemetry — relocated to the right edge and revealed on approach.
+   Never visible at rest; it is an instrument the visitor discovers. */
+.enc__meta {
+  grid-area: meta;
+  justify-self: end;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  text-align: right;
+  opacity: 0;
+  translate: 0 -6px;
+  transition: opacity 0.7s var(--ease-expo), translate 0.7s var(--ease-expo);
+}
+.enc:hover .enc__meta,
+.enc:focus-within .enc__meta {
+  opacity: 1;
+  translate: 0 0;
+}
+.enc__meta b {
+  font-weight: 700;
+  color: var(--chapter-accent, var(--cyan));
+  font-variant-numeric: tabular-nums;
+}
+.enc__meta-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  padding-right: 0.75rem;
+  border-right: 1px solid color-mix(in srgb, var(--chapter-accent, var(--cyan)) 28%, transparent);
+}
+
+/* ---- The title ----------------------------------------------------------
+   Asymmetric: the block is pulled off the optical centre so the art owns the
+   right of the frame. Line 2 (hollow) is the hinge. */
+.enc__title {
+  grid-area: title;
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 0.98;
+  letter-spacing: -0.018em;
+  font-size: clamp(2.6rem, 1rem + 7.4vw, 8rem);
+}
+.enc__title .hero__line {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  white-space: nowrap;
+}
+/* The asymmetry: line 1 inset, line 2 pushed, line 3 hanging — the block
+   leans instead of stacking. */
+.hero__line--1 { padding-left: 0.02em; }
+.hero__line--2 { padding-left: 0.14em; }
+.hero__line--3 { padding-left: 0.06em; }
+
+/* ---- The lede ----------------------------------------------------------- */
+.enc__lede {
+  grid-area: lede;
+  max-width: 46ch;
+  margin: 0;
+  font-family: var(--font-body-text);
+  font-size: var(--fs-lead);
+  line-height: 1.62;
+  color: color-mix(in srgb, var(--bone) 76%, transparent);
+}
+.enc__lede em {
+  font-style: normal;
+  color: var(--bone);
+  border-bottom: 1px solid color-mix(in srgb, var(--chapter-accent, var(--cyan)) 42%, transparent);
+}
+
+/* ---- The actions --------------------------------------------------------
+   One portal aperture, one quiet invitation. Nothing else. */
+.enc__act {
+  grid-area: act;
+  display: flex;
+  align-items: center;
+  gap: clamp(1.2rem, 3vw, 2.6rem);
+  flex-wrap: wrap;
+  padding-top: 0.6rem;
+}
+.enc__invite {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-family: var(--font-accent);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  transition: color 0.4s var(--ease-expo);
+}
+.enc__invite:hover,
+.enc__invite:focus-visible {
+  color: var(--bone);
+}
+.enc__invite i {
+  font-style: normal;
+  color: var(--chapter-accent, var(--cyan));
+  transition: transform 0.5s var(--ease-expo);
+}
+.enc__invite:hover i { transform: translateX(5px); }
+
+/* The CTA is a portal aperture, not a button: a ring that opens onto the
+   archive. It keeps the existing .btn physics and label machinery. */
+.aperture {
+  position: relative;
+  isolation: isolate;
+}
+.aperture::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  z-index: -1;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--chapter-accent, var(--cyan)) 38%, transparent);
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.5s var(--ease-expo), transform 0.6s var(--ease-expo);
+}
+.aperture:hover::before,
+.aperture:focus-within::before {
+  opacity: 1;
+  transform: scale(1);
+}
+.aperture::after {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  z-index: -2;
+  border-radius: 999px;
+  background: radial-gradient(
+    60% 60% at 50% 50%,
+    color-mix(in srgb, var(--chapter-accent-2, var(--ultraviolet)) 34%, transparent),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.6s var(--ease-expo);
+  mix-blend-mode: screen;
+}
+.aperture:hover::after,
+.aperture:focus-within::after {
+  opacity: 1;
+}
+
+/* ---- The closing notation -----------------------------------------------
+   Printed on the baseline of the frame, in the archive's own voice. Replaces
+   the old "SCROLL TO CROSS UNIVERSES" hint and the hero progress bar. */
+.enc__colophon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 1.6rem;
+  z-index: 3;
+  width: min(var(--max), 100% - var(--gutter) * 2);
+  margin-inline: auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  pointer-events: none;
+}
+.enc__colophon span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.enc__colophon em {
+  font-style: normal;
+  color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 78%, var(--bone));
+}
+.enc__rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--chapter-accent, var(--cyan)) 40%, transparent),
+    transparent
+  );
+  min-width: 2rem;
+}
+
+/* Retire the hero's competing sub-block and progress bar. */
+.hero__subblock,
+.hero__progress,
+.hero__hint,
+.hero__telemetry,
+.hero__badge,
+.hero__watermark {
+  display: none;
+}
+
+/* The fold out of the hero — the plate shears and the light column collapses
+   as the archive opens. Driven by a scrubbed CSS variable written from
+   Hero.tsx (one write per frame, transform + opacity only). */
+.enc {
+  --enc-fold: 0;
+}
+/* The plate keeps the grid; the lift wrapper owns the fold. */
+.enc__light {
+  transform: scale(calc(1 - var(--enc-fold) * 0.5));
+  opacity: calc((0.45 + 0.55 * var(--chapter-glow, 0.6)) * (1 - var(--enc-fold)));
+}
+/* framer owns `.hero__bg`'s transform (y + scale) and `.enc__plate`'s
+   transform (y), so the fold must never write `transform` on either — it is
+   expressed on `.enc__lift`, a wrapper whose transform nothing else touches. */
+.enc__lift {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  transform: translate3d(0, calc(var(--enc-fold) * -4vh), 0)
+    skewY(calc(var(--enc-fold) * 1.4deg));
+  opacity: calc(1 - var(--enc-fold) * 0.95);
+  will-change: transform, opacity;
+}
+
+/* ============================================================================
+   07 · ARCHIVE — artifacts, not product tiles
+   ----------------------------------------------------------------------------
+   The roster was a card rail: ten equal tiles, each carrying a code, a name,
+   a rarity badge, a supply bar, an artist row and a price at the same visual
+   weight as its art.
+
+   It is now a hanging exhibition:
+
+     · one archive door opens the chapter — a single plate, alone, at scale
+     · the rail expands out of that door as the visitor scrolls
+     · every plate hangs at its own depth and vertical offset
+     · a plate carries its ART at rest; its metadata is revealed on approach
+     · the physical metaphor is consistent: a hung archival print — plate,
+       mount, caption label beneath
+   ========================================================================== */
+
+/* The archive door — the chapter's opening gesture. */
+.door {
+  position: relative;
+  width: min(var(--max), 100% - var(--gutter) * 2);
+  margin-inline: auto;
+  margin-bottom: clamp(3rem, 7vw, 6rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: center;
+}
+@media (max-width: 980px) {
+  .door { grid-template-columns: 1fr; }
+}
+.door__plate {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--void-2);
+  box-shadow: var(--elev-rest);
+}
+.door__plate img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.door__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.door__title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(1.8rem, 1rem + 3.4vw, 3.6rem);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  color: var(--bone);
+}
+.door__lede {
+  max-width: 42ch;
+  font-family: var(--font-body-text);
+  font-size: var(--fs-lead);
+  line-height: 1.62;
+  color: color-mix(in srgb, var(--bone) 74%, transparent);
+}
+.door__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.6rem;
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+.door__meta b {
+  color: var(--chapter-accent, var(--cyan));
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- The hanging rail --------------------------------------------------- */
+
+.roster__rail {
+  gap: clamp(1.6rem, 3vw, 3.2rem);
+  align-items: flex-start;
+  padding-inline: var(--gutter);
+}
+
+/* Varied depth and vertical offset — a hung exhibition, not a grid row.
+   nth-child rules keep it deterministic (no JS, no layout thrash). */
+.roster__rail .ucard:nth-child(4n + 1) { translate: 0 -3.2vh; }
+.roster__rail .ucard:nth-child(4n + 2) { translate: 0 2.4vh; }
+.roster__rail .ucard:nth-child(4n + 3) { translate: 0 -1.2vh; }
+.roster__rail .ucard:nth-child(4n) { translate: 0 3.4vh; }
+
+/* ---- The artifact plate -------------------------------------------------
+   Rest state: art dominant, chrome suppressed. The caption label is the only
+   thing that never hides — it is how the archive identifies a work. */
+.ucard {
+  --plate-accent: var(--chapter-accent, var(--cyan));
+  width: clamp(268px, 27vw, 380px);
+  background: linear-gradient(168deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012) 58%);
+  border: 1px solid color-mix(in srgb, var(--plate-accent) 14%, var(--line));
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transition: border-color 0.6s var(--ease-expo), transform 0.7s var(--ease-expo),
+    box-shadow 0.6s var(--ease-expo);
+}
+
+/* The mount: the print sits in a dark mat, and the mat is what catches the
+   light. This is the single physical metaphor the whole archive shares. */
+.ucard__media {
+  position: relative;
+  isolation: isolate;
+  background: var(--void-3);
+}
+.ucard__media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(3, 3, 10, 0.42) 0%,
+    transparent 26%,
+    transparent 58%,
+    rgba(3, 3, 10, 0.72) 100%
+  );
+  opacity: calc(1 - var(--plate-open, 0) * 0.35);
+  transition: opacity 0.7s var(--ease-expo);
+}
+.ucard:hover .ucard__media::after,
+.ucard:focus-within .ucard__media::after {
+  --plate-open: 1;
+}
+
+/* Badges and the supply bar retire into the hover state. */
+.ucard__badges,
+.ucard__sold,
+.ucard__index {
+  opacity: 0;
+  translate: 0 -6px;
+  transition: opacity 0.5s var(--ease-expo), translate 0.5s var(--ease-expo);
+}
+.ucard:hover .ucard__badges,
+.ucard:hover .ucard__sold,
+.ucard:hover .ucard__index,
+.ucard:focus-within .ucard__badges,
+.ucard:focus-within .ucard__sold,
+.ucard:focus-within .ucard__index {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* The caption label — always legible, printed in the archive's voice. */
+.ucard__body {
+  padding: 1.15rem 1.25rem 1.35rem;
+}
+.ucard__name {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: clamp(1rem, 0.95rem + 0.3vw, 1.24rem);
+  color: var(--bone);
+  line-height: 1.12;
+}
+.ucard__world {
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--plate-accent) 82%, var(--bone));
+  margin-top: 0.5rem;
+}
+/* The lore is revealed on approach, not stacked at rest. */
+.ucard__lore {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.7s var(--ease-expo), opacity 0.5s var(--ease-expo),
+    margin-top 0.7s var(--ease-expo);
+  margin-top: 0;
+}
+.ucard:hover .ucard__lore,
+.ucard:focus-within .ucard__lore {
+  max-height: 8.5em;
+  opacity: 0.82;
+  margin-top: 0.7rem;
+}
+
+/* The metadata drawer — the archival print's catalogue data. */
+.ucard__meta {
+  gap: 0.55rem;
+  border-top: 1px solid color-mix(in srgb, var(--plate-accent) 16%, var(--line));
+  padding-top: 0.85rem;
+  margin-top: 0.9rem;
+  opacity: 0;
+  translate: 0 8px;
+  transition: opacity 0.55s var(--ease-expo) 0.06s, translate 0.55s var(--ease-expo) 0.06s;
+}
+.ucard:hover .ucard__meta,
+.ucard:focus-within .ucard__meta {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* Inspection affordance — the plate tells you it can be opened. */
+.ucard[data-cursor]::after {
+  content: 'INSPECT';
+  position: absolute;
+  right: 0.9rem;
+  top: 0.9rem;
+  z-index: 5;
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: var(--bone);
+  padding: 0.34rem 0.6rem;
+  border-radius: var(--r-xs);
+  background: rgba(3, 3, 10, 0.62);
+  border: 1px solid color-mix(in srgb, var(--plate-accent) 34%, transparent);
+  opacity: 0;
+  translate: 0 -4px;
+  transition: opacity 0.45s var(--ease-expo), translate 0.45s var(--ease-expo);
+}
+.ucard:hover::after,
+.ucard:focus-within::after {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* ---- ARTIFACT INSPECTION — the full-screen mode -------------------------
+   The old dialog was a two-column panel. Inspection is a room: the art
+   leaves the card boundary entirely, the lore becomes an editorial column,
+   the specs read as catalogue data, and the action is present but
+   subordinate to discovery. */
+.dialog-backdrop {
+  background: color-mix(in srgb, var(--void-core) 88%, transparent);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+}
+.dialog {
+  width: min(1500px, 94vw);
+  max-height: 92vh;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  background: linear-gradient(168deg, rgba(14, 14, 26, 0.94), rgba(5, 5, 12, 0.97));
+}
+.dialog__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  min-height: min(78vh, 720px);
+}
+@media (max-width: 900px) {
+  .dialog__grid { grid-template-columns: 1fr; }
+}
+/* The art escapes the card boundary: full-bleed against the room's left
+   wall, with its own light. */
+.dialog__media {
+  position: relative;
+  background: var(--void-core);
+  overflow: hidden;
+}
+.dialog__media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(72% 58% at 50% 42%, transparent 40%, rgba(3, 3, 10, 0.5) 100%),
+    linear-gradient(90deg, transparent 78%, rgba(5, 5, 12, 0.85) 100%);
+}
+.dialog__body {
+  padding: clamp(1.6rem, 3vw, 3rem);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+}
+.dialog__code {
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 82%, var(--bone));
+  padding-left: 0;
+}
+.dialog__code::before { display: none; }
+.dialog__name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(1.7rem, 1rem + 2.2vw, 3rem);
+  line-height: 1.02;
+  color: var(--bone);
+}
+.dialog__lore {
+  font-family: var(--font-body-text);
+  font-size: var(--fs-body);
+  line-height: 1.72;
+  color: color-mix(in srgb, var(--bone) 78%, transparent);
+  max-width: 58ch;
+}
+/* Catalogue data — the specs read as a museum label, not a stat block. */
+.dialog__specs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 12%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--chapter-accent, var(--cyan)) 12%, var(--line));
+  border-radius: var(--r-sm);
+  overflow: hidden;
+}
+.dialog__spec {
+  background: rgba(6, 6, 14, 0.8);
+  padding: 0.82rem 0.95rem;
+}
+.dialog__ctas {
+  margin-top: auto;
+  padding-top: 0.6rem;
+}
+
+/* ============================================================================
+   08 · ROOMS — one authored gesture each
+   ========================================================================== */
+
+/* ---- The rotunda — a museum volume --------------------------------------
+   Dark room, floor reflection, one overhead light. It deliberately does not
+   repeat the roster's language: this is contemplation, not browsing. */
+.cg-stage--sphere {
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+.cg-stage--sphere::before {
+  /* one overhead light, centred on the sphere */
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 4%;
+  width: min(760px, 78%);
+  height: 62%;
+  translate: -50% 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    50% 50% at 50% 30%,
+    color-mix(in srgb, var(--chapter-accent, var(--cyan)) 20%, transparent),
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+}
+.cg-stage--sphere::after {
+  /* the floor: a reflection plane the sphere appears to sit on */
+  content: '';
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 2%;
+  height: 26%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 100% at 50% 0%, rgba(255, 255, 255, 0.05), transparent 70%),
+    linear-gradient(180deg, transparent, rgba(3, 3, 10, 0.72));
+  border-top: 1px solid color-mix(in srgb, var(--chapter-accent, var(--cyan)) 16%, transparent);
+}
+.cg__hint {
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  text-align: center;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  margin-top: 1.4rem;
+}
+
+/* ---- Voice — the persona gets the room ---------------------------------
+   More negative space, a floating transmission panel, and one warm light on
+   a cool face. The section stops explaining and starts listening. */
+.persona__layout {
+  gap: clamp(2.5rem, 6vw, 6rem);
+}
+.persona__interact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr);
+  gap: clamp(1.6rem, 4vw, 4rem);
+  align-items: center;
+  min-height: min(62vh, 620px);
+}
+@media (max-width: 1100px) {
+  .persona__interact { grid-template-columns: 1fr; }
+}
+.persona__modelslot {
+  position: relative;
+  min-height: min(54vh, 520px);
+  isolation: isolate;
+}
+/* The warm light on a cool face — the only place on the page where the
+   persona's own hue is allowed to be the dominant one. */
+.persona__modelslot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    46% 42% at 50% 44%,
+    color-mix(in srgb, var(--gold) 16%, transparent),
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+  animation: personaBreath 11s ease-in-out infinite;
+}
+@keyframes personaBreath {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+html[data-silence='true'] .persona__modelslot::before { animation-play-state: paused; }
+
+/* The transmission panel — a floating receiver, not a form. */
+.persona__chatwrap {
+  position: relative;
+}
+.persona__chatwrap::before {
+  content: 'TRANSMISSION';
+  position: absolute;
+  top: -1.6rem;
+  left: 0;
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 62%, transparent);
+}
+.persona__support {
+  max-width: 62ch;
+  margin-top: clamp(1.5rem, 4vw, 3rem);
+}
+
+/* ---- Access — the ladder ------------------------------------------------
+   Four equal cards became a sequential ladder: each tier unlocks spatially
+   as the visitor descends, and the verified state is a system confirmation
+   rather than a line of text. */
+.ladder {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.2rem, 3vw, 2.4rem);
+  margin-top: clamp(2rem, 5vw, 4rem);
+  padding-left: clamp(2.4rem, 6vw, 5.5rem);
+}
+/* The ladder's rail — one continuous gold line the rungs hang off. */
+.ladder::before {
+  content: '';
+  position: absolute;
+  left: clamp(0.9rem, 2.4vw, 2.2rem);
+  top: 0.6rem;
+  bottom: 0.6rem;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--gold) 46%, transparent) 12%,
+    color-mix(in srgb, var(--gold) 46%, transparent) 88%,
+    transparent
+  );
+}
+.rung {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.42fr) minmax(0, 1fr);
+  gap: clamp(1.2rem, 3vw, 3rem);
+  align-items: start;
+  padding: clamp(1.2rem, 2.4vw, 2rem) clamp(1.2rem, 2.6vw, 2.2rem);
+  border: 1px solid color-mix(in srgb, var(--gold) 14%, var(--line));
+  border-radius: var(--r-lg);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--gold) 4%, transparent),
+    rgba(255, 255, 255, 0.014) 46%
+  );
+  transition: border-color 0.6s var(--ease-expo), background-color 0.6s var(--ease-expo),
+    transform 0.7s var(--ease-expo);
+}
+.rung:hover,
+.rung:focus-within {
+  border-color: color-mix(in srgb, var(--gold) 42%, transparent);
+  transform: translateX(6px);
+}
+/* The rung's node on the rail. */
+.rung::before {
+  content: '';
+  position: absolute;
+  left: calc(clamp(2.4rem, 6vw, 5.5rem) * -1 + clamp(0.9rem, 2.4vw, 2.2rem));
+  top: 2.1rem;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 18%, transparent),
+    0 0 14px 1px color-mix(in srgb, var(--gold) 60%, transparent);
+}
+.rung__step {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.6rem, 1rem + 2vw, 2.6rem);
+  line-height: 1;
+  color: color-mix(in srgb, var(--gold) 72%, var(--bone));
+  font-variant-numeric: tabular-nums;
+}
+.rung__trait {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(1.05rem, 1rem + 0.5vw, 1.4rem);
+  color: var(--bone);
+  letter-spacing: 0.01em;
+}
+.rung__tag {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 0.28rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--gold) 34%, transparent);
+  border-radius: var(--r-xs);
+}
+.rung__perks {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.55rem 1.4rem;
+  margin-top: 0.9rem;
+}
+.rung__perks li {
+  display: flex;
+  gap: 0.6rem;
+  font-family: var(--font-body-text);
+  font-size: 0.94rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--bone) 76%, transparent);
+}
+.rung__perks li::before {
+  content: '◇';
+  color: color-mix(in srgb, var(--gold) 70%, transparent);
+  flex: none;
+  font-size: 0.7em;
+  line-height: 1.6;
+}
+@media (max-width: 900px) {
+  .rung { grid-template-columns: 1fr; }
+}
+
+/* The verified state is a ceremony: a system confirmation, staged. */
+.access__verify {
+  margin-top: clamp(2rem, 5vw, 3.5rem);
+  padding: clamp(1.4rem, 3vw, 2.2rem);
+  border-radius: var(--r-lg);
+  border: 1px solid color-mix(in srgb, var(--gold) 20%, var(--line));
+  background:
+    radial-gradient(120% 100% at 12% 0%, color-mix(in srgb, var(--gold) 8%, transparent), transparent 62%),
+    rgba(255, 255, 255, 0.014);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem 2.5rem;
+  flex-wrap: wrap;
+}
+.access__confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-family: var(--font-accent);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.access__confirm svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* Retire the old perks grid + the old verify card. */
+.perks__grid,
+.perks__verify {
+  display: none;
+}
+
+/* ---- Commerce — the ritual ----------------------------------------------
+   The pulls simulator is a tactile ritual: a sealed fragment at the centre,
+   a staged reveal, and a collectible ledger. The odds and rules move into an
+   expandable information state instead of sitting on the surface. */
+.ritual {
+  margin-top: clamp(2rem, 5vw, 4rem);
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .ritual { grid-template-columns: 1fr; }
+}
+.ritual__altar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4rem;
+  padding: clamp(1.8rem, 4vw, 3rem) clamp(1.2rem, 3vw, 2rem);
+  border-radius: var(--r-xl);
+  border: 1px solid color-mix(in srgb, var(--gold) 18%, var(--line));
+  background:
+    radial-gradient(80% 60% at 50% 22%, color-mix(in srgb, var(--gold) 10%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+  position: relative;
+  overflow: hidden;
+}
+/* The sealed fragment — the object you pull, before it is opened. */
+.ritual__seal {
+  position: relative;
+  width: clamp(150px, 20vw, 220px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+.ritual__seal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent,
+    color-mix(in srgb, var(--gold) 55%, transparent) 22%,
+    transparent 48%,
+    color-mix(in srgb, var(--chapter-accent-2, var(--iris)) 45%, transparent) 72%,
+    transparent
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 62%, #000 64%, #000 99%, transparent);
+  mask-image: radial-gradient(circle, transparent 62%, #000 64%, #000 99%, transparent);
+  animation: sealTurn 14s linear infinite;
+}
+@keyframes sealTurn {
+  to { transform: rotate(360deg); }
+}
+html[data-silence='true'] .ritual__seal::before { animation-play-state: paused; }
+.ritual__seal::after {
+  content: '';
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 42%,
+    color-mix(in srgb, var(--gold) 30%, transparent),
+    rgba(3, 3, 10, 0.9) 68%
+  );
+  box-shadow: inset 0 0 40px -10px color-mix(in srgb, var(--gold) 40%, transparent);
+}
+.ritual__seal-glyph {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  color: var(--bone);
+  letter-spacing: 0.06em;
+}
+.ritual__state {
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--gold) 78%, var(--bone));
+  text-align: center;
+}
+.ritual__ledger {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* The expandable information state: the odds exist, but they are behind a
+   deliberate disclosure instead of on the surface. */
+.ritual__disclosure {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.014);
+}
+.ritual__disclosure > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
+  cursor: pointer;
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 62%, transparent);
+  list-style: none;
+  transition: color 0.35s var(--ease-expo), background-color 0.35s var(--ease-expo);
+}
+.ritual__disclosure > summary::-webkit-details-marker { display: none; }
+.ritual__disclosure > summary:hover,
+.ritual__disclosure > summary:focus-visible {
+  color: var(--bone);
+  background: rgba(255, 255, 255, 0.03);
+}
+.ritual__disclosure > summary::after {
+  content: '+';
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: transform 0.4s var(--ease-expo);
+}
+.ritual__disclosure[open] > summary::after {
+  transform: rotate(45deg);
+}
+.ritual__disclosure-body {
+  padding: 0.4rem 1.1rem 1.2rem;
+  font-family: var(--font-body-text);
+  font-size: 0.9rem;
+  line-height: 1.66;
+  color: color-mix(in srgb, var(--bone) 68%, transparent);
+}
+
+/* ---- The artifact catalog (store) ---------------------------------------
+   One editorial hero artifact; the rest are catalogue plates with unequal
+   weight. Product information is annotation around the object. */
+.catalog {
+  margin-top: clamp(2rem, 5vw, 4rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+  gap: clamp(1.6rem, 4vw, 3.4rem);
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .catalog { grid-template-columns: 1fr; }
+}
+.catalog__hero {
+  position: relative;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  min-height: min(62vh, 620px);
+  display: flex;
+  align-items: flex-end;
+  background: var(--void-3);
+}
+.catalog__hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 34%,
+    rgba(3, 3, 10, 0.55) 68%,
+    rgba(3, 3, 10, 0.92) 100%
+  );
+  pointer-events: none;
+}
+.catalog__hero-media {
+  position: absolute;
+  inset: 0;
+}
+.catalog__hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.catalog__caption {
+  position: relative;
+  z-index: 2;
+  padding: clamp(1.4rem, 3vw, 2.6rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 46ch;
+}
+.catalog__sku {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 78%, var(--bone));
+}
+.catalog__name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(1.5rem, 1rem + 2.2vw, 2.8rem);
+  line-height: 1.03;
+  color: var(--bone);
+}
+.catalog__note {
+  font-family: var(--font-body-text);
+  font-size: 0.98rem;
+  line-height: 1.62;
+  color: color-mix(in srgb, var(--bone) 76%, transparent);
+}
+.catalog__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+/* Catalogue plates — deliberately unequal weight, no identical framing. */
+.plate-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 1.1rem;
+  align-items: center;
+  padding: 0.85rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.026), transparent 62%);
+  transition: border-color 0.5s var(--ease-expo), transform 0.6s var(--ease-expo);
+}
+.plate-row:hover,
+.plate-row:focus-within {
+  border-color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 34%, transparent);
+  transform: translateX(4px);
+}
+.plate-row:nth-child(even) {
+  grid-template-columns: 78px minmax(0, 1fr);
+  opacity: 0.92;
+}
+.plate-row__thumb {
+  aspect-ratio: 1;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--void-2);
+}
+.plate-row__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.plate-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+}
+.plate-row__name {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.98rem;
+  color: var(--bone);
+  letter-spacing: 0.01em;
+}
+.plate-row__kind {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+.plate-row__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.35rem;
+}
+.plate-row__price {
+  font-family: var(--font-accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--bone);
+  font-variant-numeric: tabular-nums;
+}
+.plate-row__price em {
+  font-style: normal;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  color: color-mix(in srgb, var(--gold) 82%, var(--bone));
+  margin-left: 0.5rem;
+}
+
+/* Retire the old store magazine grid. */
+.store__mag { display: none; }
+
+/* ============================================================================
+   — Authorship: editorial credits
+   ----------------------------------------------------------------------------
+   The credit rod was visually extraordinary and typographically crowded. It
+   is kept — the rod IS the metaphor — but the plates are re-authored: the
+   artist's name is the largest thing on the plate, the quote is set as a
+   pull-quote, and the dense metadata recedes. Gold marks provenance only.
+   ========================================================================== */
+
+.creditcard__who b {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(1.05rem, 1rem + 0.7vw, 1.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.005em;
+  color: var(--bone);
+}
+.creditcard__handle {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+.creditcard__quote {
+  font-family: var(--font-body);
+  font-size: clamp(0.92rem, 0.88rem + 0.35vw, 1.14rem);
+  line-height: 1.58;
+  color: color-mix(in srgb, var(--bone) 82%, transparent);
+  font-style: italic;
+}
+/* Provenance is the only thing gold is allowed to mark here. */
+.creditcard__codes {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--gold) 72%, var(--bone));
+}
+.creditcard__idx {
+  font-family: var(--font-accent);
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+
+/* The head is composed from the shared grammar instead of the generic
+   <SectionHead>: one kicker line, one dominant typographic gesture, one
+   reading layer — the same three-tier rhythm as every other section now. */
+.authorship__head {
+  position: relative;
+  margin-bottom: 2.2rem;
+  max-width: 56rem;
+}
+.authorship__head .kicker {
+  margin-bottom: 1rem;
+}
+.authorship__title {
+  font-size: var(--fs-h2);
+  margin-bottom: 1rem;
+}
+.authorship__sub {
+  color: var(--ink-dim);
+  font-size: var(--fs-lead);
+  max-width: 46rem;
+}
+
+/* ---- the ledger (the receipt) -------------------------------------------
+   A credit grid is a gallery of people. A ledger is a RECORD. This is the
+   section's metadata layer: a hairline, one label, four facts, centred under
+   the rod so the eye lands on it last. Nothing here is clickable — the point
+   of a receipt is that it simply exists. */
+.authorship__ledger {
+  margin-top: clamp(2.4rem, 5vw, 4rem);
+  padding-top: 1.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--bone) 12%, transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  text-align: center;
+}
+.authorship__ledger-label {
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--gold) 70%, var(--bone));
+}
+.authorship__ledger-row {
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.authorship__ledger-row > span {
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 58%, transparent);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.authorship__ledger-row > span > b {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--bone);
+}
+/* The one word on the page that is allowed to be blunt. */
+.authorship__ledger-row > span:last-child > b {
+  color: var(--gold);
+}
+
+/* ============================================================================
+   — Canon: the page exhales
+   ----------------------------------------------------------------------------
+   Fewer competing panels, a real reading measure, the stats embedded into the
+   story instead of isolated as dashboard tiles, and the revenue model drawn as
+   one elegant proportion. Less glow, more contrast.
+   ========================================================================== */
+
+.canon {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(2.5rem, 6vw, 5rem);
+}
+
+/* The reading column — one measure, one rhythm. */
+.canon__prose {
+  max-width: 68ch;
+  margin-inline: auto;
+}
+.canon__prose p {
+  font-family: var(--font-body-text);
+  font-size: clamp(1.02rem, 0.98rem + 0.35vw, 1.24rem);
+  line-height: 1.78;
+  color: color-mix(in srgb, var(--bone) 80%, transparent);
+  margin-bottom: 1.4em;
+}
+.canon__prose p:first-of-type::first-letter {
+  float: left;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 3.4em;
+  line-height: 0.82;
+  padding: 0.08em 0.14em 0 0;
+  color: var(--gold);
+}
+.canon__prose p + p { margin-top: 0; }
+
+/* Stats are embedded in the story, not parked beside it. */
+.canon__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(1.4rem, 4vw, 3.4rem);
+  justify-content: center;
+  padding-block: clamp(1.4rem, 3vw, 2.4rem);
+  border-block: 1px solid var(--line);
+  max-width: 72ch;
+  margin-inline: auto;
+}
+.canon__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 8rem;
+}
+.canon__stat b {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.6rem, 1rem + 1.8vw, 2.6rem);
+  line-height: 1;
+  color: var(--bone);
+  font-variant-numeric: tabular-nums;
+}
+.canon__stat b em {
+  font-style: normal;
+  color: var(--gold);
+  font-size: 0.5em;
+}
+.canon__stat span {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+.canon__stat i {
+  font-style: normal;
+  font-family: var(--font-body-text);
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+
+/* The revenue model — one proportion, drawn. */
+.canon__split {
+  max-width: 62ch;
+  margin-inline: auto;
+  width: 100%;
+}
+.canon__split-bar {
+  display: grid;
+  grid-template-columns: 60fr 40fr;
+  height: 3.2rem;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--void-2);
+}
+.canon__split-bar i {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-style: normal;
+  transition: flex-basis 0.8s var(--ease-expo);
+}
+.canon__split-bar i:first-child {
+  background: linear-gradient(100deg, color-mix(in srgb, var(--gold) 42%, transparent), color-mix(in srgb, var(--gold) 18%, transparent));
+  color: #100c02;
+}
+.canon__split-bar i:last-child {
+  background: linear-gradient(100deg, color-mix(in srgb, var(--cyan) 20%, transparent), color-mix(in srgb, var(--cyan) 8%, transparent));
+  color: color-mix(in srgb, var(--bone) 86%, transparent);
+}
+.canon__split-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+
+/* The old stat cards were the dashboard this section is no longer allowed to
+   be — they retire into the prose column above. */
+.lorestats { display: none; }
+
+/* ============================================================================
+   09 · COLLAPSE and RETURN — anticipation, silence, the loop
+   ========================================================================== */
+
+/* Anticipation: everything before the singularity thins out. The two seams
+   around the black hole get more air and the chrome fades, so the simulation
+   is entered rather than encountered. */
+.bh-approach {
+  height: clamp(14vh, 30vh, 34vh);
+  position: relative;
+  pointer-events: none;
+}
+.bh-approach::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    70% 100% at 50% 100%,
+    color-mix(in srgb, var(--void-core) 92%, transparent),
+    transparent 74%
+  );
+}
+.bh-approach__label {
+  position: absolute;
+  left: 50%;
+  bottom: 1.4rem;
+  translate: -50% 0;
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  white-space: nowrap;
+}
+/* The chrome withdraws while the visitor is in the collapse. */
+html[data-chapter='collapse'] .idx,
+html[data-chapter='collapse'] .dock,
+html[data-chapter='collapse'] .idxsignal {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.2s var(--ease-expo);
+}
+/* …and returns. The curtain factor is carried through, not replaced: the
+   footer's reveal lifts a bright floor underneath every fixed dark layer, and
+   an index that faded back to 1 would be left sitting on it. */
+html[data-chapter='return'] .idx,
+html[data-chapter='return'] .dock,
+html[data-chapter='return'] .idxsignal {
+  opacity: var(--curtain-chrome-opacity, 1);
+}
+/* Same contract for the two atmospheric layers the overhaul added. */
+.la-frame,
+.la-wash,
+.idx,
+.dock,
+.idxsignal {
+  transition: opacity 1.2s var(--ease-expo);
+}
+html.at-floor .la-frame,
+html.at-floor .la-wash,
+html.at-floor .idx,
+html.at-floor .dock,
+html.at-floor .idxsignal {
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* The return: the footer opens nearly monochrome. */
+html[data-chapter='return'] .la-wash {
+  opacity: calc(var(--chapter-glow, 0.16) * 0.9);
+}
+html[data-chapter='return'] .curtain-footer__wordmark {
+  color: color-mix(in srgb, var(--bone) 90%, transparent);
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--bone) 56%, transparent);
+}
+/* One closing statement at maximum scale. */
+.return__statement {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(2rem, 1rem + 7vw, 7rem);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  color: var(--bone);
+  text-align: center;
+  max-width: 20ch;
+  margin-inline: auto;
+}
+/* The re-entry point — the loop, not a utility link. */
+.return__loop {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-family: var(--font-accent);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cyan) 88%, var(--bone));
+}
+.return__loop i {
+  font-style: normal;
+  transition: transform 0.6s var(--ease-expo);
+}
+.return__loop:hover i { transform: translateY(-5px); }
+
+/* ============================================================================
+   MARQUEES — two, not five
+   ----------------------------------------------------------------------------
+   The signal transmission after the hero, and the archival notation before
+   the return. Every other strip on the page is retired: repeated chrome is
+   what made the page read as a dashboard.
+   ========================================================================== */
+
+.marquee {
+  border-block: 1px solid color-mix(in srgb, var(--chapter-accent, var(--cyan)) 12%, var(--line));
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--chapter-accent, var(--cyan)) 4%, transparent) 22%,
+    color-mix(in srgb, var(--chapter-accent-2, var(--ultraviolet)) 4%, transparent) 74%,
+    transparent
+  );
+  padding-block: 0.85rem;
+}
+.marquee__item {
+  font-family: var(--font-accent);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 58%, transparent);
+}
+
+/* ============================================================================
+   TIER + MOTION DEGRADATION
+   ----------------------------------------------------------------------------
+   One place, ordered. Nothing above needs to know about tiers; everything
+   expensive is switched off here.
+   ========================================================================== */
+
+/* Low tier: no glass, no ambient loops, no blend modes. */
+html[data-quality='low'] .la-wash,
+html[data-quality='low'] .rv__art-bloom,
+html[data-quality='low'] .enc__light,
+html[data-quality='low'] .persona__modelslot::before {
+  display: none;
+}
+html[data-quality='low'] .idx[data-open='true'],
+html[data-quality='low'] .idx[data-scrolled='true'],
+html[data-quality='low'] .dock__btn,
+html[data-quality='low'] .idxsheet {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-quality='low'] .ucard,
+html[data-quality='low'] .card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-quality='low'] .rv__art-bloom { display: none; }
+
+/* Reduced motion: static frames, finished states, no loops at all. */
+@media (prefers-reduced-motion: reduce) {
+  .enc__light,
+  .persona__modelslot::before,
+  .ritual__seal::before,
+  .enc__mark-dot::after,
+  .dock__btn[data-on='true'] .dock__wave i,
+  .kicker::before,
+  .txt-grad,
+  .txt-gold {
+    animation: none !important;
+  }
+  .seam__band,
+  .seam__line,
+  .seam__label {
+    opacity: 1;
+    transform: none;
+    translate: none;
+  }
+  .ucard__lore,
+  .ucard__meta,
+  .ucard__badges,
+  .ucard__sold,
+  .ucard__index,
+  .enc__meta {
+    opacity: 1;
+    translate: none;
+    max-height: none;
+  }
+  .rv,
+  .rv__art-inner {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    clip-path: none !important;
+  }
+  .rv__art-bloom { display: none; }
+  .enc__plate {
+    transform: none;
+    opacity: 1;
+  }
+  .cursor { display: none; }
+  body.custom-cursor,
+  body.custom-cursor a,
+  body.custom-cursor button {
+    cursor: auto;
+  }
+}
+
+/* No-JS guard: the chapter layer defaults to a neutral, fully legible state
+   and CSS alone carries the composition. */
+html:not([data-chapter]) {
+  --chapter-glow: 0.4;
+  --chapter-grain: 0.6;
+  --chapter-tint: 0.7;
+  --chapter-vignette: 0.6;
+}
+
+/* ---- Index: status readout + wallet slot --------------------------------
+   The status is an instrument line, not copy: the chapter numeral and name,
+   always visible once the bar has opened. The wallet keeps its own component
+   chrome but is bounded to the index's scale. */
+.idx__status {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 78%, var(--bone));
+  white-space: nowrap;
+  opacity: 0;
+  translate: 0 -4px;
+  transition: opacity 0.6s var(--ease-expo), translate 0.6s var(--ease-expo);
+}
+.idx[data-open='true'] .idx__status {
+  opacity: 1;
+  translate: 0 0;
+}
+.idx__wallet {
+  display: inline-flex;
+  align-items: center;
+  scale: 0.92;
+  transform-origin: right center;
+}
+
+/* The chapter list is present in the DOM at rest (screen readers and keyboard
+   users get the whole index immediately); only its VISUAL state is gated by
+   the bar's open state. */
+.idx__list {
+  opacity: 0;
+  translate: 0 -6px;
+  pointer-events: none;
+  transition: opacity 0.6s var(--ease-expo), translate 0.6s var(--ease-expo);
+}
+.idx[data-open='true'] .idx__list {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+}
+/* …but keyboard focus must always be able to reach it, so focus restores the
+   list regardless of the bar's state. */
+.idx:focus-within .idx__list {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+}
+
+@media (max-width: 1080px) {
+  .idx__status { display: none; }
+  .idx__wallet { display: none; }
+}
+@media (max-width: 560px) {
+  .idx__toggle {
+    padding: 0.5rem 0.62rem;
+    font-size: 0;
+    gap: 0;
+  }
+  .idx__toggle-glyph { width: 14px; height: 14px; }
+}
+
+/* ============================================================================
+   PARTICLE FIELD — reacts to scroll velocity, not to a clock
+   ----------------------------------------------------------------------------
+   The field's own engine is vendored and protected (see the PROVENANCE note
+   in src/three/nemo-particles/). Its INTENSITY, however, is a page-level art
+   decision: at rest the field is a quiet presence; under scroll it tightens
+   and brightens, then releases. That is authored here from --scroll-vel,
+   which VelocityFX already writes and already parks when the page is idle.
+   ========================================================================== */
+
+.nemo-field {
+  /* --scroll-vel is roughly -1..1 (VelocityFX, already rAF-parked when the
+     page is at rest). Fast scroll reads as the archive being DISTURBED: the
+     field desaturates and brightens slightly, and the hero's own exit
+     (`--enc-fold`) takes the colour out of it as the chapter closes. Filter
+     only — the field's wrapper is inside framer's transformed parent, so
+     nothing here can fight the parallax. */
+  --field-vel: max(0, var(--scroll-vel, 0));
+  filter: saturate(calc(1 - var(--field-vel) * 0.22 - var(--enc-fold, 0) * 0.35))
+    brightness(calc(1 + var(--field-vel) * 0.12));
+}
+/* framer owns `.hero__bg`'s transform, so the entrance is opacity + filter
+   only, and it starts when the boot releases (`.hero.is-live`) — not on
+   mount, which would waste the whole animation behind the loader. */
+.hero__bg {
+  transform-origin: 50% 45%;
+}
+.hero.is-live .hero__bg {
+  animation: encArtIn 2.1s var(--ease-expo) both;
+}
+@keyframes encArtIn {
+  from { opacity: 0; filter: blur(20px) saturate(0.55) brightness(1.15); }
+  to { opacity: 1; filter: blur(0px) saturate(1) brightness(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero.is-live .hero__bg { animation: none; opacity: 1; filter: none; }
+}
+
+/* ============================================================================
+   ARCHIVE — door plate + the secondary control layer
+   ========================================================================== */
+
+.door__plate .rv__art-inner,
+.door__plate .rv__art-inner picture,
+.door__plate .rv__art-inner img {
+  width: 100%;
+  height: 100%;
+}
+.door__plate .rv__art-inner img {
+  object-fit: cover;
+}
+/* The mount: the print sits in a dark mat, and the mat catches the light. */
+.door__plate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--chapter-accent, var(--cyan)) 16%, transparent),
+    inset 0 -40% 60% -30% rgba(3, 3, 10, 0.7);
+  background: linear-gradient(180deg, transparent 52%, rgba(3, 3, 10, 0.55) 100%);
+}
+.door__body .kicker {
+  color: color-mix(in srgb, var(--chapter-accent, var(--cyan)) 84%, var(--bone));
+}
+.door__body .btn {
+  align-self: flex-start;
+}
+
+/* The filter row is a real control layer, but a secondary one: quieter, below
+   the head, and it never competes with the art for the first read. */
+.mv__filters--secondary {
+  position: relative;
+  margin-top: clamp(1.6rem, 3vw, 2.6rem);
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+  /* Resting opacity is a DIMMER, not a fade-out: at 0.72 the chips' own text
+     contrast would be measured through it and fail. 0.88 keeps the row
+     visibly secondary without pushing any label under 4.5:1. */
+  opacity: 0.88;
+  transition: opacity 0.5s var(--ease-expo);
+}
+.mv__filters--secondary:hover,
+.mv__filters--secondary:focus-within {
+  opacity: 1;
+}
+.mv__filters--secondary .chip {
+  font-size: 0.5625rem;
+  letter-spacing: 0.24em;
+}
+
+/* ---- Access: verification ceremony + footer note ------------------------- */
+.access__verify-label {
+  --rv-track: 0.3em;
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--gold) 78%, var(--bone));
+  margin-bottom: 0.5rem;
+}
+.access__verify .copy p {
+  font-family: var(--font-body-text);
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--bone) 70%, transparent);
+  max-width: 46ch;
+}
+.access__verify-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.access__confirm code {
+  font-family: var(--font-accent);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+}
+.perks__foot {
+  margin-top: 1.6rem;
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+
+/* ---- Commerce: the altar's instruments ---------------------------------- */
+
+.ritual__indicator {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--r-sm);
+  border: 1px solid color-mix(in srgb, var(--gold) 16%, var(--line));
+  background: rgba(255, 255, 255, 0.014);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.2rem;
+  transition: border-color 0.6s var(--ease-expo);
+}
+.ritual__indicator.is-spinning {
+  border-color: color-mix(in srgb, var(--gold) 60%, transparent);
+}
+
+/* The fragment turns while the archive is splitting. */
+.ritual__seal[data-spin='true']::before {
+  animation-duration: 2.4s;
+}
+.ritual__seal[data-spin='true']::after {
+  animation: sealPulse 1.1s ease-in-out infinite;
+}
+@keyframes sealPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.04); filter: brightness(1.4); }
+}
+
+/* The facts, once disclosed — a definition list, not a stat dashboard. */
+.ritual__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.9rem 1.4rem;
+  margin-block: 1.1rem;
+  padding-block: 1rem;
+  border-block: 1px solid var(--line);
+}
+.ritual__facts div { min-width: 0; }
+.ritual__facts dt {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+.ritual__facts dd {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--bone);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.ritual__fine {
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  letter-spacing: 0.16em;
+  line-height: 1.8;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+}
+.ritual__fine b { color: color-mix(in srgb, var(--gold) 76%, var(--bone)); }
+
+.ritual__odds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem 1.6rem;
+  align-items: flex-start;
+}
+
+/* The ledger side — the stage keeps a shallow perspective so the plate and
+   the stamp card read as physical surfaces rather than stacked panels. */
+.ritual__stage {
+  position: relative;
+  perspective: 1400px;
+}
+.ritual__stage > * {
+  transform-style: preserve-3d;
+}
+
+/* Retire the old dashboard chrome that the ritual replaced. */
+.npx__layout,
+.npx__float-chips,
+.npx__indicator {
+  display: none;
+}
+
+/* ---- Commerce: the catalog's own bits ----------------------------------- */
+.catalog__hero-media,
+.catalog__hero-media .rv__art-inner,
+.catalog__hero-media picture,
+.catalog__hero-media img {
+  width: 100%;
+  height: 100%;
+}
+.catalog__hero-media img { object-fit: cover; }
+.catalog__hero-foot {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-top: 0.7rem;
+}
+.catalog__price {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.4rem, 1rem + 1.2vw, 2rem);
+  color: var(--bone);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.catalog__price em {
+  display: block;
+  margin-top: 0.35rem;
+  font-style: normal;
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--gold) 82%, var(--bone));
+}
+/* The old product cards are superseded by catalogue plates; keep the selector
+   inert so a stale import can never reintroduce the grid. */
+.store__mag { display: none; }
+
+/* ---- The rotunda: the room quiets ---------------------------------------
+   While one plate is under the spotlight the stage's own chrome dims, the
+   badges stop competing, and the hint withdraws. The sphere itself already
+   quiets the other plates (see components/ui/img-sphere.tsx). */
+.cg-stage--sphere {
+  transition: opacity 0.8s var(--ease-expo);
+}
+.cg-stage--sphere[data-inspecting='true'] .cg__badges,
+.cg-stage--sphere[data-inspecting='true'] .cg__headtext {
+  opacity: 0.35;
+  transition: opacity 0.7s var(--ease-expo);
+}
+.cg-stage--sphere[data-settled='false'] .cg__hint {
+  opacity: 0;
+}
+.cg__badges,
+.cg__headtext {
+  transition: opacity 0.7s var(--ease-expo);
+}
+
+/* ---- Canon: the reading column ------------------------------------------ */
+.canon__title {
+  font-size: clamp(1.9rem, 1rem + 4vw, 4.2rem);
+  margin-bottom: 1.6rem;
+  color: var(--bone);
+}
+.canon__name {
+  color: var(--gold);
+}
+/* Less glow, more contrast: the highlight spans are ink, not neon. */
+.canon__prose .hl,
+.canon__prose .hl-gold {
+  color: var(--bone);
+  box-shadow: inset 0 -0.42em 0 color-mix(in srgb, var(--cyan) 16%, transparent);
+}
+.canon__prose .hl-gold {
+  box-shadow: inset 0 -0.42em 0 color-mix(in srgb, var(--gold) 20%, transparent);
+}
+.canon__prose b {
+  color: var(--bone);
+  font-weight: 600;
+}
+
+/* ---- Voice: the character's container reacts, not its rig ---------------
+   --att-x/--att-y/--att-yaw are written by useAttention in
+   sections/Persona.tsx (spring-smoothed, hard-capped, and not written at all
+   on coarse pointers / reduced motion / low tiers). The 3D model itself is
+   untouched. */
+.persona__modelslot {
+  --att-x: 0px;
+  --att-y: 0px;
+  --att-yaw: 0deg;
+  transform: translate3d(var(--att-x), var(--att-y), 0) rotateY(var(--att-yaw));
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .persona__modelslot {
+    transform: none;
+  }
+}
+.persona__head {
+  max-width: 56ch;
+}
+.persona__title {
+  font-size: clamp(1.9rem, 1rem + 3.6vw, 4rem);
+  margin-block: 1rem 1.2rem;
+}
+.persona__sub {
+  font-family: var(--font-body-text);
+  font-size: var(--fs-lead);
+  line-height: 1.62;
+  color: color-mix(in srgb, var(--bone) 74%, transparent);
+  max-width: 52ch;
+}
+/* Retire the old SectionHead inside the persona — the head is authored here. */
+.persona__head .sechead { display: none; }
+
+/* ============================================================================
+   01 · WAKE — the boot, re-authored as an activation sequence
+   ----------------------------------------------------------------------------
+   The typographic morph is unchanged and untouched (it is the best thing on
+   the page). What changed is what SURROUNDS it: the boot is now chapter 01,
+   it holds that chapter, and it resolves into chapter 02 instead of fading to
+   a neutral page.
+
+     · sparse COORDINATES resolve before the counter — the archive registers
+       a visitor before it shows them anything
+     · the percentage counter reads as a system heartbeat (unchanged)
+     · one SIGNAL TRACE runs the height of the boot and continues past it into
+       the hero, so the handoff hands a line over instead of cross-fading
+   ========================================================================== */
+
+.ldr__marks {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  padding: clamp(1.4rem, 4vw, 3rem);
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+.ldr__marks span { display: block; }
+.ldr__marks span:nth-child(2) { justify-self: end; text-align: right; }
+.ldr__marks span:nth-child(3) { align-self: end; }
+.ldr__marks span:nth-child(4) { align-self: end; justify-self: end; text-align: right; }
+.ldr__marks span {
+  animation: wakeMark 5.5s var(--ease-expo) infinite;
+}
+.ldr__marks span:nth-child(2) { animation-delay: -1.1s; }
+.ldr__marks span:nth-child(3) { animation-delay: -2.4s; }
+.ldr__marks span:nth-child(4) { animation-delay: -3.6s; }
+@keyframes wakeMark {
+  0%, 100% { opacity: 0.28; }
+  50% { opacity: 0.85; }
+}
+
+/* The trace: one hairline, top to bottom, masked at both ends. It outlives
+   the boot — the hero's own light column picks it up at the same x. */
+.ldr__trace {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--cyan) 42%, transparent) 26%,
+    color-mix(in srgb, var(--cyan) 72%, transparent) 62%,
+    transparent
+  );
+  opacity: 0.6;
+  animation: wakeTrace 3.6s ease-in-out infinite;
+}
+@keyframes wakeTrace {
+  0%, 100% { opacity: 0.18; transform: scaleY(0.7); }
+  50% { opacity: 0.9; transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ldr__marks span,
+  .ldr__trace { animation: none; opacity: 0.6; transform: none; }
+}
+
+/* ============================================================================
+   AMBIENCE — the chapter owns the sky
+   ----------------------------------------------------------------------------
+   The shader's uniforms are driven by lib/scenes.ts through the chapter
+   controller (one observer, one authority). Two things are added here, both
+   cheap and both compositor-only:
+
+     · INTENSITY — the canvas's opacity follows the chapter's authored glow,
+       so a quiet chapter (Canon, Collapse) is genuinely darker rather than
+       just differently coloured.
+     · VELOCITY — the sky tightens very slightly under fast scroll.
+   ========================================================================== */
+
+/* The wrapper only — the canvas paints an opaque near-black, so dimming both
+   would multiply the effect twice over. */
+.ambience {
+  /* chapter glow × the curtain reveal's chrome fade */
+  opacity: calc((0.52 + 0.48 * var(--chapter-glow, 0.5)) * var(--curtain-chrome-opacity, 1));
+  transform: scale(calc(1 + max(0, var(--scroll-vel, 0)) * 0.018));
+  transition: transform 0.6s linear, opacity 1.8s linear;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ambience { transform: none; }
+}
+
+/* ============================================================================
+   10 · RETURN — the footer as the end of a film
+   ----------------------------------------------------------------------------
+   SURGICAL by policy: the sign-off horizon, the curtain rig and the closing
+   crawl are heavily tested subsystems and are NOT rewritten here. What
+   changes is the composition AROUND them:
+
+     · the footer opens nearly monochrome (chapter `return` sets the lowest
+       glow on the page — see lib/chapters.ts)
+     · ONE closing statement at maximum scale
+     · the navigation and social links are treated as CREDITS, not as a menu
+     · the only action offered is re-entry into the archive
+   Ordinary anchor navigation is untouched: every link is still a real <a>.
+   ========================================================================== */
+
+.return__prose {
+  font-family: var(--font-body-text);
+  font-size: var(--fs-lead);
+  line-height: 1.62;
+  color: color-mix(in srgb, var(--bone) 62%, transparent);
+  max-width: 44ch;
+  margin-top: 1.2rem;
+}
+.curtain-footer__statement {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+.return__loop {
+  margin-top: 1.6rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--cyan) 34%, transparent);
+  transition: border-color 0.5s var(--ease-expo), color 0.5s var(--ease-expo);
+}
+.return__loop:hover,
+.return__loop:focus-visible {
+  border-color: color-mix(in srgb, var(--cyan) 90%, transparent);
+}
+
+/* The credits: navigation columns and signals read as a film's end credits,
+   not as a site map. */
+.curtain-footer__column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.curtain-footer__label {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+.curtain-footer__label span {
+  color: color-mix(in srgb, var(--cyan) 72%, var(--bone));
+  margin-right: 0.6rem;
+}
+.curtain-footer__prose,
+.curtain-footer__meta {
+  color: color-mix(in srgb, var(--bone) 56%, transparent);
+  font-family: var(--font-body-text);
+}
+.curtain-footer__meta {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+.curtain-footer__eyebrow {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cyan) 74%, var(--bone));
+  margin-bottom: 1rem;
+}
+
+/* ============================================================================
+   MOTION CONTRACT — the documented durations and easing roles
+   ----------------------------------------------------------------------------
+   Milestone 1 asked for motion to be DOCUMENTED, not just applied. The roles
+   below are the whole system; anything not on this list is a one-off and
+   should be replaced by one of these.
+
+   EASING
+     --ease-expo   entrances, pointer-in. Decelerating: it leaves fast and
+                   arrives slowly, which is what makes a surface feel heavy.
+     --ease-swift  small state changes (active, hover-out).
+     --ease-exit   exits, collapses, the hero's fold. Accelerating: things
+                   leave faster than they arrived.
+
+   DURATION
+     --dur-1 0.5s    feedback — a press, a chip, a hover state
+     --dur-2 0.9s    component entrances (the reveal grammar)
+     --dur-3 1.4s    scene-level moves — seams, chapter transitions, the
+                     atmosphere's own drift
+
+   ROLE → TOOL
+     scroll-linked pinning, staged reveals, the loader morph, chapter seams,
+     the hero fold ......................... GSAP + ScrollTrigger
+     component-local state, cursor springs, hover/focus, dialog entry ..... framer-motion
+     ambient breathing, opacity/colour drift, static states, reduced-motion  CSS
+     hero particles, ambience, rotunda, persona, black hole ............... WebGL/WebGPU
+
+   ONE RULE — a property has exactly one writer. Where two systems both wanted
+   a transform (framer's parallax and CSS's fold, GSAP's scroll and CSS's
+   drift), the two were separated onto different elements or different
+   properties rather than allowed to overwrite each other. That rule is why
+   the page has one continuous motion language instead of several fighting
+   ones.
+
+   SILENCE — chapters flagged `silence` in lib/chapters.ts pause every
+   decorative clock (see the [data-silence] block above). Motion is re-earned
+   the moment the visitor leaves the chapter.
+   ========================================================================== */
+
+/* A sealed canon entry: the door shows the archive's own locked treatment
+   instead of a broken image box. */
+.door__sealed {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1rem;
+  text-align: center;
+  background:
+    radial-gradient(60% 50% at 50% 45%, color-mix(in srgb, var(--gold) 12%, transparent), transparent 72%),
+    var(--void-3);
+}
+.door__sealed i {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  border: 1px dashed color-mix(in srgb, var(--gold) 45%, transparent);
+  border-top-color: color-mix(in srgb, var(--gold) 90%, transparent);
+  animation: sealTurn 9s linear infinite;
+}
+.door__sealed b {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.8rem;
+  letter-spacing: 0.24em;
+  color: var(--gold);
+}
+.door__sealed span {
+  font-family: var(--font-accent);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bone) 62%, transparent);
+}

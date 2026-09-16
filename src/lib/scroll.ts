@@ -100,8 +100,16 @@ export function pageScrollTo(
 }
 
 function navOffset(): number {
-  const nav = document.querySelector<HTMLElement>('.nav');
-  return (nav?.offsetHeight ?? 78) + 14;
+  /* The archive index replaced the old persistent bar. It is measured the
+     same way but through the design token, so a header that is currently
+     collapsed (or hidden at a breakpoint) cannot collapse the anchor offset
+     to zero and land every section jump under the chrome. */
+  const idx = document.querySelector<HTMLElement>('.idx');
+  const measured = idx?.offsetHeight ?? 0;
+  const token = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--nav-h'),
+  );
+  return (measured || (Number.isFinite(token) ? token : 78)) + 14;
 }
 
 /* Anchor navigation: `#id` links glide via Lenis and settle with the nav

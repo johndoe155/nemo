@@ -39,6 +39,50 @@
   --magenta: #ff3d9a;
   --gold: #ffc857;
 
+  /* ---- THE LIVING ARCHIVE — the cinematic palette hierarchy -------------
+     The house hues above are a broad utility palette; the overhaul reduces
+     them to six authored VOICES that are choreographed across the ten
+     chapters (see lib/chapters.ts). Nothing new is invented — each one is
+     either an existing hue renamed by its narrative job, or a single
+     luminance/hue step the system was already missing.
+
+       void-core     the foundation. One step below --void: the archive's
+                     unlit state, reserved for Wake and Collapse.
+       bone          lunar white. Primary text and archive markings — warmer
+                     and softer than --ink (#f5f3ff), which is a violet-white
+                     and reads as a screen. Type that is meant to feel
+                     PRINTED uses bone.
+       cyan          system intelligence, navigation, active states.
+       ultraviolet   dimensional fracture, portals, rare transitions.
+       gold          ownership, rarity, human authorship, value.
+       ember         instability and final collapse. Rationed: it is the only
+                     hue on the page that is never allowed to be ambient.
+       persona-cool  the one warm-lit face in a cool room (Voice).
+  */
+  --void-core: #03030a;
+  --bone: #f2efe7;
+  --ultraviolet: #7b3bff;
+  --ember: #ff4d1a;
+  --persona-cool: #7d8dff;
+
+  /* ---- Chapter layer (written by lib/chapters.ts → ChapterProvider) -----
+     Defaults are chapter 01 WAKE. Every consumer reads these instead of
+     hard-coding a hue, so the whole page re-tunes from one authored table.
+     Transition durations live on the consumers; the controller only writes
+     values. */
+  --chapter-accent: var(--bone);
+  --chapter-accent-2: var(--cyan);
+  --chapter-glow: 0.18;
+  --chapter-grain: 0.9;
+  --chapter-tint: 0.2;
+  --chapter-density: 0.12;
+  --chapter-vignette: 0.95;
+  --chapter-index: 1;
+  /* Particle budget actually granted, after the device tier has its say.
+     Authored density × tier allowance, computed in CSS so the shader, the
+     WebGL field and the CSS starfield can never disagree. */
+  --particle-density: calc(var(--chapter-density) * var(--quality-particle, 1));
+
   --grad-primary: linear-gradient(100deg, #8a4dff 0%, #3fe8ff 60%, #ff3d9a 115%);
   --grad-gold: linear-gradient(95deg, #f6d47c, #ffc857 45%, #c98a2e);
   --grad-ghost: linear-gradient(180deg, rgba(245, 243, 255, 0.92), rgba(245, 243, 255, 0.35));

@@ -57,6 +57,12 @@ import './styles/blackhole.css';
 // .grain, the nav HUD and the side rail; below the custom cursor at 1000).
 // Everything is scoped to .ldr/.ldr__*, so it contends with none of the above.
 import './styles/loader.css';
+// THE LIVING ARCHIVE — the art-direction layer of the overhaul: chapter
+// atmosphere, the reveal grammar, the seams, the cursor vocabulary, the
+// archive index and each room's authored gesture. Loaded LAST, following the
+// same rule as suspension.css / blackhole.css: it wins where its scoped
+// decisions overlap the base component layers it re-art-directs.
+import './styles/living-archive.css';
 import App from './App';
 /* The single scroll authority (DESIGN_AUDIT P1) — init before React mounts
    so the boot loader can hold/release the engine as part of the sequence.

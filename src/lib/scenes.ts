@@ -189,7 +189,9 @@ export const SECTION_SCENE: Record<string, SceneId> = {
   nemoverse: 'registry',
   rotunda: 'registry',
   persona: 'signal',
-  perks: 'arsenal',
+  /* Mirrors chapters.access.scene. The chapter table is the authority; this
+     map exists for standalone consumers and must not disagree with it. */
+  perks: 'vault',
   pulls: 'vault',
   store: 'vault',
   artists: 'constellation',
@@ -253,10 +255,75 @@ export function sceneVec(s: Scene): Float32Array {
 }
 
 /* ---------------------------------------------------------------------------
+   applyScene — the module-level district writer.
+
+   It used to live inside observeScenes' closure, which meant only that one
+   observer could ever move the sky. The overhaul makes the CHAPTER the
+   narrative authority (lib/chapters.ts), and the chapter controller needs to
+   retarget the district without running a second IntersectionObserver — so
+   the write is hoisted here and guarded by a module-level `current`. Both
+   callers (observeScenes and chapters.applyChapter) therefore move the same
+   three renderers — CSS shell, shader, no-WebGL wash — through one door, and
+   the "one scene authority" note above still holds.
+--------------------------------------------------------------------------- */
+let currentScene: SceneId | null = null;
+
+export function applyScene(id: SceneId): void {
+  const root = document.documentElement;
+  if (id === currentScene) return;
+  currentScene = id;
+  root.dataset.scene = id;
+  /* 1.4 — the CSS shell reads the district too: the transition lives on
+     the consumers (audit-gaps.css), this writes the target values. */
+  const tint = SCENE_TINTS[id];
+  root.style.setProperty('--scene-bg', tint.bg);
+  root.style.setProperty('--scene-line', tint.line);
+  for (const fn of [...listeners]) fn(id);
+}
+
+/* ---- subscription ---------------------------------------------------------
+   The renderers FOLLOW the district; they do not observe for it. Two
+   observers on the same centre band will disagree the moment the two
+   section→district maps drift apart, and the last callback to fire wins — a
+   flicker that no amount of tuning fixes. One writer, every reader a
+   subscriber. (`arsenal` remains defined and reachable, but no chapter
+   currently claims it: ACCESS is gold, so it reads from `vault`.)
+
+   Subscribing fires immediately with the current district, so a renderer that
+   mounts late (or remounts after a WebGL context loss) starts in the right
+   district instead of waiting for the next crossing. */
+type SceneListener = (id: SceneId) => void;
+const listeners = new Set<SceneListener>();
+
+export function onSceneChange(fn: SceneListener): () => void {
+  listeners.add(fn);
+  if (currentScene) fn(currentScene);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+export function currentSceneId(): SceneId | null {
+  return currentScene;
+}
+
+export function resetSceneState(): void {
+  currentScene = null;
+}
+
+/* ---------------------------------------------------------------------------
    observeScenes — single IntersectionObserver over the mapped sections using
    the same centre-band technique as SideRail (-38% / -52% root margins ≈ the
    section crossing the reading line). Stamps data-scene on <html> and calls
    the optional callback exactly once per scene change. Returns a cleanup fn.
+
+   NOTE — the canonical driver is now chapters.observeChapters(), which owns
+   the narrative sequence and retargets the district through applyScene().
+   Renderers subscribe with onSceneChange() instead of running this observer
+   themselves: two observers on the same band with different maps disagree,
+   and the last one to fire wins. Kept for standalone consumers that want the
+   district without the chapter layer; it funnels through applyScene, so it is
+   idempotent with the chapter controller by construction.
 --------------------------------------------------------------------------- */
 const MOBILE_SCENE_QUERY = '(max-width: 768px)';
 
@@ -267,12 +334,7 @@ export function observeScenes(onScene?: (id: SceneId) => void): () => void {
   const apply = (id: SceneId) => {
     if (id === current) return;
     current = id;
-    root.dataset.scene = id;
-    /* 1.4 — the CSS shell reads the district too: the transition lives on
-       the consumers (audit-gaps.css), this writes the target values. */
-    const tint = SCENE_TINTS[id];
-    root.style.setProperty('--scene-bg', tint.bg);
-    root.style.setProperty('--scene-line', tint.line);
+    applyScene(id);
     onScene?.(id);
   };
 

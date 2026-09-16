@@ -2,44 +2,16 @@ import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Reveal, SectionHead } from '../components/ui';
-import { useTilt } from '../components/motion';
+import { SectionHead } from '../components/ui';
+import { RevealLine, RevealMeta, RevealText } from '../components/reveal';
 import { LORE_STATS, LORE_TIMELINE, UNIVERSE_DROP_ISO } from '../lib/data';
-import { useCountdown, useCountUp } from '../lib/hooks';
+import { useCountdown } from '../lib/hooks';
 
 gsap.registerPlugin(ScrollTrigger);
 
 /* Per-node accent. These hues belong to the CARDS (their edge, collar, meta
    type) — the rod itself is colour-agnostic and never reads one of them. */
 const NODE_HUES = ['var(--gold)', 'var(--iris)', 'var(--cyan)', 'var(--iris)', 'var(--magenta)'];
-
-function LoreStat({
-  value,
-  suffix,
-  label,
-  note,
-  delay,
-}: (typeof LORE_STATS)[number] & { delay: number }) {
-  const { ref, val } = useCountUp(value, { duration: 1400 });
-  const tilt = useTilt<HTMLDivElement>({ maxDeg: 1.2, lift: 0 });
-  return (
-    <Reveal delay={delay} y={22} blur={false}>
-      <motion.div
-        ref={tilt.ref}
-        className="lorestat sheen"
-        style={tilt.style}
-        {...tilt.handlers}
-      >
-        <b ref={ref as React.Ref<HTMLElement>}>
-          {val}
-          {suffix}
-        </b>
-        <span>{label}</span>
-        <em>{note}</em>
-      </motion.div>
-    </Reveal>
-  );
-}
 
 /* ============================================================================
    CANON TIMELINE — the drilling rod
@@ -264,64 +236,93 @@ function CanonTimeline() {
 }
 
 export default function Lore() {
-  /* The section's single drop countdown. Declared here (not inside LoreStat)
-     so the grid runs ONE timer no matter how many tiles carry a number, and
-     the NEXT DROP tile always reports the same figure as the hero ticker. */
+  /* The section's single drop countdown. Declared here, at the top of the
+     section, so the whole page runs ONE timer no matter how many surfaces
+     carry a figure — the canon timeline, the story column and the hero
+     ticker all read the same number off the same clock. */
   const drop = useCountdown(UNIVERSE_DROP_ISO);
 
   return (
     <section className="section lore" id="lore">
-      <div className="shell lore__grid">
-        <div className="lore__copy">
-          <SectionHead
-            num="08"
-            kicker="THE CORE IDENTITY"
-            title={
-              <>
-                Who is <span className="txt-grad">NEMO</span>?
-              </>
-            }
-          />
-          <Reveal delay={0.08}>
+      {/* -------------------------------------------------------------------
+          08 · CANON — the page exhales.
+
+          This section used to be a two-panel layout whose left column ended
+          in five isolated stat tiles: a dashboard bolted onto a piece of
+          writing. It is now one reading column at a real measure, with the
+          numbers EMBEDDED in the prose as a single line they punctuate
+          rather than a block they compete with, and the revenue model drawn
+          as one proportion instead of described twice.
+      ------------------------------------------------------------------- */}
+      <div className="shell canon">
+        <div className="canon__prose">
+          <RevealLine at={0}>
+            <span className="kicker">08 · CANON — THE CORE IDENTITY</span>
+          </RevealLine>
+
+          <RevealText at={0.08}>
+            <h2 className="display canon__title">
+              Who is <span className="canon__name">NEMO</span>?
+            </h2>
+          </RevealText>
+
+          <RevealText at={0.2}>
             <p>
               <b>NEMO is one canon character</b> — a wanderer between timelines whose face is a
               small, radiant star. He is not a hero and not quite a ghost: he is the{' '}
               <span className="hl">constant</span> that every timeline keeps re-discovering, and
               the variable that every artist keeps re-drawing.
             </p>
-          </Reveal>
-          <Reveal delay={0.14}>
+          </RevealText>
+
+          <RevealText at={0.32}>
             <p>
-              Every commissioned artwork is not fan art — it is an <span className="hl">official,
-              numbered universe</span>: its own timeline, world, and lore blurb, tied back to the
-              character's existing story. The artist gets a permanent canon credit and a{' '}
-              <span className="hl-gold">60/40 revenue split</span> on every minted edition.
+              Every commissioned artwork is not fan art — it is an{' '}
+              <span className="hl">official, numbered universe</span>: its own timeline, world
+              and lore blurb, tied back to the character&rsquo;s existing story. The artist gets a
+              permanent canon credit and a <span className="hl-gold">60/40 revenue split</span> on
+              every minted edition.
             </p>
-          </Reveal>
-          <Reveal delay={0.2}>
+          </RevealText>
+
+          {/* The numbers, EMBEDDED: one line they punctuate. */}
+          <RevealMeta at={0.44} className="canon__stats">
+            {LORE_STATS.map((s) => (
+              <span className="canon__stat" key={s.label}>
+                <b>
+                  {s.clock ? drop.d : s.value}
+                  {s.clock ? <em>D</em> : s.suffix}
+                </b>
+                <span>{s.label}</span>
+                <i>{s.note}</i>
+              </span>
+            ))}
+          </RevealMeta>
+
+          <RevealText at={0.56}>
             <p>
-              New universes release on a set cadence — <span className="hl">one every few weeks</span> —
-              instead of whenever a commission happens to wrap. Fans anticipate drops. Holders enter
-              first. Every purchase pulls a piece back out. The Nemoverse{' '}
+              New universes release on a set cadence — <span className="hl">one every few
+              weeks</span> — instead of whenever a commission happens to wrap. Fans anticipate
+              drops. Holders enter first. Every purchase pulls a piece back out. The Nemoverse{' '}
               <span className="hl-gold">funds its own growth</span>.
             </p>
-          </Reveal>
+          </RevealText>
 
-          <div className="lore__stats">
-            {/* ONE countdown for the whole grid (not one timer per tile): the
-                flagged NEXT DROP card renders the same clock the hero ticker
-                and the roster teaser read, so the three can never disagree.
-                Before this the tile carried a baked-in "6D" that matched
-                neither the live countdown nor the drop date. */}
-            {LORE_STATS.map((s, i) => (
-              <LoreStat
-                key={s.label}
-                {...s}
-                value={s.clock ? Number(drop.d) : s.value}
-                delay={0.08 + i * 0.05}
-              />
-            ))}
-          </div>
+          {/* The revenue model, drawn as one proportion. */}
+          <RevealMeta at={0.7} className="canon__split">
+            <div
+              className="canon__split-bar"
+              role="img"
+              aria-label="Revenue split: 60 percent to the artist, 40 percent to the client."
+            >
+              <i>60% ARTIST</i>
+              <i>40% CLIENT</i>
+            </div>
+            <p className="canon__split-legend">
+              <span>PERMANENT CANON CREDIT</span>
+              <span>CREDITED IN METADATA</span>
+            </p>
+          </RevealMeta>
         </div>
       </div>
 

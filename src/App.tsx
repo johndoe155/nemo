@@ -1,5 +1,5 @@
 import { Component, useEffect, type CSSProperties, type ReactNode } from 'react';
-import Nav from './sections/Nav';
+
 import Hero from './sections/Hero';
 import Nemoverse from './sections/Nemoverse';
 import Gallery from './sections/Gallery';
@@ -21,17 +21,19 @@ import Footer from './sections/Footer';
 import CrawlRise from './components/CrawlRise';
 import { Marquee, Starfield, ToastHost } from './components/ui';
 import Ambience from './components/Ambience';
+import VelocityFX from './components/VelocityFX';
+import Atmosphere from './components/Atmosphere';
 import FloorState from './components/FloorState';
 // The boot sequence — the typographic morph. Renders above everything for one
 // pass, then removes itself; see components/Loader.tsx.
 import Loader from './components/Loader';
-import ScrollProgress from './components/ScrollProgress';
-import SideRail from './components/SideRail';
-import SoundToggle from './components/SoundToggle';
-import VelocityFX from './components/VelocityFX';
+import ArchiveIndex from './components/ArchiveIndex';
+import Dock from './components/Dock';
 import { CustomCursor } from './components/Cursor';
+import { ChapterSeam } from './components/reveal';
 import { KineticButton, useCursorGlow } from './components/motion';
-import { SingularityProvider, useMediaQuery } from './lib/singularityGate';
+import { useMediaQuery } from './lib/singularityGate';
+import { ChapterProvider } from './lib/ChapterProvider';
 import { preloadPersonaPoints } from './lib/personaPoints';
 import { UNIVERSES, ARTISTS } from './lib/data';
 
@@ -80,6 +82,17 @@ class SectionBoundary extends Component<{ children: ReactNode }, { failed: boole
   }
 }
 
+/* ---------------------------------------------------------------------------
+   THE JOURNEY — ten chapters, one sequence.
+
+   The DOM order is unchanged (section order is load-bearing: the rotunda
+   follows the registry, the singularity sits in the seam before the sign-off,
+   and several subsystems measure distances across those neighbours). What
+   changed is that the order is now SCORED: each seam is an authored pressure
+   change between two chapters rather than an unspecified gap, and the marquee
+   count dropped from five repeated strips to two narratively specific ones.
+--------------------------------------------------------------------------- */
+
 export default function App() {
   const hasDesktopPersona = useMediaQuery('(min-width: 981px)');
 
@@ -100,24 +113,32 @@ export default function App() {
   useCursorGlow();
 
   return (
-    <SingularityProvider>
+    <ChapterProvider>
       <Loader />
       <a className="skip-link" href="#nemoverse" style={skipStyle}>
         Skip to the Nemoverse
       </a>
-      <ScrollProgress />
-      <CustomCursor />
-      <SideRail />
-      <VelocityFX />
-      <SoundToggle />
+
+      {/* The two atmospheric layers the chapter controller owns. */}
+      <Atmosphere />
       <div className="grain" aria-hidden="true" />
       <Starfield className="starfield" />
       <Ambience />
       <FloorState />
 
-      <Nav />
+      {/* The chrome: one archive index, one system dock. */}
+      <ArchiveIndex />
+      <Dock />
+      <CustomCursor />
+      <VelocityFX />
+
       <main>
+        {/* 02 · ENCOUNTER */}
         <Hero />
+
+        {/* The seam into the archive, then the ONE high-energy signal
+            transmission of the page. */}
+        <ChapterSeam from="var(--cyan)" to="var(--ultraviolet)" />
         <Marquee
           items={[
             'U-007 — THE LAST AURORA — AUG 22',
@@ -128,55 +149,67 @@ export default function App() {
           ]}
           speed="38s"
         />
+
+        {/* 03 · ARCHIVE — the registry and the rotunda are two rooms of the
+            same chapter: the canon is read first, then seen. */}
         <Nemoverse />
-        {/* 3D rotunda — the same canon as the roster above, hung on a sphere
-            you can spin. Placed here so the registry (specs) is read first
-            and the art (plates) lands immediately after. */}
         <Gallery />
+
+        <ChapterSeam from="var(--cyan)" to="var(--persona-cool)" label="THE ARCHIVE NOTICES YOU" />
+
+        {/* 04 · VOICE */}
         <Persona />
+
+        {/* 05 · ACCESS */}
         <Perks />
+
+        {/* 06 · COMMERCE */}
         <SectionBoundary>
           <Pulls />
         </SectionBoundary>
         <Store />
+
+        <ChapterSeam from="var(--gold)" to="var(--bone)" label="WHO MADE THIS" />
+
+        {/* 07 · AUTHORSHIP */}
         <Artists />
+
+        {/* 08 · CANON */}
         <Lore />
-        {/* The closing credit crawl — moved above the Singularity so it is
-            completely unaffected by the black hole warping effect. P3.12
-            (audit 2.4): wrapped in the scrubbed clip-rise — the credits
-            ascend out of the dark instead of just continuing the scroll. */}
-        <CrawlRise>
-        <div className="signoff__crawl">
-          <Marquee
-            items={[
-              `${UNIVERSES.length} UNIVERSES REGISTERED`,
-              `${ARTISTS.length} ARTISTS CREDITED FOREVER`,
-              'HOLDERS WALK IN FIRST',
-              'EVERY MINT PULLS A PIECE',
-              'ONE CANON · INFINITE VERSIONS',
-              'NEMOVERSE PROTOCOL v0.1.0',
-            ]}
-            speed="110s"
-            variant="credits"
-          />
+
+        {/* 09 · COLLAPSE — the approach is empty on purpose. The chrome
+            withdraws, the notation thins, and the simulation is entered
+            rather than encountered. */}
+        <div className="bh-approach" aria-hidden="true">
+          <span className="bh-approach__label">THE ARCHIVE IS FOLDING · DO NOT LOOK AWAY</span>
         </div>
+        {/* The closing credit crawl — kept above the Singularity so it is
+            completely unaffected by the event-horizon warping effect. It is
+            the page's one quiet archival notation, and it ascends out of the
+            dark instead of just continuing the scroll (CrawlRise). */}
+        <CrawlRise>
+          <div className="signoff__crawl">
+            <Marquee
+              items={[
+                `${UNIVERSES.length} UNIVERSES REGISTERED`,
+                `${ARTISTS.length} ARTISTS CREDITED FOREVER`,
+                'HOLDERS WALK IN FIRST',
+                'EVERY MINT PULLS A PIECE',
+                'ONE CANON · INFINITE VERSIONS',
+                'NEMOVERSE PROTOCOL v0.1.0',
+              ]}
+              speed="110s"
+              variant="credits"
+            />
+          </div>
         </CrawlRise>
-        {/* THE SINGULARITY — the live WebGPU black hole. Placed in the exact
-            gap between the canon timeline above (Lore, whose drilling rod ends
-            on the "U-007 — THE LAST AURORA" node) and the sign-off below.
-            It is the last child of <main> because <Footer /> is a sibling
-            of <main>, so this is the seam itself — nothing else sits between
-            them. Statically imported like every other section (see the Pulls
-            note above): a section this deep in the page must always mount.
-            Its own graceful degradation — WebGPU feature detection, a static
-            SVG/CSS frame, off-screen pausing — lives in
-            components/BlackHoleStage.tsx, and the simulation in
-            src/three/blackhole/ is vendored verbatim. */}
         <Singularity />
       </main>
+
+      {/* 10 · RETURN */}
       <Footer />
       <ToastHost />
-    </SingularityProvider>
+    </ChapterProvider>
   );
 }
 

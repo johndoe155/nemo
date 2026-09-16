@@ -1,22 +1,35 @@
 /* ============================================================================
-   04 · PILLAR 3 — PROOF-OF-PURCHASE COLLECTIBLES
+   05 · COMMERCE — the ritual
    ----------------------------------------------------------------------------
-   The Awwwards-grade rebuild. A rigid two-column card stack becomes an
-   asymmetric floating canvas:
+   The proof-of-purchase simulator was a utility: a control rail with four
+   stat tiles, five probability gauges, a frequency line and a pull button all
+   visible at once, next to a stage with a reveal plate, a stamp ledger and
+   three floating chips. It read as a dashboard for a gacha mechanic.
 
-     · LEFT  — sticky high-contrast control rail (the Pull Simulator):
-               oversized roll-up numerals, kinetic probability nodes with
-               liquid shader gauges, the audio-visual frequency line, and the
-               Three.js liquid-glass PULL CTA with GSAP magnetic physics.
-     · RIGHT — a perspective-skewed interactive 3D canvas (perspective(1400px)
-               rotateY(-6deg)) holding the holographic reveal plate and the
-               obsidian-etched stamp ledger with spring-flip unlocks.
-     · UNDER — a WebGL particle field that bends around both panels on cursor
-               velocity and gravity vectors.
+   It is now a ritual, in three beats:
+
+     SEALED   — one object at the centre of an altar: the sealed fragment.
+                Nothing else on the surface. The state line under it is the
+                archive's own voice ("THE ARCHIVE IS SHUFFLED").
+     BROKEN   — the pull. The fragment turns, the frequency line locks, the
+                reveal plate stages the result with a clear crescendo, and a
+                light leaks across the stage.
+     LEDGERED — the stamp card records the pull as a collectible physical
+                ledger, and the room cools back down.
+
+   The odds, the pity counter and the system rules survive — they are real
+   information — but they move into an EXPANDABLE INFORMATION STATE instead of
+   sitting on the surface competing with the object.
+
+   PERFORMANCE — the existing WebGL implementation stays bounded: the active
+   pull state gets a temporary quality elevation (the stage flash, the plate
+   bloom) while the idle state is nearly static (the seal's ring is a CSS
+   conic gradient, not a canvas, and the particle field is gated off-screen).
    ========================================================================== */
 
 import { useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
+
 import { SectionHead } from '../../components/ui';
 import { RARITY, SET_BONUS_AT, STAMP_SLOTS } from '../../lib/data';
 import { RARITY_ACCENT, usePullEngine } from './usePullEngine';
@@ -39,6 +52,7 @@ export default function Pulls() {
   const obstacles = useMemo(() => [railRef, stageRef], []);
 
   const pityLeft = Math.max(0, STAMP_SLOTS - 1 - engine.stamps);
+  const spinning = engine.phase === 'spinning';
 
   return (
     <section className="section pulls npx" id="pulls" ref={sectionRef}>
@@ -48,7 +62,7 @@ export default function Pulls() {
         <SectionHead
           center
           num="05"
-          kicker="05 · PILLAR 3 — PROOF-OF-PURCHASE COLLECTIBLES"
+          kicker="05 · COMMERCE — PROOF-OF-PURCHASE COLLECTIBLES"
           title={
             <>
               Every purchase <em className="npx__serif">pulls a piece</em> of the Nemoverse
@@ -63,108 +77,123 @@ export default function Pulls() {
           }
         />
 
-        <div className="npx__layout">
-          {/* ============================ CONTROL RAIL ============================ */}
+        <div className="ritual" data-phase={engine.phase}>
+          {/* ==================== THE ALTAR ==================== */}
           <motion.aside
-            className="npx__rail"
+            className="ritual__altar"
             ref={railRef}
-            initial={{ opacity: 0, y: 42, filter: 'blur(8px)' }}
-            whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            initial={{ opacity: 0, y: 42 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.95, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="npx__plate npx__pullsim">
-              <span className="npx__plate-borderglow" aria-hidden="true" />
+            {/* The sealed fragment — the object itself, not a panel about it. */}
+            <div className="ritual__seal" data-spin={spinning ? 'true' : 'false'} aria-hidden="true">
+              <span className="ritual__seal-glyph">
+                {engine.pulls.length === 0 ? '▚' : String(engine.pulls.length).padStart(2, '0')}
+              </span>
+            </div>
 
-              <div className="npx__plate-head">
-                <div>
-                  <span className="npx__plate-title">PULL SIMULATOR</span>
-                </div>
-                <span className={`npx__badge ${engine.bonusReached ? 'is-live' : ''}`}>
-                  {engine.bonusReached ? 'GOLDEN GATE OPEN' : `${engine.stamps}/${SET_BONUS_AT} TOWARD SET BONUS`}
-                </span>
-              </div>
+            <p className="ritual__state" role="status">
+              {spinning
+                ? 'THE ARCHIVE IS SPLITTING — SIGNAL LOCK IN PROGRESS'
+                : engine.bonusReached
+                  ? 'GOLDEN GATE OPEN'
+                  : 'THE ARCHIVE IS SHUFFLED'}
+            </p>
 
-              <div className="npx__stats">
-                <div className="npx__stat">
-                  <StatRoll value={engine.pulls.length} className="npx__stat-num" />
-                  <span>TOTAL PULLS</span>
+            <LiquidPullButton
+              onClick={engine.doPull}
+              disabled={engine.phase !== 'idle'}
+              spin={spinning}
+              label="PULL FROM THE NEMOVERSE"
+              spinLabel="ARCHIVE SPLITTING…"
+            />
+
+            {/* The signal — the only live indicator on the surface. */}
+            <div className={`ritual__indicator ${spinning ? 'is-spinning' : ''}`}>
+              <FreqLine spin={spinning} />
+            </div>
+
+            {/* THE EXPANDABLE INFORMATION STATE. The odds, the pity counter
+                and the holder bonus are real information, so they are one
+                deliberate disclosure away — never on the surface. */}
+            <details className="ritual__disclosure">
+              <summary>
+                <span>ODDS · PITY · SYSTEM RULES</span>
+              </summary>
+              <div className="ritual__disclosure-body">
+                <div className="ritual__odds" role="group" aria-label="Live pull probability nodes">
+                  {engine.odds.map((o, i) => (
+                    <ProbabilityNode key={o.rarity} rarity={o.rarity} pct={o.pct} index={i} />
+                  ))}
+                  {engine.holderBonus && (
+                    <span className="npx__node npx__node--holder">
+                      <span className="npx__node-orb" aria-hidden="true">
+                        <i />
+                      </span>
+                      <span className="npx__node-tag">
+                        HOLDER <b>+10%</b>
+                      </span>
+                    </span>
+                  )}
                 </div>
-                <div className="npx__stat">
-                  <StatRoll value={engine.stamps} className="npx__stat-num" />
-                  <span>DISTINCT UNIVERSES</span>
-                </div>
-                <div className="npx__stat npx__stat--best">
-                  <StatRoll
-                    value={engine.pulls.length ? RARITY[engine.best].tier : 0}
-                    pad={2}
-                    color={engine.pulls.length ? RARITY_ACCENT[engine.best].color : undefined}
-                    className="npx__stat-num"
-                  />
-                  <span>
-                    BEST PULL ·{' '}
-                    <b style={{ color: engine.pulls.length ? RARITY_ACCENT[engine.best].color : undefined }}>
+
+                <dl className="ritual__facts">
+                  <div>
+                    <dt>TOTAL PULLS</dt>
+                    <dd>
+                      <StatRoll value={engine.pulls.length} />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>DISTINCT UNIVERSES</dt>
+                    <dd>
+                      <StatRoll value={engine.stamps} />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>BEST PULL</dt>
+                    <dd
+                      style={{
+                        color: engine.pulls.length
+                          ? RARITY_ACCENT[engine.best].color
+                          : undefined,
+                      }}
+                    >
                       {engine.pulls.length ? RARITY[engine.best].label : 'UNSEALED'}
-                    </b>
-                  </span>
-                </div>
-                <div className={`npx__stat npx__stat--pity ${engine.pityActive ? 'is-armed' : ''}`}>
-                  <StatRoll value={pityLeft} className="npx__stat-num" color="#3fe8ff" />
-                  <span>
-                    PITY · 8TH STAMP{engine.pityActive ? ' — ARMED' : ` IN ${pityLeft}`}
-                  </span>
-                </div>
-              </div>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>PITY · 8TH STAMP</dt>
+                    <dd>{engine.pityActive ? 'ARMED' : `IN ${pityLeft}`}</dd>
+                  </div>
+                  <div>
+                    <dt>SET BONUS</dt>
+                    <dd>
+                      {engine.stamps}/{SET_BONUS_AT}
+                    </dd>
+                  </div>
+                </dl>
 
-              <div className="npx__odds" role="group" aria-label="Live pull probability nodes">
-                {engine.odds.map((o, i) => (
-                  <ProbabilityNode key={o.rarity} rarity={o.rarity} pct={o.pct} index={i} />
-                ))}
-                {engine.holderBonus && (
-                  <span className="npx__node npx__node--holder">
-                    <span className="npx__node-orb" aria-hidden="true">
-                      <i />
-                    </span>
-                    <span className="npx__node-tag">
-                      HOLDER <b>+10%</b>
-                    </span>
-                  </span>
-                )}
-              </div>
-
-              <div className={`npx__indicator ${engine.phase === 'spinning' ? 'is-spinning' : ''}`}>
-                <FreqLine spin={engine.phase === 'spinning'} />
-                <p>
-                  {engine.phase === 'spinning'
-                    ? 'THE ARCHIVE IS SPLITTING — SIGNAL LOCK IN PROGRESS'
-                    : 'THE ARCHIVE IS SHUFFLED'}
+                <p className="ritual__fine">
+                  DEMO MINT — REAL FLOW: SHOPIFY WEBHOOK → MINT ON <b>BASE</b> → WALLET OR EMAIL.
+                  Drawing from the live Nemoverse catalog; metadata on IPFS.
                 </p>
               </div>
-
-              <LiquidPullButton
-                onClick={engine.doPull}
-                disabled={engine.phase !== 'idle'}
-                spin={engine.phase === 'spinning'}
-                label="PULL FROM THE NEMOVERSE"
-                spinLabel="ARCHIVE SPLITTING…"
-              />
-
-              <p className="npx__mock">
-                DEMO MINT — REAL FLOW: SHOPIFY WEBHOOK → MINT ON <b>BASE</b> → WALLET OR EMAIL
-              </p>
-            </div>
+            </details>
           </motion.aside>
 
-          {/* ============================ 3D CANVAS ============================ */}
+          {/* ==================== THE LEDGER ==================== */}
           <motion.div
-            className="npx__stage"
+            className="ritual__ledger"
             ref={stageRef}
-            initial={{ opacity: 0, y: 56, filter: 'blur(10px)' }}
-            whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            initial={{ opacity: 0, y: 56 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 1.1, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="npx__stage-tilt">
+            <div className="ritual__stage">
               <RevealPlate
                 phase={engine.phase}
                 spinIdx={engine.spinIdx}
@@ -172,22 +201,18 @@ export default function Pulls() {
                 onPull={engine.doPull}
                 onDone={engine.done}
               />
-              <StampCard
-                stamps={engine.stamps}
-                distinct={engine.distinct}
-                latestUid={engine.latestUid}
-                phase={engine.phase}
-                bonusReached={engine.bonusReached}
-                pulls={engine.pulls}
-                onReset={engine.reset}
-              />
-              <div className="npx__float-chips" aria-hidden="true">
-                <span className="npx__float-chip is-a">LIVE ODDS · BOUND TO THE ARCHIVE</span>
-                <span className="npx__float-chip is-b">LOW-FEE CHAIN · POLYGON / BASE</span>
-                <span className="npx__float-chip is-c">METADATA ON IPFS</span>
-              </div>
+              <StageFlash n={engine.flash} />
             </div>
-            <StageFlash n={engine.flash} />
+
+            <StampCard
+              stamps={engine.stamps}
+              distinct={engine.distinct}
+              latestUid={engine.latestUid}
+              phase={engine.phase}
+              bonusReached={engine.bonusReached}
+              pulls={engine.pulls}
+              onReset={engine.reset}
+            />
           </motion.div>
         </div>
 
@@ -195,8 +220,8 @@ export default function Pulls() {
           SHOPIFY WEBHOOK TRIGGERS THE MINT AFTER CHECKOUT · DRAWING FROM THE LIVE NEMOVERSE
           CATALOG
           <br />
-          MINTED TO THE BUYER'S WALLET — OR CLAIMABLE VIA EMAIL · LOW-FEE CHAIN: POLYGON / BASE ·
-          METADATA ON IPFS
+          MINTED TO THE BUYER&rsquo;S WALLET — OR CLAIMABLE VIA EMAIL · LOW-FEE CHAIN: POLYGON /
+          BASE · METADATA ON IPFS
         </p>
       </div>
     </section>

@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useScroll } from 'framer-motion';
 import SphereImageGrid, { type ImageData } from '@/components/ui/img-sphere';
 import { ARTISTS, GALLERY_PLATES, UNIVERSES } from '../lib/data';
 
 /* ---------------------------------------------------------------------------
-   02 · THE ROTUNDA
+   02 · ARCHIVE — THE ROTUNDA
    The rotunda sits directly after the Nemoverse roster: the roster is the
    sortable registry (specs, supply, price), this is the same canon hung as a
    sphere you can spin. Rebuilt from the CircularGallery ring onto the
@@ -66,15 +66,20 @@ for (let i = 0; i < SPHERE_IMAGE_COUNT; i++) {
  * sphereRadius are omitted: they are measured from the stage below so the
  * sphere fills the same box the ring did, keeping the demo's 600:200 ratio.
  */
+/* The rotunda is a museum volume, not another browser: the sphere is HEAVY.
+   Drag is geared down, momentum decays slowly (it keeps turning after you let
+   go instead of stopping dead), the ambient spin is barely there, and the
+   hover magnification is gentler — a plate leans toward you, it does not
+   balloon. */
 const SPHERE_CONFIG = {
-  dragSensitivity: 0.8, // Mouse drag sensitivity (0.1 - 2.0)
-  momentumDecay: 0.96, // How fast momentum fades (0.8 - 0.99)
-  maxRotationSpeed: 6, // Maximum rotation speed (1 - 10)
+  dragSensitivity: 0.5, // Mouse drag sensitivity (0.1 - 2.0)
+  momentumDecay: 0.985, // How fast momentum fades (0.8 - 0.99) — long glide
+  maxRotationSpeed: 3.2, // Maximum rotation speed (1 - 10)
   baseImageScale: 0.15, // Base image size as a fraction of the container
-  hoverScale: 1.3, // Hover scale multiplier (1.0 - 2.0)
+  hoverScale: 1.22, // Hover scale multiplier (1.0 - 2.0)
   perspective: 1000, // CSS perspective value (500 - 2000)
   autoRotate: true, // Ambient spin when idle
-  autoRotateSpeed: 0.2, // Auto rotation speed (0.1 - 2.0)
+  autoRotateSpeed: 0.1, // Auto rotation speed (0.1 - 2.0) — a slow drift
 };
 
 /** Reference sphere proportions from the demo (600px container / 200 radius). */
@@ -96,6 +101,15 @@ export default function Gallery() {
   /* The page-scroll position feeds the sphere's gust channel — being
      scrolled past nudges its spin (DESIGN_AUDIT P3.2b). */
   const { scrollY: pageScroll } = useScroll();
+
+  /* The room quiets while a single plate is under the spotlight. */
+  const [inspecting, setInspecting] = useState(false);
+  const onInspect = useCallback((v: boolean) => setInspecting(v), []);
+
+  /* A QUIET PAUSE before interaction: the sphere is mounted and drifting
+     before the visitor is told they can touch it, and the hint only resolves
+     once the stage has actually settled in the viewport. */
+  const [settled, setSettled] = useState(false);
 
   /* Measure the stage so the fixed-size sphere can be sized to it. */
   useEffect(() => {
@@ -133,6 +147,16 @@ export default function Gallery() {
     return () => io.disconnect();
   }, []);
 
+  /* The pause: one beat after the stage is in view, the room offers itself. */
+  useEffect(() => {
+    if (!inView || REDUCE) {
+      setSettled(inView && REDUCE);
+      return;
+    }
+    const t = window.setTimeout(() => setSettled(true), 900);
+    return () => window.clearTimeout(t);
+  }, [inView]);
+
   /* Fit the sphere to the stage: the same 600:200 container/radius ratio as
      the reference demo, clamped to the stage box (with breathing room) so it
      never overflows the section on small screens. */
@@ -153,7 +177,7 @@ export default function Gallery() {
       <div className="shell">
         <header className="cg__head">
           <div className="cg__headtext">
-            <span className="kicker">02 · THE ROTUNDA</span>
+            <span className="kicker">02 · ARCHIVE — THE ROTUNDA</span>
             <h2 className="display cg__title" style={{ fontSize: 'var(--fs-h2)' }}>
               Drift through the canon
             </h2>
@@ -179,7 +203,12 @@ export default function Gallery() {
         </header>
       </div>
 
-      <div ref={stageRef} className="cg-stage cg-stage--sphere">
+      <div
+        ref={stageRef}
+        className="cg-stage cg-stage--sphere"
+        data-inspecting={inspecting ? 'true' : 'false'}
+        data-settled={settled ? 'true' : 'false'}
+      >
         {!REDUCE && inView && stageBox.w > 0 && (
           <SphereImageGrid
             images={SPHERE_IMAGES}
@@ -188,6 +217,7 @@ export default function Gallery() {
             {...SPHERE_CONFIG}
             autoRotate={!REDUCE && SPHERE_CONFIG.autoRotate}
             gust={pageScroll}
+            onInspect={onInspect}
             ariaLabel={`Rotunda — ${SPHERE_IMAGES.length} plates on a drifting sphere. Left and right arrow keys bring the next plate to the front, Enter inspects it.`}
           />
         )}
@@ -232,7 +262,10 @@ export default function Gallery() {
       </div>
 
       <div className="shell">
-        <p className="cg__hint" {...(REDUCE ? { style: { display: 'none' } } : {})}>
+        <p
+          className="cg__hint"
+          {...(REDUCE ? { style: { display: 'none' } } : {})}
+        >
           <span className="cg__hint-keys" aria-hidden="true" />
           Drag · flick · tap a plate to open — or focus the sphere and use arrows + Enter
         </p>

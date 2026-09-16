@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { webglSupported } from '../sections/pulls/webgl';
-import {
-  SCENES,
-  DEFAULT_SCENE,
-  observeScenes,
-  sceneVec,
-  SCENE_FLOATS,
-} from '../lib/scenes';
+import { useQuality } from '../lib/ChapterProvider';
+import { SCENES, DEFAULT_SCENE, onSceneChange, sceneVec, SCENE_FLOATS } from '../lib/scenes';
 
 /* ---------------------------------------------------------------------------
    Ambience — the living, scene-aware background of the Nemoverse.
@@ -152,19 +147,21 @@ void main() {
 
 export default function Ambience() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  /* The device tier decides whether the ambient shader runs at all and how
+     many device pixels it is allowed to paint — one decision, published by
+     the chapter controller, instead of this component guessing a second time
+     with its own adaptive-quality heuristic. */
+  const quality = useQuality();
   const [mode, setMode] = useState<'gl' | 'css'>(() =>
-    typeof window !== 'undefined' && webglSupported() ? 'gl' : 'css',
+    typeof window !== 'undefined' && webglSupported() && quality.ambientShader ? 'gl' : 'css',
   );
   /* Bumped on webglcontextrestored to re-run the whole GL setup. */
   const [gen, setGen] = useState(0);
 
-  /* CSS fallback still gets scene-aware colour: the observer stamps
-     data-scene on <html>; the html[data-scene] rules in overhaul.css
-     retarget the --amb-* wash colours. */
-  useEffect(() => {
-    if (mode !== 'css') return;
-    return observeScenes();
-  }, [mode]);
+  /* CSS fallback still gets scene-aware colour, but it no longer RUNS an
+     observer to get it: the chapter controller stamps data-scene on <html>
+     (scenes.applyScene), and the html[data-scene] rules in overhaul.css
+     retarget the --amb-* wash from there. */
 
   useEffect(() => {
     if (mode !== 'gl') return;
@@ -280,7 +277,7 @@ export default function Ambience() {
     };
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+      const dpr = Math.min(window.devicePixelRatio || 1, quality.dprCap);
       canvas.width = Math.max(1, Math.round(window.innerWidth * dpr * scale));
       canvas.height = Math.max(1, Math.round(window.innerHeight * dpr * scale));
       gl.viewport(0, 0, canvas.width, canvas.height);
@@ -289,8 +286,10 @@ export default function Ambience() {
     };
     resize();
 
-    /* ---- Scene targeting ---- */
-    const stopScenes = observeScenes((id) => {
+    /* ---- Scene targeting ----
+       Subscribe, do not observe. The chapter controller is the only thing
+       allowed to decide which district the sky is in. */
+    const stopScenes = onSceneChange((id) => {
       tgt.set(sceneVec(SCENES[id]));
       if (reduce) {
         cur.set(tgt); // discrete state change, no animation
@@ -382,7 +381,7 @@ export default function Ambience() {
         /* context may already be lost — nothing to free */
       }
     };
-  }, [mode, gen]);
+  }, [mode, gen, quality.dprCap]);
 
   if (mode === 'css') {
     /* No-WebGL fallback: scene-tinted, blur-free radial washes + DOM

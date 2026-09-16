@@ -86,6 +86,10 @@ export interface SphereImageGridProps {
   gust?: MotionValue<number>;
   /** Region label for assistive tech; the keyboard contract is appended. */
   ariaLabel?: string;
+  /** Fires when a plate is being inspected. The rotunda is a museum volume:
+   *  while one work is under the spotlight the section quiets everything
+   *  around the stage. */
+  onInspect?: (inspecting: boolean) => void;
 }
 
 interface RotationState {
@@ -142,7 +146,8 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   autoRotateSpeed = 0.3,
   className = '',
   gust,
-  ariaLabel
+  ariaLabel,
+  onInspect
 }) => {
   const reduce = useReducedMotion() ?? false;
   const reduceRef = useRef(reduce);
@@ -155,6 +160,19 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
   const [imagePositions, setImagePositions] = useState<SphericalPosition[]>([]);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  /* THE OVERHAUL'S "SPOTLIGHT INSPECTION" (blueprint §3.6). The rotunda is a
+     museum volume, not a browser: while one plate is being inspected, every
+     other plate quiets (dims and desaturates) so the hovered work is the only
+     lit object on the sphere. `onInspect` lets the section quiet the room
+     around the stage too (its hint line, its badges) from one signal. */
+  const [inspecting, setInspecting] = useState(false);
+  /* Read inside the per-frame loop that already owns rotation, so stopping
+     the ambient spin schedules nothing new. */
+  const inspectingRef = useRef(false);
+  inspectingRef.current = inspecting;
+  useEffect(() => {
+    onInspect?.(inspecting);
+  }, [inspecting, onInspect]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const lastMousePos = useRef<MousePosition>({ x: 0, y: 0 });
@@ -522,7 +540,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
       let newY = prev.y;
 
       // Add auto-rotation to Y axis (horizontal rotation)
-      if (autoRotate) {
+      if (autoRotate && !inspectingRef.current) {
         newY += autoRotateSpeed;
       }
 
@@ -695,12 +713,24 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
           height: `${imageSize}px`,
           left: `${containerSize/2 + position.x}px`,
           top: `${containerSize/2 + position.y}px`,
-          opacity: position.fadeOpacity,
+          opacity:
+            hoveredIndex === null
+              ? position.fadeOpacity
+              : isHovered
+                ? Math.min(1, position.fadeOpacity * 1.6)
+                : position.fadeOpacity * 0.28,
+          filter: hoveredIndex === null || isHovered ? 'none' : 'saturate(0.35) brightness(0.6)',
           transform: `translate(-50%, -50%) scale(${finalScale})`,
           zIndex: position.zIndex
         }}
-        onMouseEnter={() => setHoveredIndex(index)}
-        onMouseLeave={() => setHoveredIndex(null)}
+        onMouseEnter={() => {
+          setHoveredIndex(index);
+          setInspecting(true);
+        }}
+        onMouseLeave={() => {
+          setHoveredIndex(null);
+          setInspecting(false);
+        }}
         onClick={() => swapWithPlateMorph(image)}
       >
         <div className="relative w-full h-full rounded-full overflow-hidden shadow-lg border-2 border-white/20">
@@ -715,6 +745,8 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
       </div>
     );
   }, [worldPositions, baseImageSize, containerSize, hoveredIndex, hoverScale]);
+
+
 
   /* Spotlight = a real dialog now (P2.1): focus trapped, Escape closes, the
      trigger is restored on close, and the page is locked through the shared
