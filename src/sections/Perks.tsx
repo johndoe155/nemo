@@ -1,32 +1,35 @@
 import { motion } from 'framer-motion';
 import { Reveal, SectionHead, Verified, WalletButton, useMockWallet, MOCK_ADDRESS } from '../components/ui';
-import { useTilt } from '../components/motion';
 import { PERK_TIERS } from '../lib/data';
 
-/* Tier cards share the flagship physics family at reduced throw — one
-   motion language across the page instead of two products. */
-function PerkCard({ tier, i }: { tier: (typeof PERK_TIERS)[number]; i: number }) {
-  const tilt = useTilt<HTMLDivElement>({ maxDeg: 1.4, lift: -4 });
+/* ONE TAKE — the four identical tier cards become one access ladder: a
+   single gold thread, four rungs. Each rung is a row — index, trait
+   (large), tag, and the benefits as quiet text lines — revealed in
+   sequence as the reader climbs. The tiers keep every perk and every
+   colour; only the shelf changes. */
+function PerkRung({ tier, i }: { tier: (typeof PERK_TIERS)[number]; i: number }) {
   return (
-    <Reveal delay={i * 0.08} y={34} blur={false}>
-      <motion.div
-        ref={tilt.ref}
-        className="card perk sheen"
-        style={{ '--card-accent': tier.color, '--pc': tier.color, ...tilt.style }}
-        {...tilt.handlers}
+    <Reveal delay={i * 0.07} y={26} blur={false}>
+      <div
+        className="perk-rung"
+        style={{ '--card-accent': tier.color, '--pc': tier.color } as React.CSSProperties}
       >
-        <div className="perk__head">
-          <h3 className="perk__trait">{tier.trait}</h3>
+        <span className="perk-rung__node" aria-hidden="true" />
+        <span className="perk-rung__idx" aria-hidden="true">
+          {String(i + 1).padStart(2, '0')}
+        </span>
+        <div className="perk-rung__head">
+          <h3 className="perk-rung__trait">{tier.trait}</h3>
           <span className="badge" style={{ '--c': tier.color }}>
             {tier.tag}
           </span>
         </div>
-        <ul className="perk__list">
+        <ul className="perk-rung__list">
           {tier.perks.map((p) => (
             <li key={p}>{p}</li>
           ))}
         </ul>
-      </motion.div>
+      </div>
     </Reveal>
   );
 }
@@ -38,26 +41,26 @@ export default function Perks() {
     <section className="section perks" id="perks">
       <div className="shell">
         <SectionHead
-          num="04"
-          kicker="04 · PILLAR 2 — TOKEN-GATED PERKS"
-          kickerGold
+          num="06"
+          kicker="FIRST DOORS"
           title={
             <>
-              Hold the NFT. <span className="txt-gold">Open the doors first.</span>
+              Hold the piece. <span className="hl-act">Open the doors first.</span>
             </>
           }
           sub={
             <>
-              Connect your wallet at the store. Holding the OC NFT — or a specific trait tier —
-              unlocks real perks, with first access to new Nemoverse universes as the headline
-              reward.
+              Holding the OC — or a specific trait tier — opens what the public waits for:
+              earlier access, deeper pricing, rarer artifacts. The headline reward is always
+              the same: you cross first.
             </>
           }
         />
 
-        <div className="perks__grid">
+        <div className="perks__ladder">
+          <span className="perks__thread" aria-hidden="true" />
           {PERK_TIERS.map((tier, i) => (
-            <PerkCard key={tier.tag} tier={tier} i={i} />
+            <PerkRung key={tier.tag} tier={tier} i={i} />
           ))}
         </div>
 
@@ -72,10 +75,13 @@ export default function Perks() {
             </div>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
               {wallet.connected && (
+                /* ONE TAKE — verification is a STAMP: the confirmation
+                   lands with weight and rings out to rest. */
                 <motion.span
                   className="holderline"
-                  initial={{ opacity: 0, x: -14 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  initial={{ opacity: 0, scale: 1.35 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 17 }}
                 >
                   <Verified />
                   VERIFIED HOLDER · <code>{MOCK_ADDRESS}</code> · GENESIS · LEGENDARY TRAIT

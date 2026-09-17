@@ -1,38 +1,40 @@
 import { Component, useEffect, type CSSProperties, type ReactNode } from 'react';
 import Nav from './sections/Nav';
 import Hero from './sections/Hero';
+// ONE TAKE re-order — the film is character → canon → deal. The persona now
+// opens the story (you meet the voice before the product); the canon (roster,
+// drift, lore, hands) holds the middle; the commerce act (doors, ritual,
+// artifacts) lands last. Statically imported like every other section — the
+// pulls boundary below still guards its canvas.
+import Persona from './sections/Persona';
 import Nemoverse from './sections/Nemoverse';
 import Gallery from './sections/Gallery';
-import Persona from './sections/Persona';
+import Lore from './sections/Lore';
+import Artists from './sections/Artists';
 import Perks from './sections/Perks';
-// 04 · PILLAR 3 is statically imported like every other section. It was
-// previously lazy-loaded, but a failed or stalled dynamic import on reload
-// (notably on mobile after leaving and reopening the browser) left the
-// Suspense fallback in place forever — a permanent blank gap between
-// sections 03 and 05. A static import puts the section in the critical
-// bundle so it always mounts; the boundary below is a second safety net for
-// any runtime render error.
 import Pulls from './sections/pulls/Pulls';
 import Store from './sections/Store';
-import Artists from './sections/Artists';
-import Lore from './sections/Lore';
 import Singularity from './sections/Singularity';
 import Footer from './sections/Footer';
 import CrawlRise from './components/CrawlRise';
+import Interlude from './components/Interlude';
 import { Marquee, Starfield, ToastHost } from './components/ui';
 import Ambience from './components/Ambience';
 import FloorState from './components/FloorState';
 // The boot sequence — the typographic morph. Renders above everything for one
 // pass, then removes itself; see components/Loader.tsx.
 import Loader from './components/Loader';
-import ScrollProgress from './components/ScrollProgress';
-import SideRail from './components/SideRail';
-import SoundToggle from './components/SoundToggle';
+// ONE TAKE chrome: the single standing instrument (act marks + filament +
+// sound) replaces the side rail, the scroll progress bar and the fixed
+// sound pill. VelocityFX stays — it publishes --scroll-vel, which the
+// credits crawl and the ghost-type rotate hooks still read.
+import Console from './components/Console';
 import VelocityFX from './components/VelocityFX';
 import { CustomCursor } from './components/Cursor';
 import { KineticButton, useCursorGlow } from './components/motion';
 import { SingularityProvider, useMediaQuery } from './lib/singularityGate';
 import { preloadPersonaPoints } from './lib/personaPoints';
+import { settleParticleField } from './lib/particleGate';
 import { UNIVERSES, ARTISTS } from './lib/data';
 
 /* ---------------------------------------------------------------------------
@@ -93,6 +95,14 @@ export default function App() {
     });
   }, [hasDesktopPersona]);
 
+  /* ONE TAKE — the hero's WebGL particle field was demoted from the poster
+     to the codebase; the poster is a bitmap now (gated by heroArtGate).
+     The particle boot gate is released immediately so it can never hold the
+     loader for a field that no longer mounts. */
+  useEffect(() => {
+    settleParticleField();
+  }, []);
+
   /* Delegated cursor→bloom tracking: writes --mx/--my onto whichever
      interactive control is hovered (buttons, chips, cards, sheen surfaces)
      so every glow layer is cursor-anchored. One passive listener, rAF-batched,
@@ -105,11 +115,12 @@ export default function App() {
       <a className="skip-link" href="#nemoverse" style={skipStyle}>
         Skip to the Nemoverse
       </a>
-      <ScrollProgress />
       <CustomCursor />
-      <SideRail />
+      <Console />
       <VelocityFX />
-      <SoundToggle />
+      {/* The act transition — one light sweep per act boundary, fired by
+          lib/chapters.ts. */}
+      <div className="fog" aria-hidden="true" />
       <div className="grain" aria-hidden="true" />
       <Starfield className="starfield" />
       <Ambience />
@@ -117,61 +128,94 @@ export default function App() {
 
       <Nav />
       <main>
+        {/* ============ ACT I — THE SIGNAL ============ */}
+        {/* THE POSTER — the film opens on the key art, not a dashboard. */}
         <Hero />
-        <Marquee
-          items={[
-            'U-007 — THE LAST AURORA — AUG 22',
-            'HOLDERS ENTER FIRST',
-            'U-005 · EPIC · 71/100 CLAIMED',
-            'EVERY PURCHASE PULLS A PIECE',
-            'THE PERSONA IS ALWAYS TEASING',
-          ]}
-          speed="38s"
-        />
-        <Nemoverse />
-        {/* 3D rotunda — the same canon as the roster above, hung on a sphere
-            you can spin. Placed here so the registry (specs) is read first
-            and the art (plates) lands immediately after. */}
-        <Gallery />
+        {/* THE VOICE — you meet the character before you meet the product. */}
         <Persona />
+
+        {/* ============ ACT II — THE CANON ============ */}
+        {/* THE REGISTRY — the pinned suspension roster (physics unchanged). */}
+        <Nemoverse />
+        {/* THE DRIFT — the same canon hung on a sphere you can spin; the
+            museum light lands before the sphere starts to move. */}
+        <Gallery />
+        {/* THE CANON — the editorial spread + the drilling-rod timeline. The
+            story is told BEFORE the deal, not after it. */}
+        <Lore />
+        {/* THE HANDS — the credit rod; the film becomes human here. */}
+        <Artists />
+        {/* INTERLUDE I — the film's first title card: the act's promise in
+            one enormous line. Stillness zone (data-still). */}
+        <Interlude
+          id="interlude-canon"
+          act="canon"
+          actLabel="ACT II · THE CANON"
+          ariaTitle="One canon. Infinite versions."
+          lines={[
+            <>
+              ONE&nbsp;CANON<span className="interlude__period">.</span>
+            </>,
+            <>
+              INFINITE&nbsp;VERSIONS<span className="interlude__period">.</span>
+            </>,
+          ]}
+          sub="Every universe is a numbered, official branch of one character — drawn by a different hand, canonized, and minted as a limited run."
+        />
+
+        {/* ============ ACT III — THE DEAL ============ */}
+        {/* FIRST DOORS — the access ladder; gold enters as the act's hue. */}
         <Perks />
+        {/* THE RITUAL — the proof-of-purchase pull, staged as ceremony. */}
         <SectionBoundary>
           <Pulls />
         </SectionBoundary>
+        {/* ARTIFACTS — the storefront, presented as a catalog, not a grid. */}
         <Store />
-        <Artists />
-        <Lore />
-        {/* The closing credit crawl — moved above the Singularity so it is
-            completely unaffected by the black hole warping effect. P3.12
-            (audit 2.4): wrapped in the scrubbed clip-rise — the credits
-            ascend out of the dark instead of just continuing the scroll. */}
+        {/* INTERLUDE II — the second title card: the whole promise in two
+            words. Stillness zone. The end credits follow. */}
+        <Interlude
+          id="interlude-doors"
+          act="doors"
+          actLabel="ACT III · THE DEAL"
+          ariaTitle="Holders cross first."
+          lines={[
+            <>HOLDERS</>,
+            <>
+              CROSS&nbsp;FIRST<span className="interlude__period">.</span>
+            </>,
+          ]}
+          sub="Hold the canon and every door — drops, pricing, artifacts — opens before the rest of the world reaches it."
+        />
+
+        {/* ============ CODA — THE COLLAPSE ============ */}
+        {/* The closing credit crawl — above the Singularity so it is
+            completely unaffected by the event-horizon warping. Wrapped in
+            the scrubbed clip-rise: the credits ascend out of the dark. */}
         <CrawlRise>
-        <div className="signoff__crawl">
-          <Marquee
-            items={[
-              `${UNIVERSES.length} UNIVERSES REGISTERED`,
-              `${ARTISTS.length} ARTISTS CREDITED FOREVER`,
-              'HOLDERS WALK IN FIRST',
-              'EVERY MINT PULLS A PIECE',
-              'ONE CANON · INFINITE VERSIONS',
-              'NEMOVERSE PROTOCOL v0.1.0',
-            ]}
-            speed="110s"
-            variant="credits"
-          />
-        </div>
+          <div className="signoff__crawl">
+            <Marquee
+              items={[
+                `${UNIVERSES.length} UNIVERSES REGISTERED`,
+                `${ARTISTS.length} ARTISTS CREDITED FOREVER`,
+                'HOLDERS WALK IN FIRST',
+                'EVERY MINT PULLS A PIECE',
+                'ONE CANON · INFINITE VERSIONS',
+              ]}
+              speed="110s"
+              variant="credits"
+            />
+          </div>
         </CrawlRise>
-        {/* THE SINGULARITY — the live WebGPU black hole. Placed in the exact
-            gap between the canon timeline above (Lore, whose drilling rod ends
-            on the "U-007 — THE LAST AURORA" node) and the sign-off below.
-            It is the last child of <main> because <Footer /> is a sibling
-            of <main>, so this is the seam itself — nothing else sits between
-            them. Statically imported like every other section (see the Pulls
-            note above): a section this deep in the page must always mount.
-            Its own graceful degradation — WebGPU feature detection, a static
-            SVG/CSS frame, off-screen pausing — lives in
-            components/BlackHoleStage.tsx, and the simulation in
-            src/three/blackhole/ is vendored verbatim. */}
+        {/* THE VOID — the breath before the collapse: 40vh of pure dark, a
+            stillness zone observed by lib/chapters. The take holds its
+            breath once, before the fastest moment of the film. */}
+        <div className="void" id="void" aria-hidden="true" />
+        {/* THE SINGULARITY — the live WebGPU black hole, last child of
+            <main>: the seam itself. Statically imported; its graceful
+            degradation (WebGPU detection, static frame, off-screen pause)
+            lives in components/BlackHoleStage.tsx, the simulation in
+            src/three/blackhole/ (vendored verbatim — untouched). */}
         <Singularity />
       </main>
       <Footer />

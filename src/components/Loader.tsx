@@ -14,6 +14,7 @@ import { GLYPH_SCALE, counterLabel, glyphPath, layoutCounter, trackingAt } from 
 import { holdScroll, releaseScroll } from '../lib/scroll';
 import { criticalFontsReady } from '../lib/fonts';
 import { particleFieldReady } from '../lib/particleGate';
+import { heroArtReady } from '../lib/heroArtGate';
 
 gsap.registerPlugin(MorphSVGPlugin);
 
@@ -253,10 +254,19 @@ export default function Loader() {
        a token cap only: the reader asked to move on, and the boot is already
        invisible by the time finish() runs, so the wait reads as a brief
        scroll-lock. */
+    /* ONE TAKE — the hero is the poster now: the boot holds for the key
+       art's decode (heroArtGate, capped like the font gate) so the frame
+       the loader releases is the frame the poster is painted. The particle
+       field no longer gates the boot — App settles its gate on mount, so
+       this race is a formality kept for the skip path's token cap. */
     const finish = () => {
       if (done) return;
       done = true;
-      void Promise.all([fontsReady, particleFieldReady(skipped ? 600 : 2000)]).then(settle);
+      void Promise.all([
+        fontsReady,
+        heroArtReady(skipped ? 600 : 2600),
+        particleFieldReady(skipped ? 600 : 1200),
+      ]).then(settle);
     };
     let skipped = false;
 

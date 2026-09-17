@@ -1,22 +1,21 @@
 /* ============================================================================
-   04 · PILLAR 3 — PROOF-OF-PURCHASE COLLECTIBLES
+   THE RITUAL — proof-of-purchase, ONE TAKE.
    ----------------------------------------------------------------------------
-   The Awwwards-grade rebuild. A rigid two-column card stack becomes an
-   asymmetric floating canvas:
+   At rest the section is a ceremony, not a control room: the liquid-glass
+   PULL CTA is the SEAL, the holographic plate is the SLATE (ARCHIVE SEALED),
+   the stamp card is the LEDGER. The systems (odds, pity, set bonus, best
+   pull) remain fully implemented behind the "systems" disclosure.
 
-     · LEFT  — sticky high-contrast control rail (the Pull Simulator):
-               oversized roll-up numerals, kinetic probability nodes with
-               liquid shader gauges, the audio-visual frequency line, and the
-               Three.js liquid-glass PULL CTA with GSAP magnetic physics.
-     · RIGHT — a perspective-skewed interactive 3D canvas (perspective(1400px)
-               rotateY(-6deg)) holding the holographic reveal plate and the
-               obsidian-etched stamp ledger with spring-flip unlocks.
-     · UNDER — a WebGL particle field that bends around both panels on cursor
-               velocity and gravity vectors.
+   When a pull is in flight (phase !== 'idle') the section takes the
+   npx--engaged state: the chrome steps out of the light (CSS, chapters.css)
+   and the reveal plate owns the frame — crescendo, then settle.
+
+   Under it all, unchanged: the WebGL particle field that bends around the
+   panels on cursor velocity, and the single usePullEngine source of truth.
    ========================================================================== */
 
-import { useMemo, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { SectionHead } from '../../components/ui';
 import { RARITY, SET_BONUS_AT, STAMP_SLOTS } from '../../lib/data';
 import { RARITY_ACCENT, usePullEngine } from './usePullEngine';
@@ -33,6 +32,12 @@ export default function Pulls() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const railRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
+  /* ONE TAKE — the ritual. At rest the section is one sealed fragment:
+     the pull button is the seal, the plate is the slate, the ledger is
+     the record. The control room (stats, odds, pity) lives behind the
+     "systems" disclosure — the rules are available, but the cover is a
+     ceremony, not a dashboard. */
+  const [systemsOpen, setSystemsOpen] = useState(false);
 
   // Stable identity across renders: a fresh array here would tear down and
   // rebuild the whole WebGL particle field on every state change.
@@ -41,14 +46,18 @@ export default function Pulls() {
   const pityLeft = Math.max(0, STAMP_SLOTS - 1 - engine.stamps);
 
   return (
-    <section className="section pulls npx" id="pulls" ref={sectionRef}>
+    <section
+      className={`section pulls npx ${engine.phase !== 'idle' ? 'npx--engaged' : ''}`}
+      id="pulls"
+      ref={sectionRef}
+    >
       <ParticleField obstacles={obstacles} sectionRef={sectionRef} />
 
       <div className="shell npx__shell">
         <SectionHead
           center
-          num="05"
-          kicker="05 · PILLAR 3 — PROOF-OF-PURCHASE COLLECTIBLES"
+          num="07"
+          kicker="THE RITUAL"
           title={
             <>
               Every purchase <em className="npx__serif">pulls a piece</em> of the Nemoverse
@@ -78,58 +87,90 @@ export default function Pulls() {
 
               <div className="npx__plate-head">
                 <div>
-                  <span className="npx__plate-title">PULL SIMULATOR</span>
+                  <span className="npx__plate-title">THE SEAL</span>
                 </div>
                 <span className={`npx__badge ${engine.bonusReached ? 'is-live' : ''}`}>
                   {engine.bonusReached ? 'GOLDEN GATE OPEN' : `${engine.stamps}/${SET_BONUS_AT} TOWARD SET BONUS`}
                 </span>
               </div>
 
-              <div className="npx__stats">
-                <div className="npx__stat">
-                  <StatRoll value={engine.pulls.length} className="npx__stat-num" />
-                  <span>TOTAL PULLS</span>
-                </div>
-                <div className="npx__stat">
-                  <StatRoll value={engine.stamps} className="npx__stat-num" />
-                  <span>DISTINCT UNIVERSES</span>
-                </div>
-                <div className="npx__stat npx__stat--best">
-                  <StatRoll
-                    value={engine.pulls.length ? RARITY[engine.best].tier : 0}
-                    pad={2}
-                    color={engine.pulls.length ? RARITY_ACCENT[engine.best].color : undefined}
-                    className="npx__stat-num"
-                  />
-                  <span>
-                    BEST PULL ·{' '}
-                    <b style={{ color: engine.pulls.length ? RARITY_ACCENT[engine.best].color : undefined }}>
-                      {engine.pulls.length ? RARITY[engine.best].label : 'UNSEALED'}
-                    </b>
+              {/* ONE TAKE — the control room behind the ritual. Everything
+                  stays implemented and correct; the cover just changes. */}
+              <div className="npx__disclosure">
+                <button
+                  type="button"
+                  className="npx__disclosure-toggle"
+                  aria-expanded={systemsOpen}
+                  onClick={() => setSystemsOpen((v) => !v)}
+                  data-cursor="OPEN"
+                >
+                  <span className="npx__disclosure-label">
+                    {systemsOpen ? 'CLOSE THE SYSTEMS' : 'THE SYSTEMS · ODDS, PITY, BONUS'}
                   </span>
-                </div>
-                <div className={`npx__stat npx__stat--pity ${engine.pityActive ? 'is-armed' : ''}`}>
-                  <StatRoll value={pityLeft} className="npx__stat-num" color="#3fe8ff" />
-                  <span>
-                    PITY · 8TH STAMP{engine.pityActive ? ' — ARMED' : ` IN ${pityLeft}`}
+                  <span className={`npx__disclosure-chev ${systemsOpen ? 'is-open' : ''}`} aria-hidden="true">
+                    <svg viewBox="0 0 10 6" width="10" height="6">
+                      <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.4" fill="none" />
+                    </svg>
                   </span>
-                </div>
-              </div>
+                </button>
+                <AnimatePresence initial={false}>
+                  {systemsOpen && (
+                    <motion.div
+                      className="npx__disclosure-body"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                      <div className="npx__stats">
+                        <div className="npx__stat">
+                          <StatRoll value={engine.pulls.length} className="npx__stat-num" />
+                          <span>TOTAL PULLS</span>
+                        </div>
+                        <div className="npx__stat">
+                          <StatRoll value={engine.stamps} className="npx__stat-num" />
+                          <span>DISTINCT UNIVERSES</span>
+                        </div>
+                        <div className="npx__stat npx__stat--best">
+                          <StatRoll
+                            value={engine.pulls.length ? RARITY[engine.best].tier : 0}
+                            pad={2}
+                            color={engine.pulls.length ? RARITY_ACCENT[engine.best].color : undefined}
+                            className="npx__stat-num"
+                          />
+                          <span>
+                            BEST PULL ·{' '}
+                            <b style={{ color: engine.pulls.length ? RARITY_ACCENT[engine.best].color : undefined }}>
+                              {engine.pulls.length ? RARITY[engine.best].label : 'UNSEALED'}
+                            </b>
+                          </span>
+                        </div>
+                        <div className={`npx__stat npx__stat--pity ${engine.pityActive ? 'is-armed' : ''}`}>
+                          <StatRoll value={pityLeft} className="npx__stat-num" color="#3fe8ff" />
+                          <span>
+                            PITY · 8TH STAMP{engine.pityActive ? ' — ARMED' : ` IN ${pityLeft}`}
+                          </span>
+                        </div>
+                      </div>
 
-              <div className="npx__odds" role="group" aria-label="Live pull probability nodes">
-                {engine.odds.map((o, i) => (
-                  <ProbabilityNode key={o.rarity} rarity={o.rarity} pct={o.pct} index={i} />
-                ))}
-                {engine.holderBonus && (
-                  <span className="npx__node npx__node--holder">
-                    <span className="npx__node-orb" aria-hidden="true">
-                      <i />
-                    </span>
-                    <span className="npx__node-tag">
-                      HOLDER <b>+10%</b>
-                    </span>
-                  </span>
-                )}
+                      <div className="npx__odds" role="group" aria-label="Live pull probability nodes">
+                        {engine.odds.map((o, i) => (
+                          <ProbabilityNode key={o.rarity} rarity={o.rarity} pct={o.pct} index={i} />
+                        ))}
+                        {engine.holderBonus && (
+                          <span className="npx__node npx__node--holder">
+                            <span className="npx__node-orb" aria-hidden="true">
+                              <i />
+                            </span>
+                            <span className="npx__node-tag">
+                              HOLDER <b>+10%</b>
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               <div className={`npx__indicator ${engine.phase === 'spinning' ? 'is-spinning' : ''}`}>

@@ -63,29 +63,11 @@
 .ghost-num--huge { font-size: var(--fs-ghost); }
 .ghost-num--section { font-size: var(--fs-secnum); }
 
-.sechead { position: relative; }
-.sechead__num {
-  position: absolute;
-  top: -3rem;
-  right: -1rem;
-  z-index: 0;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: var(--fs-secnum);
-  line-height: 0.9;
-  color: transparent;
-  -webkit-text-stroke: 1.5px rgba(245, 243, 255, 0.18);
-  text-shadow: 0 8px 36px rgba(138, 77, 255, 0.15);
-  user-select: none;
-  pointer-events: none;
-  rotate: calc(var(--scroll-vel, 0) * 1.4deg);
-  will-change: rotate;
-}
-.sechead--center .sechead__num { right: auto; left: 50%; transform: translateX(-50%); }
-.sechead__num.gold-num {
-  -webkit-text-stroke: 1.5px rgba(255, 200, 87, 0.35);
-  text-shadow: 0 8px 36px rgba(255, 200, 87, 0.25);
-}
+/* ONE TAKE — the ghost numeral is retired. The chapter number now lives in
+   the index line (sechead__index-num, styled in components.css); a 12vw
+   outlined "04" behind every heading was the loudest "template" tell on the
+   page. The block is kept empty-on-purpose as a migration marker. */
+.sechead__num { display: none; }
 
 /* ============================ ATMOSPHERIC DEPTH ============================ */
 

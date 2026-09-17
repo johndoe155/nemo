@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Reveal, SectionHead } from '../components/ui';
-import { useTilt } from '../components/motion';
 import { LORE_STATS, LORE_TIMELINE, UNIVERSE_DROP_ISO } from '../lib/data';
 import { useCountdown, useCountUp } from '../lib/hooks';
 
@@ -13,7 +12,10 @@ gsap.registerPlugin(ScrollTrigger);
    type) — the rod itself is colour-agnostic and never reads one of them. */
 const NODE_HUES = ['var(--gold)', 'var(--iris)', 'var(--cyan)', 'var(--iris)', 'var(--magenta)'];
 
-function LoreStat({
+/* ONE TAKE — the stat tiles die; the numbers are BARE. Oversized,
+   tabular, sitting in the prose gutter like marginalia in a printed
+   book. No card, no border, no tilt: the story carries them. */
+function LoreNum({
   value,
   suffix,
   label,
@@ -21,22 +23,16 @@ function LoreStat({
   delay,
 }: (typeof LORE_STATS)[number] & { delay: number }) {
   const { ref, val } = useCountUp(value, { duration: 1400 });
-  const tilt = useTilt<HTMLDivElement>({ maxDeg: 1.2, lift: 0 });
   return (
-    <Reveal delay={delay} y={22} blur={false}>
-      <motion.div
-        ref={tilt.ref}
-        className="lorestat sheen"
-        style={tilt.style}
-        {...tilt.handlers}
-      >
+    <Reveal delay={delay} y={18} blur={false}>
+      <div className="lore-num">
         <b ref={ref as React.Ref<HTMLElement>}>
           {val}
           {suffix}
         </b>
         <span>{label}</span>
-        <em>{note}</em>
-      </motion.div>
+        {note && <em>{note}</em>}
+      </div>
     </Reveal>
   );
 }
@@ -274,53 +270,59 @@ export default function Lore() {
       <div className="shell lore__grid">
         <div className="lore__copy">
           <SectionHead
-            num="08"
-            kicker="THE CORE IDENTITY"
+            num="04"
+            kicker="THE CANON"
             title={
               <>
-                Who is <span className="txt-grad">NEMO</span>?
+                Who is <span className="hl-act">NEMO</span>?
               </>
             }
           />
-          <Reveal delay={0.08}>
-            <p>
-              <b>NEMO is one canon character</b> — a wanderer between timelines whose face is a
-              small, radiant star. He is not a hero and not quite a ghost: he is the{' '}
-              <span className="hl">constant</span> that every timeline keeps re-discovering, and
-              the variable that every artist keeps re-drawing.
-            </p>
-          </Reveal>
-          <Reveal delay={0.14}>
-            <p>
-              Every commissioned artwork is not fan art — it is an <span className="hl">official,
-              numbered universe</span>: its own timeline, world, and lore blurb, tied back to the
-              character's existing story. The artist gets a permanent canon credit and a{' '}
-              <span className="hl-gold">60/40 revenue split</span> on every minted edition.
-            </p>
-          </Reveal>
-          <Reveal delay={0.2}>
-            <p>
-              New universes release on a set cadence — <span className="hl">one every few weeks</span> —
-              instead of whenever a commission happens to wrap. Fans anticipate drops. Holders enter
-              first. Every purchase pulls a piece back out. The Nemoverse{' '}
-              <span className="hl-gold">funds its own growth</span>.
-            </p>
-          </Reveal>
-
-          <div className="lore__stats">
-            {/* ONE countdown for the whole grid (not one timer per tile): the
-                flagged NEXT DROP card renders the same clock the hero ticker
-                and the roster teaser read, so the three can never disagree.
-                Before this the tile carried a baked-in "6D" that matched
-                neither the live countdown nor the drop date. */}
-            {LORE_STATS.map((s, i) => (
-              <LoreStat
-                key={s.label}
-                {...s}
-                value={s.clock ? Number(drop.d) : s.value}
-                delay={0.08 + i * 0.05}
-              />
-            ))}
+          {/* ONE TAKE — the editorial spread: reading prose on the left,
+              bare numerals in the right gutter. */}
+          <div className="lore__spread">
+            <div className="lore__prose">
+              <Reveal delay={0.08}>
+                <p className="lore__drop">
+                  <b>NEMO is one canon character</b> — a wanderer between timelines whose face is a
+                  small, radiant star. He is not a hero and not quite a ghost: he is the{' '}
+                  <span className="hl">constant</span> that every timeline keeps re-discovering, and
+                  the variable that every artist keeps re-drawing.
+                </p>
+              </Reveal>
+              <Reveal delay={0.14}>
+                <p>
+                  Every commissioned artwork is not fan art — it is an{' '}
+                  <span className="hl">official, numbered universe</span>: its own timeline, world,
+                  and lore blurb, tied back to the character's existing story. The artist gets a
+                  permanent canon credit and a <span className="hl-gold">60/40 revenue split</span>{' '}
+                  on every minted edition.
+                </p>
+              </Reveal>
+              <Reveal delay={0.2}>
+                <p>
+                  New universes release on a set cadence —{' '}
+                  <span className="hl">one every few weeks</span> — instead of whenever a commission
+                  happens to wrap. Fans anticipate drops. Holders enter first. Every purchase pulls
+                  a piece back out. The Nemoverse{' '}
+                  <span className="hl-gold">funds its own growth</span>.
+                </p>
+              </Reveal>
+            </div>
+            <aside className="lore__nums" aria-label="The canon in numbers">
+              {/* ONE countdown for the whole column (not one timer per
+                  numeral): the NEXT DROP figure renders the same clock the
+                  hero data line and the roster teaser read, so the three
+                  can never disagree. */}
+              {LORE_STATS.map((s, i) => (
+                <LoreNum
+                  key={s.label}
+                  {...s}
+                  value={s.clock ? Number(drop.d) : s.value}
+                  delay={0.08 + i * 0.05}
+                />
+              ))}
+            </aside>
           </div>
         </div>
       </div>

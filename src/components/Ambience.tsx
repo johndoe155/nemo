@@ -322,14 +322,22 @@ export default function Ambience() {
     canvas.addEventListener('webglcontextlost', onLost);
     canvas.addEventListener('webglcontextrestored', onRestored);
 
-    /* ---- Loop (skipped entirely under reduced motion) ---- */
+    /* ---- Loop (skipped entirely under reduced motion) ----
+       STILLSHIP (ONE TAKE): while html[data-still] is present — an
+       interlude or the void occupies the centre band — the nebula holds
+       its breath: uTime stops advancing, so the fbm domain warp freezes
+       mid-sheet. The palette still glides to the act's target (a scene
+       change crossing into a still zone must land, it just arrives
+       motionless), and the cursor swell stays live — that is a response,
+       not ambience. */
     let last = performance.now();
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       let dt = (now - last) / 1000;
       last = now;
       if (dt > 0.1) dt = 0.1; // tab was hidden — don't lurch
-      time += dt;
+      const still = document.documentElement.dataset.still === 'true';
+      if (!still) time += dt;
 
       /* Adaptive resolution: rAF-throttling browsers aside, a sustained
          ~1.5s of >26ms frames means we're too heavy — step down once. */

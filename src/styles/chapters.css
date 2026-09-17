@@ -1,0 +1,943 @@
+/* ===========================================================================
+   ONE TAKE — the chapter layer.
+
+   The page is directed as one continuous take in three acts + a coda.
+   lib/chapters.ts stamps html[data-act] / html[data-still] as sections cross
+   the viewport centre band; this stylesheet is the visual half of that
+   authority:
+
+     · ONE accent is live at a time (html[data-act] promotes the act hue into
+       --act-accent, which every in-view surface reads through .hl-act).
+     · The interludes are the film's title cards — full-viewport, pinned,
+       silent. data-still is what makes them silent: starfield, grain and
+       marquees all honour it (see the STILLSHIPP rules at the foot).
+     · The fog is the act transition — one light sweep, no page cut.
+     · The Console is the page's only standing chrome: act marks + progress
+       filament + sound, on one thin left-edge instrument.
+
+   Nothing here overrides a protected subsystem (black hole, sign-off,
+   curtain, roster physics). Loaded after the section styles so the act
+   rules win where they meet them.
+   ========================================================================= */
+
+/* -------------------------- ACT ACCENT MAPPING -------------------------- */
+
+html[data-act='i']    { --act-accent: var(--act-i); }
+html[data-act='ii']   { --act-accent: var(--act-ii); }
+html[data-act='iii']  { --act-accent: var(--act-iii); }
+html[data-act='coda'] { --act-accent: var(--act-coda); }
+
+/* The act accent as TYPE: one word lit, not a word painted. A faint
+   coloured bloom behind the ink is what makes it read as "a light", not
+   "a highlight". Act II's accent is bone/white — the lit-word treatment is
+   the whole point there: the UI stays monochrome, the ART carries hue. */
+.hl-act {
+  color: var(--act-accent, var(--ink));
+  text-shadow: 0 0 28px color-mix(in srgb, var(--act-accent, #ffffff) 42%, transparent);
+}
+
+/* ------------------------------ INTERLUDES ------------------------------ */
+
+/* A title card: 150vh of scroll, a pinned 100vh card, one enormous line.
+   The pin is plain sticky — no GSAP machinery, no pin-spacer, so it composes
+   with Lenis and degrades to a static card without JS. */
+.interlude {
+  position: relative;
+  height: 150vh;
+}
+.interlude__pin {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.interlude__card {
+  text-align: center;
+  padding: 0 var(--gutter);
+  max-width: 100rem;
+}
+.interlude__index {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.1rem;
+  font-family: var(--font-accent);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.52em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 3.2rem;
+}
+.interlude__index::before,
+.interlude__index::after {
+  content: '';
+  width: 3.2rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--chrome));
+}
+.interlude__index::after {
+  background: linear-gradient(90deg, var(--chrome), transparent);
+}
+.interlude__title {
+  font-size: clamp(3rem, 11vw, 12rem);
+  line-height: 0.98;
+  letter-spacing: -0.015em;
+}
+.interlude__line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.06em; /* keeps descenders out of the clip */
+}
+.interlude__line > span {
+  display: block;
+  will-change: transform;
+}
+.interlude__sub {
+  margin-top: 3rem;
+  font-family: var(--font-body);
+  font-size: var(--fs-lead);
+  color: var(--ink-dim);
+  max-width: 34rem;
+  margin-inline: auto;
+  line-height: 1.7;
+}
+
+/* Act II interlude — the period alone is lit (the canon is bone).
+   Act III interlude — gold ingress begins. */
+.interlude--canon .interlude__period { color: var(--act-ii); }
+.interlude--doors .interlude__period {
+  color: var(--act-iii);
+  text-shadow: 0 0 34px color-mix(in srgb, var(--act-iii) 55%, transparent);
+}
+
+/* --------------------------- THE VOID ----------------------------------- */
+
+/* The breath before the collapse: 40vh of pure dark. No content, no id in
+   the nav — observed only by the chapter director (stillness) and the scene
+   system (abyss). The singularity's own gap-l padding follows it, so the
+   approach totals ~80vh of still before the first warm frame. */
+.void {
+  height: var(--gap-xl);
+  pointer-events: none;
+}
+
+/* --------------------------- THE FOG ------------------------------------ */
+
+/* The act transition: one light sweeping up through the frame. Driven by
+   the Web Animations API from lib/chapters.ts (element.animate), so no
+   class juggling; reduced motion's global kill-switch collapses the
+   keyframes to a single frame. */
+.fog {
+  position: fixed;
+  inset: 0;
+  z-index: 95; /* above content, below the boot loader (600) and cursor (1000) */
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(120% 80% at 50% 115%, rgba(170, 190, 230, 0.17), transparent 62%),
+    radial-gradient(90% 60% at 50% -10%, rgba(170, 190, 230, 0.08), transparent 55%);
+}
+
+/* ----------------------------- THE CONSOLE ------------------------------ */
+
+/* The page's one standing instrument: three act marks, a progress filament,
+   a sound glyph. Replaces the side rail + scroll progress bar + sound
+   toggle + velocity FX chrome. It breathes with the take: 42% at rest,
+   full presence while scrolling (toggled by .is-scrolling, written by the
+   component's scroll listener). Hidden on touch — the film is the chrome
+   there. */
+.console {
+  position: fixed;
+  left: 1.1rem;
+  top: 50%;
+  translate: 0 -50%;
+  z-index: 55;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  opacity: 0.42;
+  transition: opacity 0.7s var(--ease-expo);
+}
+.console.is-scrolling {
+  opacity: 1;
+}
+@media (min-width: 1100px) and (pointer: fine) {
+  .console { display: flex; }
+}
+.console__acts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  font-family: var(--font-accent);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+}
+.console__act {
+  color: rgba(245, 243, 255, 0.28);
+  transition: color 0.6s var(--ease-expo), text-shadow 0.6s var(--ease-expo);
+  padding: 0.1rem 0;
+}
+.console__act.is-active {
+  color: var(--act-accent, var(--chrome-strong));
+  text-shadow: 0 0 14px color-mix(in srgb, var(--act-accent, #fff) 55%, transparent);
+}
+.console__filament {
+  position: relative;
+  width: 1px;
+  height: 30vh;
+  background: rgba(255, 255, 255, 0.07);
+}
+.console__filament i {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-origin: top;
+  background: linear-gradient(180deg, var(--chrome-strong), var(--chrome));
+  will-change: transform;
+}
+.console__sound {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color 0.3s var(--ease-expo), border-color 0.3s var(--ease-expo),
+    box-shadow 0.3s var(--ease-expo);
+}
+.console__sound:hover,
+.console__sound[aria-pressed='true'] {
+  color: var(--act-accent, var(--chrome-strong));
+  border-color: color-mix(in srgb, var(--act-accent, #fff) 45%, transparent);
+  box-shadow: 0 0 16px -6px color-mix(in srgb, var(--act-accent, #fff) 60%, transparent);
+}
+.console__sound svg {
+  display: block;
+}
+/* The wave glyph: three thin bars, centred. Off = one flat bar; on = the
+   act accent breathes them at three heights (static under reduce). */
+.console__sound .wave {
+  display: flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 12px;
+}
+.console__sound .wave i {
+  width: 1.5px;
+  height: 12px;
+  border-radius: 1px;
+  background: currentColor;
+  transform-origin: center;
+  transform: scaleY(0.2);
+  transition: transform 0.4s var(--ease-expo);
+}
+.console__act--coda {
+  font-size: 0.42rem;
+  line-height: 1;
+}
+.console__sound[aria-pressed='true'] .wave i:nth-child(1) { transform: scaleY(0.55); }
+.console__sound[aria-pressed='true'] .wave i:nth-child(2) { transform: scaleY(1); }
+.console__sound[aria-pressed='true'] .wave i:nth-child(3) { transform: scaleY(0.75); }
+
+/* The old standing chrome is retired from the page — the rules stay as
+   inert guards for any future re-add (and for reduced-motion parity). */
+.siderail { display: none !important; }
+.scrollprog { display: none !important; }
+.soundtoggle { display: none !important; }
+
+/* ============================== THE POSTER ============================== */
+
+/* The hero is the film's key art, full-bleed, with the type bottom-left.
+   Five elements only. The old dashboard elements are hidden defensively —
+   the JSX no longer renders them, but a stray re-add must not resurrect
+   the old density over the art. */
+.hero--poster {
+  min-height: 100svh;
+  display: flex;
+  align-items: flex-end;
+  padding-top: calc(var(--nav-h) + 2rem);
+  padding-bottom: clamp(3.5rem, 9vh, 7rem);
+  overflow: hidden;
+}
+.hero--poster .hero__telemetry,
+.hero--poster .hero__watermark,
+.hero--poster .hero__progress,
+.hero--poster .hero__scanlines,
+.hero--poster .hero__wash,
+.hero--poster .hero__badge,
+.hero--poster .hero__marquee,
+.hero--poster .hero__subblock {
+  display: none !important;
+}
+/* Plane 1 — the key art (CardImage paints its own LQIP → bitmap fade on
+   the <img>; the wrapper's framer opacity is the scroll recede). */
+.hero--poster .hero__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  will-change: transform, opacity;
+}
+.hero--poster .hero__bg picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.hero--poster .hero__bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 32%;
+}
+/* Plane 2 — cinematic vignette: top under the nav, left for the type,
+   bottom dissolving into the void the next act rises from. */
+.hero__vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(135% 105% at 50% 18%, transparent 42%, rgba(5, 5, 10, 0.5) 100%),
+    linear-gradient(
+      180deg,
+      rgba(5, 5, 10, 0.55) 0%,
+      transparent 20%,
+      transparent 52%,
+      rgba(5, 5, 10, 0.58) 80%,
+      var(--void) 100%
+    ),
+    linear-gradient(90deg, rgba(5, 5, 10, 0.46) 0%, transparent 46%);
+}
+/* The one data line — the hero's entire telemetry, top-right. */
+.hero__dataline {
+  position: absolute;
+  top: calc(var(--nav-h) + 1.3rem);
+  right: var(--gutter);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  font-family: var(--font-accent);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+.hero__dataline span + span::before {
+  content: '';
+  display: inline-block;
+  width: 1px;
+  height: 0.95em;
+  margin: 0 1.1rem 0 1.1rem;
+  background: var(--line-strong);
+  vertical-align: -0.15em;
+}
+.hero__dataline-live {
+  color: var(--act-accent, var(--ink-dim));
+  text-shadow: 0 0 14px color-mix(in srgb, var(--act-accent, #ffffff) 42%, transparent);
+}
+@media (max-width: 760px) {
+  .hero__dataline {
+    top: calc(var(--nav-h) + 0.9rem);
+    right: 1.25rem;
+    font-size: 0.52rem;
+    letter-spacing: 0.24em;
+  }
+}
+/* Plane 3 — the type, bottom-left. */
+.hero--poster .hero__content {
+  position: relative;
+  z-index: 3;
+  align-self: flex-start;
+  max-width: 92rem;
+  padding-top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.hero--poster .hero__title {
+  font-size: clamp(3rem, 11.5vw, 10.5rem);
+  margin-bottom: 1.4rem;
+  text-align: left;
+}
+@media (max-width: 760px) {
+  .hero--poster .hero__title {
+    font-size: clamp(2.5rem, 13vw, 4.4rem);
+  }
+}
+.hero--poster .hero__line {
+  margin-bottom: 0.04em;
+}
+.hero--poster .hero__lede {
+  max-width: 33rem;
+  margin-bottom: 2.7rem;
+  color: var(--ink-dim);
+  font-size: var(--fs-lead);
+  line-height: 1.75;
+}
+.hero--poster .hero__ctas {
+  margin-bottom: 2.6rem;
+}
+.hero--poster .hero__hint {
+  font-size: 0.62rem;
+  letter-spacing: 0.34em;
+}
+
+/* ------------------------ THE REGISTRY, QUIETED ------------------------- */
+
+/* ONE TAKE — the universe cards stop being product tiles and start being
+   exhibition plates. At rest a card is ART + CODE + NAME — nothing else.
+   The lore line, world tag, supply/price meta, artist line and claim bar
+   defer to hover/focus (and the dialog, which remains the place of record).
+   The min-heights the body already reserves mean the reveal never shifts
+   layout — it only appears, like a caption plate under museum glass.
+   Touch (hover: none) keeps everything visible: the reveal is a fine-
+   pointer courtesy, not a content gate. */
+.mv .ucard__world,
+.mv .ucard__lore,
+.mv .ucard__meta,
+.mv .ucard__artist,
+.mv .ucard__body .progress {
+  opacity: 0;
+  translate: 0 7px;
+  transition: opacity 0.5s var(--ease-expo), translate 0.5s var(--ease-expo);
+}
+.mv .ucard:hover .ucard__world,
+.mv .ucard:focus-visible .ucard__world,
+.mv .ucard:focus-within .ucard__world,
+.mv .ucard:hover .ucard__lore,
+.mv .ucard:focus-visible .ucard__lore,
+.mv .ucard:focus-within .ucard__lore,
+.mv .ucard:hover .ucard__meta,
+.mv .ucard:focus-visible .ucard__meta,
+.mv .ucard:focus-within .ucard__meta,
+.mv .ucard:hover .ucard__artist,
+.mv .ucard:focus-visible .ucard__artist,
+.mv .ucard:focus-within .ucard__artist,
+.mv .ucard:hover .ucard__body .progress,
+.mv .ucard:focus-visible .ucard__body .progress,
+.mv .ucard:focus-within .ucard__body .progress {
+  opacity: 1;
+  translate: 0 0;
+}
+@media (hover: none) {
+  .mv .ucard__world,
+  .mv .ucard__lore,
+  .mv .ucard__meta,
+  .mv .ucard__artist,
+  .mv .ucard__body .progress {
+    opacity: 1;
+    translate: none;
+  }
+}
+/* The resting label: the name is the plate's caption — a touch larger,
+   full ink, no dim. The code already rides the art. */
+.mv .ucard__name {
+  color: var(--ink);
+  font-size: 1.14rem;
+}
+.mv .ucard__code {
+  letter-spacing: 0.3em;
+}
+/* The showcase slot: the first plate in the current ordering hangs one
+   step larger — the eye enters the rack on the lead piece. The rail
+   measures its geometry from scrollWidth, so the wider lead is picked up
+   by the existing measure effect on filter/sort change. */
+.roster__rail .hang:first-child .ucard {
+  width: calc(clamp(280px, 26vw, 380px) * 1.1);
+}
+
+/* --------------------------- THE VOICE (I) ------------------------------ */
+
+/* ONE TAKE — the persona now opens the film (Act I, screen two). The
+   composition inverts: the character is the subject, large and centre-left
+   in a museum light; the chat is a small transmission panel. The support
+   copy steps back from a two-column panel to a quiet footnote. Act I's
+   accent is cyan, so the overhead light is cool. */
+.persona__interact {
+  grid-template-columns: 1.25fr 0.75fr;
+  align-items: center;
+}
+.persona__modelslot {
+  position: relative;
+  min-height: clamp(34rem, 46vw, 46rem);
+}
+/* The museum light: one cool source, above and in front. It lands as the
+   section enters (transition below) — the character is lit, not decorated. */
+.persona__modelslot::before {
+  content: '';
+  position: absolute;
+  inset: -8% -18%;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    55% 48% at 50% 16%,
+    color-mix(in srgb, var(--act-i) 9%, transparent),
+    transparent 72%
+  );
+  opacity: 0;
+  transition: opacity 1.6s var(--ease-expo) 0.25s;
+}
+.persona.in-view .persona__modelslot::before {
+  opacity: 1;
+}
+.persona__support {
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: clamp(2.4rem, 4vw, 3.6rem);
+}
+.persona__support .lede {
+  font-size: 1.02rem;
+  max-width: 54rem;
+  color: var(--ink-dim);
+}
+.persona__cap {
+  border: none;
+  background: none;
+  border-radius: 0;
+  border-top: 1px solid var(--line);
+  padding: 1rem 0 0;
+  font-size: 0.56rem;
+  letter-spacing: 0.2em;
+}
+@media (max-width: 980px) {
+  .persona__interact {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* -------------------------- THE DRIFT (II) ------------------------------ */
+
+/* ONE TAKE — the rotunda is a museum room, not a widget. The stage opens
+   from dark: the overhead light lands first (is-lit, ~650 ms), and only
+   then does the sphere mount and start its slow turn. One light source,
+   bone-white, from above — Act II belongs to the art, not the UI. */
+.cg-stage--sphere {
+  position: relative;
+}
+.cg-stage--sphere::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    58% 42% at 50% 12%,
+    rgba(235, 240, 252, 0.055),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 1.8s var(--ease-expo);
+}
+.cg-stage--sphere.is-lit::before {
+  opacity: 1;
+}
+
+/* -------------------------- THE CANON, EDITORIAL ------------------------ */
+
+/* ONE TAKE — lore stops being a content panel and becomes the film's
+   editorial spread: a reading column with a drop cap, and the canon's
+   numbers as bare oversized marginalia in the gutter (no tiles). */
+.lore__spread {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(2.5rem, 6vw, 6rem);
+  align-items: start;
+  margin-top: 2.6rem;
+}
+.lore__prose p {
+  font-family: var(--font-body);
+  font-size: 1.12rem;
+  line-height: 1.85;
+  color: var(--ink-dim);
+  margin-bottom: 1.7rem;
+  max-width: 34em;
+}
+.lore__prose p b {
+  color: var(--ink);
+  font-weight: 600;
+}
+/* Act II is the bone act — emphasis in the prose is a brighter ink with a
+   faint lift, not the cyan of Act I. The one gold thread is the money:
+   the 60/40 split, and the self-funding line. */
+.lore__copy p .hl,
+.lore__prose p .hl {
+  color: var(--ink);
+  font-weight: 600;
+  text-shadow: 0 0 22px rgba(245, 243, 255, 0.35);
+}
+.lore__prose p .hl-gold {
+  color: color-mix(in srgb, var(--gold) 88%, #ffffff 12%);
+  font-weight: 600;
+}
+.lore__drop::first-letter {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 4.1em;
+  line-height: 0.76;
+  float: left;
+  margin: 0.1em 0.16em 0 0;
+  color: var(--act-accent, var(--ink));
+  text-shadow: 0 0 44px color-mix(in srgb, var(--act-accent, #ffffff) 32%, transparent);
+}
+/* The numbers — bare, tabular, oversized. The count-up still runs; it just
+   has no card to live in. */
+.lore__nums {
+  display: flex;
+  flex-direction: column;
+  gap: 2.4rem;
+  padding-top: 0.4rem;
+  min-width: 11rem;
+}
+.lore-num b {
+  display: block;
+  font-family: var(--font-accent);
+  font-size: clamp(2.5rem, 3.8vw, 3.8rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.lore-num span {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.lore-num em {
+  display: block;
+  margin-top: 0.35rem;
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint-decor);
+}
+@media (max-width: 980px) {
+  .lore__spread {
+    grid-template-columns: 1fr;
+  }
+  .lore__nums {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 2rem 3rem;
+    min-width: 0;
+    margin-top: 1rem;
+  }
+}
+
+/* THE HANDS — the credit plate's quote is the plate's dominant element:
+   a real pull-quote, not a caption. */
+.creditcard__quote {
+  font-size: 1.5rem;
+  line-height: 1.42;
+  font-weight: 500;
+}
+
+/* -------------------------- FIRST DOORS (III) --------------------------- */
+
+/* ONE TAKE — the access ladder. One gold thread, four rungs. Act III's
+   accent is gold, so the thread is the act made visible: ownership is a
+   line you climb. */
+.perks__ladder {
+  position: relative;
+  max-width: 62rem;
+  padding-left: clamp(2rem, 4vw, 3rem);
+  margin-top: 0.5rem;
+}
+.perks__thread {
+  position: absolute;
+  left: 0.5rem;
+  top: 1rem;
+  bottom: 1rem;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--act-iii) 60%, transparent) 10%,
+    color-mix(in srgb, var(--act-iii) 60%, transparent) 90%,
+    transparent
+  );
+}
+.perk-rung {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: clamp(1.6rem, 3vw, 2.6rem);
+  row-gap: 1rem;
+  align-content: start;
+  padding: clamp(1.7rem, 3.2vw, 2.7rem) 0;
+  border-bottom: 1px solid var(--line);
+}
+.perk-rung:last-child {
+  border-bottom: none;
+}
+/* The node on the thread — the rung's place in the climb. */
+.perk-rung__node {
+  position: absolute;
+  left: calc(clamp(2rem, 4vw, 3rem) * -1 + 0.5rem - 4px);
+  top: clamp(2.1rem, 3.6vw, 3rem);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--card-accent, var(--act-iii));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--card-accent, var(--act-iii)) 65%, transparent);
+}
+.perk-rung__idx {
+  grid-row: 1;
+  align-self: center;
+  font-family: var(--font-accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  color: var(--ink-faint);
+}
+.perk-rung__head {
+  grid-row: 1;
+  grid-column: 2;
+  display: flex;
+  align-items: baseline;
+  gap: 1.3rem;
+  flex-wrap: wrap;
+}
+.perk-rung__trait {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(1.55rem, 1rem + 2.2vw, 2.7rem);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.perk-rung__list {
+  grid-row: 2;
+  grid-column: 2;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 46rem;
+  margin: 0;
+  padding: 0;
+}
+.perk-rung__list li {
+  position: relative;
+  padding-left: 1.5rem;
+  font-size: 0.96rem;
+  line-height: 1.55;
+  color: var(--ink-dim);
+}
+.perk-rung__list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.68em;
+  width: 0.75rem;
+  height: 1px;
+  background: color-mix(in srgb, var(--card-accent, var(--act-iii)) 75%, transparent);
+}
+/* The verification stamp gets its gold light. */
+.holderline {
+  text-shadow: 0 0 22px color-mix(in srgb, var(--gold) 35%, transparent);
+}
+
+/* ----------------------------- ARTIFACTS (III) -------------------------- */
+
+/* ONE TAKE — the store stops being a product grid. The featured artifact
+   bleeds to the viewport edge; the rest become catalog plates at stepped
+   scales with an annotation line each. No two plates carry the same
+   visual weight. */
+.store__mag {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: clamp(1.4rem, 3vw, 2.6rem);
+  align-items: start;
+}
+.store__hero {
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+.store__hero .product__media {
+  min-height: clamp(26rem, 44vw, 40rem);
+}
+.store__stack {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.2rem, 2.4vw, 2rem);
+}
+/* Catalog plates: stepped scale + offset, the stack reads as a shelf of
+   artifacts, not a grid of tiles. */
+.store__stack .product {
+  border-radius: var(--r-lg);
+}
+.store__stack .product:nth-child(2) {
+  scale: 0.97;
+  translate: 1.4rem 0;
+}
+.store__stack .product:nth-child(3) {
+  scale: 0.94;
+  translate: 2.8rem 0;
+}
+@media (max-width: 980px) {
+  .store__mag {
+    grid-template-columns: 1fr;
+  }
+  .store__stack .product:nth-child(2),
+  .store__stack .product:nth-child(3) {
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+/* --------------------------- THE RITUAL (III) --------------------------- */
+
+/* ONE TAKE — the disclosure that keeps the systems honest but hidden.
+   Rest: a single quiet line under the badge. Open: the control room
+   unfolds (framer height, compositor-clean). */
+.npx__disclosure {
+  margin: 1.1rem 0 0.4rem;
+}
+.npx__disclosure-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-family: var(--font-accent);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--line);
+  transition: color 0.3s var(--ease-expo);
+}
+.npx__disclosure-toggle:hover,
+.npx__disclosure-toggle:focus-visible {
+  color: var(--act-accent, var(--ink-dim));
+}
+.npx__disclosure-chev {
+  display: grid;
+  place-items: center;
+  transition: rotate 0.4s var(--ease-expo);
+}
+.npx__disclosure-chev.is-open {
+  rotate: 180deg;
+}
+.npx__disclosure-body {
+  overflow: hidden;
+}
+.npx__disclosure-body .npx__stats {
+  margin-top: 1rem;
+}
+
+/* The float chips are dashboard chatter — out of the ritual. */
+.npx__float-chips {
+  display: none;
+}
+
+/* THE ENGAGED STATE — a pull is in flight. The chrome steps out of the
+   light and the reveal plate owns the frame. The rail dims to a ghost
+   (interactions stay live — the plate's own PULL AGAIN / DONE actions
+   carry the keyboard path) and the stage lifts. Settles back on done(). */
+.npx__engaged .npx__rail,
+.npx__engaged .sechead,
+.npx__engaged .npx__foot {
+  opacity: 0.05;
+  transition: opacity 0.9s var(--ease-expo);
+}
+.npx__rail,
+.npx .sechead,
+.npx__foot {
+  transition: opacity 1.1s var(--ease-expo);
+}
+.npx__engaged .npx__stage {
+  z-index: 3;
+}
+.npx__engaged .npx__reveal {
+  scale: 1.05;
+  transition: scale 1.1s var(--ease-expo);
+}
+
+/* ----------------------------- STILLSHIP -------------------------------- */
+
+/* data-still: the film holds its breath (interludes + the void). Every
+   ambient system has exactly one static contract, and it lives here so no
+   renderer can drift from it. */
+
+/* Starfield canvas: fade to the dark, no drift (the canvas loop also checks
+   the attribute and parks itself — see Starfield in components/ui). */
+.starfield {
+  transition: opacity 1.2s var(--ease-expo);
+}
+html[data-still] .starfield {
+  opacity: 0;
+}
+
+/* Grain: hold one frame, drop to near-invisible. */
+html[data-still] .grain {
+  animation-play-state: paused;
+  opacity: 0.02;
+}
+
+/* Marquees: the crawl keeps its GSAP velocity driver; that reads the
+   stillness flag directly. The CSS-driven default variant pauses here. */
+html[data-still] .marquee__track {
+  animation-play-state: paused;
+}
+
+/* Sheens, blooms, breath loops on card-scale surfaces: rest. */
+html[data-still] .kcta:has(.btn-gold)::after {
+  animation-play-state: paused;
+}
+
+/* The hero hint's bob and the pulse dots settle to their mean state. */
+html[data-still] .hero__hint .arr,
+html[data-still] .pulse-dot::after,
+html[data-still] .orbit.spin,
+html[data-still] .orbit.spin-rev {
+  animation-play-state: paused;
+}
+
+/* ------------------------- THE DIALOG (all acts) ---------------------- */
+
+/* ONE TAKE — the plate that follows a card into focus. The morph is a
+   protected crown jewel; the interior just gets more air: the art takes
+   the wider column, the name breathes, and the specs become a catalogue
+   record — label · hairline · value, one annotated row each. */
+.dialog__grid {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+}
+.dialog__name {
+  font-size: clamp(2rem, 1.2rem + 2.6vw, 3.2rem);
+}
+.dialog__specs {
+  grid-template-columns: 1fr;
+  gap: 0;
+  border: none;
+  padding-block: 0;
+}
+.dialog__spec {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.8rem;
+  padding: 0.65rem 0;
+}
+.dialog__spec + .dialog__spec {
+  border-top: 1px solid var(--line);
+}
+.dialog__spec b {
+  margin-left: auto;
+  text-align: right;
+}

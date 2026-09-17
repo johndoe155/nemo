@@ -1869,32 +1869,58 @@
   top: 12px !important;
 }
 
-/* ============================ SECTION HEADS ============================ */
+/* ============================ SECTION HEADS ============================
+   ONE TAKE — the quiet header. One index line, one display line, one
+   reading line. The index line's hairline is the live act accent, so the
+   same component reads cool in Act I, bone in Act II, gold in Act III. */
 
 .sechead {
-  margin-bottom: 2.4rem;
+  position: relative;
+  margin-bottom: clamp(2.6rem, 5vw, 4.2rem);
   max-width: 56rem;
 }
-.sechead .kicker {
-  margin-bottom: 1rem;
+.sechead__index {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: var(--font-accent);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 1.5rem;
+}
+.sechead__index::before {
+  content: '';
+  width: 2.8rem;
+  height: 1px;
+  flex: none;
+  background: linear-gradient(90deg, var(--act-accent, var(--chrome)), transparent);
+  opacity: 0.85;
+}
+.sechead__index-num {
+  color: var(--act-accent, var(--ink-dim));
+  font-weight: 700;
 }
 .sechead .display {
   font-size: var(--fs-h2);
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
 }
 .sechead .sub {
   color: var(--ink-dim);
   font-size: var(--fs-lead);
   max-width: 46rem;
+  line-height: 1.7;
 }
 .sechead--center {
   margin-inline: auto;
   text-align: center;
 }
-.sechead--center .kicker {
+.sechead--center .sechead__index {
   justify-content: center;
 }
-.sechead--center .kicker::before {
+.sechead--center .sechead__index::before {
   display: none;
 }
 

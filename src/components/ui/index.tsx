@@ -33,14 +33,21 @@ export function Verified({ color = '#3FE8FF' }: { color?: string }) {
   );
 }
 
-/* ------------------------------ Section head ------------------------------ */
+/* ------------------------------ Section head ------------------------------
+   ONE TAKE — the "quiet header". The old recipe (giant ghost numeral +
+   neon kicker + display H2 + sub) was the same gesture twelve times, which
+   is exactly how a film stops looking like a template. The new head is one
+   index line — chapter number + name, hairline of the live act accent —
+   one display line, one reading line. The act accent on the hairline is
+   what tells you which act you are in; nothing else shouts.
+   (The ghost numeral is retired: `num` now renders inside the index line.)
+   ------------------------------------------------------------------------ */
 
 export function SectionHead({
   kicker,
   title,
   sub,
   center,
-  kickerGold,
   id,
   num,
 }: {
@@ -48,14 +55,20 @@ export function SectionHead({
   title: React.ReactNode;
   sub?: React.ReactNode;
   center?: boolean;
-  kickerGold?: boolean;
   id?: string;
+  /** Chapter number, rendered as the index line's lead ("01 — THE REGISTRY"). */
   num?: string;
+  /** @deprecated ONE TAKE — kept as a no-op prop so call sites migrate in
+   *  stages without a type break; the index line no longer takes a gold
+   *  variant, it takes the live act accent. */
+  kickerGold?: boolean;
 }) {
   return (
-    <div className={`sechead ${center ? 'sechead--center' : ''}`} id={id}>
-      {num && <span className={`sechead__num ${kickerGold ? 'gold-num' : ''}`} aria-hidden="true">{num}</span>}
-      <span className={`kicker ${kickerGold ? 'gold' : ''}`}>{kicker}</span>
+    <header className={`sechead ${center ? 'sechead--center' : ''}`} id={id}>
+      <span className="sechead__index" aria-hidden="true">
+        {num ? <span className="sechead__index-num">{num}</span> : null}
+        <span>{kicker}</span>
+      </span>
       <h2 className="display">
         <Reveal>{title}</Reveal>
       </h2>
@@ -64,7 +77,7 @@ export function SectionHead({
           <Reveal delay={0.12}>{sub}</Reveal>
         </div>
       )}
-    </div>
+    </header>
   );
 }
 
@@ -207,7 +220,10 @@ export function Marquee({
     const drive = () => {
       const raw = document.documentElement.style.getPropertyValue('--scroll-vel');
       const v = Math.abs(parseFloat(raw) || 0);
-      const factor = Math.min(1 + v * VEL_GAIN, VEL_MAX);
+      /* STILLSHIP (ONE TAKE): in a stillness zone the end credits hold
+         their breath — timeScale 0, no drift, no spin. */
+      const still = document.documentElement.dataset.still === 'true';
+      const factor = still ? 0 : Math.min(1 + v * VEL_GAIN, VEL_MAX);
       crawl.timeScale(factor);
       for (const t of spinTweens) t.timeScale(factor);
     };
@@ -438,6 +454,12 @@ export function Starfield({
     let raf = 0;
     let w = 0;
     let h = 0;
+    /* STILLSHIP (ONE TAKE): in a stillness zone (html[data-still] — an
+       interlude or the void) the sky goes dark and the loop parks itself
+       instead of chasing frames for a canvas CSS is fading to zero. A
+       MutationObserver on the flag wakes it the frame the film breathes
+       again. */
+    const stillNow = () => document.documentElement.dataset.still === 'true';
 
     interface Star {
       x: number;
@@ -475,9 +497,10 @@ export function Starfield({
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
       seed();
+      if (reduce) renderFrame(); // keep the static frame current on resize
     };
 
-    const draw = () => {
+    const renderFrame = () => {
       ctx.clearRect(0, 0, w, h);
       const t = performance.now();
       for (const s of stars) {
@@ -497,8 +520,29 @@ export function Starfield({
         ctx.fill();
       }
       ctx.globalAlpha = 1;
-      if (!reduce) raf = requestAnimationFrame(draw);
     };
+
+    const draw = () => {
+      renderFrame();
+      /* Park the loop when the film is still (or under reduced motion,
+         where a single static frame is the whole contract). */
+      raf = !reduce && !stillNow() ? requestAnimationFrame(draw) : 0;
+    };
+
+    const wake = () => {
+      if (raf !== 0) return;
+      if (reduce) {
+        renderFrame(); // the reduced-motion static frame
+        return;
+      }
+      if (!stillNow()) raf = requestAnimationFrame(draw);
+    };
+
+    const mo = new MutationObserver(wake);
+    mo.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-still'],
+    });
 
     resize();
     const ro = new ResizeObserver(resize);
@@ -506,6 +550,7 @@ export function Starfield({
     draw();
     return () => {
       cancelAnimationFrame(raf);
+      mo.disconnect();
       ro.disconnect();
     };
   }, [density, drift]);

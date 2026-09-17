@@ -6,14 +6,18 @@ import { useFocusTrap, useScrollspy } from '../lib/hooks';
 import { lockPage, unlockPage } from '../lib/scroll';
 import { LOGO_SRC } from '../lib/assets';
 
+/* ONE TAKE — the index follows the film's new order: the voice opens the
+   story, the canon holds the middle, the deal lands last. Seven links; the
+   remaining destinations (store, the drift's plates) stay one anchor tap
+   away through the footer and the console. */
 const LINKS = [
-  { n: '01', label: 'NEMOVERSE', href: '#nemoverse' },
-  { n: '02', label: 'THE ROTUNDA', href: '#rotunda' },
-  { n: '03', label: 'THE PERSONA', href: '#persona' },
-  { n: '04', label: 'HOLDER PERKS', href: '#perks' },
-  { n: '05', label: 'POP PULLS', href: '#pulls' },
-  { n: '06', label: 'STORE', href: '#store' },
-  { n: '07', label: 'ARTISTS', href: '#artists' },
+  { n: '01', label: 'THE VOICE', href: '#persona' },
+  { n: '02', label: 'THE REGISTRY', href: '#nemoverse' },
+  { n: '03', label: 'THE DRIFT', href: '#rotunda' },
+  { n: '04', label: 'THE CANON', href: '#lore' },
+  { n: '05', label: 'THE HANDS', href: '#artists' },
+  { n: '06', label: 'FIRST DOORS', href: '#perks' },
+  { n: '07', label: 'THE RITUAL', href: '#pulls' },
 ];
 
 const SECTION_IDS = LINKS.map((l) => l.href.slice(1));

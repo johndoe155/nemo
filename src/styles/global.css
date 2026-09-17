@@ -43,6 +43,27 @@
   --grad-gold: linear-gradient(95deg, #f6d47c, #ffc857 45%, #c98a2e);
   --grad-ghost: linear-gradient(180deg, rgba(245, 243, 255, 0.92), rgba(245, 243, 255, 0.35));
 
+  /* ---- ONE TAKE — act accent system -------------------------------------
+     The film is shot in three acts + a coda. ONE accent is live at a time;
+     html[data-act] (written by lib/chapters.ts as sections cross the centre
+     band) promotes the act's hue into --act-accent, which every in-view
+     surface reads. This is the difference between "a palette" and "lighting".
+       I   — THE SIGNAL : the waking, cyan
+       II  — THE CANON  : bone — the art carries the hue, the UI stays lit
+       III — THE DEAL   : gold — ownership, rarity, value
+       CODA — the collapse: the singularity's own ember, read off the
+             simulation palette (not a house hue). */
+  --act-i: var(--cyan);
+  --act-ii: #ffffff;
+  --act-iii: var(--gold);
+  --act-coda: #e8b48a;
+  /* Global fallback before the director stamps data-act (first paint = Act I). */
+  --act-accent: var(--act-i);
+  /* Chrome (rails, filaments, hairlines, cursor glow) is desaturated by law:
+     accent is a narrative resource, not a UI default. */
+  --chrome: rgba(178, 190, 216, 0.55);
+  --chrome-strong: rgba(196, 208, 236, 0.9);
+
   /* ---- Rarity ---- */
   --r-common: #c8cfe0;
   --r-rare: #3fe8ff;
@@ -93,8 +114,10 @@
   --font-mono: var(--font-accent);
   --font-ui: var(--font-body);
 
+  /* P-1 (ONE TAKE): H2 steps down a notch — the intertitles and the sign-off
+     now own the top of the scale. Section titles are the quiet voice. */
   --fs-h1: clamp(2.7rem, 1rem + 6.6vw, 7.25rem);
-  --fs-h2: clamp(1.9rem, 1rem + 3.6vw, 4.1rem);
+  --fs-h2: clamp(1.7rem, 1rem + 2.9vw, 3.4rem);
   --fs-h3: clamp(1.25rem, 1rem + 1.1vw, 1.85rem);
   --fs-lead: clamp(1.05rem, 0.95rem + 0.45vw, 1.35rem);
   --fs-body: clamp(0.98rem, 0.94rem + 0.18vw, 1.1rem);
@@ -107,10 +130,12 @@
   /* Vertical dynamic range (DESIGN_AUDIT 1.3 / P3.14). Three sizes and the
      discipline of USING them unevenly: --gap-l belongs to the two thresholds
      of the scroll story — before the Singularity and before the Sign-off —
-     and nowhere else. */
+     and nowhere else. --gap-xl is the VOID: the one breath the film holds
+     before the collapse (sections/void, observed for stillness). */
   --gap-s: 10vw;
   --gap-m: 16vw;
   --gap-l: 26vw;
+  --gap-xl: 40vh;
   --max: 1500px;
   --nav-h: 78px;
   --r-card: 18px;
@@ -333,6 +358,10 @@ section[id] {
   padding-block: clamp(5.5rem, var(--gap-m), 13rem);
 }
 
+/* P-1 (ONE TAKE) — the kicker is demoted from "neon sign" to "archive index":
+   desaturated ink, a hairline of the LIVE ACT accent, no drifting loop. The
+   per-section index line (sechead__index) is its primary face now; raw
+   .kicker survives as the minimal form. */
 .kicker {
   display: inline-flex;
   align-items: center;
@@ -342,15 +371,13 @@ section[id] {
   font-weight: 700;
   letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: var(--cyan);
+  color: var(--ink-faint);
 }
 .kicker::before {
   content: '';
   width: 2.4rem;
   height: 1px;
-  background: linear-gradient(90deg, transparent, currentColor);
-  background-size: 260% 100%;
-  animation: gdrift 11s ease-in-out infinite;
+  background: linear-gradient(90deg, var(--act-accent, var(--chrome)), transparent);
   flex: none;
 }
 .kicker.gold {
@@ -923,15 +950,16 @@ section[id] {
   background: rgba(255, 255, 255, 0.07);
   overflow: hidden;
 }
+/* P-1 (ONE TAKE) — progress fills are data, not aurora: a desaturated
+   steel-cyan fill, no drifting loop. The tri-gradient is reserved for the
+   three sanctioned sites (loader morph, hero title, sign-off). */
 .progress > i {
   display: block;
   width: 100%;
   height: 100%;
   border-radius: 99px;
-  background: var(--grad-primary);
-  background-size: 240% 240%;
-  animation: gdrift 13s ease-in-out infinite;
-  box-shadow: 0 0 14px rgba(63, 232, 255, 0.6);
+  background: linear-gradient(90deg, var(--chrome), var(--chrome-strong));
+  box-shadow: 0 0 10px rgba(120, 150, 200, 0.35);
   /* fills are driven with scaleX from JS — transform-only, zero relayout */
   transform: scaleX(var(--p, 1));
   transform-origin: left;

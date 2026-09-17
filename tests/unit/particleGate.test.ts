@@ -81,12 +81,15 @@ test('the field has no loader of its own: the boot owns the wait (P7)', () => {
     assert.doesNotMatch(css, /nemo-field__loading|npfLoadspin/, `${sheet} carries no veil rules`);
   }
 
-  /* And the boot actually waits on it. */
+  /* And the boot actually waits on it. ONE TAKE — the release now waits on
+     the hero art as well (fonts + poster + field), so the regex must allow
+     the art gate between the fonts and the field; the contract it guards —
+     the boot never releases before the field reports, capped — is intact. */
   const loader = readFileSync(join(SRC, 'components', 'Loader.tsx'), 'utf8');
   assert.match(loader, /import \{ particleFieldReady \}/, 'the loader imports the gate');
   assert.match(
     loader,
-    /Promise\.all\(\[fontsReady, particleFieldReady\(/,
+    /Promise\.all\(\[\s*fontsReady,\s*heroArtReady\([^)]*\),\s*particleFieldReady\(/,
     'and the release waits on the field as well as the fonts',
   );
 });

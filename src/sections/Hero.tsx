@@ -1,14 +1,38 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { motion, useScroll, useTransform, useMotionValue } from 'framer-motion';
+import CardImage from '../components/CardImage';
 import { Reveal } from '../components/ui';
-import { LiquidButton, GlassButton, PortalMagnetic } from '../components/PortalButton';
-import { DROP_LABEL, UNIVERSES, UNIVERSE_DROP_ISO, visibleUniverses } from '../lib/data';
-import NemoParticleField from '../components/NemoParticleField';
+import { LiquidButton, PortalMagnetic } from '../components/PortalButton';
+import { settleHeroArt } from '../lib/heroArtGate';
+import { art, UNIVERSE_DROP_ISO, visibleUniverses } from '../lib/data';
 import { useCountdown } from '../lib/hooks';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+/* ============================================================================
+   THE POSTER — hero, ONE TAKE.
+
+   The film opens on its key art: the wanderer before the ring of portals,
+   full-bleed. Five elements, no more: the title, one line of lede, one
+   portal, a single data line, a hint. Everything else the old hero carried
+   — the badge ticker, the ASCII sub-block, the telemetry row, the orbit
+   rings, the ghost watermark, the progress bar, the particle field — is
+   gone from the first impression. The particle field still exists in the
+   codebase (its boot gate is released by App on mount, see heroArtGate).
+
+   Depth is three planes:
+     · the key art — slow Ken Burns + scroll parallax (it recedes and dims
+       as the film moves on)
+     · the vignette — cinematic edge darkening, the bottom fading into the
+       void so the next act rises out of it
+     · the type — bottom-left, the loudest thing in the frame, scattering
+       on the first 40vh of scroll (GSAP scrub, unchanged authority split:
+       framer owns the entrance, GSAP owns the exit)
+============================================================================ */
+
+/* Per-letter hover glitch for VERSIONS — carried over from the old hero,
+   it is the one piece of play allowed in the title. */
 function GlitchLetters({ word }: { word: string }) {
   return (
     <>
@@ -21,76 +45,49 @@ function GlitchLetters({ word }: { word: string }) {
   );
 }
 
-/* Scroll-bound entrance for the three hero title lines (ONE CANON. / INFINITE /
-   VERSIONS.): Line 1 slides in from the left, Line 2 fades/scales in, Line 3
-   enters from the right. Fires once as the hero scrolls into view — since it's
-   the first section, that happens on load. */
 const HERO_VIEWPORT = { once: true, amount: 0.3 } as const;
-
-const totalSupply = UNIVERSES.reduce((s, u) => s + u.supply, 0);
-const totalMinted = UNIVERSES.reduce((s, u) => s + u.minted, 0);
-
-/* Geometric ASCII separator — dual-frequency interference + sliding window.
-   Run lengths continuously morph (e.g. --==++==-- ↔ +=----===+) while the
-   window scrolls horizontally. Fixed output width keeps the flex row stable. */
-const GEOM_GLYPHS = ['-', '=', '+', '=', '-'] as const;
-const GEOM_WIDTH = 14;
-
-function buildGeomPattern(t: number): string {
-  let buf = '';
-  for (let i = 0; i < GEOM_GLYPHS.length; i++) {
-    const n = 1 + Math.round(2 + 1.85 * Math.sin(t * 0.95 + i * ((Math.PI * 2) / GEOM_GLYPHS.length)));
-    buf += GEOM_GLYPHS[i].repeat(Math.max(1, n));
-  }
-  // Secondary high-frequency ripple occasionally inserts a + so the sequence
-  // doesn't stay a perfect palindrome — closer to +=----===+ style frames.
-  if (Math.sin(t * 1.7) > 0.55) {
-    buf = '+' + buf.slice(1, -1) + '+';
-  }
-  const len = buf.length || 1;
-  const shift = ((Math.floor(t * 8) % len) + len) % len;
-  return (buf + buf).slice(shift, shift + GEOM_WIDTH);
-}
-
-function GeomSep({ reduced }: { reduced: boolean }) {
-  const ref = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (reduced) {
-      el.textContent = '--==++==--';
-      return;
-    }
-    let raf = 0;
-    const t0 = performance.now();
-    const tick = (now: number) => {
-      el.textContent = buildGeomPattern((now - t0) / 1000);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [reduced]);
-
-  return (
-    <span className="hero__sub-sep" aria-hidden="true" ref={ref}>
-      --==++==--
-    </span>
-  );
-}
 
 export default function Hero() {
   const ref = useRef<HTMLElement | null>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
 
-  /* P3.12 (audit 2.4) — the handoff flings the title into the rail: line 1
-     ←, line 3 →, line 2 up, all to opacity 0, scrubbed across the first
-     40vh on the SAME range that currently just fades `contentOpacity`.
-     GSAP's translateX/translateY write the standalone CSS `translate`
-     property, so the framer entrance transforms (x/scale on the same
-     elements) are never touched — the two authorities coexist by geometry.
-     Reduced motion vetoes the whole timeline; the framer fade stays as the
-     only exit. */
+  /* Lenis owns scroll inertia (lib/scroll.ts) — the progress arrives
+     continuous by construction, so it is consumed raw. */
+  const smooth = scrollYProgress;
+
+  /* Poster depth — the art breathes (Ken Burns 1.08 → 1.24 across the
+     first viewport) and recedes (y drift + dim) while the type lifts out
+     of it. Cursor nudge: a few px against the pointer, composed with the
+     scroll drift in one calc() so the two authorities never fight. */
+  const bgScale = useTransform(smooth, [0, 1], [1.08, 1.24]);
+  const contentY = useTransform(smooth, [0, 1], [0, -140]);
+  const contentOpacity = useTransform(smooth, [0, 0.55], [1, 0]);
+  const artFade = useTransform(smooth, [0, 1], [1, 0.3]);
+
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const handleMove = (e: MouseEvent) => {
+      const { innerWidth: w, innerHeight: h } = window;
+      mx.set((e.clientX / w - 0.5) * 2);
+      my.set((e.clientY / h - 0.5) * 2);
+    };
+    window.addEventListener('mousemove', handleMove, { passive: true });
+    return () => window.removeEventListener('mousemove', handleMove);
+  }, [mx, my]);
+
+  const bgX = useTransform(mx, (v) => `${v * -10}px`);
+  const bgY = useTransform([smooth, my], (latest) => {
+    const [s, m] = latest as [number, number];
+    return `calc(${s * 13}% + ${m * -8}px)`;
+  });
+
+  /* Scroll-bound exit: the title scatters — line 1 leaves left, line 2
+     right, both rising, scrubbed across the first 40vh. GSAP writes the
+     standalone `translate` properties so the framer entrance transforms
+     are never touched. Reduced motion vetoes; the framer fade remains. */
   const titleRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     const el = titleRef.current;
@@ -100,247 +97,120 @@ export default function Hero() {
       const tl = gsap.timeline({
         defaults: { ease: 'none' },
         scrollTrigger: {
-          /* The scatter rides the hero's own first 40vh — progress 0 at the
-             top of the page, so the title is whole when the site opens. */
           trigger: ref.current,
           start: 'top top',
           end: '+=40vh',
           scrub: 0.6,
         },
       });
-      tl.to(
-        '.hero__line--1',
-        { translateX: '-13vw', translateY: '2.5vh', opacity: 0 },
+      tl.to('.hero__line--1', { translateX: '-12vw', translateY: '2.5vh', opacity: 0 }, 0).to(
+        '.hero__line--2',
+        { translateX: '12vw', translateY: '3vh', opacity: 0 },
         0,
-      )
-        .to('.hero__line--2', { translateY: '-9vh', opacity: 0 }, 0)
-        .to('.hero__line--3', { translateX: '13vw', translateY: '3vh', opacity: 0 }, 0);
+      );
     }, el);
     return () => ctx.revert();
     // ref is the stable hero section container; it never swaps identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  /* Lenis owns scroll inertia (lib/scroll.ts). The old useSpring wrapper here
-     stacked a second smoothing layer on top of the engine's own — exactly
-     the mush the audit called out; scrollYProgress now arrives continuous by
-     construction, so it is consumed raw. The name stays `smooth` for the
-     transform block below. */
-  const smooth = scrollYProgress;
-
-  const bgScale = useTransform(smooth, [0, 1], [1.12, 1.3]);
-  const contentY = useTransform(smooth, [0, 1], [0, -90]);
-  const contentOpacity = useTransform(smooth, [0, 0.72], [1, 0]);
-  const orbitY = useTransform(smooth, [0, 1], [0, -160]);
-  const progressScale = useTransform(smooth, [0, 1], [0, 1]);
 
   const t = useCountdown(UNIVERSE_DROP_ISO);
-
   const prefersReduced =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const [marqueePaused, setMarqueePaused] = useState(false);
-
-  useEffect(() => {
-    if (prefersReduced || typeof window === 'undefined') return;
-    const handleMove = (e: MouseEvent) => {
-      const { innerWidth: w, innerHeight: h } = window;
-      const x = (e.clientX / w - 0.5) * 2; // -1..1
-      const y = (e.clientY / h - 0.5) * 2;
-      mx.set(x);
-      my.set(y);
-    };
-    window.addEventListener('mousemove', handleMove, { passive: true });
-    return () => window.removeEventListener('mousemove', handleMove);
-  }, [prefersReduced, mx, my]);
-
-  /* Background layer drifts down on scroll and nudges a few px opposite the
-     cursor for a subtle tilt. Both effects share the same x/y transform, so
-     they're combined into one motion value each rather than two style keys.
-     This is the OUTER transform: the particle field inside it runs its own
-     pointer response in canvas-local pixels and reads its position back
-     through getBoundingClientRect(), so the two compose instead of fighting. */
-  const bgX = useTransform(mx, (v) => `${v * -12}px`);
-  const bgY = useTransform([smooth, my], (latest) => {
-    const [s, m] = latest as [number, number];
-    return `calc(${s * 18}% + ${m * -12}px)`;
-  });
-
-  /* Staggered scroll entrance for one title line.
-     - x:      travel distance (negative = from the left, positive = from the right)
-     - scale:  1 = plain fade-slide, <1 = fade + scale-in (used by INFINITE)
-     - delay:  cascades Line 1 -> Line 2 -> Line 3 */
-  function titleEntrance(x: number, scale: number, delay: number) {
+  /* Staggered scroll entrance for one title line. */
+  function titleEntrance(x: number, delay: number) {
     if (prefersReduced) {
       return { initial: { opacity: 1 }, whileInView: { opacity: 1 } };
     }
     return {
-      initial: { opacity: 0, x, scale },
-      whileInView: { opacity: 1, x: 0, scale: 1 },
-      transition: { duration: 1.05, delay, ease: EASE },
+      initial: { opacity: 0, x },
+      whileInView: { opacity: 1, x: 0 },
+      transition: { duration: 1.15, delay, ease: EASE },
       viewport: HERO_VIEWPORT,
     };
   }
 
   const statusLine = t.done
-    ? 'THE NEMOVERSE IS LIVE · U-007 IS IN THE REGISTRY'
-    : `EST. 2026 · THE NEMOVERSE IS LIVE · U-007 DROPS IN ${t.d}D ${t.h}H`;
-  const ticker = `${statusLine}   ·   `;
+    ? 'The Nemoverse is live. Universe U-007 is in the registry.'
+    : `The Nemoverse is live. Next drop: U-007.`;
 
   return (
-    <header className="hero" ref={ref} id="top">
-      {/* The background layer. Everything inside it is the WebGL particle field
-          (components/NemoParticleField.tsx + src/three/nemo-particles/); the
-          scroll parallax and cursor nudge below are unchanged, and now move the
-          canvas instead of a photo. */}
-      <motion.div
-        className="hero__bg"
-        style={{ scale: bgScale, y: bgY, x: bgX }}
-      >
-        <NemoParticleField hostRef={ref} />
-      </motion.div>
-      <div className="hero__wash" />
-      <div className="hero__scanlines" />
-      <div className="hero__watermark ghost-num ghost-num--huge" aria-hidden="true">NEMO</div>
-
-      <motion.div
-        className="hero__telemetry"
-        style={{ y: orbitY, opacity: contentOpacity }}
-        aria-hidden="true"
-      >
-        <span>UNIVERSE REGISTRY</span>
-        <span>
-          REGISTERED <b>{UNIVERSES.length}</b>
-        </span>
-        <span>
-          SUPPLY <b>{totalSupply}</b>
-        </span>
-        <span>
-          MINTED <b>{totalMinted}</b>
-        </span>
-        <span>
-          NEXT <b>{t.done ? 'LIVE' : `D-${t.d}`}</b>
-        </span>
+    <header className="hero hero--poster" ref={ref} id="top">
+      {/* Plane 1 — the key art. */}
+      <motion.div className="hero__bg" style={{ scale: bgScale, y: bgY, x: bgX, opacity: artFade }}>
+        <CardImage
+          src={art('hero.jpg')}
+          alt="NEMO — the canon character, standing before the ring of universe portals"
+          eager
+          sizes="100vw"
+          fetchpriority="high"
+          onLoaded={() => settleHeroArt()}
+        />
       </motion.div>
 
-      <motion.div className="shell hero__content" style={{ y: contentY, opacity: contentOpacity }}>
-        <Reveal delay={0.05}>
-          {/* P0.4 — the ticker is DECORATION: its text mutates every second
-              (d/h countdown), so it used to re-announce itself through
-              role="status" on a live region — permanent SR spam. The visual
-              marquee is now aria-hidden and the announcement is a separate,
-              static line: one polite status sentence that only changes when
-              the situation changes, and a one-shot assertive alert the frame
-              the drop goes live. */}
-          <span
-            className={`hero__badge hero__marquee${t.done ? ' live-pill' : ''}${marqueePaused ? ' is-paused' : ''}`}
-            aria-hidden="true"
-            onPointerDown={() => setMarqueePaused(true)}
-            onPointerUp={() => setMarqueePaused(false)}
-            onPointerLeave={() => setMarqueePaused(false)}
-            onPointerCancel={() => setMarqueePaused(false)}
-          >
-            <span className="pulse-dot" />
-            <span className="hero__marquee-viewport">
-              <span className="hero__marquee-track">
-                <span className="hero__marquee-copy">{ticker}</span>
-                <span className="hero__marquee-copy" aria-hidden="true">
-                  {ticker}
-                </span>
-              </span>
-            </span>
-          </span>
-          <span className="vh" role="status">
-            {t.done
-              ? 'The Nemoverse is live. Universe U-007 is in the registry.'
-              : `The Nemoverse is live. Next drop: U-007, ${DROP_LABEL}.`}
-          </span>
-          {t.done && (
-            <span className="vh" role="alert">
-              U-007 drop is live now.
-            </span>
-          )}
-        </Reveal>
+      {/* Plane 2 — the cinematic vignette. */}
+      <div className="hero__vignette" aria-hidden="true" />
 
+      {/* The one data line — the hero's only telemetry, top-right. */}
+      <div className="hero__dataline" aria-hidden="true">
+        <span>EST. 2026</span>
+        <span>{visibleUniverses.length} UNIVERSES</span>
+        <span className="hero__dataline-live">{t.done ? 'U-007 LIVE' : `NEXT DROP · D-${t.d}`}</span>
+      </div>
+
+      {/* Plane 3 — the type. */}
+      <motion.div
+        className="shell hero__content"
+        style={{ y: contentY, opacity: contentOpacity }}
+      >
         <h1
           className="display hero__title"
           aria-label="One canon. Infinite versions."
           ref={titleRef}
         >
-          {/* Line 1 — solid ONE + extended gradient CANON + flat white period */}
-          <motion.span
-            className="hero__line hero__line--1"
-            {...titleEntrance(-90, 1, 0.15)}
-          >
-            <span className="hero__one">ONE</span>{' '}
-            <span className="hero__glow">
-              <span className="hero__wide hero__grad">CANON</span>
-            </span>
+          <motion.span className="hero__line hero__line--1" {...titleEntrance(-70, 0.15)}>
+            <span className="hero__one">ONE </span>
+            <span className="hero__grad hero__wide">CANON</span>
             <span className="hero__period">.</span>
           </motion.span>
-
-          {/* Line 2 — hollow, white-outlined INFINITE */}
-          <motion.span
-            className="hero__line hero__line--2"
-            {...titleEntrance(0, 0.82, 0.4)}
-          >
-            <span className="hero__hollow">INFINITE</span>
-          </motion.span>
-
-          {/* Line 3 — extended gradient VERSIONS, per-letter hover glitch, flat period */}
-          <motion.span
-            className="hero__line hero__line--3"
-            {...titleEntrance(90, 1, 0.62)}
-          >
-            <span className="hero__glow">
-              <span className="hero__wide hero__grad hero__vers">
-                <GlitchLetters word="VERSIONS" />
-              </span>
+          <motion.span className="hero__line hero__line--2" {...titleEntrance(70, 0.38)}>
+            <span className="hero__hollow">INFINITE </span>
+            <span className="hero__grad hero__wide hero__vers">
+              <GlitchLetters word="VERSIONS" />
             </span>
             <span className="hero__period">.</span>
           </motion.span>
         </h1>
 
-        <Reveal delay={0.5}>
-          <p className="hero__subblock">
-            <span className="hero__sub-brand">THE NEMOVERSE</span>
-            <GeomSep reduced={prefersReduced} />
-            <span className="hero__sub-desc">A CONNECTED WEB3 ECOSYSTEM</span>
-          </p>
-        </Reveal>
-
-        <Reveal delay={0.62}>
+        <Reveal delay={0.55}>
           <p className="hero__lede">
-            One character. <em>{visibleUniverses.length} registered universes</em> — each commissioned from a different
-            artist, numbered, canonized, and minted as a limited run. Holders enter new universes
-            first. Every purchase pulls a piece from the Nemoverse. The persona keeps it alive
-            between drops.
+            One character. {visibleUniverses.length} registered universes — each commissioned from a
+            different artist, numbered, and minted as a limited run.
           </p>
         </Reveal>
 
-        <Reveal delay={0.74}>
+        <Reveal delay={0.68}>
           <div className="hero__ctas">
             <PortalMagnetic>
               <LiquidButton href="#nemoverse" />
             </PortalMagnetic>
-            <PortalMagnetic>
-              <GlassButton href="#perks" />
-            </PortalMagnetic>
           </div>
         </Reveal>
 
-        <Reveal delay={0.86}>
+        <Reveal delay={0.82}>
           <div className="hero__hint">
-            <span className="arr">▼</span> SCROLL TO CROSS UNIVERSES
+            <span className="arr">▼</span> CROSS THE THRESHOLD
           </div>
         </Reveal>
-      </motion.div>
 
-      <div className="hero__progress">
-        <motion.i style={{ scaleX: progressScale }} />
-      </div>
+        {/* P0.4 — the live status is a separate, polite line; the visible
+            data line is decoration (aria-hidden). */}
+        <span className="vh" role="status">
+          {statusLine}
+        </span>
+      </motion.div>
     </header>
   );
 }

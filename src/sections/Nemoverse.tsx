@@ -256,16 +256,19 @@ export default function Nemoverse() {
       <div className="shell">
         <div className="mv__head">
           <div>
-            <span className="kicker">01 · THE ANCHOR FEATURE</span>
+            <span className="sechead__index" aria-hidden="true">
+              <span className="sechead__index-num">02</span>
+              <span>THE REGISTRY</span>
+            </span>
             <h2 className="display" style={{ fontSize: 'var(--fs-h2)' }}>
               <Reveal>
-                The <span className="txt-grad">Nemoverse</span>
+                The <span className="hl-act">Nemoverse</span>
               </Reveal>
             </h2>
             <Reveal delay={0.1}>
               <p className="sub" style={{ color: 'var(--ink-dim)', maxWidth: '44rem', marginTop: '0.8rem' }}>
-                One canon collection. Infinite versions of the OC — every commissioned artist creates
-                their own official, numbered universe. Browse by artist, release date, or rarity.
+                One canon collection — every commissioned artist creates their own official,
+                numbered universe. Browse by rarity, release date, or claim.
               </p>
             </Reveal>
           </div>

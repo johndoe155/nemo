@@ -183,17 +183,23 @@ export const SCENES: Record<SceneId, Scene> = {
 export const DEFAULT_SCENE: SceneId = 'arrival';
 
 /* Section id → scene. Ids match the live DOM (Hero renders header#top;
-   the footer is #connect and sits outside <main>, hence getElementById). */
+   the footer is #connect and sits outside <main>, hence getElementById).
+   ONE TAKE additions: the interludes and the void are thresholds — the
+   first eases the gold ingress as the deal approaches, the second and the
+   void close the sky down into the singularity's navy. */
 export const SECTION_SCENE: Record<string, SceneId> = {
   top: 'arrival',
+  persona: 'signal',
   nemoverse: 'registry',
   rotunda: 'registry',
-  persona: 'signal',
+  lore: 'abyss',
+  artists: 'constellation',
+  'interlude-canon': 'vault',
   perks: 'arsenal',
   pulls: 'vault',
   store: 'vault',
-  artists: 'constellation',
-  lore: 'abyss',
+  'interlude-doors': 'abyss',
+  void: 'abyss',
   singularity: 'singularity',
   connect: 'abyss',
 };

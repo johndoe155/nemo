@@ -1,4 +1,4 @@
-import { Component, Suspense, lazy, useRef, type ReactNode } from 'react';
+import { Component, Suspense, lazy, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useInView } from 'framer-motion';
 import { Reveal, SectionHead } from '../components/ui';
 import NemoChat from '../components/NemoChat';
@@ -56,24 +56,36 @@ function DesktopPersonaModel() {
 }
 
 export default function Persona() {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  /* ONE TAKE — the museum light lands when the section enters (CSS
+     transition on .persona.in-view, see styles/chapters.css). */
+  const inView = useInView(sectionRef, { once: true, margin: '-12% 0px' });
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    if (inView) setEntered(true);
+  }, [inView]);
+
   return (
-    <section className="section persona" id="persona">
+    <section
+      className={`section persona${entered ? ' in-view' : ''}`}
+      id="persona"
+      ref={sectionRef}
+    >
       <div className="gridplane" />
       <div className="shell persona__layout">
         <div className="persona__head">
           <SectionHead
-            num="03"
-            kicker="03 · PILLAR 4 — THE AI PERSONA"
+            num="01"
+            kicker="THE VOICE"
             title={
               <>
-                The voice that <span className="txt-grad">teases</span> every universe
+                The voice that <span className="hl-act">teases</span> every universe
               </>
             }
             sub={
               <>
-                An AI-driven persona that speaks and interacts as the OC — active on X even when the
-                creator isn't posting. The Nemoverse's drop schedule is its built-in content
-                calendar.
+                NEMO speaks for himself — on the Hub, on X, between drops and after them.
+                This is a live transmission; he notices you are here.
               </>
             }
           />

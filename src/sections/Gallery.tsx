@@ -93,6 +93,18 @@ export default function Gallery() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [stageBox, setStageBox] = useState({ w: 0, h: 0 });
   const [inView, setInView] = useState(false);
+  /* ONE TAKE — museum entry. The room lights first (is-lit on the stage,
+     ~1.8s CSS transition), and the sphere mounts half a beat after, so the
+     eye meets a lit, still room before the canon starts to turn. */
+  const [sphereLive, setSphereLive] = useState(false);
+  useEffect(() => {
+    if (!inView) {
+      setSphereLive(false);
+      return;
+    }
+    const t = window.setTimeout(() => setSphereLive(true), 650);
+    return () => window.clearTimeout(t);
+  }, [inView]);
   /* The page-scroll position feeds the sphere's gust channel — being
      scrolled past nudges its spin (DESIGN_AUDIT P3.2b). */
   const { scrollY: pageScroll } = useScroll();
@@ -153,7 +165,10 @@ export default function Gallery() {
       <div className="shell">
         <header className="cg__head">
           <div className="cg__headtext">
-            <span className="kicker">02 · THE ROTUNDA</span>
+            <span className="sechead__index" aria-hidden="true">
+              <span className="sechead__index-num">03</span>
+              <span>THE DRIFT</span>
+            </span>
             <h2 className="display cg__title" style={{ fontSize: 'var(--fs-h2)' }}>
               Drift through the canon
             </h2>
@@ -179,8 +194,11 @@ export default function Gallery() {
         </header>
       </div>
 
-      <div ref={stageRef} className="cg-stage cg-stage--sphere">
-        {!REDUCE && inView && stageBox.w > 0 && (
+      <div
+        ref={stageRef}
+        className={`cg-stage cg-stage--sphere${inView ? ' is-lit' : ''}`}
+      >
+        {!REDUCE && sphereLive && stageBox.w > 0 && (
           <SphereImageGrid
             images={SPHERE_IMAGES}
             containerSize={containerSize}

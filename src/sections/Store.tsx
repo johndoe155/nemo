@@ -127,11 +127,11 @@ export default function Store() {
     <section className="section store section--tall" id="store">
       <div className="shell">
         <SectionHead
-          num="06"
-          kicker="06 · DIRECT SHOPIFY INTEGRATION"
+          num="08"
+          kicker="ARTIFACTS"
           title={
             <>
-              The <span className="txt-grad">storefront</span>, wired into the Nemoverse
+              The <span className="hl-act">storefront</span>, wired into the canon
             </>
           }
           sub={

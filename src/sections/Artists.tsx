@@ -164,12 +164,11 @@ export default function Artists() {
     <section className="section artists" id="artists">
       <div className="shell">
         <SectionHead
-          num="07"
-          kicker="07 · PERMANENT PUBLIC CREDITS"
-          kickerGold
+          num="05"
+          kicker="THE HANDS"
           title={
             <>
-              Every universe, <span className="txt-gold">credited forever</span>
+              Every universe, <span className="hl-act">credited forever</span>
             </>
           }
           sub={

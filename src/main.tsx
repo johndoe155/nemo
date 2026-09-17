@@ -5,11 +5,13 @@ import ReactDOM from 'react-dom/client';
 //   PP Neue Montreal (+ Text)            — self-hosted body/reading faces
 //   Space Grotesk                         — retained tech-forward accent face
 // Unbounded / Inter / Space Mono have been PURGED from the bundle.
+// Michroma was purged with the ONE TAKE pass: it shipped in the webfont
+// layer but rendered in zero pixels ("kept for future accent use" — the
+// budget ratchet does not fund futures).
 // The PP families are registered as @font-face rules and exposed as
 // --font-pp-* raw family tokens on :root; the canonical semantic tokens
 // (--font-display/heading/body/body-text/accent) are mapped in global.css.
 import '@fontsource-variable/space-grotesk';
-import '@fontsource/michroma';
 import './assets/fonts/pp-fonts.css';
 import './styles/global.css';
 // Tailwind v4 utility layer (theme + utilities, NO preflight) behind the
@@ -53,6 +55,11 @@ import './styles/nemo-particles.css';
 // into the page, and the static fallback frame. Scoped to .singularity/.bh-*,
 // so it loads last without contending with anything above.
 import './styles/blackhole.css';
+// ONE TAKE — the chapter layer: act accents, interludes, the void, the fog,
+// the console, and every ambient system's stillness contract. Loaded LAST:
+// its rules intentionally win over the base chrome and section layers it
+// supersedes (side rail, scroll progress, standing sound toggle).
+import './styles/chapters.css';
 // The boot sequence — the topmost fixed layer the site owns (z 600: above
 // .grain, the nav HUD and the side rail; below the custom cursor at 1000).
 // Everything is scoped to .ldr/.ldr__*, so it contends with none of the above.

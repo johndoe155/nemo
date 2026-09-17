@@ -127,12 +127,12 @@ export const FOOTER_NAV: FooterNavGroup[] = [
     ],
   },
   {
-    label: 'SYSTEMS',
+    label: 'THE REST OF THE STORY',
     links: [
-      { label: 'Holder Perks', href: '#perks' },
-      { label: 'POP Pulls', href: '#pulls' },
-      { label: 'Store', href: '#store' },
-      { label: 'The Persona', href: '#persona' },
+      { label: 'First Doors', href: '#perks' },
+      { label: 'The Ritual', href: '#pulls' },
+      { label: 'Artifacts', href: '#store' },
+      { label: 'The Voice', href: '#persona' },
     ],
   },
 ];

@@ -170,13 +170,13 @@ export default function Footer() {
       <div className="curtain-stage">
       <footer className="footer curtain-footer" id="connect">
       <div className="curtain-footer__topline" aria-hidden="true">
-        <span>THE BASE / 06</span>
+        <span>ONE CANON · INFINITE VERSIONS</span>
         <span>THE END IS ANOTHER THRESHOLD</span>
       </div>
 
       <div className="shell curtain-footer__intro">
         <div>
-          <p className="curtain-footer__eyebrow">NEMOVERSE PROTOCOL · SIGN-OFF</p>
+          <p className="curtain-footer__eyebrow">THE NEMOVERSE · SIGN-OFF</p>
           <h2 className="curtain-footer__heading">
             <span>STEP OUT</span>
             <span>OF THE VOID.</span>
@@ -238,7 +238,7 @@ export default function Footer() {
 
       <div className="curtain-footer__ribbon">
         <span>© 2026 THE NEMOVERSE · CONCEPT PITCH DEMO</span>
-        <span>NEMOVERSE PROTOCOL v0.1.0</span>
+        <span>ONE CANON · INFINITE VERSIONS</span>
         <Magnetic preset="pill" radius={100} strength={0.18} max={14}>
           {/* Rewind rides the same anchor channel as every #id on the page
               (lib/scroll.ts) — Lenis owns the easing, the raw scrollTo was a
