@@ -217,14 +217,14 @@ export const SECTION_SCENE: Record<string, SceneId> = {
    cannot drift apart: one scene authority, three renderers.
 --------------------------------------------------------------------------- */
 export const SCENE_TINTS: Record<SceneId, { bg: string; line: string }> = {
-  arrival: { bg: '#07060f', line: 'rgba(214, 205, 255, 0.10)' }, // iris-leaning
-  registry: { bg: '#05070d', line: 'rgba(200, 232, 255, 0.10)' }, // cooler, archival
-  signal: { bg: '#050a10', line: 'rgba(196, 238, 255, 0.10)' }, // cyan cast
-  arsenal: { bg: '#080610', line: 'rgba(216, 200, 255, 0.10)' }, // iris charge
-  vault: { bg: '#0a0806', line: 'rgba(255, 228, 176, 0.10)' }, // warm gold ingress
-  constellation: { bg: '#0a0510', line: 'rgba(255, 206, 232, 0.10)' }, // magenta-led
-  abyss: { bg: '#040409', line: 'rgba(196, 208, 236, 0.08)' }, // deeper than the void
-  singularity: { bg: '#080b12', line: 'rgba(232, 214, 198, 0.09)' }, // meets the canvas sky
+  arrival: { bg: '#030508', line: 'rgba(239, 238, 231, 0.09)' }, // near-monochrome wake
+  registry: { bg: '#04090d', line: 'rgba(139, 233, 247, 0.11)' }, // electric archive intelligence
+  signal: { bg: '#041018', line: 'rgba(139, 233, 247, 0.14)' }, // NEMO notices the visitor
+  arsenal: { bg: '#090704', line: 'rgba(215, 180, 106, 0.14)' }, // ownership introduces solar gold
+  vault: { bg: '#090704', line: 'rgba(215, 180, 106, 0.12)' }, // ritual and catalog stay warm
+  constellation: { bg: '#e8e5dc', line: 'rgba(18, 21, 26, 0.12)' }, // editorial authorship page
+  abyss: { bg: '#030508', line: 'rgba(239, 238, 231, 0.07)' }, // paper falls back into void
+  singularity: { bg: '#070a10', line: 'rgba(213, 91, 62, 0.11)' }, // ember only at collapse
 };
 
 /* ---------------------------------------------------------------------------

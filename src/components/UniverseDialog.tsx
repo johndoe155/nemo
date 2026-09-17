@@ -84,8 +84,13 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
         onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
       >
         <button className="dialog__close" onClick={beginClose} aria-label="Close universe detail">
-          ✕
+          <span>CLOSE</span> ✕
         </button>
+        <div className="dialog__folio" aria-hidden="true">
+          <span>THE LIVING ARCHIVE</span>
+          <i />
+          <span>ARTIFACT INSPECTION / {u.code}</span>
+        </div>
 
         <div className="dialog__grid">
           <motion.div

@@ -17,7 +17,7 @@
 
 import { useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { SectionHead } from '../../components/ui';
+
 import { RARITY, SET_BONUS_AT, STAMP_SLOTS } from '../../lib/data';
 import { RARITY_ACCENT, usePullEngine } from './usePullEngine';
 import ParticleField from './ParticleField';
@@ -45,24 +45,19 @@ export default function Pulls() {
       <ParticleField obstacles={obstacles} sectionRef={sectionRef} />
 
       <div className="shell npx__shell">
-        <SectionHead
-          center
-          num="05"
-          kicker="05 · PILLAR 3 — PROOF-OF-PURCHASE COLLECTIBLES"
-          title={
-            <>
-              Every purchase <em className="npx__serif">pulls a piece</em> of the Nemoverse
-            </>
-          }
-          sub={
-            <>
-              Buy anything — merch or a universe edition — and a random pull from the current
-              Nemoverse set mints to your wallet. No generic receipt art: a genuine, numbered
-              piece of the collection.
-            </>
-          }
-        />
+        <header className="npx__head">
+          <span className="kicker">V · COMMERCE AS RITUAL</span>
+          <h2>Break the seal.<br /><em>Reveal a world.</em></h2>
+          <div>
+            <p>
+              Every purchase carries a numbered fragment from the living archive.
+              One pull. One crescendo. The ledger remembers what found you.
+            </p>
+            <span>PROOF OF PURCHASE / MINTED ON BASE</span>
+          </div>
+        </header>
 
+        <div className="npx__ritual-axis" aria-hidden="true"><span>RECEIPT</span><i /><b>REVEAL</b></div>
         <div className="npx__layout">
           {/* ============================ CONTROL RAIL ============================ */}
           <motion.aside
@@ -85,6 +80,12 @@ export default function Pulls() {
                 </span>
               </div>
 
+              <details className="npx__rules">
+                <summary>
+                  <span>ODDS & ARCHIVE RULES</span>
+                  <b>{engine.pulls.length ? `${engine.pulls.length} RITUALS COMPLETE` : 'SEALED'}</b>
+                  <i aria-hidden="true">＋</i>
+                </summary>
               <div className="npx__stats">
                 <div className="npx__stat">
                   <StatRoll value={engine.pulls.length} className="npx__stat-num" />
@@ -122,15 +123,12 @@ export default function Pulls() {
                 ))}
                 {engine.holderBonus && (
                   <span className="npx__node npx__node--holder">
-                    <span className="npx__node-orb" aria-hidden="true">
-                      <i />
-                    </span>
-                    <span className="npx__node-tag">
-                      HOLDER <b>+10%</b>
-                    </span>
+                    <span className="npx__node-orb" aria-hidden="true"><i /></span>
+                    <span className="npx__node-tag">HOLDER <b>+10%</b></span>
                   </span>
                 )}
               </div>
+              </details>
 
               <div className={`npx__indicator ${engine.phase === 'spinning' ? 'is-spinning' : ''}`}>
                 <FreqLine spin={engine.phase === 'spinning'} />

@@ -153,26 +153,22 @@ export default function Gallery() {
       <div className="shell">
         <header className="cg__head">
           <div className="cg__headtext">
-            <span className="kicker">02 · THE ROTUNDA</span>
-            <h2 className="display cg__title" style={{ fontSize: 'var(--fs-h2)' }}>
-              Drift through the canon
+            <span className="kicker">II · THE PHYSICAL ARCHIVE</span>
+            <h2 className="display cg__title">
+              A room<br />without walls.
             </h2>
-            <p className="cg__sub">
-              Every commissioned universe, hung on one drifting sphere — from the
-              prime reality to the signal that was never commissioned. Drag the
-              sphere, flick it into a spin, or tap any plate to open it.
-            </p>
           </div>
-
-          <ul className="cg__badges">
+          <div className="cg__aside">
+            <p className="cg__sub">
+              The registry becomes a suspended museum. Sixty plates orbit one quiet center;
+              touch one and the room lowers its voice.
+            </p>
+            <span>DRAG TO ALTER GRAVITY</span>
+          </div>
+          <ul className="cg__badges" aria-label="Rotunda catalog data">
             {ROTUNDA_BADGES.map((b) => (
-              <li
-                className="badge cg__badge"
-                key={b.label}
-                style={{ '--c': b.accent ?? 'var(--gold)' } as CSSProperties}
-              >
-                <b>{b.count}</b>
-                {b.label}
+              <li className="cg__badge" key={b.label} style={{ '--c': b.accent ?? 'var(--gold)' } as CSSProperties}>
+                <b>{b.count}</b><span>{b.label}</span>
               </li>
             ))}
           </ul>
@@ -180,6 +176,19 @@ export default function Gallery() {
       </div>
 
       <div ref={stageRef} className="cg-stage cg-stage--sphere">
+        <div className="cg-stage__architecture" aria-hidden="true">
+          <span className="cg-stage__ceiling" />
+          <span className="cg-stage__beam" />
+          <span className="cg-stage__floor" />
+          <span className="cg-stage__axis">N / 00°</span>
+          <span className="cg-stage__room">ROTUNDA 02</span>
+        </div>
+        {REDUCE && (
+          <figure className="cg-stage__still">
+            <img src={GALLERY_PLATES[0].image} alt={GALLERY_PLATES[0].alt} />
+            <figcaption><b>{GALLERY_PLATES[0].code}</b><span>{GALLERY_PLATES[0].title}</span></figcaption>
+          </figure>
+        )}
         {!REDUCE && inView && stageBox.w > 0 && (
           <SphereImageGrid
             images={SPHERE_IMAGES}

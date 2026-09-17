@@ -62,6 +62,11 @@ export default function Singularity() {
 
       <section className="section singularity" id="singularity">
         <h2 className="vh">The singularity — a live black hole simulation</h2>
+        <div className="singularity__notation" aria-hidden="true">
+          <span>ARCHIVE LIMIT / 00</span>
+          <i />
+          <span>LIGHT CANNOT BE CATALOGED BEYOND THIS POINT</span>
+        </div>
 
         {/* .bh-frame carries the seam gradients above and below the stage
             (styles/blackhole.css); .bh-stage inside it owns the canvas box. It is

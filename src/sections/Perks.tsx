@@ -1,32 +1,34 @@
 import { motion } from 'framer-motion';
-import { Reveal, SectionHead, Verified, WalletButton, useMockWallet, MOCK_ADDRESS } from '../components/ui';
-import { useTilt } from '../components/motion';
+import { Reveal, Verified, WalletButton, useMockWallet, MOCK_ADDRESS } from '../components/ui';
 import { PERK_TIERS } from '../lib/data';
 
-/* Tier cards share the flagship physics family at reduced throw — one
-   motion language across the page instead of two products. */
-function PerkCard({ tier, i }: { tier: (typeof PERK_TIERS)[number]; i: number }) {
-  const tilt = useTilt<HTMLDivElement>({ maxDeg: 1.4, lift: -4 });
+const CEREMONY = ['ACCESS', 'ADVANTAGE', 'ARTIFACT', 'INVITATION'] as const;
+
+function AccessStep({ tier, index }: { tier: (typeof PERK_TIERS)[number]; index: number }) {
   return (
-    <Reveal delay={i * 0.08} y={34} blur={false}>
-      <motion.div
-        ref={tilt.ref}
-        className="card perk sheen"
-        style={{ '--card-accent': tier.color, '--pc': tier.color, ...tilt.style }}
-        {...tilt.handlers}
+    <Reveal delay={index * 0.1} y={42} blur={false}>
+      <motion.article
+        className="access-step"
+        style={{ '--pc': tier.color } as React.CSSProperties}
+        whileHover={{ x: 8 }}
+        transition={{ type: 'spring', stiffness: 240, damping: 24 }}
       >
-        <div className="perk__head">
-          <h3 className="perk__trait">{tier.trait}</h3>
-          <span className="badge" style={{ '--c': tier.color }}>
-            {tier.tag}
-          </span>
+        <div className="access-step__number">
+          <span>{String(index + 1).padStart(2, '0')}</span>
+          <i aria-hidden="true" />
         </div>
-        <ul className="perk__list">
-          {tier.perks.map((p) => (
-            <li key={p}>{p}</li>
-          ))}
+        <div className="access-step__identity">
+          <small>{CEREMONY[index]}</small>
+          <h3>{tier.trait}</h3>
+          <span>{tier.tag}</span>
+        </div>
+        <ul className="access-step__benefits">
+          {tier.perks.map((perk) => <li key={perk}>{perk}</li>)}
         </ul>
-      </motion.div>
+        <div className="access-step__seal" aria-hidden="true">
+          <span>NV</span><i />
+        </div>
+      </motion.article>
     </Reveal>
   );
 }
@@ -36,70 +38,49 @@ export default function Perks() {
 
   return (
     <section className="section perks" id="perks">
+      <div className="perks__halo" aria-hidden="true" />
       <div className="shell">
-        <SectionHead
-          num="04"
-          kicker="04 · PILLAR 2 — TOKEN-GATED PERKS"
-          kickerGold
-          title={
-            <>
-              Hold the NFT. <span className="txt-gold">Open the doors first.</span>
-            </>
-          }
-          sub={
-            <>
-              Connect your wallet at the store. Holding the OC NFT — or a specific trait tier —
-              unlocks real perks, with first access to new Nemoverse universes as the headline
-              reward.
-            </>
-          }
-        />
+        <header className="perks__head">
+          <div>
+            <span className="kicker">IV · ACCESS CEREMONY</span>
+            <h2>Four thresholds.<br /><em>One key.</em></h2>
+          </div>
+          <div className="perks__intro">
+            <p>
+              Ownership is not a badge pinned to a dashboard. It is a sequence of doors:
+              earlier entry, rarer artifacts and a closer position to the next reality.
+            </p>
+            <span>THE KEY IS ALREADY IN YOUR WALLET</span>
+          </div>
+        </header>
 
-        <div className="perks__grid">
-          {PERK_TIERS.map((tier, i) => (
-            <PerkCard key={tier.tag} tier={tier} i={i} />
+        <div className="perks__ladder" aria-label="Holder access levels">
+          <span className="perks__ladder-line" aria-hidden="true" />
+          {PERK_TIERS.map((tier, index) => (
+            <AccessStep key={tier.tag} tier={tier} index={index} />
           ))}
         </div>
 
         <Reveal delay={0.15}>
-          <div className="perks__verify">
+          <div className={`perks__verify ${wallet.connected ? 'is-verified' : ''}`}>
+            <div className="perks__verify-index" aria-hidden="true">04 / KEY CEREMONY</div>
             <div className="copy">
-              <b>Wallet verification</b>
-              <span>
-                RainbowKit connect → on-chain ownership check via Alchemy → perks auto-applied at
-                Shopify checkout.
-              </span>
+              <span>WALLET VERIFICATION</span>
+              <b>{wallet.connected ? 'THE ARCHIVE RECOGNIZES YOU.' : 'PRESENT THE KEY.'}</b>
+              <p>
+                The demo makes no signature request. In production, on-chain ownership applies
+                access and Shopify benefits automatically.
+              </p>
             </div>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="perks__verify-action">
               {wallet.connected && (
-                <motion.span
-                  className="holderline"
-                  initial={{ opacity: 0, x: -14 }}
-                  animate={{ opacity: 1, x: 0 }}
-                >
-                  <Verified />
-                  VERIFIED HOLDER · <code>{MOCK_ADDRESS}</code> · GENESIS · LEGENDARY TRAIT
+                <motion.span className="holderline" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                  <Verified /> VERIFIED · <code>{MOCK_ADDRESS}</code> · LEGENDARY
                 </motion.span>
               )}
               <WalletButton connected={wallet.connected} onConnect={wallet.connect} onReset={wallet.disconnect} />
             </div>
           </div>
-        </Reveal>
-
-        <Reveal delay={0.2}>
-          <p
-            style={{
-              marginTop: '1.6rem',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.66rem',
-              letterSpacing: '0.2em',
-              textTransform: 'uppercase',
-              color: 'var(--ink-faint)',
-            }}
-          >
-            ◆ Demo wallet state is mocked — no signature is requested. Production wiring:
-            WalletConnect/RainbowKit + Alchemy/Moralis + Shopify Admin & Storefront API.
-          </p>
         </Reveal>
       </div>
     </section>

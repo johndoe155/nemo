@@ -253,54 +253,59 @@ export default function Nemoverse() {
 
   return (
     <section className="section mv" id="nemoverse">
+      <div className="mv__threshold" aria-hidden="true">
+        <span>CHAPTER I</span>
+        <i />
+        <span>THE ARCHIVE</span>
+      </div>
       <div className="shell">
         <div className="mv__head">
-          <div>
-            <span className="kicker">01 · THE ANCHOR FEATURE</span>
-            <h2 className="display" style={{ fontSize: 'var(--fs-h2)' }}>
+          <div className="mv__intro">
+            <span className="kicker">I · THE NUMBERED REALITIES</span>
+            <h2 className="display">
               <Reveal>
-                The <span className="txt-grad">Nemoverse</span>
+                An archive of<br /><span className="txt-grad">other selves.</span>
               </Reveal>
             </h2>
+          </div>
+          <div className="mv__declaration">
             <Reveal delay={0.1}>
-              <p className="sub" style={{ color: 'var(--ink-dim)', maxWidth: '44rem', marginTop: '0.8rem' }}>
-                One canon collection. Infinite versions of the OC — every commissioned artist creates
-                their own official, numbered universe. Browse by artist, release date, or rarity.
+              <p>
+                NEMO is the constant. Everything else is allowed to fracture.
+                Each plate is an official reality, signed by its author and entered into canon.
               </p>
             </Reveal>
-          </div>
-          <div className="mv__stats">
-            <div className="mv__stat">
-              <StatTicker value={visibleUniverses.length} label="UNIVERSES" />
-            </div>
-            <div className="mv__stat">
-              <StatTicker value={totalMinted} label="PIECES MINTED" />
-            </div>
-            <div className="mv__stat">
-              <b>1/2WKS</b>
-              <span>DROP CADENCE</span>
+            <div className="mv__stats" aria-label="Archive statistics">
+              <div className="mv__stat"><StatTicker value={visibleUniverses.length} label="OPEN DOORS" /></div>
+              <div className="mv__stat"><StatTicker value={totalMinted} label="OBJECTS CLAIMED" /></div>
+              <div className="mv__stat"><b>14D</b><span>ARCHIVE RHYTHM</span></div>
             </div>
           </div>
         </div>
 
-        <div className="mv__filters">
-          {rarityChips.map((c) => (
-            <MagneticButton
-              key={c.id}
-              preset="chrome"
-              className={`chip ${filter === c.id ? 'active' : ''}`}
-              style={{ '--c': c.id === 'all' ? 'var(--cyan)' : RARITY[c.id as Rarity].color } as React.CSSProperties}
-              aria-pressed={filter === c.id}
-              onClick={() => setFilter(c.id)}
-            >
-              {c.id !== 'all' && <span className="dot" />}
-              <RollText text={c.label} />
-            </MagneticButton>
-          ))}
-          <span style={{ marginLeft: 'auto' }}>
-            <SortDropdown value={sort} onChange={setSort} />
-          </span>
-        </div>
+        <details className="mv__index-controls">
+          <summary>
+            <span>REFINE THE ARCHIVE</span>
+            <b>{filter === 'all' ? 'ALL REALITIES' : RARITY[filter].label}</b>
+            <i aria-hidden="true">＋</i>
+          </summary>
+          <div className="mv__filters">
+            {rarityChips.map((c) => (
+              <MagneticButton
+                key={c.id}
+                preset="chrome"
+                className={`chip ${filter === c.id ? 'active' : ''}`}
+                style={{ '--c': c.id === 'all' ? 'var(--cyan)' : RARITY[c.id as Rarity].color } as React.CSSProperties}
+                aria-pressed={filter === c.id}
+                onClick={() => setFilter(c.id)}
+              >
+                {c.id !== 'all' && <span className="dot" />}
+                <RollText text={c.label} />
+              </MagneticButton>
+            ))}
+            <span className="mv__sort"><SortDropdown value={sort} onChange={setSort} /></span>
+          </div>
+        </details>
       </div>
 
       {!isMobile ? (

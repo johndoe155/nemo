@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
-import { SectionHead } from '../components/ui';
+
 import { ARTISTS, UNIVERSES } from '../lib/data';
 
 /* ============================================================================
@@ -128,6 +128,7 @@ function CreditPlate({ a, i, n }: { a: (typeof ARTISTS)[number]; i: number; n: n
           aria-label={`${a.name} — ${a.handle}. Canon credit: ${codes}`}
           data-cursor="NUDGE"
         >
+          <span className="creditcard__name-ghost" aria-hidden="true">{a.name}</span>
           <div className="creditcard sheen">
             {/* Segment A — details, left of the rod. */}
             <div className="creditcard__seg">
@@ -163,23 +164,17 @@ export default function Artists() {
   return (
     <section className="section artists" id="artists">
       <div className="shell">
-        <SectionHead
-          num="07"
-          kicker="07 · PERMANENT PUBLIC CREDITS"
-          kickerGold
-          title={
-            <>
-              Every universe, <span className="txt-gold">credited forever</span>
-            </>
-          }
-          sub={
-            <>
-              The artists behind the Nemoverse are credited publicly on the Hub and in each
-              piece's own metadata. The spotlight is tied directly to Nemoverse credits — the
-              collection is only as strong as its canon.
-            </>
-          }
-        />
+        <header className="artists__head">
+          <span className="kicker">VII · AUTHORSHIP</span>
+          <h2>The archive<br />has <em>authors.</em></h2>
+          <div>
+            <p>
+              Technology opens the door. A human hand decides what waits beyond it.
+              Every name remains attached to the reality it created—in public and on-chain.
+            </p>
+            <span>60% ARTIST / 40% ARCHIVE</span>
+          </div>
+        </header>
 
         <div className="credits">
           <span className="credits__rod" aria-hidden="true" />

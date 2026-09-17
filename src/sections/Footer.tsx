@@ -135,20 +135,20 @@ function ClosingSignoff() {
             footer stays) if this block is ever restructured. */}
         <h2 className="signoff__title" data-horizon-item="invite">
           <span className="signoff__line">
-            <span className="signoff__line-in signoff__line-in--dim">ENTER THE</span>
+            <span className="signoff__line-in signoff__line-in--dim">BEGIN</span>
           </span>
           <span className="signoff__line">
             <span className="signoff__line-in signoff__title-main">
-              <span className="txt-grad chroma" data-text="NEMOVERSE.">
-                NEMOVERSE.
+              <span className="txt-grad chroma" data-text="AGAIN.">
+                AGAIN.
               </span>
             </span>
           </span>
         </h2>
         <div className="signoff__actions" data-horizon-item="cta">
-          <a href="#nemoverse" className="btn btn-primary" data-cursor="ENTER" aria-label="Explore the universes">
+          <a href="#nemoverse" className="btn btn-primary" data-cursor="RETURN" aria-label="Re-enter the archive">
             <span className="btn-spark" aria-hidden="true" />
-            <KineticLabel label="EXPLORE THE UNIVERSES" swap="ENTER THE VOID" open={false} />
+            <KineticLabel label="RE-ENTER THE ARCHIVE" swap="RETURN TO U-001" open={false} />
           </a>
         </div>
       </div>
@@ -170,22 +170,22 @@ export default function Footer() {
       <div className="curtain-stage">
       <footer className="footer curtain-footer" id="connect">
       <div className="curtain-footer__topline" aria-hidden="true">
-        <span>THE BASE / 06</span>
-        <span>THE END IS ANOTHER THRESHOLD</span>
+        <span>RETURN / 00</span>
+        <span>THE END IS ANOTHER ENTRANCE</span>
       </div>
 
       <div className="shell curtain-footer__intro">
         <div>
           <p className="curtain-footer__eyebrow">NEMOVERSE PROTOCOL · SIGN-OFF</p>
           <h2 className="curtain-footer__heading">
-            <span>STEP OUT</span>
-            <span>OF THE VOID.</span>
+            <span>THE END</span>
+            <span>IS A DOOR.</span>
           </h2>
         </div>
         <div className="curtain-footer__statement">
-          <p>One canon character. Infinite versions. A living archive for the people who keep looking.</p>
+          <p>The archive never closes. It waits in the dark until the next person chooses the first door.</p>
           <a className="curtain-footer__cta" href="#nemoverse">
-            <KineticLabel label="EXPLORE THE UNIVERSES" swap="ENTER THE VOID" open={false} />
+            <KineticLabel label="RE-ENTER THE ARCHIVE" swap="RETURN TO U-001" open={false} />
             <span aria-hidden="true">↗</span>
           </a>
         </div>

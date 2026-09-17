@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Reveal, SectionHead, toast, useMockWallet } from '../components/ui';
+import { Reveal, toast, useMockWallet } from '../components/ui';
 import { KineticButton, useTilt } from '../components/motion';
 import CardImage from '../components/CardImage';
 import type { Product } from '../lib/data';
@@ -10,11 +10,13 @@ function ProductCard({
   wallet,
   hero,
   delay,
+  index,
 }: {
   p: Product;
   wallet: { connected: boolean };
   hero?: boolean;
   delay?: number;
+  index: number;
 }) {
   const gated = p.gated && !wallet.connected;
   const tilt = useTilt<HTMLDivElement>({ maxDeg: hero ? 1.6 : 2.2, lift: hero ? -5 : -7 });
@@ -27,12 +29,16 @@ function ProductCard({
   };
   return (
     <Reveal delay={delay} y={34} blur={false}>
-      <motion.div
+      <motion.article
         ref={tilt.ref}
         className={`card product sheen ${hero ? 'store__hero' : ''}`}
         style={tilt.style}
         {...tilt.handlers}
+        data-catalog-index={String(index + 1).padStart(2, '0')}
       >
+        <div className="product__catalog-mark" aria-hidden="true">
+          <span>PLATE {String(index + 1).padStart(2, '0')}</span><i />
+        </div>
         {/* NB: no inline `position` here. The stylesheet owns it —
             `.product__media` is `relative` for the stacked cards and
             `.store__hero .product__media` flips it to `absolute; inset: 0`
@@ -114,7 +120,7 @@ function ProductCard({
             )}
           </div>
         </div>
-      </motion.div>
+      </motion.article>
     </Reveal>
   );
 }
@@ -126,28 +132,25 @@ export default function Store() {
   return (
     <section className="section store section--tall" id="store">
       <div className="shell">
-        <SectionHead
-          num="06"
-          kicker="06 · DIRECT SHOPIFY INTEGRATION"
-          title={
-            <>
-              The <span className="txt-grad">storefront</span>, wired into the Nemoverse
-            </>
-          }
-          sub={
-            <>
-              Featured products from the Shopify store. Holder discounts are auto-applied at
-              checkout; gated SKUs unlock by trait tier; every order ships with a Proof-of-Purchase
-              pull.
-            </>
-          }
-        />
+        <header className="store__head">
+          <div>
+            <span className="kicker">VI · EDITORIAL CATALOG</span>
+            <h2>Objects from<br /><em>impossible places.</em></h2>
+          </div>
+          <div className="store__head-note">
+            <span>CATALOG / 2026–01</span>
+            <p>
+              Wearable evidence, numbered prints and holder-only objects. Each order leaves
+              the catalog carrying one Proof-of-Purchase fragment.
+            </p>
+          </div>
+        </header>
 
         <div className="store__mag">
-          <ProductCard p={heroProduct} wallet={wallet} hero />
+          <ProductCard p={heroProduct} wallet={wallet} hero index={0} />
           <div className="store__stack">
             {stack.map((p, i) => (
-              <ProductCard key={p.sku} p={p} wallet={wallet} delay={0.06 + i * 0.06} />
+              <ProductCard key={p.sku} p={p} wallet={wallet} delay={0.06 + i * 0.06} index={i + 1} />
             ))}
           </div>
         </div>

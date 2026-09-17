@@ -1,101 +1,114 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-
-/* ---------------------------------------------------------------------------
-   SideRail — fixed left-edge orientation mini-rail (DESIGN_AUDIT §3.1.1).
-   Discovers the top-level sections at runtime, tracks the active one with an
-   IntersectionObserver, and lets the user jump between them. Desktop only
-   (hidden via CSS below 1100px / on coarse pointers).
-
-   MOBILE SINGULARITY REMOVAL — the singularity section does not exist on
-   mobile (see sections/Singularity.tsx + styles/blackhole.css). This rail
-   filters it out when the mobile breakpoint matches, and re-discovers on
-   breakpoint changes so a desktop→mobile resize drops the dot immediately.
---------------------------------------------------------------------------- */
+import SoundToggle from './SoundToggle';
 
 interface RailItem {
   id: string;
+  chapter: string;
   label: string;
 }
 
-const MOBILE_QUERY = '(max-width: 768px)';
+const CHAPTERS: Record<string, Omit<RailItem, 'id'>> = {
+  nemoverse: { chapter: 'I', label: 'ARCHIVE' },
+  rotunda: { chapter: 'II', label: 'ROTUNDA' },
+  persona: { chapter: 'III', label: 'VOICE' },
+  perks: { chapter: 'IV', label: 'ACCESS' },
+  pulls: { chapter: 'V', label: 'RITUAL' },
+  store: { chapter: 'VI', label: 'ARTIFACTS' },
+  artists: { chapter: 'VII', label: 'AUTHORSHIP' },
+  lore: { chapter: 'VIII', label: 'CANON' },
+  singularity: { chapter: 'IX', label: 'COLLAPSE' },
+};
 
+const MOBILE_QUERY = '(max-width: 900px)';
+
+/**
+ * ArchiveConsole consolidates the old side dots, sound island and cursor hint
+ * into one instrument. It is intentionally quiet: one active chapter name,
+ * one meridian and compact ticks. Labels reveal only when the index is used.
+ */
 export default function SideRail() {
   const [items, setItems] = useState<RailItem[]>([]);
-  const [active, setActive] = useState('');
+  const [active, setActive] = useState('nemoverse');
 
   useEffect(() => {
     const mql = window.matchMedia(MOBILE_QUERY);
+    let observer: IntersectionObserver | null = null;
 
     const discover = () => {
-      const isMobile = mql.matches;
-      const all = Array.from(document.querySelectorAll<HTMLElement>('main section[id]'));
-      const filtered = isMobile ? all.filter((s) => s.id !== 'singularity') : all;
-      setItems(filtered.map((s) => ({ id: s.id, label: s.id.replace(/-/g, ' ').toUpperCase() })));
+      observer?.disconnect();
+      const sections = Array.from(document.querySelectorAll<HTMLElement>('main section[id]'))
+        .filter((section) => CHAPTERS[section.id])
+        .filter((section) => !(mql.matches && section.id === 'singularity'));
+      setItems(sections.map((section) => ({ id: section.id, ...CHAPTERS[section.id] })));
 
-      if (typeof IntersectionObserver === 'undefined' || filtered.length === 0) return;
-
-      const io = new IntersectionObserver(
+      if (typeof IntersectionObserver === 'undefined') return;
+      observer = new IntersectionObserver(
         (entries) => {
-          for (const e of entries) {
-            if (e.isIntersecting) {
-              setActive(e.target.id);
-              return;
-            }
-          }
-          /* Matches useScrollspy: with no section in the band the rail must
-             clear, not keep the last dot lit. */
-          setActive('');
+          const visible = entries
+            .filter((entry) => entry.isIntersecting)
+            .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+          if (visible) setActive(visible.target.id);
         },
-        { rootMargin: '-38% 0px -56% 0px' },
+        { rootMargin: '-34% 0px -55% 0px', threshold: [0, 0.05, 0.2] },
       );
-      filtered.forEach((s) => io.observe(s));
-      return () => io.disconnect();
+      sections.forEach((section) => observer?.observe(section));
     };
 
-    let cleanup: (() => void) | undefined = discover();
-
-    const onChange = () => {
-      cleanup?.();
-      cleanup = discover();
-    };
-
-    mql.addEventListener('change', onChange);
-
+    discover();
+    mql.addEventListener('change', discover);
     return () => {
-      mql.removeEventListener('change', onChange);
-      cleanup?.();
+      mql.removeEventListener('change', discover);
+      observer?.disconnect();
     };
   }, []);
 
+  const activeIndex = Math.max(0, items.findIndex((item) => item.id === active));
+  const activeItem = items[activeIndex];
   if (items.length === 0) return null;
 
   return (
-    <nav className="siderail" aria-label="Section progress">
-      {items.map((it, i) => (
-        <a
-          key={it.id}
-          href={`#${it.id}`}
-          className={`siderail__dot ${active === it.id ? 'active' : ''}`}
-          aria-current={active === it.id ? 'true' : undefined}
-        >
-          <i aria-hidden="true">
-            {/* P2.11 — the mini-rail's active state gets the same shared
-                layoutId slide as the nav (separate id: the two rails are
-                mounted simultaneously and must never hijack each other). */}
-            {active === it.id && (
-              <motion.span
-                layoutId="siderail-marker"
-                className="siderail__marker"
-                transition={{ type: 'spring', stiffness: 420, damping: 36, mass: 0.7 }}
-              />
-            )}
-          </i>
-          <span className="siderail__label">
-            {String(i + 1).padStart(2, '0')} · {it.label}
-          </span>
-        </a>
-      ))}
-    </nav>
+    <aside className="archive-console" aria-label="Archive controls">
+      <div className="archive-console__readout" aria-live="polite">
+        <span>{activeItem?.chapter ?? 'I'}</span>
+        <b>{activeItem?.label ?? 'ARCHIVE'}</b>
+      </div>
+
+      <nav className="siderail" aria-label="Chapter index">
+        <span className="siderail__track" aria-hidden="true">
+          <motion.i
+            animate={{ scaleY: items.length > 1 ? activeIndex / (items.length - 1) : 0 }}
+            transition={{ type: 'spring', stiffness: 180, damping: 28 }}
+          />
+        </span>
+        {items.map((item, index) => (
+          <a
+            key={item.id}
+            href={`#${item.id}`}
+            className={`siderail__dot ${active === item.id ? 'active' : ''}`}
+            aria-current={active === item.id ? 'true' : undefined}
+            aria-label={`${item.chapter}. ${item.label}`}
+          >
+            <i aria-hidden="true">
+              {active === item.id && (
+                <motion.span
+                  layoutId="siderail-marker"
+                  className="siderail__marker"
+                  transition={{ type: 'spring', stiffness: 360, damping: 32, mass: 0.7 }}
+                />
+              )}
+            </i>
+            <span className="siderail__label">
+              {item.chapter} · {item.label}
+            </span>
+            <span className="siderail__count" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+          </a>
+        ))}
+      </nav>
+
+      <div className="archive-console__sound">
+        <SoundToggle />
+      </div>
+    </aside>
   );
 }

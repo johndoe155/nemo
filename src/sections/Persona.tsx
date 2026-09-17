@@ -1,6 +1,6 @@
 import { Component, Suspense, lazy, useRef, type ReactNode } from 'react';
 import { useInView } from 'framer-motion';
-import { Reveal, SectionHead } from '../components/ui';
+import { Reveal } from '../components/ui';
 import NemoChat from '../components/NemoChat';
 import { useMediaQuery } from '../lib/singularityGate';
 
@@ -58,51 +58,44 @@ function DesktopPersonaModel() {
 export default function Persona() {
   return (
     <section className="section persona" id="persona">
-      <div className="gridplane" />
+      <div className="gridplane" aria-hidden="true" />
+      <div className="persona__ghost" aria-hidden="true">VOICE</div>
       <div className="shell persona__layout">
-        <div className="persona__head">
-          <SectionHead
-            num="03"
-            kicker="03 · PILLAR 4 — THE AI PERSONA"
-            title={
-              <>
-                The voice that <span className="txt-grad">teases</span> every universe
-              </>
-            }
-            sub={
-              <>
-                An AI-driven persona that speaks and interacts as the OC — active on X even when the
-                creator isn't posting. The Nemoverse's drop schedule is its built-in content
-                calendar.
-              </>
-            }
-          />
-        </div>
+        <header className="persona__head">
+          <span className="kicker">III · THE SENTIENT SIGNAL</span>
+          <h2>The archive<br /><em>answers back.</em></h2>
+          <p>
+            NEMO speaks between drops—teasing doors, remembering canon and noticing
+            the person standing on the other side of the glass.
+          </p>
+        </header>
 
         <div className="persona__interact">
-          <DesktopPersonaModel />
+          <div className="persona__model-frame">
+            <span className="persona__coord persona__coord--a">SUBJECT LOCK / N-00</span>
+            <span className="persona__coord persona__coord--b">ATTENTION / ACTIVE</span>
+            <DesktopPersonaModel />
+          </div>
           <div className="persona__chatwrap">
+            <span className="persona__transmission">LIVE TRANSMISSION · CANON ONLY</span>
             <NemoChat />
           </div>
         </div>
 
         <div className="persona__support">
           <Reveal delay={0.1}>
-            <p className="lede">
-              <b>Teasers</b> hint at the next universe before it drops. <b>Banter</b> runs between
-              the OC and its alternate selves. <b>Drafting</b> turns a topic into in-character posts
-              for review. And this <b>chatbot</b> answers questions about specific universes, right
-              here on the Hub.
-            </p>
+            <blockquote>
+              “You found me. Most people never look past the first portal.”
+              <cite>— NEMO / CURRENT SIGNAL</cite>
+            </blockquote>
           </Reveal>
           <Reveal delay={0.16}>
             <div className="persona__cap">
               <span className="pulse-dot" />
               <span>
-                <b>BUILT ON THE CLAUDE API</b> with a custom persona system prompt — voice, backstory
-                and tone. Clear content guardrails keep the character on-brand. Rate-limited, no
-                persistent memory required. <em>This demo runs on a canned in-canon brain; swap the
-                reply engine for the real API.</em>
+                <b>PERSONA ENGINE / DEMO BRAIN</b> Teasers, banter and in-character answers are
+                bounded by canon guardrails. The production reply engine can be connected without
+                changing the transmission surface.
               </span>
             </div>
           </Reveal>

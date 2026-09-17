@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Reveal, SectionHead } from '../components/ui';
+import { Reveal } from '../components/ui';
 import { useTilt } from '../components/motion';
 import { LORE_STATS, LORE_TIMELINE, UNIVERSE_DROP_ISO } from '../lib/data';
 import { useCountdown, useCountUp } from '../lib/hooks';
@@ -273,15 +273,11 @@ export default function Lore() {
     <section className="section lore" id="lore">
       <div className="shell lore__grid">
         <div className="lore__copy">
-          <SectionHead
-            num="08"
-            kicker="THE CORE IDENTITY"
-            title={
-              <>
-                Who is <span className="txt-grad">NEMO</span>?
-              </>
-            }
-          />
+          <header className="lore__head">
+            <span className="kicker">VIII · CANON</span>
+            <h2>A constant<br />called <em>NEMO.</em></h2>
+            <p>Field notes on the wanderer, the artists who alter his physics, and the economy that keeps the doors opening.</p>
+          </header>
           <Reveal delay={0.08}>
             <p>
               <b>NEMO is one canon character</b> — a wanderer between timelines whose face is a
@@ -307,6 +303,12 @@ export default function Lore() {
             </p>
           </Reveal>
 
+          <div className="lore__split-visual" aria-label="Revenue split: 60 percent artist, 40 percent archive">
+            <div><b>60</b><span>THE ARTIST<br />AUTHORSHIP</span></div>
+            <div><b>40</b><span>THE ARCHIVE<br />CONTINUITY</span></div>
+            <i aria-hidden="true" />
+          </div>
+
           <div className="lore__stats">
             {/* ONE countdown for the whole grid (not one timer per tile): the
                 flagged NEXT DROP card renders the same clock the hero ticker
@@ -326,7 +328,11 @@ export default function Lore() {
       </div>
 
       <div className="shell lore__timeline">
-        <SectionHead center kicker="CANON TIMELINE" title={<>The story so far</>} />
+        <header className="lore__timeline-head">
+          <span>CANON / CHRONOLOGY</span>
+          <h3>The story,<br /><em>still becoming.</em></h3>
+          <p>Scroll to drive the archive needle through each recorded event.</p>
+        </header>
         <CanonTimeline />
       </div>
     </section>

@@ -27,7 +27,7 @@ import FloorState from './components/FloorState';
 import Loader from './components/Loader';
 import ScrollProgress from './components/ScrollProgress';
 import SideRail from './components/SideRail';
-import SoundToggle from './components/SoundToggle';
+import ArchiveAtmosphere from './components/ArchiveAtmosphere';
 import VelocityFX from './components/VelocityFX';
 import { CustomCursor } from './components/Cursor';
 import { KineticButton, useCursorGlow } from './components/motion';
@@ -109,7 +109,7 @@ export default function App() {
       <CustomCursor />
       <SideRail />
       <VelocityFX />
-      <SoundToggle />
+      <ArchiveAtmosphere />
       <div className="grain" aria-hidden="true" />
       <Starfield className="starfield" />
       <Ambience />
@@ -118,21 +118,28 @@ export default function App() {
       <Nav />
       <main>
         <Hero />
-        <Marquee
-          items={[
-            'U-007 — THE LAST AURORA — AUG 22',
-            'HOLDERS ENTER FIRST',
-            'U-005 · EPIC · 71/100 CLAIMED',
-            'EVERY PURCHASE PULLS A PIECE',
-            'THE PERSONA IS ALWAYS TEASING',
-          ]}
-          speed="38s"
-        />
+        <div className="signal-bleed" aria-hidden="true">
+          <span>TRANSMISSION / 0001</span>
+          <Marquee
+            items={[
+              'THE ARCHIVE IS AWAKE',
+              'NINE DOORS · ONE WANDERER',
+              'U-007 APPROACHING',
+              'EVERY VERSION REMEMBERS',
+            ]}
+            speed="42s"
+          />
+        </div>
         <Nemoverse />
         {/* 3D rotunda — the same canon as the roster above, hung on a sphere
             you can spin. Placed here so the registry (specs) is read first
             and the art (plates) lands immediately after. */}
         <Gallery />
+        <div className="chapter-breath chapter-breath--voice" aria-hidden="true">
+          <span>III / VOICE</span>
+          <p>Then the archive<br /><em>noticed you.</em></p>
+          <i />
+        </div>
         <Persona />
         <Perks />
         <SectionBoundary>
@@ -141,6 +148,11 @@ export default function App() {
         <Store />
         <Artists />
         <Lore />
+        <div className="collapse-prologue" aria-hidden="true">
+          <span>IX / COLLAPSE</span>
+          <p>Every archive has<br />a final gravity.</p>
+          <div><i /><i /><i /></div>
+        </div>
         {/* The closing credit crawl — moved above the Singularity so it is
             completely unaffected by the black hole warping effect. P3.12
             (audit 2.4): wrapped in the scrubbed clip-rise — the credits

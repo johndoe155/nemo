@@ -61,7 +61,8 @@ export default function UniverseCard({
       role="button"
       tabIndex={0}
       aria-haspopup="dialog"
-      data-cursor="OPEN"
+      data-cursor="INSPECT"
+      data-rarity={u.rarity}
       aria-labelledby={`${nameId} ${actId}`}
       onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -83,6 +84,9 @@ export default function UniverseCard({
       transition={{ layout: { type: 'spring', stiffness: 240, damping: 26 } }}
     >
       <div className="ucard__index" aria-hidden="true">{u.code}</div>
+      <div className="ucard__folio" aria-hidden="true">
+        <span>ARCHIVE OBJECT</span><b>{String(index === undefined ? u.id : index + 1).padStart(2, '0')}</b>
+      </div>
       <span id={actId} className="vh">Open universe details</span>
       {/* P3.13 (audit 2.5) — the media plate is the SHARED ELEMENT: while the
           card's own dialog is open it surrenders its layoutId (`plate-<id>`)
@@ -175,6 +179,7 @@ export default function UniverseCard({
             {u.artist.name} <em>· {u.style}</em>
           </span>
         </div>
+        <span className="ucard__inspect" aria-hidden="true">INSPECT ARTIFACT <i>↗</i></span>
       </div>
     </motion.article>
   );

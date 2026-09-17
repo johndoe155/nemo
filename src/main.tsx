@@ -57,6 +57,10 @@ import './styles/blackhole.css';
 // .grain, the nav HUD and the side rail; below the custom cursor at 1000).
 // Everything is scoped to .ldr/.ldr__*, so it contends with none of the above.
 import './styles/loader.css';
+// Final art-direction layer for the Living Archive. It is intentionally last:
+// every rule is section-scoped and turns the stable functional modules above
+// into one authored narrative without editing protected rendering subsystems.
+import './styles/living-archive.css';
 import App from './App';
 /* The single scroll authority (DESIGN_AUDIT P1) — init before React mounts
    so the boot loader can hold/release the engine as part of the sequence.

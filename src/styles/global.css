@@ -10,20 +10,27 @@
 
 :root {
   /* ---- Palette ---- */
-  --void: #05050a;
-  --abyss: #0a0a16;
-  /* P4.17 (audit 1.4): the void is not one value any more — two luminance
-     steps below it own the card wells (temperature, not alpha), and the
-     per-district tints written by lib/scenes.ts default to the plain void. */
-  --void-2: #090a13;
-  --void-3: #0d0f1b;
+  /* LIVING ARCHIVE PALETTE — five materials, each with a narrative job.
+     Void is the architecture; Lunar is the editorial page; Electric is the
+     archive intelligence; Ultraviolet is dimensional fracture; Solar is
+     authorship and value. Ember only appears at the collapse threshold. */
+  --void: #030508;
+  --abyss: #070a10;
+  --void-2: #070a0f;
+  --void-3: #0b1018;
+  --lunar: #efeee7;
+  --lunar-dim: #cbc9bf;
+  --electric: #8be9f7;
+  --ultraviolet: #745cff;
+  --solar: #d7b46a;
+  --ember: #d55b3e;
   --scene-bg: var(--void);
   --scene-line: var(--line);
-  --panel: rgba(255, 255, 255, 0.032);
-  --line: rgba(255, 255, 255, 0.09);
-  --line-strong: rgba(255, 255, 255, 0.18);
-  --ink: #f5f3ff;
-  --ink-dim: rgba(245, 243, 255, 0.66);
+  --panel: rgba(239, 238, 231, 0.035);
+  --line: rgba(239, 238, 231, 0.11);
+  --line-strong: rgba(239, 238, 231, 0.24);
+  --ink: var(--lunar);
+  --ink-dim: rgba(239, 238, 231, 0.68);
   /* ---- ink-faint is a TEXT token — AA-correct by construction. -----------
      It was rgba(...,0.38) ≈ 3.2:1 on void while applied to ~50 places of
      10–12px tracked metadata: below AA for small text. The "dim" read is
@@ -31,17 +38,19 @@
      typography.css); the perceptual ghost survives, the contrast doesn't
      fail an audit. The old value lives on as --ink-faint-decor for the few
      consumers that paint non-text (hairlines, tick ghosts). */
-  --ink-faint: rgba(245, 243, 255, 0.56);
-  --ink-faint-decor: rgba(245, 243, 255, 0.38);
-  --iris: #8a4dff;
-  --iris-deep: #5b2bd6;
-  --cyan: #3fe8ff;
-  --magenta: #ff3d9a;
-  --gold: #ffc857;
+  --ink-faint: rgba(239, 238, 231, 0.56);
+  --ink-faint-decor: rgba(239, 238, 231, 0.34);
+  /* Compatibility aliases keep the protected simulations and data accents
+     wired to the authored hierarchy instead of maintaining a second palette. */
+  --iris: var(--ultraviolet);
+  --iris-deep: #4932bb;
+  --cyan: var(--electric);
+  --magenta: #b56fff;
+  --gold: var(--solar);
 
-  --grad-primary: linear-gradient(100deg, #8a4dff 0%, #3fe8ff 60%, #ff3d9a 115%);
-  --grad-gold: linear-gradient(95deg, #f6d47c, #ffc857 45%, #c98a2e);
-  --grad-ghost: linear-gradient(180deg, rgba(245, 243, 255, 0.92), rgba(245, 243, 255, 0.35));
+  --grad-primary: linear-gradient(102deg, var(--ultraviolet) 2%, var(--electric) 62%, var(--lunar) 118%);
+  --grad-gold: linear-gradient(96deg, #8b6c35, var(--solar) 46%, #f2d89d);
+  --grad-ghost: linear-gradient(180deg, rgba(239, 238, 231, 0.96), rgba(239, 238, 231, 0.3));
 
   /* ---- Rarity ---- */
   --r-common: #c8cfe0;
