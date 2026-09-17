@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    /* `@/*` path alias — required by the shadcn/ui structure (components.json
+       aliases point every primitive at @/components/ui, @/lib/utils, …).
+       Mirrored in vite.config.ts → resolve.alias so the dev server and the
+       compiler agree on the same mapping. */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    /* src/three/blackhole/ and src/three/persona-model/ contain vendored donor
+       rendering code (see each folder's PROVENANCE.md). These plain .js/.jsx
+       files must not be rewritten merely to satisfy the compiler. allowJs lets
+       tsc resolve them from the typed mounting layers; checkJs:false keeps the
+       compiler from reporting inside the vendored shader implementations. */
+    "allowJs": true,
+    "checkJs": false,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}

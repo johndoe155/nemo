@@ -1,0 +1,221 @@
+/* ============================================================================
+   Sign-off horizon — the pinned consumption scene's paint layer.
+
+   Separate from blackhole.css, whose three jobs remain box / seam / still.
+   Nothing here changes the tab order, the accessible name of the CTA, or the
+   curtain's layout: the sheet keeps its own margin, stacking context and
+   background, and the only element this file adds paint for is the overlay
+   canvas (pointer-inert, aria-hidden) plus the two flyers whose crossfade it
+   owns. V4: no SVG filter surfaces anywhere — the warp lives on the overlay
+   (shader or 2D mosaic), and the live flyers always carry the affine fall
+   (translate toward the singularity + anisotropic stretch), exchanging only
+   their opacity with the frozen frame on the mix.
+   ========================================================================== */
+
+/* The frozen frame. JS owns `top`/`width`/`height`: the canvas covers the
+   sheet plus the measured veil of seam above it, so the warp pulled past the
+   sheet's top edge is not clipped mid-fall. Its opacity is the paint exchange
+   with the live DOM, written as --horizon-mix by the effect. */
+.signoff-horizon__canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  display: block;
+  pointer-events: none;
+  opacity: var(--horizon-mix, 0);
+}
+
+/* The flyers — the headline and the CTA. Both are already positioned in
+   overhaul.css; this only guarantees it, and lifts them above the sheet's own
+   background (but below the frozen frame, which takes the paint over).
+
+   While the scene holds, the effect takes them OUT OF DOCUMENT FLOW: it writes
+   their measured rest boxes back as `position: absolute` + `left/top/width/
+   height` (resolved against `.signoff__anchor`, which is `position: relative`)
+   and pins the anchor's own height, which lifting its only two children would
+   otherwise empty. From that frame on, the fall is a transform on a box the
+   layout can no longer move, and the sheet's collapsing border box cannot
+   perturb a flyer's rest position by a sub-pixel — which matters, because the
+   rest position is one of the three numbers the whole field is evaluated from.
+   The inline box is the rest box exactly, so the lift itself paints nothing. */
+.footer.signoff [data-horizon-item] {
+  position: relative;
+  z-index: 2;
+  transform-origin: 50% 50%;
+}
+
+/* The fluid mesh — the live DOM warp. A single affine transform cannot curve
+   and the SVG displacement lens is retired (engines sampled its feImage maps
+   as transparent black), so the flyer's content is windowed into a fine
+   `cols × rows` grid of clones, each clipped to its cell, and every cell's
+   corners are displaced to the field's true image of their rest positions:
+   rows nearer the singularity are hauled further along the pull axis
+   (spaghettification), columns bow toward it (lensing), and the whole grid
+   closes onto the point. The grid is inert and aria-hidden — the real
+   headline and CTA stay mounted, focusable and nameable, and only their paint
+   is exchanged (`data-horizon-fluid` stands the original content down in
+   favour of the mesh). */
+.footer.signoff .horizon-fluid-cell {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+  /* The per-cell affine is written in the cell's own frame (its top-left
+     corner), so the origin is the corner, not the centre. */
+  transform-origin: 0 0;
+  will-change: transform;
+}
+/* The whole grid is inert anyway, but pointer-events is written on the clones
+   too: the cloned CTA would otherwise keep its own auto pointer, and a
+   hit-test over the consumed flyer must never land on a cell's copy of the
+   link. */
+.footer.signoff .horizon-fluid-cell * {
+  pointer-events: none !important;
+}
+/* The window inside a cell holds the WHOLE content at full flyer size,
+   offset so the cell shows only its own sub-rectangle. Percentage geometry,
+   so the grid re-flows if the flyer box ever changes. */
+.footer.signoff .horizon-fluid-window {
+  position: absolute;
+  display: block;
+  text-align: center;
+}
+/* The CTA is centred by the (flex) `.signoff__actions`, which a plain window
+   does not reproduce — a modifier restores that centring so the cloned pill
+   sits exactly where the real one does. */
+.footer.signoff .horizon-fluid-window--cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* The real content stands down while the mesh paints: the original flyer
+   stays in the accessibility tree and the tab order, only its paint is
+   exchanged. */
+.footer.signoff [data-horizon-item][data-horizon-fluid='on'] > :not(.horizon-fluid-cell) {
+  opacity: 0;
+}
+
+/* Promotion only while an activation exists: the live rasters pay for their
+   fall transform and their opacity in the crossfade per frame — the overlay
+   canvas's own composition is the expensive half and it needs no hint.
+
+   'hold' is on the list deliberately: it is the state where the overlay was
+   withheld — no snapshot, a capture that timed out — and the DOM still runs
+   the entire consumption under it (the opacity coda). The lift, the collapse
+   and the curtain are layout, so the sequence appears everywhere the hold
+   does. */
+.footer.signoff[data-horizon-state='capturing'] [data-horizon-item],
+.footer.signoff[data-horizon-state='hold'] [data-horizon-item],
+.footer.signoff[data-horizon-state='ready'] [data-horizon-item] {
+  will-change: transform, opacity;
+}
+
+/* While the scene holds, the sheet must not clip what it is eating with its own
+   `overflow: hidden`: the headline and the CTA leave the box on their way to the
+   singularity, and the overlay paints the stretched mesh across the seam above it.
+
+   What it MUST still clip is the hem. The sheet's border box collapses as the
+   void is paid back to the curtain, but the frozen frame and the live flyers
+   keep their rest-size boxes, so without this they would paint over the bright
+   floor below the hem (the sheet's stacking context sits above the stage's).
+   `clip-path` is the tool: it follows the collapsing border box exactly, and the
+   negative top inset re-grants the measured veil of seam above it. The value is
+   published by the effect as --horizon-veil. */
+.footer.signoff[data-horizon-scene='pinned'],
+.footer.signoff[data-horizon-scene='pinned'] .signoff__anchor,
+.footer.signoff[data-horizon-scene='pinned'] .signoff__line,
+.footer.signoff[data-horizon-scene='pinned'] .signoff__line-in,
+.footer.signoff[data-horizon-scene='pinned'] .signoff__title,
+.footer.signoff[data-horizon-scene='pinned'] .signoff__actions,
+.footer.signoff[data-horizon-scene='pinned'] .btn,
+.footer.signoff[data-horizon-scene='pinned'] .pk-stack,
+.footer.signoff[data-horizon-scene='pinned'] .pk-layer,
+.footer.signoff[data-horizon-scene='pinned'] .pk-char {
+  overflow: visible;
+}
+.footer.signoff[data-horizon-scene='pinned'] {
+  clip-path: inset(calc(-1 * var(--horizon-veil, 0px)) 0 0 0);
+}
+
+/* The CTA's hover sheen (.btn-spark) is a hard white diagonal band parked
+   off-canvas at translateX(-130%) and only ever clipped away by `.btn`'s own
+   `overflow: hidden`. The pinned rule above un-clips `.btn` so the CTA can
+   leave the sheet, which also un-clips the parked sheen — and the fluid mesh
+   clones the button (sheen included) into its cells, stretching that band
+   into the white needle trailing the fall. It is a hover affordance and the
+   consumption scene has no hover: stand it down for the hold so only the real
+   button strata fall in. */
+.footer.signoff[data-horizon-scene='pinned'] .btn-spark {
+  display: none;
+}
+
+/* ---- keyboard rescue -------------------------------------------------------
+   At ANY progress, including a fully consumed sheet: focus inside the
+   invitation restores the real paint, the real focus ring and the real hit
+   target, in place, and suppresses the frozen frame. A consumed flyer keeps its
+   tab stop — only its pointer is retired, so no invisible link is left sitting
+   over the hole. This is a rescue, not a
+   reset — the playhead, the collapse and the curtain stay exactly where the
+   scroll put them. `!important` is load-bearing: the effect writes these three
+   as inline styles, and a stylesheet rule cannot beat an inline declaration
+   without it. */
+.footer.signoff:focus-within [data-horizon-item] {
+  transform: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+/* The rescue restores the real content — the fluid mesh stands down and the
+   original glyphs come back in place, without touching the playhead, the
+   collapse or the curtain. */
+.footer.signoff:focus-within [data-horizon-item] > :not(.horizon-fluid-cell) {
+  opacity: 1 !important;
+}
+.footer.signoff:focus-within .horizon-fluid-cell {
+  opacity: 0 !important;
+}
+.footer.signoff:focus-within > .signoff-horizon__canvas {
+  opacity: 0;
+}
+
+/* ---- synchronous paint guard ----------------------------------------------
+   The shared matchMedia hook tears an active capture/playhead down asynchronously
+   after a device-policy change, and a ScrollTrigger refresh is not the same
+   tick as the media query that invalidated it. These rules make the fallback
+   state correct on the first painted frame after the change: the real
+   invitation is back in place and only the CANVAS is hidden — real links are
+   never hidden by a media query. The breakpoint is the existing singularity
+   CSS fallback, so both halves of the gate agree without a second source. */
+@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+  .signoff-horizon__canvas {
+    display: none;
+  }
+  .footer.signoff[data-horizon-scene='pinned'] {
+    clip-path: none;
+  }
+  .footer.signoff [data-horizon-item] {
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    /* …and the lift out of document flow is undone with it. The effect drops
+       the box itself on teardown; these are the same frame's guarantee, for a
+       policy change that lands before the matchMedia revert does. */
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: auto !important;
+    height: auto !important;
+  }
+  /* The real content comes back; the fluid mesh is hidden outright so a
+     policy change landing before the matchMedia revert can never leave the
+     invitation as an empty cell grid. */
+  .footer.signoff [data-horizon-item] > :not(.horizon-fluid-cell) {
+    opacity: 1 !important;
+  }
+  .footer.signoff .horizon-fluid-cell {
+    display: none !important;
+  }
+  .footer.signoff .signoff__anchor {
+    height: auto !important;
+  }
+}

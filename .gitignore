@@ -1,0 +1,27 @@
+# Build output
+dist/
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
+
+# Dependencies / Vite cache (never add generated packages to the patch)
+node_modules/
+
+# Browser test artifacts
+playwright-report/
+test-results/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+.arena/
+
+# Local Netlify folder
+.netlify
+.vercel
+.env*

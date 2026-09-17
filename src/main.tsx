@@ -1,0 +1,73 @@
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+// TYPE STACK — Awwwards-grade typographic system.
+//   PP Neue Machina  (Inktrap + Plain)   — self-hosted Pangram Pangram display faces
+//   PP Neue Montreal (+ Text)            — self-hosted body/reading faces
+//   Space Grotesk                         — retained tech-forward accent face
+// Unbounded / Inter / Space Mono have been PURGED from the bundle.
+// The PP families are registered as @font-face rules and exposed as
+// --font-pp-* raw family tokens on :root; the canonical semantic tokens
+// (--font-display/heading/body/body-text/accent) are mapped in global.css.
+import '@fontsource-variable/space-grotesk';
+import '@fontsource/michroma';
+import './assets/fonts/pp-fonts.css';
+import './styles/global.css';
+// Tailwind v4 utility layer (theme + utilities, NO preflight) behind the
+// shadcn/ui structure — components.json · @/components/ui · @/lib/utils.
+// Loaded after global.css; see the header comment in the file itself for why
+// preflight is deliberately excluded.
+import './styles/tailwind.css';
+import './styles/components.css';
+import './styles/overhaul.css';
+import './styles/audit-gaps.css';
+import './styles/portal.css';
+// Motion system (.pk / .rt / .magnetic / .btn bloom) — the kinetic layer
+// shared by every control; loads right after portal.css so hero scoping
+// (prefixed .hero__ctas) still wins where both define a rule.
+import './styles/motion.css';
+import './styles/nemo-chat.css';
+// Art-directed typographic application layer — loaded LAST so the role
+// assignments (Plain sub-headings/nav, Montreal Text dense reading, active
+// pills, tabular counters) take precedence over the base component rules.
+import './styles/typography.css';
+// 04 · PILLAR 3 — cyber-luxury split-canvas rebuild (loads after typography
+// so its scoped art direction wins where tokens overlap).
+import './styles/pulls.css';
+// 3D rotunda section chrome — scoped .cg-* layer for the section head,
+// badges, stage frame and hint. (The sphere stage itself is the
+// self-contained Tailwind component src/components/ui/img-sphere.tsx.)
+import './styles/circular-gallery.css';
+// Rod system — suspended roster (01), skewered credit plates (06) and the
+// drilling canon-timeline rod. Loaded LAST: its scoped rules intentionally
+// win over the base card/timeline layer they rebuild.
+import './styles/suspension.css';
+// The hero background — the WebGL particle field's own layers (breathing
+// ambience, vignette, film grain, loading veil, no-WebGL fallback). The
+// standalone concept it is ported from reset html/body and claimed the bare
+// names .vignette/.grain and the :root vars --bg/--cyan/--ink/--magenta, all of
+// which this site already uses; everything here is contained under .nemo-field
+// with --npf-* variables, so it loads anywhere without contending.
+import './styles/nemo-particles.css';
+// The singularity — the WebGPU black hole stage between the canon timeline and
+// the closing crawl: stage box, the seam gradients that dissolve the canvas
+// into the page, and the static fallback frame. Scoped to .singularity/.bh-*,
+// so it loads last without contending with anything above.
+import './styles/blackhole.css';
+// The boot sequence — the topmost fixed layer the site owns (z 600: above
+// .grain, the nav HUD and the side rail; below the custom cursor at 1000).
+// Everything is scoped to .ldr/.ldr__*, so it contends with none of the above.
+import './styles/loader.css';
+import App from './App';
+/* The single scroll authority (DESIGN_AUDIT P1) — init before React mounts
+   so the boot loader can hold/release the engine as part of the sequence.
+   See src/lib/scroll.ts for the full contract. */
+import { initSmoothScroll } from './lib/scroll';
+
+initSmoothScroll();
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
+

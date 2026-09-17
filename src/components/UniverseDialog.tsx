@@ -1,0 +1,266 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusTrap } from '../lib/hooks';
+import { lockPage, unlockPage } from '../lib/scroll';
+import { haptic, HAPTIC } from '../lib/haptics';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { KineticLink } from './motion';
+import CardImage from './CardImage';
+import type { Universe } from '../lib/data';
+import { RARITY } from '../lib/data';
+
+const EASE = [0.16, 1, 0.3, 1] as const;
+
+export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: () => void }) {
+  const rarity = RARITY[u.rarity];
+  const accent = rarity.color;
+  const soldPct = u.supply ? Math.round((u.minted / u.supply) * 100) : 0;
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const mediaRef = useRef<HTMLDivElement | null>(null);
+
+  /* Subtle media parallax tied to the panel's internal scroll: the art
+     drifts ±3% against the copy when the dialog content overflows. The
+     transform is percentage-of-self, so it costs nothing and settles at 0
+     when there is nothing to scroll. */
+  const { scrollYProgress } = useScroll({
+    container: panelRef,
+    target: mediaRef,
+    offset: ['start end', 'end start'],
+  });
+  const mediaY = useTransform(scrollYProgress, [0, 1], ['-3%', '3%']);
+
+  /* P0.3 — the hand-rolled trap and lock now live in shared primitives, so
+     this dialog and the mobile menu can never drift apart again: same
+     focus cycle, same Escape, same return-to-trigger on close, same
+     lib/scroll lock (Lenis frozen alongside the CSS viewport lock; the
+     ~scrollbar-width layout pop that `overflow:hidden` used to cause is
+     gone via scrollbar-gutter on html). */
+  /* P3.13 — the panel receives the card's plate on the shared layoutId.
+     `handedBack` flips in the same commit that unmounts the dialog: the
+     layoutId moves back to the (now un-lifted) card, and the exact same
+     spring carries the plate home — dialog closing is the morph reversed,
+     not a fade. */
+  const [handedBack, setHandedBack] = useState(false);
+  const reduce = useReducedMotion();
+  const morphing = !reduce && !handedBack;
+  const beginClose = useCallback(() => {
+    setHandedBack(true);
+    onClose();
+  }, [onClose]);
+  useFocusTrap(true, panelRef, { onEscape: beginClose });
+
+  useEffect(() => {
+    lockPage('dialog');
+    /* P4.16 (audit 3.5): the dialog-open beat reaches the hand as well as
+       the eye — one util, feature-detected, silent where there is no motor. */
+    haptic(HAPTIC.dialogOpen);
+    return () => unlockPage('dialog');
+  }, []);
+
+  return (
+    <motion.div
+      className="dialog-backdrop"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35, ease: EASE }}
+      onClick={beginClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${u.code} — ${u.name}`}
+    >
+      <motion.div
+        ref={panelRef}
+        className="dialog"
+        data-lenis-prevent
+        style={{ '--card-accent': accent }}
+        /* While the plate morph owns the motion, the panel must not double
+           the movement: entrance is opacity-only; the plate's spring IS the
+           choreography (audit 2.5 — "one 0.6 s expo-spring carries the plate
+           from rail to panel"). Without an active morph the old slide stays. */
+        initial={morphing ? { opacity: 0 } : { opacity: 0, y: 44, scale: 0.96 }}
+        animate={morphing ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: morphing ? 0 : 30, scale: morphing ? 1 : 0.97 }}
+        transition={{ duration: morphing ? 0.34 : 0.5, ease: EASE }}
+        onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+      >
+        <button className="dialog__close" onClick={beginClose} aria-label="Close universe detail">
+          ✕
+        </button>
+
+        <div className="dialog__grid">
+          <motion.div
+            className="dialog__media"
+            ref={mediaRef}
+            layoutId={reduce || handedBack ? undefined : `plate-${u.id}`}
+            transition={{ layout: { type: 'spring', stiffness: 190, damping: 27, mass: 0.9 } }}
+          >
+            {u.image ? (
+              <motion.div className="dialog__media-parallax" style={{ y: mediaY }}>
+                <CardImage
+                  src={u.image}
+                  alt={`${u.name} — ${u.artist.name}`}
+                  eager
+                  sizes="min(46vw, 470px)"
+                />
+              </motion.div>
+            ) : (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'grid',
+                  placeItems: 'center',
+                  background:
+                    'radial-gradient(60% 50% at 50% 45%, rgba(138,77,255,0.18), transparent 70%)',
+                }}
+              >
+                <div className="ucard__lock" style={{ textAlign: 'center' }}>
+                  <div className="ring orbit spin" style={{ width: 90, height: 90, margin: '0 auto 1.2rem' }} />
+                  <div className="q" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '2rem', color: 'var(--ink-dim)', letterSpacing: '0.3em' }}>
+                    ▚▚▚
+                  </div>
+                  <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.66rem', letterSpacing: '0.26em', color: 'var(--ink-faint)', textTransform: 'uppercase', marginTop: '0.8rem' }}>
+                    ART & LORE SEALED UNTIL DROP
+                  </p>
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          <div className="dialog__body">
+            <div className="dialog__code">{u.code} · CANON ENTRY</div>
+            <h3 className="dialog__name">{u.name}</h3>
+            <p className="dialog__world">TIMELINE — {u.world}</p>
+
+            <p className="dialog__lore">{u.lore}</p>
+
+            <div className="dialog__specs">
+              <div className="dialog__spec">
+                <span>RARITY</span>
+                <b style={{ color: accent }}>{rarity.label}</b>
+              </div>
+              <div className="dialog__spec">
+                <span>EDITION</span>
+                <b>
+                  {u.minted}/{u.supply}
+                </b>
+              </div>
+              <div className="dialog__spec">
+                <span>MINT PRICE</span>
+                <b className="eth">{u.price > 0 ? `${u.price} ETH · BASE` : '—'}</b>
+              </div>
+              <div className="dialog__spec">
+                <span>RELEASED</span>
+                <b>
+                  {u.status === 'secret'
+                    ? 'UNREGISTERED'
+                    : new Date(u.released).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: '2-digit',
+                        year: 'numeric',
+                      })}
+                </b>
+              </div>
+            </div>
+
+            {u.variant && (
+              <p className="dialog__split">
+                <span className="pill">VARIANT PULLS</span> {u.variant}
+              </p>
+            )}
+
+            <div className="dialog__artist">
+              <span className="ava" style={{ '--a1': u.artist.hue[0], '--a2': u.artist.hue[1] }}>
+                {u.artist.initials}
+              </span>
+              <span className="who">
+                <b>{u.artist.name}</b>
+                <span>{u.artist.handle} · {u.style}</span>
+              </span>
+              <span className="quote">{u.artist.quote}</span>
+            </div>
+
+            <p className="dialog__split">
+              <span className="pill">
+                REVENUE SPLIT <b>60% ARTIST</b>
+              </span>
+              <span className="pill">
+                <b>40% CLIENT</b>
+              </span>
+              <span className="pill">CREDITED IN METADATA</span>
+            </p>
+
+            {u.status === 'live' && (
+              <div>
+                <div className="labels" style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: '0.6rem', letterSpacing: '0.2em', color: 'var(--ink-faint)', textTransform: 'uppercase', marginBottom: 6 }}>
+                  <span>CLAIMED</span>
+                  <span>{soldPct}%</span>
+                </div>
+                <div className="progress">
+                  <i style={{ ['--p' as string]: soldPct / 100 }} />
+                </div>
+              </div>
+            )}
+
+            <div className="dialog__ctas">
+              {u.status === 'live' && (
+                <KineticLink
+                  href="#perks"
+                  className="btn btn-primary"
+                  cursor="CLAIM"
+                  label="CLAIM THIS UNIVERSE"
+                  swap="SECURE THE EDITION"
+                  onClick={onClose}
+                />
+              )}
+              {u.status === 'upcoming' && (
+                <KineticLink
+                  href="#perks"
+                  className="btn btn-primary"
+                  cursor="ENTER"
+                  label="HOLDERS ENTER FIRST"
+                  swap="CROSS THE GATE"
+                  onClick={onClose}
+                />
+              )}
+              {u.status === 'sold-out' && (
+                <span className="btn btn-ghost" style={{ cursor: 'default' }}>
+                  <span className="btn__txt">SOLD OUT — CHECK SECONDARY</span>
+                </span>
+              )}
+              {u.status === 'encrypted' && (
+                <KineticLink
+                  href="#persona"
+                  className="btn btn-gold"
+                  cursor="ASK"
+                  label="ASK THE PERSONA ABOUT #008"
+                  swap="SUMMON NEMO"
+                  onClick={onClose}
+                />
+              )}
+              {u.status === 'secret' && (
+                <KineticLink
+                  href="#pulls"
+                  className="btn btn-gold"
+                  cursor="PULL"
+                  label="NO ONE COMMISSIONED THIS"
+                  swap="UNWRITTEN CANON"
+                  onClick={onClose}
+                />
+              )}
+              <KineticLink
+                href="#pulls"
+                className="btn btn-ghost"
+                cursor="VIEW"
+                label="HOW PULLS WORK"
+                arrow
+                spark={false}
+                onClick={onClose}
+              />
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}

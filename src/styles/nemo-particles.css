@@ -1,0 +1,163 @@
+/* ============================================================================
+   THE NEMOVERSE PARTICLE FIELD — hero background
+   (section: sections/Hero.tsx · glue: components/NemoParticleField.tsx ·
+    engine: src/three/nemo-particles/, ported from nemo-webgl.html)
+
+   This is the <style> block of the standalone `nemo-webgl.html` concept,
+   re-scoped for embedding. Every value is the original's; only the selectors
+   and the custom-property names changed, for one reason: the original was a
+   whole document, so it reset html/body and claimed bare class names
+   (.vignette, .grain, #fallback, .loading-overlay) plus bare :root variables
+   (--bg, --cyan, --ink, --magenta). Those all exist already in this site —
+   .vignette (overhaul.css), .grain (global.css + overhaul.css) and
+   --cyan/--ink/--magenta (global.css :root) — so a verbatim copy would have
+   restyled the whole page. Hence:
+
+     · every rule is contained under the .nemo-field wrapper
+     · every variable is renamed --npf-* and declared on that wrapper only
+     · the html/body reset and the canvas's position:fixed are gone; the
+       wrapper is absolutely positioned inside .hero__bg and the canvas is
+       sized by the engine from the hero's measured box
+
+   Layer order is the original's z-index ramp (breathe 1 · vignette 3 ·
+   grain 4 · fallback 10 · loading 20), now local to the wrapper. Because
+   .hero__bg is itself a stacking context (z-index:-2), nothing here can
+   escape above .hero__wash / .hero__content — the field is a background.
+   ========================================================================== */
+
+.nemo-field {
+  /* the standalone page's :root palette, scoped */
+  --npf-bg: #030208;
+  --npf-breathe: #12101c;
+  --npf-cyan: #5ed0f5;
+  --npf-violet: #9b8cf0;
+  --npf-magenta: #e98bd8;
+  --npf-ink: #f5f4fa;
+
+  position: absolute;
+  inset: 0;
+  /* the field paints its own opaque near-black backdrop (alpha:false context),
+     so the wrapper needs no background of its own */
+  contain: paint;
+}
+
+.nemo-field__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  /* CSS owns the display box; the engine owns canvas.width/height (drawing
+     buffer) from the hero's measured size — see resize() in the engine. */
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- ambient "breathing" background ----------------------------------
+   Pure DOM/CSS layer, does not touch the canvas, the WebGL context, or
+   any particle code. The WebGL context is opaque (alpha:false, and the
+   composite shader always writes alpha=1), so a layer placed *behind*
+   the canvas would never be visible — instead this sits just above the
+   canvas (below the vignette/grain) and uses mix-blend-mode:screen with
+   stops that are all near-black. screen(base, black)=base exactly, so
+   the pure-black outer edge and the opacity-0 resting state leave every
+   pixel untouched; only the faint off-center violet-charcoal core ever
+   lifts brightness, and only by a fraction of a percent — imperceptible
+   against particle colors, but enough to "breathe" the black backdrop.
+   The existing grain overlay (already above this layer) dithers away
+   any banding risk from the narrow color range. No layout box, no
+   canvas repaint, no JS: purely a compositor-level effect. */
+.nemo-field__breathe {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 130% 110% at 60% 38%,
+    var(--npf-breathe) 0%,
+    var(--npf-bg) 45%,
+    #000 100%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: npfBreathe 10s ease-in-out infinite;
+  will-change: opacity;
+}
+@keyframes npfBreathe {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nemo-field__breathe {
+    animation: none;
+    opacity: 0.2;
+  }
+}
+
+.nemo-field__vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background: radial-gradient(
+    ellipse 90% 80% at 62% 42%,
+    transparent 0%,
+    transparent 42%,
+    rgba(2, 1, 6, 0.62) 100%
+  );
+}
+.nemo-field__grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+}
+
+/* Terminal-failure chip — no WebGL, or pose data that never arrived. It is
+   the field's ONLY overlay now: loading is the boot loader's job (see
+   lib/particleGate.ts; the field's own loading overlay was deleted because
+   it painted a second loader across the hero the moment the boot released).
+   It used to be centred across the whole field, which put it directly behind
+   the hero headline — the one surface that must stay clean (and `z-index: 10`
+   inside the field still loses to the hero content, so it read as smudged
+   type under the title rather than as a message). It parks at the foot of the
+   field as a small glass chip: legible, honest, and out of the type's way. */
+.nemo-field__fallback {
+  position: absolute;
+  left: 50%;
+  bottom: 1.6rem;
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: min(30rem, calc(100% - 2rem));
+  color: #a7b2cc;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  padding: 0.5rem 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(5, 5, 10, 0.7);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  z-index: 10;
+  text-align: center;
+  box-sizing: border-box;
+}
+.nemo-field__fallback.is-error {
+  color: #f0c9a8;
+  border-color: rgba(240, 180, 120, 0.34);
+  background: rgba(24, 12, 6, 0.72);
+  letter-spacing: 0.12em;
+  text-transform: none;
+}

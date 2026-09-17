@@ -1,0 +1,200 @@
+/* ============================================================================
+   PORTAL BUTTONS — hero CTA overhaul
+   Companion CSS for components/PortalButton.tsx. Loaded last so it wins over
+   the shared .btn tokens; scoped to .hero__ctas so the rest of the site's
+   buttons are untouched.
+============================================================================ */
+
+/* ---------- magnetic wrapper ---------- */
+
+.portal-magnetic {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* ---------- shared button chrome ---------- */
+
+.hero__ctas .portal-btn {
+  /* typographic tension fix: looser block → inviting kinetic label */
+  letter-spacing: 0.12em;
+  font-size: clamp(0.72rem, 0.66rem + 0.32vw, 0.84rem);
+  padding: 1.1rem 1.9rem;
+  border-radius: 13px;
+  transition: transform 0.35s var(--ease-expo), box-shadow 0.35s var(--ease-expo),
+    filter 0.35s var(--ease-expo), border-color 0.35s var(--ease-expo),
+    background 0.35s var(--ease-expo);
+}
+.hero__ctas .portal-btn:hover {
+  /* movement is owned by the GSAP magnetic spring now */
+  transform: none;
+  filter: none;
+}
+.hero__ctas .portal-btn:active {
+  transform: scale(0.965);
+}
+.hero__ctas .portal-btn .btn-spark {
+  z-index: 2;
+}
+.hero__ctas .portal-btn:focus-visible {
+  outline: 1px solid var(--cyan);
+  outline-offset: 3px;
+}
+
+/* ---------- kinetic label (shared) ---------- */
+/* The .pk-* core (stack/layer/char) has been PROMOTED to styles/motion.css —
+   it now powers every tier-1/2 CTA, not just the hero. Only hero-scoped
+   blend/treatment overrides remain below. */
+
+/* ---------- PRIMARY — liquid WebGL surface ---------- */
+
+.hero__ctas .portal-btn--liquid {
+  /* fallback while the shader boots / when WebGL is unavailable */
+  background: var(--grad-primary);
+  animation: pk-breathe 5s var(--ease-expo) infinite alternate;
+}
+.hero__ctas .portal-btn--liquid .pk-liquid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+.hero__ctas .portal-btn--liquid.no-webgl .pk-liquid {
+  display: none;
+}
+/* dynamic blend mode: exclusion inverts the label against the shifting
+   liquid beneath — contrast is computed by the shader's own palette */
+.hero__ctas .portal-btn--liquid .pk-layer {
+  mix-blend-mode: exclusion;
+  color: #fff;
+  text-shadow: 0 0 14px rgba(5, 5, 12, 0.55);
+}
+
+@keyframes pk-breathe {
+  from {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 12px 44px -10px rgba(120, 70, 255, 0.5);
+  }
+  to {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18) inset, 0 16px 60px -8px rgba(63, 232, 255, 0.62);
+  }
+}
+
+/* click-state chromatic aberration — RGB split flash on the boundaries */
+.hero__ctas .portal-btn--liquid.is-burst {
+  animation: pk-breathe 5s var(--ease-expo) infinite alternate, pk-burst 0.46s var(--ease-expo);
+}
+@keyframes pk-burst {
+  0% {
+    box-shadow: -5px 0 0 0 rgba(255, 61, 154, 0.95), 5px 0 0 0 rgba(63, 232, 255, 0.95),
+      0 0 42px 4px rgba(138, 77, 255, 0.75);
+    filter: saturate(1.7) brightness(1.14);
+  }
+  45% {
+    box-shadow: -3px 0 0 0 rgba(255, 61, 154, 0.55), 3px 0 0 0 rgba(63, 232, 255, 0.55),
+      0 0 26px 2px rgba(138, 77, 255, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 12px 44px -10px rgba(120, 70, 255, 0.5);
+    filter: none;
+  }
+}
+.hero__ctas .portal-btn--liquid.is-burst .pk-char-in {
+  text-shadow: -2px 0 rgba(255, 61, 154, 0.95), 2px 0 rgba(63, 232, 255, 0.95);
+}
+
+/* ---------- SECONDARY — refractive glassmorphism ---------- */
+
+.hero__ctas .portal-btn--glass {
+  border: 1px solid transparent;
+  letter-spacing: 0.16em;
+  /* 1px inner border: translucent white→transparent gradient, animated;
+     padding-box keeps the fill frosted while border-box carries the rim */
+  background:
+    linear-gradient(180deg, rgba(20, 20, 36, 0.26), rgba(8, 8, 18, 0.44)) padding-box,
+    linear-gradient(
+        120deg,
+        rgba(255, 255, 255, 0.62) 0%,
+        rgba(255, 255, 255, 0.06) 30%,
+        rgba(63, 232, 255, 0.55) 52%,
+        rgba(255, 255, 255, 0.05) 74%,
+        rgba(138, 77, 255, 0.62) 100%
+      )
+      border-box;
+  background-size: auto, 240% 240%;
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 32px -12px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  animation: pk-glass-border 8s ease-in-out infinite alternate;
+}
+@keyframes pk-glass-border {
+  from {
+    background-position: 0 0, 0% 50%;
+  }
+  to {
+    background-position: 0 0, 100% 50%;
+  }
+}
+/* re-assert the glass layers on hover — .btn-ghost:hover would otherwise
+   replace the fill and rim with its flat tint */
+.hero__ctas .portal-btn--glass:hover {
+  border-color: transparent;
+  background:
+    linear-gradient(180deg, rgba(20, 20, 36, 0.26), rgba(8, 8, 18, 0.44)) padding-box,
+    linear-gradient(
+        120deg,
+        rgba(255, 255, 255, 0.62) 0%,
+        rgba(255, 255, 255, 0.06) 30%,
+        rgba(63, 232, 255, 0.55) 52%,
+        rgba(255, 255, 255, 0.05) 74%,
+        rgba(138, 77, 255, 0.62) 100%
+      )
+      border-box;
+  background-size: auto, 240% 240%;
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 46px -12px rgba(63, 232, 255, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+/* frosted sheen sweep across the pane */
+.hero__ctas .portal-btn--glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.16) 50%, transparent 62%);
+  transform: translateX(-130%);
+  transition: transform 0.9s var(--ease-swift);
+  pointer-events: none;
+}
+.hero__ctas .portal-btn--glass:hover::after {
+  transform: translateX(130%);
+}
+/* dynamic blend mode: difference keeps the label readable as the blurred
+   scene behind the glass shifts */
+.hero__ctas .portal-btn--glass .pk-layer {
+  mix-blend-mode: difference;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(5, 5, 12, 0.4);
+}
+
+/* ---------- custom kinetic chevron icon ---------- */
+/* The .pk-chev-* chrome has been PROMOTED to styles/motion.css (generic,
+   unscoped) so ghost-tier buttons across the site share the morphing arrow. */
+
+/* ---------- reduced motion: everything freezes, labels stay put ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__ctas .portal-btn--liquid,
+  .hero__ctas .portal-btn--glass,
+  .hero__ctas .portal-btn--liquid.is-burst {
+    animation: none;
+  }
+  .hero__ctas .portal-btn--glass::after {
+    display: none;
+  }
+  .hero__ctas .portal-btn:hover {
+    transform: none;
+  }
+}

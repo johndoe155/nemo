@@ -1,0 +1,176 @@
+<!doctype html>
+<!--
+  Dev harness for the sign-off lensing field.
+
+  Served by the repo's own dev server (`npm run dev`, port 5173 — vite.Config
+  allowlists it, and `base:"./"` keeps the bare-module rewrite relative), so
+  this file IMPORTS THE PRODUCTION FIELD from src/lib/spaghettification.ts.
+  No math or constants are duplicated here: what you scrub is the same
+  `lensFieldAt` the live overlay draws from — plus the PRODUCTION fallback
+  renderer from src/lib/signoffMosaic.ts, wired the way SignoffHorizon.tsx's
+  unarmed path wires it: one rest-pose raster (painted procedurally with the
+  probe's computed font, standing in for html2canvas), one overlay canvas,
+  `draw(p, geometry, flyers)` per playhead, the live DOM crossfaded out on the
+  same mix the sheet CSS uses. NO SVG FILTER anywhere: that substrate is
+  permanently retired (engines sampled feImage data-URL displacement maps as
+  transparent black — three fix-rounds later the verdict stood), so what you
+  scrub here is what the real fallback paints.
+
+  The probe is a stand-in flyer (a noun-scenario headline in the sheet's own
+  type), positioned and sized the way the fixture places them relative to a
+  singularity directly above. You drag the playhead handle and watch, at any
+  speed, in direct-Zoom:
+
+  1. the fall carry the probe toward the singularity (the pull axis),
+  2. its NEAR edge lead the far one exponentially (the tide differential),
+  3. its baseline arch into the quadratic term (concentric with the disk, NOT
+     a list — the frame-drag swirl is kept subordinate),
+  4. the texture pinching off and collapsing INTO the point at the horizon,
+  5. the dashed audit rect — the forward hull of the rest perimeter
+     (lensRegionAt) — ride the same fall.
+
+  The camera's own frame ("the camera sprite") is hinted by the screen-fixed
+  outline behind the hole; the playhead drive below stands in appearance only
+  for the scroll pin that owns it in production.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spaghettification harness</title>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="camera"></div>
+      <div id="disk"></div>
+      <div id="ring"></div>
+      <div id="hole"></div>
+      <div id="probe" data-horizon-item="probe">NEMOVERSE</div>
+    </div>
+
+    <aside id="needs">
+      <h1>Sign-off lensing invariants</h1>
+      <ul>
+        <li>Neither transform nor filter on the flyer — the warp lives on the overlay canvas (inspect: the probe keeps <code>transform</code>/<code>filter</code> empty; only <code>opacity</code> moves, as the crossfade mix).</li>
+        <li>Concentric arching — the baseline bows toward the hole (hatched guides run concentric with the disk; the quadratic coefficient is read out below).</li>
+        <li>Exponential near-edge differential — the rows nearest the horizon keep more of their destination height than the far rows as the sheet contracts.</li>
+        <li>Unified cohesion — the raster moves as one object; slices whose destination height collapses erase themselves, so the letterforms pinch off and dive into the point rather than tearing.</li>
+        <li>Region audit — the dashed rect is the forward hull (<code>lensRegionAt</code>): it rides the fall and collapses with the content instead of leaving a fixed slab over the rest position.</li>
+      </ul>
+    </aside>
+
+    <div id="scrub">
+      <input id="playhead" type="range" min="0" max="1" step="0.001" value="0" />
+      <output id="readout">p = 0.000 · rest (identity mosaic verified, live DOM shown)</output>
+    </div>
+
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #030003;
+        color: #ffe9e2;
+        font-family: "Helvetica Neue", system-ui, sans-serif;
+      }
+      #stage { position: relative; height: 74vh; overflow: hidden; }
+      /* The camera spirit frame: screen-fixed behind the hole, the way the
+         live camera's lingerer holds the hole's face steady while the scrub
+         scrubs. */
+      #camera {
+        position: absolute;
+        left: 50%; top: 16vh;
+        width: 9.5rem; height: 10rem;
+        transform: translate(-50%, -50%);
+        outline: 1px dashed rgba(255, 197, 168, 0.35);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      /* The hole and its twin imply the field's center; the hatch ring marks
+         the dilation contour the baseline must arch ALONG, not across. */
+      #hole, #disk, #ring {
+        position: absolute;
+        left: 50%; top: 16vh;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      #disk {
+        width: 20rem; height: 20rem;
+        border: 1px solid rgba(255, 142, 108, 0.28);
+        box-shadow: 0 0 4rem rgba(255, 90, 40, 0.28), inset 0 0 3rem rgba(255, 60, 20, 0.2);
+      }
+      #ring {
+        width: 42rem; height: 42rem;
+        border: 0.15rem dashed rgba(255, 255, 255, 0.14);
+      }
+      #hole {
+        width: 4.5rem; height: 4.5rem;
+        background: #000;
+        border: 2px solid #ff2f2f;
+        box-shadow: 0 0 2.5rem rgba(255, 45, 45, 0.8);
+      }
+      /* The probe stands in for the invite flyer: page-flow position, the
+         sheet's 700px measure, and the SAME ratio of near-edge radius to hole
+         radius the live geometry owns (--vor-r-s is the variable the real
+         sheet arma). */
+      #probe {
+        position: absolute;
+        left: 50%; top: 54vh;
+        width: min(700px, 86vw);
+        transform: translateX(-50%);
+        font-size: clamp(2rem, 10vw, 4.25rem);
+        font-weight: 800;
+        text-align: center;
+        letter-spacing: 0.06em;
+        color: #fff;
+        background: linear-gradient(90deg, #fff 10%, #ff9c6b 42%, #ff4136 72%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        will-change: opacity;
+      }
+      #region {
+        position: absolute;
+        pointer-events: none;
+        outline: 1.5px dashed rgba(122, 214, 255, 0.75);
+        background: rgba(122, 214, 255, 0.05);
+      }
+      aside {
+        position: fixed;
+        right: 1rem; top: 1rem;
+        width: 17rem;
+        font-size: 0.72rem;
+        line-height: 1.45;
+        color: rgba(255, 240, 232, 0.8);
+        background: rgba(10, 4, 6, 0.85);
+        border: 1px solid rgba(255, 120, 80, 0.25);
+        border-radius: 8px;
+        padding: 0.75rem 0.9rem;
+      }
+      aside h1 { font-size: 0.8rem; margin: 0 0 0.4rem; color: #ffb59d; }
+      aside ul { margin: 0; padding-left: 1rem; }
+      aside li { margin: 0 0 0.35rem; }
+      aside code { color: #7ad6ff; }
+      #scrub {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        padding: 0.9rem 1.2rem;
+        background: rgba(5, 1, 2, 0.92);
+      }
+      #playhead { flex: 1; accent-color: #ff4136; }
+      #readout {
+        font-family: ui-monospace, monospace;
+        font-size: 0.72rem;
+        white-space: pre;
+        min-width: 34ch;
+        text-align: right;
+      }
+    </style>
+
+    <script type="module" src="/harness/spaghettification.ts"></script>
+  </body>
+</html>

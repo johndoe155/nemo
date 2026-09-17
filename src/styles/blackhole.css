@@ -1,0 +1,430 @@
+/* ============================================================================
+   THE SINGULARITY — the WebGPU black hole stage
+   (section: sections/Singularity.tsx · glue: components/BlackHoleStage.tsx ·
+    simulation: src/three/blackhole/, vendored verbatim)
+
+   Three jobs, and only three:
+
+     1 · BOX      give the canvas a definite, responsive rectangle. The renderer
+                  sizes itself off THIS element's bounding box (ResizeObserver),
+                  never off window.innerWidth/innerHeight the way upstream's
+                  standalone main.js did.
+
+     2 · SEAM     dissolve the canvas's own hard rectangle into the page. The
+                  simulation paints its own opaque starfield/nebula background
+                  (blackhole.config.js: starBackgroundColor #000000,
+                  nebula1Color #071f44, nebula2Color #010615), so an unmasked
+                  edge reads as a cut. A vertical mask fades the stage's top
+                  and bottom 9% to transparent and lets the scene-tuned
+                  ambience show through, while .bh-frame's pseudo-elements lay
+                  navy above the stage and ember below it — the same palette,
+                  from the same tokens, so the two backgrounds meet as one.
+                  This is host-page code only: nothing from the zip.
+
+     3 · STILL    style the static frame (no WebGPU, failed init, or booting).
+
+   Every colour comes from the --bh-* tokens in global.css, which are read off
+   blackhole.config.js. Nothing is hardcoded twice, and the same palette is
+   mirrored in lib/scenes.ts (GL ambience) and styles/overhaul.css (CSS
+   ambience fallback).
+   ========================================================================== */
+
+.singularity {
+  /* Keep the black-hole section in the main experience’s paint layer. The
+     curtain footer is a later, bright stacking context; without an explicit
+     main-layer level, its surface can cover transparent Singularity seams. */
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  /* The stage is a focal interruption, not a full-height standalone page.
+     Use a slightly tighter rhythm than the generic .section while retaining
+     enough air for the atmosphere to travel in and out of the canvas. */
+  padding-block: clamp(3.5rem, 7vw, 7rem) clamp(2.5rem, 5vw, 5rem);
+  --bh-seam: clamp(56px, 10vh, 130px);
+}
+
+/* One continuous host-page field sits behind both the canvas and its seams.
+   This is deliberately broader than the local .bh-frame gradients: the
+   neighboring sections should inherit a trace of the black hole's navy/ember
+   atmosphere before the reader reaches the masked canvas edge. */
+.singularity::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(82% 42% at 50% 8%, color-mix(in srgb, var(--bh-navy) 44%, transparent), transparent 76%),
+    radial-gradient(72% 34% at 50% 94%, color-mix(in srgb, var(--bh-ember) 18%, transparent), transparent 78%),
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in srgb, var(--bh-navy-deep) 22%, transparent) 23%,
+      color-mix(in srgb, var(--bh-navy-deep) 34%, transparent) 67%,
+      transparent 100%
+    );
+  opacity: 0.9;
+}
+
+/* ---------------------------------------------------------------------------
+   The frame — carries the two seam gradients, one on each side of the stage.
+   They are painted into the section's own padding (bottom: 100% / top: 100%),
+   so the PAGE eases toward the canvas rather than the canvas being asked to
+   ease toward the page.
+--------------------------------------------------------------------------- */
+.bh-frame {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+
+.bh-frame::before,
+.bh-frame::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--bh-seam);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Above the stage: void → deep navy → nebula navy. This is the ramp the canon
+   timeline's rod fades out on. */
+.bh-frame::before {
+  bottom: 100%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--bh-navy-deep) 62%, transparent) 48%,
+    color-mix(in srgb, var(--bh-navy) 52%, transparent) 100%
+  );
+}
+
+/* Below the stage: nebula navy → a hint of the disk's ember → void. The warm
+   note sits exactly at the seam with the sign-off footer below. */
+.bh-frame::after {
+  top: 100%;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--bh-navy) 48%, transparent) 0%,
+    color-mix(in srgb, var(--bh-ember) 26%, transparent) 38%,
+    color-mix(in srgb, var(--bh-amber) 10%, transparent) 62%,
+    transparent 100%
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   The stage — the canvas box.
+--------------------------------------------------------------------------- */
+.bh-stage {
+  position: relative;
+  height: clamp(500px, 76vh, 860px);
+  height: min(clamp(500px, 76vh, 860px), var(--bh-frame-fit, 860px));
+  height: clamp(500px, 76svh, 860px); /* small-viewport units where supported */
+  /* THE COMPOSITION BUDGET. The pinned consumption scene is art-directed on one
+     framing — the whole black hole at the top of the viewport and the whole
+     "ENTER THE NEMOVERSE" headline at the bottom of it, on the same scroll
+     pixel — and those two boxes plus the document between them have to FIT that
+     pixel. They do not at this height: the stage alone is 76svh and the
+     invitation block below it is about a third of a viewport, so the hole's
+     crown would be off the top of the screen at the exact moment the hold
+     begins, which is a crop of the reference framing rather than the framing.
+
+     The distance below the stage does not depend on the stage's height, so the
+     stage's height is the free variable and `lib/spaghettification.ts`
+     (`solveFraming`) spends it: `--bh-frame-fit` is the height the composition
+     leaves, published by `components/SignoffHorizon.tsx` once it has measured
+     the scene. Unset — no consumption scene (mobile, reduced motion, a stage
+     that never went live) — the fallback is the clamp's own ceiling, so the
+     declaration is exactly the two above it and this section is unchanged.
+     When it does bind, the stage's top edge lands on the top of the viewport at
+     the trigger, which is the framing the hold is specified on. */
+  height: min(clamp(500px, 76svh, 860px), var(--bh-frame-fit, 860px));
+  overflow: hidden;
+  background: transparent;
+  contain: layout paint style;
+
+  /* The seam. Fading the top/bottom 9% out to transparent lets the ambience
+     behind (already tuned to this palette by the `singularity` scene) continue
+     straight through the canvas edge. One composited mask on a paused-when-
+     off-screen layer; if a low-end mobile GPU ever complains, deleting these
+     two properties degrades to a hard-but-dark edge, not to a broken section. */
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0,
+    #000 13%,
+    #000 87%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(180deg, transparent 0, #000 13%, #000 87%, transparent 100%);
+}
+
+/* The simulation is intentionally opaque, so a mask alone is not a reliable
+   handoff: the first opaque pixels can still read as a straight horizontal
+   cut on mobile. These two overlays are the actual optical dissolve. They sit
+   above the render, begin with the neighboring page tone, and reveal the
+   black-hole sky progressively over a long distance. The outer .bh-frame
+   gradients continue the same ramps outside the stage. */
+.bh-stage::before,
+.bh-stage::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: 24%;
+  pointer-events: none;
+}
+
+.bh-stage::before {
+  top: 0;
+  background:
+    radial-gradient(90% 100% at 50% 0%, color-mix(in srgb, var(--bh-navy) 22%, transparent), transparent 72%),
+    linear-gradient(
+      180deg,
+      var(--void) 0%,
+      color-mix(in srgb, var(--bh-navy-deep) 88%, var(--void)) 28%,
+      color-mix(in srgb, var(--bh-navy-deep) 38%, transparent) 72%,
+      transparent 100%
+    );
+}
+
+.bh-stage::after {
+  bottom: 0;
+  background:
+    radial-gradient(86% 110% at 50% 100%, color-mix(in srgb, var(--bh-ember) 16%, transparent), transparent 70%),
+    linear-gradient(
+      0deg,
+      var(--void) 0%,
+      color-mix(in srgb, var(--bh-ember) 20%, var(--void)) 28%,
+      color-mix(in srgb, var(--bh-navy-deep) 24%, transparent) 72%,
+      transparent 100%
+    );
+}
+
+/* The renderer's canvas is appended into this element by the effect in
+   BlackHoleStage.tsx. three is told not to write inline sizes
+   (setSize(w, h, false)), so CSS owns the layout box and three owns only the
+   backing-store resolution. */
+.bh-stage__host {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 1.2s var(--ease-expo);
+}
+.bh-stage[data-status='live'] .bh-stage__host {
+  opacity: 1;
+}
+
+.bh-stage__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------------------------
+   The static frame — underneath the canvas, cross-faded out once the stage
+   reports `live`, and left in place permanently when WebGPU never arrives.
+--------------------------------------------------------------------------- */
+.bh-still {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  isolation: isolate;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.7s var(--ease-exit),
+    visibility 0s linear 0.7s;
+}
+.bh-stage[data-status='live'] .bh-still {
+  opacity: 0;
+  visibility: hidden; /* stops it painting at all behind an opaque canvas */
+}
+
+.bh-still__svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The site's obsidian grain, reused as-is: the still sits in the same material
+   family as every other surface on the page instead of reading as a pasted-in
+   illustration. */
+.bh-still__grain {
+  position: absolute;
+  inset: 0;
+  background-image: var(--noise);
+  background-size: 180px 180px;
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+/* Only ever rendered on a degraded path, so it is quiet by design: tracked
+   mono, faint, bottom-centre, out of the way of the hole.
+
+   It is also the mobile-readable half of the diagnostics. On a phone there is
+   no devtools, so the label itself has to name what actually failed — see the
+   failure taxonomy at the top of BlackHoleStage.tsx. `data-kind="error"` tints
+   toward the disk's amber and becomes interactive: a REAL error offers Retry,
+   genuine non-support does not (offering to retry a browser that has no WebGPU
+   would be the same lie wearing a different hat). */
+.bh-stage__note {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(16px, 4vh, 34px);
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: min(92vw, 46ch);
+  margin: 0;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--bh-navy-deep) 86%, transparent);
+  font-family: var(--font-mono);
+  text-align: center;
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+.bh-stage__note p {
+  margin: 0;
+  font-size: var(--fs-mono);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  line-height: 1.55;
+}
+.bh-stage__note[data-kind='error'] {
+  border-color: color-mix(in srgb, var(--bh-amber) 46%, transparent);
+  color: color-mix(in srgb, var(--bh-amber) 58%, var(--ink-dim));
+}
+
+/* The hint is prose, not instrumentation: sentence case, no tracking, readable
+   — it is the line that tells an embedded-frame visitor what to actually do. */
+.bh-stage__hint {
+  max-width: 40ch;
+  font-family: var(--font-body-text);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-dim);
+}
+
+.bh-stage__retry {
+  pointer-events: auto;
+  cursor: pointer;
+  padding: 0.44rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--bh-amber) 55%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--bh-ember) 28%, transparent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink);
+  /* Colour only — the house rule in motion.css forbids transitioning
+     box-shadow/filter on surfaces, and this is no exception. */
+  transition:
+    background-color 0.3s var(--ease-swift),
+    border-color 0.3s var(--ease-swift);
+}
+.bh-stage__retry:hover {
+  background: color-mix(in srgb, var(--bh-amber) 32%, transparent);
+  border-color: var(--bh-amber);
+}
+.bh-stage__retry:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bh-amber) 60%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   Reduced motion — the JS already declines to run a loop (one static frame,
+   re-drawn on resize) and never starts the cinematic orbit; this collapses the
+   cross-fade so nothing animates at all on this section.
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .bh-stage__host,
+  .bh-still,
+  .bh-stage__retry {
+    transition-duration: 0.01ms;
+    transition-delay: 0s;
+  }
+}
+
+@media (max-width: 700px) {
+  .singularity {
+    padding-block: 2.5rem 2rem;
+    --bh-seam: 74px;
+  }
+
+  .bh-stage {
+    height: clamp(420px, 70svh, 680px);
+  }
+}
+
+/* ============================================================================
+   THE HOLD — the box the sign-off's consumption scene pays for.
+
+   `components/SignoffHorizon.tsx` writes one inline `height` onto this empty
+   element per scroll frame (see `holdDistanceAt` in lib/spaghettification.ts):
+   it is zero before the composition is framed, one pixel per scrolled pixel
+   through the hold, and frozen at the span's length afterwards. Everything below
+   it — this section, the sign-off, the curtain — is pushed down at exactly the
+   rate the reader scrolls, which is what holds the black hole and the invitation
+   rigidly on screen together without `position: fixed`, without a pin-spacer and
+   without a box of the picture being re-parented.
+
+   It therefore has to be: inside `<main>`, immediately above `#singularity`, and
+   NOTHING ELSE. No background (the void above the section is the page's own
+   atmosphere, and a painted band there would be a visible seam), no margin (the
+   reservation is measured as a height, and margins would collapse with it), no
+   content, no stacking context, and no `display` change on a breakpoint where
+   the effect still runs — a `display: none` element still reports a height to
+   its own inline style but contributes nothing to the document, which would
+   silently cost the reader the hold. Mobile is the one place that is safe, and
+   it is safe because the scene is gated off there as well.
+   ========================================================================== */
+.bh-hold {
+  /* Zero at rest: the reservation exists only while the hold runs, and the
+     effect writes an INLINE height on top of this rule — which is why the
+     declaration must stay unimportant. */
+  height: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  pointer-events: none;
+}
+
+/* ============================================================================
+   MOBILE REMOVAL — the singularity section must not exist on mobile.
+   This CSS is the fallback / first-paint guard: even before React hydrates
+   and Singularity.tsx returns null, the section occupies zero layout, paints
+   nothing, and leaves no seam gap. Desktop / wide screens are untouched.
+   Breakpoint matches the shared JS gate in lib/singularityGate.tsx.
+   ========================================================================== */
+@media (max-width: 768px) {
+  .singularity {
+    display: none !important;
+  }
+
+  /* The reservation goes with the section it reserves space for: the consumption
+     scene never mounts at this width, so an inline `height` would be stranded by
+     a viewport that was resized down mid-hold. `display: none` cannot strand a
+     hold the page is not running. */
+  .bh-hold {
+    display: none;
+  }
+}

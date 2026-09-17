@@ -1,0 +1,147 @@
+/* ===========================================================================
+   THE LOADER — "the typographic morph"
+   (docs: src/components/Loader.tsx · frames: src/lib/nemoLoaderData.ts)
+
+   Scoped .ldr__* layer for the boot sequence. Loads LAST: it is the topmost
+   thing on the page and contends with nothing, but it has to sit above every
+   other fixed layer the site owns — .grain (120), the nav HUD (110/100) and
+   the side rail (99) — while staying *under* the custom cursor (1000) so the
+   pointer is never buried by the loader.
+
+   Colours come from the global tokens: desaturated silver for the counting
+   numerals, then --grad-primary's own three stops (iris → cyan → magenta) as
+   an SVG gradient the instant the numbers snap into the character.
+   =========================================================================== */
+
+.ldr {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  display: grid;
+  place-items: center;
+  background: var(--void);
+  /* The loader owns the screen for ~4s: nothing behind it should be able to
+     paint over the boot, and no rubber-banding on iOS. */
+  overscroll-behavior: none;
+  contain: strict;
+}
+
+/* The void, lit from the centre: a soft pool the character resolves out of. */
+.ldr__bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 46%, rgba(24, 26, 44, 0.85) 0%, rgba(5, 5, 10, 0) 60%),
+    radial-gradient(60% 46% at 50% 50%, rgba(138, 77, 255, 0.07) 0%, rgba(5, 5, 10, 0) 70%);
+}
+
+/* The bloom that ignites with the gradient. Sits *behind* the ink so the
+   character reads as the thing emitting it. */
+.ldr__glow {
+  position: absolute;
+  width: min(78vmin, 760px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(63, 232, 255, 0.3) 0%,
+    rgba(138, 77, 255, 0.22) 38%,
+    rgba(255, 61, 154, 0.12) 58%,
+    rgba(5, 5, 10, 0) 72%
+  );
+  filter: blur(26px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ldr__stage {
+  position: relative;
+  display: block;
+  width: min(92vmin, 880px);
+  height: min(92vmin, 880px);
+  /* Vector ink at display scale: never let the compositor round the curves. */
+  shape-rendering: geometricPrecision;
+}
+
+/* --- counting ------------------------------------------------------------ */
+
+.ldr__digit path,
+.ldr__pct path,
+.ldr__morph {
+  fill: url(#ldr-dim);
+}
+
+/* --- the snap ------------------------------------------------------------ */
+
+.ldr__morph.is-holo {
+  fill: url(#ldr-holo);
+}
+
+/* The exact artwork, resolved over the fitted morph target once the character
+   lands (3,823 cubics of dust the morph itself never carries). */
+.ldr__exact {
+  opacity: 0;
+  fill: url(#ldr-holo);
+}
+
+/* The field's own boot veil used to be suppressed here while .is-booting was
+   up — which meant it came back the instant the boot released, painting a
+   second loader across the hero on a slow connection. The veil is gone from
+   the component entirely and the boot now waits for the field to report
+   ready instead (lib/particleGate.ts), so there is nothing left to suppress
+   and no window for a flash. */
+
+/* --- reduced motion ------------------------------------------------------
+   The sequence itself branches in JS (no count, no morph — the character is
+   simply there). This block mirrors the site-wide kill-switch in global.css:
+   nothing in the loader may animate on its own. */
+@media (prefers-reduced-motion: reduce) {
+  .ldr,
+  .ldr *,
+  .ldr *::before,
+  .ldr *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .ldr__stage {
+    width: 96vmin;
+    height: 96vmin;
+  }
+  .ldr__glow {
+    width: 86vmin;
+  }
+}
+
+/* P2.10 — skip affordance (Loader.tsx). Fades in only after the sequence has
+   held for a beat, so the intro stays uncluttered; mono + tracked like every
+   other annotation, sitting on the bottom rule of the stage. */
+.ldr__skip {
+  position: absolute;
+  left: 50%;
+  bottom: 2.1rem;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  opacity: 0;
+  animation: ldr-skip-in 0.7s ease 1.45s forwards;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.ldr:focus-visible {
+  outline: 1px solid rgba(var(--iris-rgb, 138, 77, 255), 0.6);
+  outline-offset: -6px;
+}
+
+@keyframes ldr-skip-in {
+  to {
+    opacity: 1;
+  }
+}
