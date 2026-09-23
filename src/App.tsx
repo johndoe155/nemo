@@ -19,8 +19,8 @@ import Lore from './sections/Lore';
 import Singularity from './sections/Singularity';
 import Footer from './sections/Footer';
 import CrawlRise from './components/CrawlRise';
-import { Marquee, Starfield, ToastHost } from './components/ui';
-import Ambience from './components/Ambience';
+import { Marquee, ToastHost } from './components/ui';
+import MultiverseBackground from './components/MultiverseBackground';
 import FloorState from './components/FloorState';
 // The boot sequence — the typographic morph. Renders above everything for one
 // pass, then removes itself; see components/Loader.tsx.
@@ -111,8 +111,7 @@ export default function App() {
       <VelocityFX />
       <SoundToggle />
       <div className="grain" aria-hidden="true" />
-      <Starfield className="starfield" />
-      <Ambience />
+      <MultiverseBackground />
       <FloorState />
 
       <Nav />

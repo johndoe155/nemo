@@ -19,6 +19,10 @@ import './styles/global.css';
 import './styles/tailwind.css';
 import './styles/components.css';
 import './styles/overhaul.css';
+// Page background — the extracted multiverse stack (WebGL2, 2D fallback,
+// vignette, grain). Loaded with the curtain rules so .mv-bg can be faded
+// with the rest of the fixed chrome.
+import './styles/multiverse-bg.css';
 import './styles/audit-gaps.css';
 import './styles/portal.css';
 // Motion system (.pk / .rt / .magnetic / .btn bloom) — the kinetic layer

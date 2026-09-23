@@ -1889,6 +1889,7 @@ main {
    1:1 instead of snapping at the last frame. No transition: the value is
    already a continuous function of scroll position, and a transition would
    only make it lag the curtain. Base opacities are preserved as factors. */
+.mv-bg,
 .ambience,
 .nav,
 .siderail,
@@ -1909,6 +1910,7 @@ main {
    focusable — an invisible tab stop is worse than a visible one. The custom
    cursor and the toast host are deliberately left alone: both still have work
    to do over the footer (StarEasterEgg's toast fires from inside it). */
+html.at-floor .mv-bg,
 html.at-floor .ambience,
 html.at-floor .starfield,
 html.at-floor .nav,
