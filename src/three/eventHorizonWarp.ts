@@ -3,11 +3,12 @@
    mass = mouth pull, lensing = refraction bend, stepSize = ray march budget.
    Values carried over verbatim so the signoff geometry suite's expectations
    hold unchanged (SPEC §10: geometry assertions stay). */
-const flatSimulationConfig = {
+export const VORTEX_CONFIG = {
   blackHoleMass: 0.4,
   gravitationalLensing: 2.4,
   stepSize: 1,
 } as const;
+const flatSimulationConfig = VORTEX_CONFIG;
 import {
   EFFECTIVE_HORIZON_RADIUS_PX,
   TIDAL_CAP,

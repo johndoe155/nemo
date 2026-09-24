@@ -2,8 +2,8 @@
    scroll.ts — ONE scroll authority for the page (DESIGN_AUDIT P1).
 
    Before this module, scroll position had six independent readers (Nav's
-   scrolled state, ScrollProgress, VelocityFX, useScrollspy, the mobile
-   carriage, the pinned roster) each pacing itself against whatever the
+   scrolled state, ScrollProgress, the since-deleted VelocityFX component,
+   useScrollspy, the mobile carriage, the pinned roster) each pacing itself against whatever the
    browser happened to do, with a framer useSpring stacked on top as a second
    smoothing layer and `scroll-behavior: smooth` on html as a third. That is
    why the page felt mushy on a trackpad and why GSAP refreshes had to fight

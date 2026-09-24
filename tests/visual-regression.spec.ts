@@ -24,7 +24,7 @@ import { test, expect, type Page } from '@playwright/test';
    Baselines: seed once on CI with
        npx playwright test visual-regression --update-snapshots
    and commit tests/visual-regression.spec.ts-snapshots/. Nothing is
-   asserted about GPU-composited 3D (persona/blackhole interiors) — that
+   asserted about GPU-composited 3D (the retired persona model and black hole) — that
    territory belongs to the fixture-driven signoff-horizon suite, which
    measures engine behaviour, not pixels.
 
@@ -116,12 +116,6 @@ test.describe('motion-safe visual regression', () => {
     await page.evaluate(() => window.scrollBy({ top: window.innerHeight * 0.4, behavior: 'instant' }));
     await settle(page);
     await expect(page).toHaveScreenshot('roster-head.png');
-  });
-
-  test('rotunda — reduced motion renders the flat plate grid (P2.1)', async ({ page }) => {
-    await boot(page);
-    await gotoSection(page, 'rotunda');
-    await expect(page).toHaveScreenshot('rotunda-flat.png');
   });
 
   test('pulls — idle ledger, empty slots, radar at rest', async ({ page }) => {

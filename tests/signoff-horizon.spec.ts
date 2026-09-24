@@ -1548,11 +1548,11 @@ test('WebGL2 pixels agree with an independent CPU port of both shader stages', a
   const result = await page.evaluate(async () => {
     const {
       createEventHorizonWarp, horizonRadiusAtProgress, HORIZON_STEPS, CAPTURE_THRESHOLD,
+      VORTEX_CONFIG: physics,
     } = await import('/src/three/eventHorizonWarp.ts');
     const {
       shaderInfallAt, tidalAt, swirlAt,
     } = await import('/src/lib/spaghettification.ts');
-    const { flatSimulationConfig: physics } = await import('/src/three/blackhole/blackhole.config.js');
     const source = document.createElement('canvas');
     source.width = 512; source.height = 320;
     const context = source.getContext('2d')!;
@@ -1571,9 +1571,11 @@ test('WebGL2 pixels agree with an independent CPU port of both shader stages', a
     let maxError = 0, checks = 0, captureChecks = 0, escapeChecks = 0, tidalChecks = 0;
 
     // Float64 reference for BOTH stages: the tidal remap this effect owns, then
-    // the vendored deflection ODE. The physical coefficients come from the
-    // config and the field constants from lib/spaghettification.ts — never from
-    // test literals.
+    // the deflection ODE. The coefficients come from the warp's own
+    // VORTEX_CONFIG and the field constants from lib/spaghettification.ts —
+    // never from test literals. (Until IDENTITY-SPEC §7 these came from the
+    // vendored blackhole.config.js; the warp carries them verbatim now, so the
+    // geometry expectations are unchanged.)
     const port = (
       geometry: { width: number; height: number; anchorX: number; anchorY: number; seam: number; veil: number },
       x: number,

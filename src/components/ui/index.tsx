@@ -161,7 +161,8 @@ export function Marquee({
      Instead of the CSS keyframe loop, the credits track is a GSAP tween
      (xPercent −50 → 0, i.e. the reversed roll) and each asterisk is a
      continuous 360° spin. Both share one timeScale that reads the smoothed
-     --scroll-vel custom property VelocityFX publishes on <html>: while the
+     --scroll-vel custom property the scroll authority (lib/scroll.ts)
+     publishes on <html>: while the
      user scrolls fast the crawl accelerates and the asterisks wind up,
      easing back to base pace as velocity decays to rest. Reading the inline
      property each tick is cheap; no ScrollTrigger dependency is needed. */
