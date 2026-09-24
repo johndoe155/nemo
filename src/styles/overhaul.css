@@ -40,11 +40,6 @@
   --font-display-ext: var(--font-display);
 }
 
-/* ============================ LAYOUT RHYTHM ============================ */
-
-.section--tall { padding-block: var(--section-tall); }
-.section--tight { padding-block: var(--section-tight); }
-
 /* ============================ TYPE: GHOST / NUMERALS ============================ */
 
 .ghost-num {
@@ -61,7 +56,6 @@
 }
 
 .ghost-num--huge { font-size: var(--fs-ghost); }
-.ghost-num--section { font-size: var(--fs-secnum); }
 
 .sechead { position: relative; }
 .sechead__num {
@@ -191,8 +185,7 @@ html[data-scene='trench'] {
   position: relative;
   display: inline-block;
 }
-.chroma::before,
-.chroma::after {
+.chroma::before, .chroma::after {
   content: attr(data-text);
   position: absolute;
   inset: 0;
@@ -235,8 +228,7 @@ html[data-scene='trench'] {
   }
 }
 
-.cursor-dot,
-.cursor-glow {
+.cursor-dot, .cursor-glow {
   position: fixed;
   top: 0;
   left: 0;
@@ -325,8 +317,7 @@ html[data-scene='trench'] {
   transform-origin: left;
   transition: transform 0.4s var(--ease-expo);
 }
-.nav__link.active::after,
-.nav__link:hover::after { transform: scaleX(1); }
+.nav__link.active::after, .nav__link:hover::after { transform: scaleX(1); }
 
 /* ============================ COUNTDOWN LIVE SWITCH ============================ */
 
@@ -391,8 +382,7 @@ html[data-scene='trench'] {
   flex: none;
   display: block;
 }
-.roster__arrow:hover:not(:disabled) .roster__arrow-track,
-.roster__arrow:focus-visible .roster__arrow-track {
+.roster__arrow:hover:not(:disabled) .roster__arrow-track, .roster__arrow:focus-visible .roster__arrow-track {
   transform: translateX(-11px);
 }
 .roster__arrow:not(:disabled):active {
@@ -468,23 +458,6 @@ html[data-scene='trench'] {
 
 /* Giant index numeral watermark on each card */
 .ucard { position: relative; }
-.ucard__index {
-  position: absolute;
-  top: -1.8rem;
-  left: -0.2rem;
-  z-index: 4;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(6rem, 14vw, 16rem);
-  line-height: 1;
-  color: transparent;
-  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--ink) 14%, transparent);
-  text-shadow: 0 8px 40px color-mix(in srgb, var(--card-accent, var(--iris)) 35%, transparent);
-  pointer-events: none;
-  mix-blend-mode: screen;
-  rotate: calc(var(--scroll-vel, 0) * 1.4deg);
-  will-change: rotate;
-}
 
 /* Zig-zag rhythm on the rail.
    TRANSFORM AUTHORITY RULE: framer-motion (useTilt) owns `transform` on
@@ -501,109 +474,7 @@ html[data-scene='trench'] {
 @media (max-width: 400px) {
   .roster__rail--wrap .ucard { width: 100%; }
 }
-
-/* ============================ STORE — MAGAZINE ============================ */
-
-.store__mag {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  gap: 1.4rem;
-  margin-top: 2.6rem;
-}
-@media (max-width: 980px) {
-  .store__mag { grid-template-columns: 1fr; }
-}
-.store__hero {
-  position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  min-height: 520px;
-  display: flex;
-  /* `.card` sets `flex-direction: column`, and that is the right axis here —
-     but `align-items: flex-end` on a COLUMN flex box aligns horizontally, so
-     the copy sat top-right over the brightest part of the art instead of on
-     the bottom scrim the `::after` gradient below paints. Anchor the content
-     to the bottom explicitly and let it span the card. */
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: 2rem;
-}
-.store__hero .product__media picture {
-  /* `.store__hero .product__media` is `position: absolute; inset: 0`, which
-     takes `picture` out of flow. The base `.product__media picture` rule
-     (components.css) sizes it with `height: 100%`, and `inset: 0` here makes
-     the stretch explicit rather than inherited — the hero art must fill the
-     whole card, not sit at its natural aspect inside it. */
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  aspect-ratio: auto;
-}
-.store__hero img {
-  position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-}
-/* The copy rides the bottom of the card, so the scrim has to be deep enough
-   THERE to hold AA over whatever art the client drops in — the placeholder
-   key art is bright gold exactly where the name and price sit. Two stops:
-   a soft lift from the middle, then a near-opaque floor. */
-.store__hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    transparent 26%,
-    rgba(5, 5, 10, 0.62) 58%,
-    rgba(5, 5, 10, 0.94) 86%,
-    rgba(5, 5, 10, 0.97) 100%
-  );
-}
-.store__hero .store__body {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-}
-.store__hero .product__media {
-  position: absolute;
-  inset: 0;
-  aspect-ratio: auto;
-  border-radius: 0;
-}
-/* The hero is the featured piece, not a grid cell — the base rule's 2-line
-   clamp exists to keep a column of cards even, and here it cut the product
-   name off mid-word ("…FINE…") on the one card that is supposed to sell it.
-   Let the hero name run its full length at display size. */
-.store__hero .product__name {
-  font-size: clamp(1.4rem, 1rem + 1.4vw, 2.2rem);
-  max-width: 22rem;
-  display: block;
-  -webkit-line-clamp: unset;
-  overflow: visible;
-  min-height: 0;
-}
-.store__stack {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.4rem;
-}
 .store__stack .product { min-height: 0; }
-
-/* ============================ ARTISTS — MASONRY ============================ */
-
-.artists__grid--masonry {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  grid-auto-rows: 8px;
-  gap: 1.2rem;
-  margin-top: 2.6rem;
-}
-.artists__grid--masonry .artists__grid-item { grid-row: span 30; align-self: start; }
-.artists__grid--masonry .artists__grid-item:nth-child(3n + 2) { grid-row: span 38; }
-.artists__grid--masonry .artists__grid-item:nth-child(3n) { grid-row: span 26; }
 
 /* Below ~660px the auto-fill grid collapses to a single column anyway, so the
    fixed-track span sizes above (tuned for staggering multiple columns) have
@@ -930,20 +801,6 @@ html[data-scene='trench'] {
   position: relative;
   z-index: 1;
 }
-
-/* ---- Closing credits ---- */
-
-.signoff__credits {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr 1fr;
-  gap: clamp(2rem, 4vw, 4.5rem);
-  padding-block: clamp(3.5rem, 6vw, 6rem) 3rem;
-}
-.signoff__identity {
-  max-width: 34rem;
-}
 .footer__brand {
   display: flex;
   align-items: center;
@@ -976,139 +833,6 @@ html[data-scene='trench'] {
   transform: scale(1.15) rotate(-6deg);
   filter: none;
 }
-.signoff__prose {
-  color: var(--ink-dim);
-  font-size: 0.95rem;
-  line-height: 1.65;
-  max-width: 30rem;
-}
-.signoff__stats {
-  margin-top: 1.2rem;
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta-mobile);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  font-variant-numeric: tabular-nums;
-}
-.signoff__col-label {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  margin-bottom: 1.15rem;
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: var(--fs-kicker);
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--cyan);
-}
-.signoff__col-num {
-  color: var(--ink-faint);
-  font-size: var(--fs-meta-min);
-}
-.signoff__col a {
-  position: relative;
-  display: block;
-  width: fit-content;
-  color: var(--ink-dim);
-  font-size: 0.95rem;
-  padding: 0.34rem 0;
-  /* the label carries the motion (RollText char cascade); the underline
-     draws instead of a translateX nudge */
-  transition: color 0.3s var(--ease-expo);
-}
-.signoff__col a::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  height: 1px;
-  background: linear-gradient(90deg, var(--cyan), transparent 80%);
-  background-size: 260% 100%;
-  animation: gdrift 9s ease-in-out infinite;
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.45s var(--ease-expo);
-}
-.signoff__col a:hover,
-.signoff__col a:focus-visible {
-  color: var(--ink);
-}
-.signoff__col a:hover::after,
-.signoff__col a:focus-visible::after {
-  transform: scaleX(1);
-}
-.signoff__social {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  width: 100%;
-}
-.signoff__social-handle {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta-min);
-  letter-spacing: 0.14em;
-  color: var(--ink-faint);
-  transition: color 0.3s var(--ease-expo);
-}
-.signoff__social:hover .signoff__social-handle,
-.signoff__social:focus-visible .signoff__social-handle {
-  color: var(--gold);
-}
-
-/* ---- The ribbon ---- */
-
-.signoff__ribbon {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem 2.4rem;
-  flex-wrap: wrap;
-  border-top: 1px solid var(--line);
-  padding: 1.5rem var(--gutter);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-.signoff__rewind {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  margin-left: auto;
-  padding: 0.62rem 1.15rem;
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  background: rgba(12, 11, 14, 0.03);
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
-  cursor: pointer;
-  transition: color 0.3s var(--ease-expo), border-color 0.3s var(--ease-expo),
-    background-color 0.3s var(--ease-expo);
-}
-.signoff__rewind:hover,
-.signoff__rewind:focus-visible {
-  color: var(--cyan);
-  border-color: color-mix(in srgb, var(--cyan) 52%, transparent);
-  background: color-mix(in srgb, var(--cyan) 6%, transparent);
-}
-.signoff__rewind-chev {
-  transition: transform 0.45s var(--ease-expo);
-}
-.signoff__rewind:hover .signoff__rewind-chev,
-.signoff__rewind:focus-visible .signoff__rewind-chev {
-  transform: translateY(-3px);
-}
 
 /* ---- Sign-off responsive ---- */
 
@@ -1133,19 +857,6 @@ html[data-scene='trench'] {
        the anchor. Vertical padding, aurora gradient and font weight all stay
        on the shared .btn / .btn-primary base — untouched here. */
     width: min(90%, 22rem);
-  }
-  .signoff__credits {
-    grid-template-columns: 1fr;
-    gap: 2.4rem;
-  }
-  .signoff__ribbon {
-    justify-content: center;
-    text-align: center;
-  }
-  .signoff__rewind {
-    margin-left: 0;
-    width: 100%;
-    justify-content: center;
   }
 }
 
@@ -1384,8 +1095,7 @@ html[data-scene='trench'] {
   animation: none;
   box-shadow: none;
 }
-.hero__char::before,
-.hero__char::after {
+.hero__char::before, .hero__char::after {
   content: attr(data-text);
   position: absolute;
   left: 0;
@@ -1427,8 +1137,8 @@ html[data-scene='trench'] {
 }
 .hero__vers:hover .hero__char:nth-child(2n)::before { animation-delay: -0.12s; }
 .hero__vers:hover .hero__char:nth-child(3n)::before { animation-delay: -0.22s; }
-.hero__vers:hover .hero__char:nth-child(2n)::after  { animation-delay: -0.18s; }
-.hero__vers:hover .hero__char:nth-child(3n)::after  { animation-delay: -0.28s; }
+.hero__vers:hover .hero__char:nth-child(2n)::after { animation-delay: -0.18s; }
+.hero__vers:hover .hero__char:nth-child(3n)::after { animation-delay: -0.28s; }
 @keyframes heroGlitchR {
   0%, 100% { transform: translate(-2px, 0); clip-path: inset(0 0 52% 0); }
   33%      { transform: translate(-4px, 1px); clip-path: inset(12% 0 38% 0); }
@@ -1472,8 +1182,7 @@ html[data-scene='trench'] {
 /* Borderless frosted-glass capsule. No colored outline, no rainbow bloom —
    presence comes from translucency, depth-of-blur and generous internal
    whitespace. Typography is monochromatic, muted and widely tracked. */
-.hero__badge,
-.hero__marquee {
+.hero__badge, .hero__marquee {
   --marquee-mask: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
   position: relative;
   isolation: isolate;
@@ -1509,8 +1218,7 @@ html[data-scene='trench'] {
 }
 
 /* Soft monochrome interior lift — a diffuse sheen rather than an outline. */
-.hero__badge::after,
-.hero__marquee::after {
+.hero__badge::after, .hero__marquee::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -1526,11 +1234,7 @@ html[data-scene='trench'] {
   opacity: 0.9;
 }
 
-.hero__badge:hover,
-.hero__badge:focus-visible,
-.hero__marquee:hover,
-.hero__marquee:focus-visible,
-.hero__marquee.is-paused {
+.hero__badge:hover, .hero__badge:focus-visible, .hero__marquee:hover, .hero__marquee:focus-visible, .hero__marquee.is-paused {
   background: rgba(12, 11, 14, 0.054);
   color: rgba(12, 11, 14, 0.675);
   box-shadow:
@@ -1574,10 +1278,7 @@ html[data-scene='trench'] {
   to   { transform: translate3d(-50%, 0, 0); }
 }
 
-.hero__marquee:hover .hero__marquee-track,
-.hero__marquee:focus-within .hero__marquee-track,
-.hero__marquee:active .hero__marquee-track,
-.hero__marquee.is-paused .hero__marquee-track {
+.hero__marquee:hover .hero__marquee-track, .hero__marquee:focus-within .hero__marquee-track, .hero__marquee:active .hero__marquee-track, .hero__marquee.is-paused .hero__marquee-track {
   animation-play-state: paused;
 }
 
@@ -1656,8 +1357,7 @@ html[data-scene='trench'] {
     padding: 0.6rem 0.85rem;
     letter-spacing: 0.14em;
   }
-  .hero__sub-brand,
-  .hero__sub-desc { letter-spacing: 0.14em; }
+  .hero__sub-brand, .hero__sub-desc { letter-spacing: 0.14em; }
   .hero__sub-sep { min-width: 12ch; width: 12ch; }
 }
 
@@ -1858,16 +1558,8 @@ main {
    1:1 instead of snapping at the last frame. No transition: the value is
    already a continuous function of scroll position, and a transition would
    only make it lag the curtain. Base opacities are preserved as factors. */
-.ambience,
-.nav,
-.siderail,
-.soundtoggle,
-.scrollprog {
+.ambience, .nav, .siderail, .soundtoggle, .scrollprog {
   opacity: var(--curtain-chrome-opacity, 1);
-}
-
-.starfield {
-  opacity: calc(0.85 * var(--curtain-chrome-opacity, 1));
 }
 
 .grain {
@@ -1878,13 +1570,7 @@ main {
    focusable — an invisible tab stop is worse than a visible one. The custom
    cursor and the toast host are deliberately left alone: both still have work
    to do over the footer (StarEasterEgg's toast fires from inside it). */
-html.at-floor .ambience,
-html.at-floor .starfield,
-html.at-floor .nav,
-html.at-floor .siderail,
-html.at-floor .soundtoggle,
-html.at-floor .scrollprog,
-html.at-floor .grain {
+html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-floor .siderail, html.at-floor .soundtoggle, html.at-floor .scrollprog, html.at-floor .grain {
   pointer-events: none;
   visibility: hidden;
 }
@@ -1916,8 +1602,7 @@ html.at-floor .grain {
   mix-blend-mode: multiply;
 }
 
-.curtain-footer__topline,
-.curtain-footer__ribbon {
+.curtain-footer__topline, .curtain-footer__ribbon {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1952,9 +1637,7 @@ html.at-floor .grain {
   padding-block: clamp(1.2rem, 4.5dvh, 11rem) clamp(1rem, 3.2dvh, 8rem);
 }
 
-.curtain-footer__eyebrow,
-.curtain-footer__label,
-.curtain-footer__meta {
+.curtain-footer__eyebrow, .curtain-footer__label, .curtain-footer__meta {
   font-family: var(--font-accent);
   font-size: 0.68rem;
   font-weight: 700;
@@ -1993,8 +1676,7 @@ html.at-floor .grain {
   padding-bottom: 0.45rem;
 }
 
-.curtain-footer__statement p,
-.curtain-footer__prose {
+.curtain-footer__statement p, .curtain-footer__prose {
   color: var(--curtain-muted);
   font-family: var(--font-body-text);
   font-size: 0.98rem;
@@ -2018,8 +1700,7 @@ html.at-floor .grain {
   text-transform: uppercase;
 }
 
-.curtain-footer__cta:hover,
-.curtain-footer__cta:focus-visible {
+.curtain-footer__cta:hover, .curtain-footer__cta:focus-visible {
   color: var(--curtain-accent);
 }
 
@@ -2097,8 +1778,7 @@ html.at-floor .grain {
   color: var(--curtain-accent);
 }
 
-.footer-mask-link:hover .footer-mask-link__stack,
-.footer-mask-link:focus-visible .footer-mask-link__stack {
+.footer-mask-link:hover .footer-mask-link__stack, .footer-mask-link:focus-visible .footer-mask-link__stack {
   transform: translateY(-50%);
 }
 
@@ -2133,8 +1813,7 @@ html.at-floor .grain {
   text-align: right;
 }
 
-.footer-social:hover,
-.footer-social:focus-visible {
+.footer-social:hover, .footer-social:focus-visible {
   color: var(--curtain-accent);
 }
 
@@ -2166,8 +1845,7 @@ html.at-floor .grain {
   white-space: nowrap;
 }
 
-.curtain-footer__rewind:hover,
-.curtain-footer__rewind:focus-visible {
+.curtain-footer__rewind:hover, .curtain-footer__rewind:focus-visible {
   color: var(--curtain-accent);
 }
 
@@ -2234,8 +1912,7 @@ html.at-floor .grain {
   .curtain-footer__prose {
     font-size: 0.78rem;
   }
-  .footer-mask-link,
-  .footer-social__label {
+  .footer-mask-link, .footer-social__label {
     font-size: 0.85rem;
   }
   /* Two credits columns means a narrow SIGNALS column: stack each signal's
@@ -2282,8 +1959,7 @@ html.at-floor .grain {
   .curtain-footer__cta {
     padding-block: clamp(0.3rem, 0.9dvh, 0.8rem);
   }
-  .curtain-footer__identity,
-  .curtain-footer__column--signals {
+  .curtain-footer__identity, .curtain-footer__column--signals {
     grid-column: auto;
     max-width: none;
   }
@@ -2384,8 +2060,7 @@ html.at-floor .grain {
 @media (max-height: 560px) and (max-width: 900px) {
   /* Landscape phones: short *and* narrow, the tightest box this footer is ever
      asked to fit in. Same content, smallest step of the type scale. */
-  .footer-mask-link,
-  .footer-social__label {
+  .footer-mask-link, .footer-social__label {
     font-size: 0.72rem;
     line-height: 1.3;
   }
@@ -2395,13 +2070,10 @@ html.at-floor .grain {
   .footer-social + .footer-social {
     margin-top: 0.15rem;
   }
-  .footer-social__handle,
-  .curtain-footer__meta,
-  .curtain-footer__ribbon {
+  .footer-social__handle, .curtain-footer__meta, .curtain-footer__ribbon {
     font-size: 0.48rem;
   }
-  .curtain-footer__prose,
-  .curtain-footer__statement p {
+  .curtain-footer__prose, .curtain-footer__statement p {
     font-size: 0.68rem;
   }
   .curtain-footer__identity .footer__brand {
@@ -2423,18 +2095,14 @@ html.at-floor .grain {
   .curtain-footer__statement {
     margin: 0;
   }
-  .curtain-footer__topline,
-  .curtain-footer__ribbon {
+  .curtain-footer__topline, .curtain-footer__ribbon {
     flex-direction: row;
     align-items: center;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ambience,
-  .starfield,
-  .footer-mask-link__stack,
-  .footer-social {
+  .ambience, .footer-mask-link__stack, .footer-social {
     transition: none;
   }
 }

@@ -70,8 +70,7 @@
   border-color: var(--ink);
   color: var(--ink);
 }
-.mv__filters .chip.active,
-.mv__filters .chip[aria-pressed='true'] {
+.mv__filters .chip.active, .mv__filters .chip[aria-pressed='true'] {
   background: var(--c, var(--pink));
   border-color: var(--ink);
   color: var(--ink);
@@ -162,8 +161,7 @@
   overflow: hidden;
   transition: box-shadow 0.28s var(--ease-thud), transform 0.28s var(--ease-slap);
 }
-.plate:hover,
-.plate:focus-visible {
+.plate:hover, .plate:focus-visible {
   box-shadow: var(--shadow-print-4);
 }
 /* the retired bloom: demoted to the printed accent rule along the bottom */
@@ -179,8 +177,7 @@
   box-shadow: none;
   transition: none;
 }
-.plate:hover::before,
-.plate:focus-visible::before {
+.plate:hover::before, .plate:focus-visible::before {
   opacity: 1;
 }
 
@@ -241,15 +238,13 @@
   opacity: 0.5;
   pointer-events: none;
 }
-.plate .ucard__media .scrim,
-.plate .ucard__media .scrim-top {
+.plate .ucard__media .scrim, .plate .ucard__media .scrim-top {
   display: none;
 }
 .plate .ucard__media img {
   filter: saturate(1.06) contrast(1.04);
 }
-.plate:hover .ucard__media img,
-.plate:focus-visible .ucard__media img {
+.plate:hover .ucard__media img, .plate:focus-visible .ucard__media img {
   transform: scale(1.05);
   filter: saturate(1.1) contrast(1.05);
 }
@@ -369,15 +364,7 @@
     2px 3px 0 var(--ink),
     inset 0 0 0 1px color-mix(in srgb, var(--stamp) 60%, transparent);
 }
-.plate--secret {
-  background-color: var(--deep);
-  border-color: var(--deep-3);
-  box-shadow: 6px 6px 0 var(--deep-3);
-}
-.plate--secret .ucard__serial,
-.plate--secret .ucard__tier,
-.plate--secret .ucard__name,
-.plate--secret .ucard__world {
+.plate--secret .ucard__serial, .plate--secret .ucard__tier, .plate--secret .ucard__name, .plate--secret .ucard__world {
   color: var(--paper-ink);
 }
 .plate--secret .ucard__catalogue-rule {
@@ -386,17 +373,13 @@
 .plate--secret .ucard__tier {
   border-color: var(--paper-ink-faint);
 }
-.plate--secret .ucard__lore,
-.plate--secret .ucard__data dt,
-.plate--secret .ucard__sign-style {
+.plate--secret .ucard__lore, .plate--secret .ucard__data dt, .plate--secret .ucard__sign-style {
   color: var(--paper-ink-dim);
 }
-.plate--secret .ucard__data dd,
-.plate--secret .ucard__sign-name b {
+.plate--secret .ucard__data dd, .plate--secret .ucard__sign-name b {
   color: var(--paper-ink);
 }
-.plate--secret .ucard__data,
-.plate--secret .ucard__sign {
+.plate--secret .ucard__data, .plate--secret .ucard__sign {
   border-color: var(--paper-ink-faint);
 }
 .plate--secret .ucard__claim {
@@ -706,8 +689,7 @@
   color: var(--ink);
 }
 
-.roster__hint,
-.mrail__hint {
+.roster__hint, .mrail__hint {
   font-family: var(--font-accent);
   font-size: var(--fs-meta-min);
   font-weight: 700;
@@ -715,8 +697,7 @@
   text-transform: uppercase;
   color: var(--ink-faint);
 }
-.roster__hint .arr,
-.mrail__hint .arr {
+.roster__hint .arr, .mrail__hint .arr {
   color: var(--stamp);
 }
 
@@ -867,8 +848,7 @@
   letter-spacing: 0.18em;
   color: var(--ink-faint);
 }
-.dialog__spec b,
-.dialog__spec .eth {
+.dialog__spec b, .dialog__spec .eth {
   font-family: var(--font-accent);
   font-size: 0.95rem;
   font-weight: 700;
@@ -876,8 +856,7 @@
   color: var(--ink);
 }
 /* pills → rubber-stamp chips */
-.dialog .pill,
-.dialog__split .pill {
+.dialog .pill, .dialog__split .pill {
   background: transparent;
   border: var(--outline-w) solid var(--ink);
   color: var(--ink);
@@ -941,8 +920,7 @@
   background-image: var(--noise);
   background-blend-mode: multiply;
 }
-.plate--legendary .ucard__serial,
-.plate--legendary .ucard__tier {
+.plate--legendary .ucard__serial, .plate--legendary .ucard__tier {
   color: var(--ink);
 }
 .ucard__media--sealed {

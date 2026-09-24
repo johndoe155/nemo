@@ -69,8 +69,7 @@
 
 /* The old zig-zag rhythm is retired — rhythm now comes from cord length, and
    a stylesheet `translate` on the card would fight the pendulum arm. */
-.roster__rail .hang .ucard:nth-child(odd),
-.roster__rail .hang .ucard:nth-child(even) {
+.roster__rail .hang .ucard:nth-child(odd), .roster__rail .hang .ucard:nth-child(even) {
   translate: none;
 }
 
@@ -107,8 +106,7 @@
   width: min(74vw, 320px);
   padding-top: 30px;
 }
-.mrail .ucard:nth-child(odd),
-.mrail .ucard:nth-child(even) {
+.mrail .ucard:nth-child(odd), .mrail .ucard:nth-child(even) {
   translate: none;
 }
 .mrail__hint {
@@ -362,8 +360,7 @@
        its inner edge, so the hole always lands dead-centre on the rod.
    ========================================================================== */
 
-.credits,
-.ctl {
+.credits, .ctl {
   --rod-w: 4px;
   --hole-r: 11px;
   --hole-inset: 20px;
@@ -387,16 +384,14 @@
   overflow-clip-margin: 28px;
 }
 @media (max-width: 900px) {
-  .credits,
-  .ctl {
+  .credits, .ctl {
     --hole-r: 10px;
     --hole-inset: 18px;
     --grommet: 27px;
   }
 }
 @media (max-width: 600px) {
-  .credits,
-  .ctl {
+  .credits, .ctl {
     --rod-w: 3px;
     --hole-r: 8.5px;
     --hole-inset: 15px;
@@ -406,8 +401,7 @@
 
 /* The cut. Everything inside the circle is removed from the card — background,
    border, segment fills, text — so the rod behind shows through it. */
-.creditcard,
-.ctlcard {
+.creditcard, .ctlcard {
   -webkit-mask-image: radial-gradient(
     circle at var(--hole-x) 50%,
     transparent var(--hole-r),
@@ -493,8 +487,7 @@
 }
 
 /* Bevelled rim around the cut (its own centre is cut away by the same mask). */
-.creditcard__grommet,
-.ctlcard__grommet {
+.creditcard__grommet, .ctlcard__grommet {
   position: absolute;
   top: 50%;
   z-index: 5;
@@ -679,60 +672,6 @@
   background-blend-mode: overlay, normal;
   border-right: 1px solid var(--line);
 }
-.creditcard__id {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-}
-.creditcard__ava {
-  width: 40px;
-  height: 40px;
-  flex: none;
-  border-radius: var(--r-sm);
-  display: grid;
-  place-items: center;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 0.78rem;
-  color: var(--paper-3);
-  background: linear-gradient(135deg, var(--a1, #fff), var(--a2, #888));
-  box-shadow:
-    inset 0 1px 0 rgba(12, 11, 14, 0.252),
-    0 10px 24px -12px color-mix(in srgb, var(--a2, #888) 85%, transparent);
-}
-.creditcard__idx {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta-min);
-  letter-spacing: 0.18em;
-  color: var(--ink-faint);
-}
-.creditcard__who b {
-  display: block;
-  font-family: var(--font-heading);
-  font-size: 0.94rem;
-  letter-spacing: 0.01em;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-.creditcard__handle {
-  display: block;
-  margin-top: 0.15rem;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ac, var(--cyan));
-  overflow-wrap: anywhere;
-}
-.creditcard__codes {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta-min);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  overflow-wrap: anywhere;
-}
 
 /* Segment B — the quote, right of the rod. */
 .creditcard__main {
@@ -744,14 +683,6 @@
   /* Copy steps clear of the cut on the rod side. */
   padding: 1.2rem 1.35rem 1.2rem calc(var(--hole-r) + 0.9rem);
   background: rgba(12, 11, 14, 0.03);
-}
-.creditcard__quote {
-  font-size: 0.98rem;
-  line-height: 1.5;
-  color: var(--ink);
-  font-style: italic;
-  overflow-wrap: anywhere;
-  hyphens: auto;
 }
 
 /* ---- compact rig (the rod holds the centre; the plate re-proportions) ----- */
@@ -794,36 +725,10 @@
   .creditcard__main {
     padding: 0.8rem 0.85rem 0.8rem calc(var(--hole-r) + 0.6rem);
   }
-  .creditcard__ava {
-    width: 28px;
-    height: 28px;
-    border-radius: var(--r-xs);
-    font-size: 0.62rem;
-  }
-  .creditcard__who b {
-    font-size: 0.8rem;
-  }
-  .creditcard__handle {
-    font-size: 0.55rem;
-    letter-spacing: 0.12em;
-  }
-  .creditcard__idx,
-  .creditcard__codes {
-    font-size: 0.55rem;
-    letter-spacing: 0.12em;
-  }
-  .creditcard__quote {
-    font-size: 0.82rem;
-    line-height: 1.45;
-  }
 }
 @media (max-width: 430px) {
   .credits {
     margin-inline: -0.5rem;
-  }
-  .creditcard__quote {
-    font-size: 0.78rem;
-    line-height: 1.42;
   }
 }
 
@@ -1012,14 +917,6 @@
   filter: blur(4px);
   pointer-events: none;
   transition: scale 0.5s var(--ease-expo), opacity 0.4s var(--ease-expo);
-}
-/* Light sits on the axis, so the shadow falls towards the card the rod has
-   just come through. */
-.ctl__row--left::after {
-  translate: calc(-50% - 3px) 0;
-}
-.ctl__row--right::after {
-  translate: calc(-50% + 3px) 0;
 }
 .ctl__row.is-pierced::after {
   scale: 1 1;

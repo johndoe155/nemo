@@ -63,9 +63,7 @@
   background: rgba(5, 5, 10, 0.82);
   border: 1px solid var(--line, rgba(12, 11, 14, 0.086));
 }
-.siderail__dot:hover .siderail__label,
-.siderail__dot:focus-visible .siderail__label,
-.siderail__dot.active .siderail__label {
+.siderail__dot:hover .siderail__label, .siderail__dot:focus-visible .siderail__label, .siderail__dot.active .siderail__label {
   opacity: 1;
   translate: 0 0;
 }
@@ -82,10 +80,7 @@
 /* -------- P2.4 · Scroll-velocity "hyperdrive" numerals ----
    The independent `rotate` property composes with existing transforms, so
    framer-motion / writing-mode transforms are untouched. */
-.ghost-num,
-.hero__watermark,
-.ucard__index,
-.sechead__num {
+.ghost-num, .hero__watermark, .sechead__num {
   rotate: calc(var(--scroll-vel, 0) * 1.4deg);
   will-change: rotate;
 }
@@ -120,8 +115,7 @@
   inset: -7px;
   border-radius: inherit;
 }
-.soundtoggle:hover,
-.soundtoggle:focus-visible {
+.soundtoggle:hover, .soundtoggle:focus-visible {
   color: var(--ink);
   border-color: color-mix(in srgb, var(--cyan) 57%, transparent);
 }
@@ -177,72 +171,11 @@
   }
 }
 
-/* ═════════════════ P2 · INTERACTION PARITY + P3 · CINEMATIC LAYER ════════
-   Everything the P2/P3 roadmap needs that is not owned by a section file.
-   Additive pass: later in the cascade than overhaul/components, so no
-   upstream file had to be edited to say these things. */
-
-/* ---- P2.8 · rotunda: the keyboard-operated region gets a keyboard-grade
-   focus ring (the sphere root is a region, not a button — house focus
-   treatment, inset so the 600px box never grows a halo outside the stage) */
-.cg-stage--sphere [role='region']:focus-visible {
-  outline: 1px solid var(--cyan);
-  outline-offset: -4px;
-  border-radius: 18px;
-}
-
-/* ---- P2.8 · reduced-motion flat plates (Gallery.tsx REDUCE branch): the
-   rotunda as a real, crawlable grid — figures, not furniture. */
-.cg__flat {
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
-  gap: clamp(1rem, 2.4vw, 1.8rem);
-  padding: 0;
-  margin: 0;
-}
-.cg__flat li {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  overflow: hidden;
-  background: rgba(12, 11, 14, 0.03);
-}
-.cg__flat figure {
-  margin: 0;
-}
-.cg__flat img {
-  width: 100%;
-  aspect-ratio: 1/1;
-  object-fit: cover;
-  display: block;
-}
-.cg__flat figcaption {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.85rem 1rem 1rem;
-}
-.cg__flat figcaption b {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 0.86rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.cg__flat figcaption span {
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
 /* ---- P2.10 · View-Transition morph for the plate spotlight (img-sphere):
    the UA carries the named snapshot between plate and dialog; retune the
    default duration onto the site's expo curve and keep both sides crisp.
    No `@supports` needed — unknown pseudo-elements are simply ignored. */
-::view-transition-old(plate-active),
-::view-transition-new(plate-active) {
+::view-transition-old(plate-active), ::view-transition-new(plate-active) {
   animation-duration: 0.45s;
   animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   mix-blend-mode: normal;
@@ -278,35 +211,8 @@
 #rotunda.section {
   padding-block: clamp(4rem, var(--gap-s), 8rem);
 }
-#singularity,
-.singularity.section {
+#singularity, .singularity.section {
   padding-top: clamp(9rem, var(--gap-l), 24rem);
-}
-/* `#connect` IS THE CURTAIN FLOOR, AND ITS HEIGHT IS A HARD BUDGET.
-   P3.14's threshold rule used to read `#connect { padding-top: clamp(8rem,
-   var(--gap-l), 20rem) }` here. That element is `.footer.curtain-footer` — the
-   bright floor the sign-off is revealed over — and the reveal is
-   `position: sticky; bottom: 0` inside `.curtain-stage`, which can only uncover
-   a floor that FITS the viewport: `components/FloorState.tsx` sets
-   `--curtain-travel` to the footer's own height when `height <= viewport - 2`,
-   and to 0 otherwise, so a footer taller than the screen has its top edge
-   permanently above the fold and the whole rig degrades into an ordinary
-   in-flow footer (which is exactly what the padding did — measured: 768.6px →
-   1088.6px at 1280×900, 752.1px → 880.1px at 375×812, travel 768.6/752.1 → 0
-   on both, i.e. the curtain silently stopped being a curtain on every device,
-   with nothing logged and nothing visibly broken except the reveal itself).
-   The space before the sign-off therefore belongs to the SIGN-OFF side of the
-   threshold, never to the floor; see `--gap-l` in global.css, still spent on
-   `#singularity`. Any padding added here must be measured against the viewport,
-   not against the story. */
-
-/* ---- P3.14 · the rotunda bleeds past the gutter: the sphere is the only
-   full-viewport object on the page, and grid-breaking starts where depth
-   already exists. Plates pass under the nav's fade (the stage box simply
-   reaches the viewport edges; nothing else reflows). */
-#rotunda .cg-stage {
-  margin-inline: calc(-1 * var(--gutter));
-  width: calc(100% + var(--gutter) * 2);
 }
 
 /* ---- P3.14 · the oversized numerals read as engraved outlines, not
@@ -351,38 +257,20 @@
    body carries --scene-bg; hairlines and card wells follow it at the same
    tempo. background-color only (the gradient layers stay) — the wells gain
    a navy floor under the white haze instead of more alpha. */
-.ucard,
-.card,
-.dialog,
-.soundtoggle,
-.npx__slot {
+.ucard, .card, .dialog, .soundtoggle {
   transition:
     background-color 1.6s linear,
     border-color 1.6s linear;
 }
-.ucard,
-.card {
+.ucard, .card {
   background-color: var(--void-2);
 }
-.npx__slot,
-#rotunda .cg-stage {
-  background-color: var(--void-3);
-}
-.ucard,
-.card,
-.dialog,
-#rotunda .cg-stage {
+.ucard, .card, .dialog {
   border-color: var(--scene-line);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body,
-  .ucard,
-  .card,
-  .dialog,
-  .soundtoggle,
-  .npx__slot,
-  #rotunda .cg-stage {
+  body, .ucard, .card, .dialog, .soundtoggle {
     transition: none;
   }
 }

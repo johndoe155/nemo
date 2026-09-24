@@ -50,37 +50,6 @@
   width: 100%;
   height: 100%;
 }
-
-/* ---- ambient "breathing" background ----------------------------------
-   Pure DOM/CSS layer, does not touch the canvas, the WebGL context, or
-   any particle code. The WebGL context is opaque (alpha:false, and the
-   composite shader always writes alpha=1), so a layer placed *behind*
-   the canvas would never be visible — instead this sits just above the
-   canvas (below the vignette/grain) and uses mix-blend-mode:screen with
-   stops that are all near-black. screen(base, black)=base exactly, so
-   the pure-black outer edge and the opacity-0 resting state leave every
-   pixel untouched; only the faint off-center violet-charcoal core ever
-   lifts brightness, and only by a fraction of a percent — imperceptible
-   against particle colors, but enough to "breathe" the black backdrop.
-   The existing grain overlay (already above this layer) dithers away
-   any banding risk from the narrow color range. No layout box, no
-   canvas repaint, no JS: purely a compositor-level effect. */
-.nemo-field__breathe {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse 130% 110% at 60% 38%,
-    var(--npf-breathe) 0%,
-    var(--npf-bg) 45%,
-    #000 100%
-  );
-  mix-blend-mode: screen;
-  opacity: 0;
-  animation: npfBreathe 10s ease-in-out infinite;
-  will-change: opacity;
-}
 @keyframes npfBreathe {
   0%,
   100% {
@@ -88,12 +57,6 @@
   }
   50% {
     opacity: 0.9;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .nemo-field__breathe {
-    animation: none;
-    opacity: 0.2;
   }
 }
 

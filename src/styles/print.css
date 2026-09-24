@@ -57,8 +57,7 @@
   -webkit-text-fill-color: var(--ink);
 }
 /* the chromatic-aberration glitch is retired (§8) */
-.hero__char::before,
-.hero__char::after {
+.hero__char::before, .hero__char::after {
   content: none;
 }
 .hero__watermark {
@@ -91,23 +90,17 @@
   text-underline-offset: 3px;
 }
 /* the countdown pill becomes a tape-and-ink plate */
-.hero__badge,
-.hero__marquee {
+.hero__badge, .hero__marquee {
   background: var(--paper-2);
   border: var(--outline-w) solid var(--ink);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-print-1);
   color: var(--ink);
 }
-.hero__badge::after,
-.hero__marquee::after {
+.hero__badge::after, .hero__marquee::after {
   content: none;
 }
-.hero__badge:hover,
-.hero__badge:focus-visible,
-.hero__marquee:hover,
-.hero__marquee:focus-visible,
-.hero__marquee.is-paused {
+.hero__badge:hover, .hero__badge:focus-visible, .hero__marquee:hover, .hero__marquee:focus-visible, .hero__marquee.is-paused {
   background: var(--manila);
   color: var(--ink);
   box-shadow: var(--shadow-print-2);
@@ -134,20 +127,17 @@
   border-bottom: var(--outline-w) solid var(--ink);
   box-shadow: none;
 }
-.nav.is-scrolled,
-.nav.scrolled {
+.nav.is-scrolled, .nav.scrolled {
   background: var(--paper);
   box-shadow: 0 4px 0 -2px color-mix(in srgb, var(--ink) 18%, transparent);
 }
-.nav a,
-.nav__link {
+.nav a, .nav__link {
   color: var(--ink);
 }
 .nav__link::after {
   background: var(--stamp);
 }
-.nav__brand,
-.nav__logo {
+.nav__brand, .nav__logo {
   color: var(--ink);
 }
 .nav__cta {
@@ -156,22 +146,12 @@
   border: var(--outline-w) solid var(--ink);
   box-shadow: var(--shadow-print-1);
 }
-.nav__cta:hover,
-.nav__cta:focus-visible {
+.nav__cta:hover, .nav__cta:focus-visible {
   background: var(--manila);
   transform: translate(-2px, -2px);
   box-shadow: var(--shadow-print-2);
 }
-
-/* ---- side rail → depth gauge (SPEC §7) ---------------------------------- */
-/* The rail's own colour language is re-pointed at the depth gauge: ticks read
-   as a sounding line, the active mark takes the zone accent. */
-.siderail__tick,
-.rail__tick {
-  background: var(--line-strong);
-}
-.siderail__tick.is-active,
-.rail__tick.is-active {
+.siderail__tick.is-active, .rail__tick.is-active {
   background: var(--pink);
 }
 
@@ -187,14 +167,11 @@
 .ldr__glow {
   opacity: 0.18;
 }
-.ldr__pct,
-.ldr__digit,
-.ldr__exact {
+.ldr__pct, .ldr__digit, .ldr__exact {
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
-.ldr__morph svg,
-.ldr__art svg {
+.ldr__morph svg, .ldr__art svg {
   color: var(--ink);
 }
 .ldr__skip {
@@ -203,8 +180,7 @@
   background: var(--paper);
   box-shadow: var(--shadow-print-1);
 }
-.ldr__skip:hover,
-.ldr__skip:focus-visible {
+.ldr__skip:hover, .ldr__skip:focus-visible {
   background: var(--manila);
   transform: translate(-2px, -2px);
   box-shadow: var(--shadow-print-2);

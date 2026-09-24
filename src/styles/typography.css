@@ -45,12 +45,7 @@
 }
 
 /* Animated display numerals — tabular figures keep their advance width. */
-.mv__stat b,
-.lorestat b,
-.countdown__cell b,
-.product__price,
-.ucard__meta b,
-.npx__slot-code {
+.mv__stat b, .lorestat b, .countdown__cell b {
   font-variant-numeric: tabular-nums;
 }
 
@@ -59,10 +54,7 @@
    the giant ghost numerals / Inktrap hero keep maximum impact while every
    structural sub-heading reads as a clean, confident Plain cut. */
 
-.ucard__name,
-.product__name,
-.perk__trait,
-.tlitem b {
+.ucard__name, .perk__trait {
   font-family: var(--font-heading);
   font-weight: 800; /* Ultrabold Plain — only 300/400/800 are loaded */
   letter-spacing: 0;
@@ -84,9 +76,7 @@
 }
 
 /* Active filter pills / badges — Plain Ultrabold reads as a locked UI state. */
-.chip[aria-pressed='true'],
-.chip.active,
-.badge {
+.chip[aria-pressed='true'], .chip.active, .badge {
   font-family: var(--font-heading);
   font-weight: 800;
 }
@@ -95,20 +85,10 @@
 /* Optical-size Book cut tuned for sustained, smaller reading: leads, modal
    lore, timeline body, sign-off prose + the legal ribbon. */
 
-.hero__lede,
-.dialog__lore,
-.tlitem p,
-.signoff__prose {
+.hero__lede, .dialog__lore {
   font-family: var(--font-body-text);
   /* Montreal Text shares metrics with Montreal (same family), so no
      font-size-adjust is needed — size parity is automatic and CLS-free. */
-}
-
-/* Legal / copyright caption line — Montreal Text, kept compact + tracked. */
-.signoff__ribbon {
-  font-family: var(--font-body-text);
-  letter-spacing: 0.12em;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Modal content container — Montreal (primary body voice). The dense lore
@@ -137,42 +117,10 @@
    `--ink-faint` in components/overhaul/suspension/blackhole — children with
    explicit weights (.ucard__meta b, telemetry <b>) are untouched by the
    cascade, so emphasis hierarchy inside each cluster survives verbatim. */
-.mmenu .mmenu__foot,
-.hero__hint,
-.hero__telemetry,
-.mv__stat span,
-.lorestat span,
-.roster__counter,
-.roster__hint,
-.ucard__meta,
-.ucard__lock p,
-.dialog__spec span,
-.dialog__artist .who span,
-.dialog__split,
-.persona__cap,
-.product__sku,
-.product__price .eth,
-.store__foot,
-.artistcard__body .credit,
-.feedcard__who .h,
-.feedcard__who time,
-.feedcard__body .threadline,
-.feedcard__meta,
-.feed__foot,
-.countdown__cell span,
-.bh-stage__note,
-.signoff__stats,
-.signoff__social-handle,
-.roster__minimap button span,
-.mrail__hint,
-.creditcard__idx,
-.creditcard__codes {
+.mmenu .mmenu__foot, .hero__hint, .hero__telemetry, .mv__stat span, .lorestat span, .roster__counter, .roster__hint, .ucard__lock p, .dialog__spec span, .dialog__artist .who span, .dialog__split, .persona__cap, .product__price .eth, .artistcard__body .credit, .feedcard__who .h, .countdown__cell span, .roster__minimap button span, .mrail__hint {
   font-weight: 300;
 }
 
-.btn,
-.chip,
-.sort-dd__trigger,
-.sort-dd__opt {
+.btn, .chip, .sort-dd__trigger, .sort-dd__opt {
   font-variant-numeric: tabular-nums;
 }

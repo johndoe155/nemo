@@ -296,15 +296,13 @@
   opacity: 0.5;
   background-size: 24px 100%;
 }
-.stamp-press:hover:not(:disabled),
-.stamp-press:focus-visible:not(:disabled) {
+.stamp-press:hover:not(:disabled), .stamp-press:focus-visible:not(:disabled) {
   transform: translate(-2px, -2px);
   box-shadow: var(--shadow-print-4);
   background: color-mix(in srgb, var(--pink) 86%, var(--manila));
 }
 /* THE PRESS: down 3px, shadow collapses to 4px — a stamp hitting paper */
-.stamp-press.is-pressing:not(:disabled),
-.stamp-press:active:not(:disabled) {
+.stamp-press.is-pressing:not(:disabled), .stamp-press:active:not(:disabled) {
   transform: translate(2px, 2px) scale(0.985);
   box-shadow: var(--shadow-print-1);
 }
@@ -552,8 +550,7 @@
   gap: 0.5rem;
   margin-top: 0.4rem;
 }
-.reveal__actions .btn,
-.reveal__actions button {
+.reveal__actions .btn, .reveal__actions button {
   border: var(--outline-w) solid var(--ink);
   background: var(--paper);
   color: var(--ink);
@@ -566,8 +563,7 @@
   text-transform: uppercase;
   padding: 0.5rem 0.85rem;
 }
-.reveal__actions .btn:hover,
-.reveal__actions button:hover {
+.reveal__actions .btn:hover, .reveal__actions button:hover {
   background: var(--manila);
   transform: translate(-1px, -1px);
   box-shadow: 3px 3px 0 var(--ink);
@@ -881,13 +877,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal__wheel::after,
-  .stamp-press.is-spinning .stamp-press__roller,
-  .stamp-press.is-spinning .stamp-press__seal svg {
+  .reveal__wheel::after, .stamp-press.is-spinning .stamp-press__roller, .stamp-press.is-spinning .stamp-press__seal svg {
     animation: none;
   }
-  .slot__stamp,
-  .reveal__done {
+  .slot__stamp, .reveal__done {
     animation: none;
   }
 }

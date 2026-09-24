@@ -46,8 +46,7 @@
 }
 
 /* Seam gradients: water above the canvas, mouth-dark below it. */
-.bh-frame::before,
-.bh-frame::after {
+.bh-frame::before, .bh-frame::after {
   content: '';
   position: absolute;
   left: 0;
@@ -118,8 +117,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   /* The stage draws one static frame; nothing here animates anyway. */
-  .bh-frame::before,
-  .bh-frame::after {
+  .bh-frame::before, .bh-frame::after {
     transition: none;
   }
 }

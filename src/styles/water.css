@@ -18,9 +18,7 @@
 }
 
 /* ---- prose ------------------------------------------------------------- */
-.zone-water :is(h1, h2, h3, h4, h5),
-.zone-water .sechead .display,
-.zone-water .part-head__title {
+.zone-water :is(h1, h2, h3, h4, h5), .zone-water .sechead .display, .zone-water .part-head__title {
   color: var(--paper-ink);
 }
 .zone-water :is(p, .sub, .lede, .sechead .sub) {
@@ -56,9 +54,7 @@
 ) {
   color: var(--ink);
 }
-.zone-water .card :is(p, span, b, strong, li, h3, h4, .sub, .lede),
-.zone-water .perk :is(p, span, b, strong, li, h3, h4),
-.zone-water .product :is(p, span, b, strong, li, h3, h4) {
+.zone-water .card :is(p, span, b, strong, li, h3, h4, .sub, .lede), .zone-water .perk :is(p, span, b, strong, li, h3, h4), .zone-water .product :is(p, span, b, strong, li, h3, h4) {
   color: inherit;
 }
 
@@ -111,20 +107,10 @@
   left: -14px;
   transform: rotate(-12deg);
 }
-.tape--tr {
-  top: -13px;
-  right: -14px;
-  transform: rotate(11deg);
-}
 .tape--br {
   bottom: -13px;
   right: -14px;
   transform: rotate(-9deg);
-}
-.tape--bl {
-  bottom: -13px;
-  left: -14px;
-  transform: rotate(8deg);
 }
 
 /* ---- persona: the glass plate (ration slot 1, SPEC §4.5) ---------------- */
@@ -195,23 +181,16 @@
 }
 
 /* ---- holder + canon beat wrappers --------------------------------------- */
-.holder,
-.canon {
+.holder, .canon {
   position: relative;
 }
-.holder .shell > .perks,
-.holder .shell > .store,
-.canon .shell > .lore,
-.canon .shell > .artists {
+.holder .shell > .perks, .holder .shell > .store, .canon .shell > .lore, .canon .shell > .artists {
   margin-top: 0;
 }
 
 /* Perks + Store sit inside beat 5: their old section padding is halved so
    the merge reads as one economic argument, not two stacked sections. */
-.holder .perks .shell,
-.holder .store .shell,
-.canon .lore .shell,
-.canon .artists .shell {
+.holder .perks .shell, .holder .store .shell, .canon .lore .shell, .canon .artists .shell {
   padding-top: clamp(1.4rem, 2.4vw, 2.6rem);
 }
 
@@ -237,8 +216,7 @@
   border: var(--outline-w) solid var(--line-strong-dark);
   border-radius: var(--r-md);
 }
-.zone-water .perks__verify .copy b,
-.zone-water .store__foot b {
+.zone-water .perks__verify .copy b, .zone-water .store__foot b {
   color: var(--paper-ink);
 }
 .zone-water .store__foot {
@@ -264,9 +242,7 @@
 .nchat {
   --glass-radius: 12px;
 }
-.nchat__mesh,
-.nchat__mesh--far,
-.nchat__specular {
+.nchat__mesh, .nchat__mesh--far, .nchat__specular {
   display: none;
 }
 .nchat__glass {
@@ -285,13 +261,10 @@
   border-bottom: var(--outline-w) solid var(--ink);
   padding-bottom: 0.9rem;
 }
-.nchat__ident b,
-.nchat__raillabel {
+.nchat__ident b, .nchat__raillabel {
   color: var(--ink);
 }
-.nchat__ident em,
-.nchat__status,
-.nchat__count {
+.nchat__ident em, .nchat__status, .nchat__count {
   color: var(--ink-faint);
 }
 .nchat__live {
@@ -315,8 +288,7 @@
   box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 85%, transparent);
   animation: none;
 }
-.nmsg__meta,
-.nmsg__sys {
+.nmsg__meta, .nmsg__sys {
   color: var(--ink-faint);
 }
 .nmsg__meta i {
@@ -335,15 +307,4 @@
 }
 .nchat__rail {
   scrollbar-color: color-mix(in srgb, var(--ink) 30%, transparent) transparent;
-}
-.nchat__chip,
-.nchat__suggest {
-  background: var(--paper);
-  border: var(--outline-w) solid var(--ink);
-  color: var(--ink);
-  border-radius: var(--r-pill);
-}
-.nchat__chip:hover,
-.nchat__suggest:hover {
-  background: var(--manila);
 }
