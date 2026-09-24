@@ -136,8 +136,12 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
 
             <div className="dialog__specs">
               <div className="dialog__spec">
-                <span>RARITY</span>
+                <span>EDITION TIER</span>
                 <b style={{ color: accent }}>{rarity.label}</b>
+              </div>
+              <div className="dialog__spec">
+                <span>TREATMENT</span>
+                <b>{rarity.treatment}</b>
               </div>
               <div className="dialog__spec">
                 <span>EDITION</span>

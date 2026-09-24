@@ -13,15 +13,56 @@ export const art = (f: string) => `${BASE}art/${f}`;
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'secret';
 
+/* IDENTITY-SPEC §6 — tiers are TREATMENTS, not hues. The weight/tier logic
+   below is unchanged (it drives the draw, the pity rule and the set bonus);
+   only the colour coupling moved. Each tier's `color` is the ink its seal
+   prints in — read straight off src/lib/palette.ts, so the ramp cannot drift
+   from the rest of the design system — and `treatment` states what the plate
+   does differently for that tier. */
 export const RARITY: Record<
   Rarity,
-  { label: string; color: string; weight: number; tier: number; note: string }
+  { label: string; color: string; weight: number; tier: number; note: string; treatment: string }
 > = {
-  common: { label: 'COMMON', color: '#c8cfe0', weight: 60, tier: 1, note: 'Open edition of the universe' },
-  rare: { label: 'RARE', color: '#3fe8ff', weight: 26, tier: 2, note: 'Includes variant colorway odds' },
-  epic: { label: 'EPIC', color: '#8a4dff', weight: 9, tier: 3, note: 'Lower supply, higher chase' },
-  legendary: { label: 'LEGENDARY', color: '#ffc857', weight: 3.5, tier: 4, note: 'Single-digit odds on most pulls' },
-  secret: { label: 'SECRET', color: '#ff3d9a', weight: 4, tier: 5, note: 'Unannounced universe. Never commissioned.' },
+  common: {
+    label: 'COMMON',
+    color: 'var(--ink)',
+    weight: 60,
+    tier: 1,
+    treatment: 'BLACK INK ON STOCK',
+    note: 'Open edition of the universe',
+  },
+  rare: {
+    label: 'RARE',
+    color: 'var(--water-ink)',
+    weight: 26,
+    tier: 2,
+    treatment: 'WATER INK SEAL',
+    note: 'Includes variant colorway odds',
+  },
+  epic: {
+    label: 'EPIC',
+    color: 'var(--pink-ink)',
+    weight: 9,
+    tier: 3,
+    treatment: 'PINK INK SEAL',
+    note: 'Lower supply, higher chase',
+  },
+  legendary: {
+    label: 'LEGENDARY',
+    color: 'var(--stamp)',
+    weight: 3.5,
+    tier: 4,
+    treatment: 'MANILA STOCK · FOIL LINE',
+    note: 'Single-digit odds on most pulls',
+  },
+  secret: {
+    label: 'SECRET',
+    color: 'var(--deep)',
+    weight: 4,
+    tier: 5,
+    treatment: 'SEALED BLACKOUT',
+    note: 'Unannounced universe. Never commissioned.',
+  },
 };
 
 /* ------------------------------ UNIVERSES ------------------------------ */
@@ -55,13 +96,13 @@ export interface Universe {
 }
 
 export const ARTISTS: Artist[] = [
-  { name: 'Aya Okafor', handle: '@ayaokafor.art', initials: 'AO', hue: ['#f6d47c', '#c98a2e'], quote: '“I painted him the way cathedrals get painted — slowly, and in candlelight.”' },
-  { name: 'Kenji “KXM” Matsuda', handle: '@kxm.works', initials: 'KM', hue: ['#3fe8ff', '#8a4dff'], quote: '“Edo never ended. It just changed its electricity.”' },
-  { name: 'Mara Volkov', handle: '@maravolkov.studio', initials: 'MV', hue: ['#ff5c5c', '#7a0f0f'], quote: '“Brutalism is honesty. I cut him out of paper so the truth would show through.”' },
-  { name: 'DIVINE✧MACHINE', handle: '@divinemachine', initials: 'DM', hue: ['#ff9ad5', '#7a5cff'], quote: '“Mirrors don’t lie. They just repeat you forever.”' },
-  { name: 'Sister Amara', handle: '@sister.amara', initials: 'SA', hue: ['#ffc857', '#f6d47c'], quote: '“Gilding NEMO took 214 hours. Worth every second.”' },
-  { name: 'NULL//FORM', handle: '@nullform', initials: 'NF', hue: ['#ff3d9a', '#3fe8ff'], quote: '“The signal was already there. I just tuned the antenna.”' },
-  { name: 'Ingrid Solvane', handle: '@ingridsolvane', initials: 'IS', hue: ['#7dffb0', '#3fe8ff'], quote: '“He walks where the lights end. I only followed.”' },
+  { name: 'Aya Okafor', handle: '@ayaokafor.art', initials: 'AO', hue: ['var(--manila)', 'var(--stamp)'], quote: '“I painted him the way cathedrals get painted — slowly, and in candlelight.”' },
+  { name: 'Kenji “KXM” Matsuda', handle: '@kxm.works', initials: 'KM', hue: ['var(--sky)', 'var(--water)'], quote: '“Edo never ended. It just changed its electricity.”' },
+  { name: 'Mara Volkov', handle: '@maravolkov.studio', initials: 'MV', hue: ['var(--stamp)', 'var(--stamp-ink)'], quote: '“Brutalism is honesty. I cut him out of paper so the truth would show through.”' },
+  { name: 'DIVINE✧MACHINE', handle: '@divinemachine', initials: 'DM', hue: ['var(--pink)', 'var(--sky)'], quote: '“Mirrors don’t lie. They just repeat you forever.”' },
+  { name: 'Sister Amara', handle: '@sister.amara', initials: 'SA', hue: ['var(--manila)', 'var(--pink)'], quote: '“Gilding NEMO took 214 hours. Worth every second.”' },
+  { name: 'NULL//FORM', handle: '@nullform', initials: 'NF', hue: ['var(--pink)', 'var(--bio-cyan)'], quote: '“The signal was already there. I just tuned the antenna.”' },
+  { name: 'Ingrid Solvane', handle: '@ingridsolvane', initials: 'IS', hue: ['var(--mint)', 'var(--water)'], quote: '“He walks where the lights end. I only followed.”' },
 ];
 
 /* ------------------------------ DROP CLOCK ------------------------------
@@ -291,7 +332,7 @@ export const UNIVERSES: Universe[] = [
     name: 'ENCRYPTED',
     world: '▚▚▚▚▚▚▚▚▚',
     lore: 'This universe exists in the registry but not yet in the light. The artist has signed. The lore is sealed. Release cadence: one universe every few weeks — this one is next in line.',
-    artist: { name: 'REDACTED', handle: '@█████', initials: '??', hue: ['#3d3a52', '#151221'], quote: '“Signed and sealed.”' },
+    artist: { name: 'REDACTED', handle: '@█████', initials: '??', hue: ['var(--paper-4)', 'var(--ink)'], quote: '“Signed and sealed.”' },
     style: '████████████',
     released: '2026-09-05',
     status: 'encrypted',
@@ -309,7 +350,7 @@ export const UNIVERSES: Universe[] = [
     name: 'Unregistered Signal',
     world: 'Nowhere On Record',
     lore: 'It was never commissioned. It has no artist credit because no one drew it — it simply arrived, already numbered, already mintable, already watching. The registry lists it as a pull result. The registry is also afraid.',
-    artist: { name: 'REDACTED', handle: '@null_null_null', initials: '×', hue: ['#ff3d9a', '#3a0a1e'], quote: '“i was not drawn. i was received.”' },
+    artist: { name: 'REDACTED', handle: '@null_null_null', initials: '×', hue: ['var(--pink)', 'var(--deep)'], quote: '“i was not drawn. i was received.”' },
     style: 'Corrupted broadcast',
     released: '0000-00-00',
     status: 'secret',
@@ -360,7 +401,7 @@ export const PERK_TIERS: PerkTier[] = [
   {
     trait: 'ANY OC NFT',
     tag: 'GENESIS',
-    color: '#c8cfe0',
+    color: 'var(--ink)',
     perks: [
       'HOLDER BADGE ACROSS THE HUB',
       '48H EARLY CLAIM ON EVERY NEW UNIVERSE',
@@ -370,19 +411,19 @@ export const PERK_TIERS: PerkTier[] = [
   {
     trait: 'UNCOMMON TRAIT',
     tag: 'T2',
-    color: '#3fe8ff',
+    color: 'var(--water-ink)',
     perks: ['EVERYTHING IN GENESIS', 'FREE SHIPPING ON ALL ORDERS', 'POP PULL ODDS: +10% RARE'],
   },
   {
     trait: 'RARE TRAIT',
     tag: 'T3',
-    color: '#8a4dff',
+    color: 'var(--pink-ink)',
     perks: ['EVERYTHING ABOVE', 'HOLDER-ONLY SKUS UNLOCKED', 'DISCOUNT RAISED TO 20%', '72H EARLY CLAIM'],
   },
   {
     trait: 'LEGENDARY TRAIT',
     tag: 'T4',
-    color: '#ffc857',
+    color: 'var(--stamp)',
     perks: ['EVERYTHING ABOVE', 'GUARANTEED VARIANT PULL ON NEXT UNIVERSE', 'DISCOUNT RAISED TO 25%', '96H EARLY CLAIM'],
   },
 ];
@@ -450,7 +491,7 @@ export const TWEETS: Tweet[] = [
     name: 'NEMO',
     initials: 'N',
     verified: true,
-    hue: ['#8a4dff', '#3fe8ff'],
+    hue: ['var(--pink)', 'var(--sky)'],
     time: '2h',
     body: 'a version of me you haven’t met is already in the archive. #007 does not knock. it arrives.',
     stats: { replies: 214, reposts: 1180, likes: 6210 },
@@ -460,7 +501,7 @@ export const TWEETS: Tweet[] = [
     name: 'NEMO — NEON SHOGUNATE',
     initials: 'N2',
     verified: true,
-    hue: ['#3fe8ff', '#8a4dff'],
+    hue: ['var(--sky)', 'var(--water)'],
     time: '2h',
     body: 'you think your timeline is loud. try sleeping in mine.',
     stats: { replies: 89, reposts: 540, likes: 2904 },
@@ -472,7 +513,7 @@ export const TWEETS: Tweet[] = [
     name: 'NEMO',
     initials: 'N',
     verified: true,
-    hue: ['#8a4dff', '#3fe8ff'],
+    hue: ['var(--pink)', 'var(--sky)'],
     time: '2h',
     body: 'you’re literally me.',
     stats: { replies: 312, reposts: 1904, likes: 11200 },
@@ -491,7 +532,7 @@ export const TWEETS: Tweet[] = [
     handle: '@sister_amara',
     name: 'Sister Amara',
     initials: 'SA',
-    hue: ['#ffc857', '#f6d47c'],
+    hue: ['var(--manila)', 'var(--pink)'],
     time: '3d',
     body: 'gilding NEMO took 214 hours. worth every second. #TheGildedEcho',
     stats: { replies: 67, reposts: 302, likes: 2108 },

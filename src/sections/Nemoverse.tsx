@@ -467,39 +467,67 @@ function DropTeaserCard() {
   const t = useCountdown(UNIVERSE_DROP_ISO);
   return (
     <motion.div
-      className="ucard"
+      className="ucard plate plate--legendary ucard--teaser"
       layout
+      data-tier="legendary"
       /* Width is owned by the rig (.roster__rail/.mrail .ucard) so the teaser
          hangs at exactly the same scale as the roster it closes. */
-      style={{ '--card-accent': 'var(--gold)' }}
+      style={{ '--card-accent': 'var(--stamp)' } as React.CSSProperties}
       transition={{ layout: { type: 'spring', stiffness: 240, damping: 26 } }}
     >
-      <div className="ucard__media" style={{ background: 'radial-gradient(70% 60% at 50% 40%, rgba(255,200,87,0.12), transparent 70%)', display: 'grid', placeItems: 'center' }}>
-        <div className="ucard__lock" style={{ textAlign: 'center' }}>
-          <div className="ring orbit spin" style={{ width: 80, height: 80, margin: '0 auto 1.1rem', borderColor: 'rgba(255,200,87,0.4)' }} />
-          <div className="q" style={{ color: 'var(--gold)' }}>U-007</div>
+      {/* The sealed plate: what is coming, printed as an announcement rather
+          than sold as a countdown widget. */}
+      <header className="ucard__catalogue">
+        <span className="ucard__serial">№ 007</span>
+        <span className="ucard__catalogue-rule" aria-hidden="true" />
+        <span className="ucard__tier">{t.done ? 'MINTING' : 'ANNOUNCED'}</span>
+      </header>
+
+      <div className="ucard__media ucard__media--sealed">
+        <div className="ucard__lock">
+          <span className="seal seal--big" data-tier="legendary">
+            <span className="seal__ring" aria-hidden="true" />
+            <span className="seal__label">SEALED</span>
+            <span className="seal__sub">UNTIL DROP</span>
+          </span>
+          <div className="q">U-007</div>
           <p>THE LAST AURORA</p>
         </div>
+        <span className="ucard__tick ucard__tick--tl" aria-hidden="true" />
+        <span className="ucard__tick ucard__tick--tr" aria-hidden="true" />
+        <span className="ucard__tick ucard__tick--bl" aria-hidden="true" />
+        <span className="ucard__tick ucard__tick--br" aria-hidden="true" />
       </div>
-      <div className="ucard__body" style={{ textAlign: 'center' }}>
-        <h3 className="ucard__name" style={{ fontSize: '0.95rem' }}>
+
+      <div className="ucard__body">
+        <h3 className="ucard__name" style={{ fontSize: '1.15rem' }}>
           {t.done ? 'U-007 IS LIVE' : `NEXT DROP — ${DROP_LABEL}`}
         </h3>
-        <div style={{ margin: '0.8rem 0' }}>
-          {t.done ? (
-            <span className="live-pill">NOW MINTING</span>
-          ) : (
-            <Countdown target={UNIVERSE_DROP_ISO} />
-          )}
+        <div className="ucard__teaser-time">
+          {t.done ? <span className="live-pill">NOW MINTING</span> : <Countdown target={UNIVERSE_DROP_ISO} />}
         </div>
-        <p className="ucard__lore" style={{ minHeight: 0 }}>
+        <p className="ucard__lore">
           Holders cross first — up to 96 hours early, at a discount. Legendary traits get guaranteed
           variants.
         </p>
+        <dl className="ucard__data">
+          <div>
+            <dt>WINDOW</dt>
+            <dd>96<em>H</em></dd>
+          </div>
+          <div>
+            <dt>ACCESS</dt>
+            <dd>HOLDERS</dd>
+          </div>
+          <div>
+            <dt>TIER</dt>
+            <dd>4<em>S</em></dd>
+          </div>
+        </dl>
         <KineticLink
           href="#perks"
           className="btn btn-gold"
-          style={{ width: '100%' }}
+          style={{ width: '100%', marginTop: '0.9rem' }}
           block
           cursor="ENTER"
           label={t.done ? 'CLAIM THE LAST AURORA' : 'HOLD TO ENTER FIRST'}

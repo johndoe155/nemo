@@ -4,16 +4,23 @@ import { useTilt } from './motion';
 import CardImage from './CardImage';
 import type { Universe } from '../lib/data';
 import { RARITY } from '../lib/data';
+import { plateSerial } from '../lib/serials';
 
 /* ------------------------- Universe card -------------------------
+
+   THE SPECIMEN PLATE (IDENTITY-SPEC §2.2 beat 2, §6).
+
+   The card is a museum field-guide plate for one timeline: an ink-ruled
+   specimen window holding the artwork, a catalogue strip that leads with the
+   EDITION SERIAL (never a rarity gem — §6.1), and a printed data band. The
+   tier is expressed as a seal and a treatment, not a colour.
 
    Depth model (2.5D, deliberately NOT preserve-3d — overflow:hidden on the
    card would flatten it, so depth is authored as layered counter-motion):
      · card          — useTilt springs (rotateX/Y ±2.5°, lift −8, press .985)
      · media-inner   — art counter-moves ±5px against the tilt (parallax)
-     · badges        — counter-move ±8px (nearest plane, moves the most)
-     · scrims/body   — hold still (the stationary reference plane)
-   The ::before bloom + cursor sheen (useCursorGlow) add light on top.
+     · seal/window tags — counter-move ±8px (nearest plane, moves the most)
+     · catalogue strip/body — hold still (the stationary reference plane)
 
    Motion authority: framer owns `transform` on this element; rail rhythm
    (zig-zag) and the ghost numeral use the independent `translate`/`rotate`
@@ -38,18 +45,20 @@ export default function UniverseCard({
   const reduce = useReducedMotion();
   const tilt = useTilt<HTMLElement>({ maxDeg: 2.5, lift: -8, parallax: 5 });
 
-  // Badges sit on the nearest plane: derive a stronger counter-move from the
-  // same smoothed tilt springs (±8px at full throw).
+  // The seal sits on the nearest plane: derive a stronger counter-move from
+  // the same smoothed tilt springs (±8px at full throw).
   const badgeX = useTransform(tilt.springs.ry, [-5, 5], [8, -8]);
   const badgeY = useTransform(tilt.springs.rx, [-5, 5], [-8, 8]);
 
   const nameId = `ucard-name-${u.id}`;
   const actId = `ucard-act-${u.id}`;
+  const serial = plateSerial(u.code);
 
   return (
     <motion.article
       ref={tilt.ref}
-      className="ucard sheen"
+      className={`ucard plate plate--${u.rarity}`}
+      data-tier={u.rarity}
       style={{
         '--card-accent': accent,
         '--a1': u.artist.hue[0],
@@ -82,8 +91,15 @@ export default function UniverseCard({
       }
       transition={{ layout: { type: 'spring', stiffness: 240, damping: 26 } }}
     >
-      <div className="ucard__index" aria-hidden="true">{u.code}</div>
       <span id={actId} className="vh">Open universe details</span>
+
+      {/* ---- catalogue strip: the serial is the card's identity (§6.1) ---- */}
+      <header className="ucard__catalogue">
+        <span className="ucard__serial">{serial}</span>
+        <span className="ucard__catalogue-rule" aria-hidden="true" />
+        <span className="ucard__tier">{rarity.label}</span>
+      </header>
+
       {/* P3.13 (audit 2.5) — the media plate is the SHARED ELEMENT: while the
           card's own dialog is open it surrenders its layoutId (`plate-<id>`)
           to the dialog panel, and framer's layout projection carries the one
@@ -96,7 +112,7 @@ export default function UniverseCard({
         layoutId={lifted || reduce ? undefined : `plate-${u.id}`}
         transition={{ layout: { type: 'spring', stiffness: 190, damping: 27, mass: 0.9 } }}
       >
-        {/* Parallax plane: skeleton + bitmap. Scrims stay outside it. */}
+        {/* Parallax plane: skeleton + bitmap. The window rule stays outside it. */}
         <motion.div className="ucard__media-inner" style={{ x: tilt.layer.x, y: tilt.layer.y }}>
           <div
             className="ucard-skeleton"
@@ -104,7 +120,7 @@ export default function UniverseCard({
               position: 'absolute',
               inset: 0,
               zIndex: 0,
-              background: `radial-gradient(80% 70% at 50% 40%, ${accent}18, transparent 72%)`,
+              background: `radial-gradient(80% 70% at 50% 40%, color-mix(in srgb, ${accent} 14%, transparent), transparent 72%)`,
               opacity: 1,
               transition: 'opacity 0.6s ease',
             }}
@@ -129,52 +145,79 @@ export default function UniverseCard({
             </div>
           )}
         </motion.div>
-        {u.image && (
-          <>
-            <div className="scrim-top" />
-            <div className="scrim" />
-          </>
-        )}
+
+        {/* window furniture: corner ticks read as a specimen frame */}
+        <span className="ucard__tick ucard__tick--tl" aria-hidden="true" />
+        <span className="ucard__tick ucard__tick--tr" aria-hidden="true" />
+        <span className="ucard__tick ucard__tick--bl" aria-hidden="true" />
+        <span className="ucard__tick ucard__tick--br" aria-hidden="true" />
+
         <span className="ucard__code">{u.code}</span>
-        <motion.div className="ucard__badges" style={{ x: badgeX, y: badgeY }}>
-          <span className="badge" style={{ '--c': accent }}>
-            {rarity.label}
+
+        {/* the seal — a stamp impression, not a glowing badge */}
+        <motion.div className="ucard__seal" style={{ x: badgeX, y: badgeY }}>
+          <span className="seal" data-tier={u.rarity}>
+            <span className="seal__ring" aria-hidden="true" />
+            <span className="seal__label">{rarity.label}</span>
+            {u.status === 'upcoming' && <span className="seal__sub">NEXT DROP</span>}
           </span>
-          {u.status === 'upcoming' && (
-            <span className="badge" style={{ '--c': 'var(--cyan)' }}>
-              NEXT DROP
-            </span>
-          )}
         </motion.div>
-        {u.status === 'sold-out' && <span className="ucard__sold">SOLD OUT · {u.minted}/{u.supply}</span>}
+
+        {u.status === 'sold-out' && (
+          <span className="ucard__sold">SOLD OUT · {u.minted}/{u.supply}</span>
+        )}
       </motion.div>
 
       <div className="ucard__body">
         <h3 className="ucard__name" id={nameId}>{u.name}</h3>
         <p className="ucard__world">{u.world}</p>
         <p className="ucard__lore">{u.lore}</p>
-        <div className="ucard__meta">
-          <span>
-            SUPPLY <b>{u.supply}</b>
-          </span>
-          <span>
-            {u.status === 'sold-out' ? 'MINTED' : 'CLAIMED'} <b>{u.minted}/{u.supply}</b>
-          </span>
-          <span>
-            PRICE <b style={{ color: 'var(--gold)' }}>{u.price > 0 ? `${u.price}Ξ` : '—'}</b>
-          </span>
-        </div>
+
+        {/* printed data band — labels over tabular values */}
+        <dl className="ucard__data">
+          <div>
+            <dt>SUPPLY</dt>
+            <dd>{u.supply}</dd>
+          </div>
+          <div>
+            <dt>{u.status === 'sold-out' ? 'MINTED' : 'CLAIMED'}</dt>
+            <dd>
+              {u.minted}
+              <em>/{u.supply}</em>
+            </dd>
+          </div>
+          <div>
+            <dt>PRICE</dt>
+            <dd>{u.price > 0 ? `${u.price}Ξ` : '—'}</dd>
+          </div>
+        </dl>
+
         {u.status === 'live' && (
-          <div className="progress" style={{ marginTop: 10 }} aria-label={`${soldPct}% claimed`}>
+          <div
+            className="ucard__claim"
+            role="progressbar"
+            aria-label={`${soldPct}% claimed`}
+            aria-valuenow={soldPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
             <i style={{ ['--p' as string]: soldPct / 100 }} />
+            <span className="ucard__claim-ticks" aria-hidden="true">
+              {Array.from({ length: 10 }, (_, i) => (
+                <em key={i} data-on={i < Math.round(soldPct / 10)} />
+              ))}
+            </span>
           </div>
         )}
-        <div className="ucard__artist">
-          <span className="ava">{u.artist.initials}</span>
-          <span>
-            {u.artist.name} <em>· {u.style}</em>
+
+        <footer className="ucard__sign">
+          <span className="ucard__sign-stamp" aria-hidden="true">{u.artist.initials}</span>
+          <span className="ucard__sign-name">
+            <b>{u.artist.name}</b>
+            <em>{u.artist.handle}</em>
           </span>
-        </div>
+          <span className="ucard__sign-style">{u.style}</span>
+        </footer>
       </div>
     </motion.article>
   );

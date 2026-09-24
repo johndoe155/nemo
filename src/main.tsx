@@ -54,6 +54,8 @@ import './styles/water.css';
 // Everything is scoped to .ldr/.ldr__*, so it contends with none of the above.
 import './styles/loader.css';
 import './styles/print.css';
+// Beat 2 — the registry: sounding-line rail + specimen plates.
+import './styles/registry.css';
 import App from './App';
 /* The single scroll authority (DESIGN_AUDIT P1) — init before React mounts
    so the boot loader can hold/release the engine as part of the sequence.

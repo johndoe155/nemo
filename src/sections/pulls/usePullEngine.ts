@@ -66,13 +66,15 @@ function loadPulls(): StoredPull[] {
   }
 }
 
-/** Rarity accents synced to the primary site theme (no custom bold hues). */
+/* IDENTITY-SPEC §6 — the seal inks, straight from src/lib/palette.ts. `color`
+   is the ink a tier's stamp prints in; `glow` is the ink pad's halo, built
+   with color-mix so it stays a token expression rather than a literal. */
 export const RARITY_ACCENT: Record<Rarity, { color: string; glow: string }> = {
-  common: { color: '#c8cfe0', glow: 'rgba(200, 207, 224, 0.4)' },
-  rare: { color: '#3fe8ff', glow: 'rgba(63, 232, 255, 0.45)' },
-  epic: { color: '#8a4dff', glow: 'rgba(138, 77, 255, 0.45)' },
-  legendary: { color: '#ffc857', glow: 'rgba(255, 200, 87, 0.4)' },
-  secret: { color: '#ff3d9a', glow: 'rgba(255, 61, 154, 0.45)' },
+  common: { color: 'var(--ink)', glow: 'color-mix(in srgb, var(--ink) 32%, transparent)' },
+  rare: { color: 'var(--water-ink)', glow: 'color-mix(in srgb, var(--water) 34%, transparent)' },
+  epic: { color: 'var(--pink-ink)', glow: 'color-mix(in srgb, var(--pink) 34%, transparent)' },
+  legendary: { color: 'var(--stamp)', glow: 'color-mix(in srgb, var(--stamp) 32%, transparent)' },
+  secret: { color: 'var(--deep)', glow: 'color-mix(in srgb, var(--deep) 40%, transparent)' },
 };
 
 export function usePullEngine() {
