@@ -73,7 +73,7 @@
 }
 :is(a, button):hover .pk-chevron,
 :is(a, button):focus-visible .pk-chevron {
-  filter: drop-shadow(0 0 6px rgba(63, 232, 255, 0.7));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--cyan) 80%, transparent));
 }
 
 /* ------------------------------ roll text (rt) ---------------------------- */
@@ -136,7 +136,7 @@
 
 .btn {
   isolation: isolate; /* keep bloom/spark layers inside the button's context */
-  --bloom: rgba(255, 255, 255, 0.26);
+  --bloom: rgba(12, 11, 14, 0.187);
 }
 /* Layer contract inside .btn (isolation: isolate):
    0 = aurora strata (primary ::after, global.css)
@@ -165,14 +165,14 @@
 }
 .btn:active::before {
   /* press: bloom swells brighter for tactile confirmation */
-  --bloom: rgba(255, 255, 255, 0.38);
+  --bloom: rgba(12, 11, 14, 0.274);
   transition-duration: 0.12s;
 }
 .btn-ghost {
-  --bloom: rgba(63, 232, 255, 0.16);
+  --bloom: color-mix(in srgb, var(--cyan) 18%, transparent);
 }
 .btn-ghost:active::before {
-  --bloom: rgba(63, 232, 255, 0.28);
+  --bloom: color-mix(in srgb, var(--cyan) 32%, transparent);
 }
 .btn-gold {
   --bloom: rgba(255, 240, 200, 0.3);

@@ -150,9 +150,9 @@
   background:
     linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.55) 0%,
-      rgba(255, 255, 255, 0.16) 26%,
-      rgba(255, 255, 255, 0.05) 52%,
+      rgba(12, 11, 14, 0.396) 0%,
+      rgba(12, 11, 14, 0.115) 26%,
+      rgba(12, 11, 14, 0.036) 52%,
       rgba(0, 0, 0, 0.45) 100%
     ),
     linear-gradient(
@@ -164,7 +164,7 @@
       transparent 100%
     );
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 1px 0 rgba(12, 11, 14, 0.288),
     0 10px 26px -14px rgba(0, 0, 0, 0.9),
     0 0 24px -6px color-mix(in srgb, var(--cyan) 40%, transparent);
   /* Clean fade into the section walls at both ends. */
@@ -179,7 +179,7 @@
   height: 26px;
   translate: 0 -50%;
   border-radius: var(--r-xs);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.05));
+  background: linear-gradient(180deg, rgba(12, 11, 14, 0.158), rgba(12, 11, 14, 0.036));
   border: 1px solid var(--line-strong);
   box-shadow: var(--elev-rest);
 }
@@ -246,10 +246,10 @@
   height: 12px;
   translate: -50% -50%;
   border-radius: var(--r-pill);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.1) 60%, rgba(0, 0, 0, 0.4));
+  background: linear-gradient(180deg, rgba(12, 11, 14, 0.36), rgba(12, 11, 14, 0.072) 60%, rgba(0, 0, 0, 0.4));
   border: 1px solid var(--line-strong);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 1px 0 rgba(12, 11, 14, 0.324),
     0 6px 14px -8px rgba(0, 0, 0, 0.9);
 }
 
@@ -266,9 +266,9 @@
   border-radius: var(--r-pill);
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.62),
-    rgba(255, 255, 255, 0.26) 45%,
-    color-mix(in srgb, var(--cyan) 55%, rgba(255, 255, 255, 0.3))
+    rgba(12, 11, 14, 0.446),
+    rgba(12, 11, 14, 0.187) 45%,
+    color-mix(in srgb, var(--cyan) 55%, rgba(12, 11, 14, 0.216))
   );
   box-shadow: 0 0 10px -2px color-mix(in srgb, var(--cyan) 45%, transparent);
 }
@@ -286,8 +286,8 @@
   background: radial-gradient(circle at 50% 35%, #000 40%, rgba(0, 0, 0, 0.86));
   box-shadow:
     inset 0 2px 3px rgba(0, 0, 0, 0.95),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.14),
-    0 1px 0 rgba(255, 255, 255, 0.16);
+    inset 0 -1px 0 rgba(12, 11, 14, 0.101),
+    0 1px 0 rgba(12, 11, 14, 0.115);
 }
 
 /* Ring threaded through the punch. */
@@ -300,16 +300,16 @@
   height: 26px;
   translate: -50% 0;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.42);
+  border: 2px solid rgba(12, 11, 14, 0.302);
   background: transparent;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 1px 0 rgba(12, 11, 14, 0.396),
     0 0 14px -4px color-mix(in srgb, var(--cyan) 65%, transparent);
 }
 
 /* Hover raises the light on the whole rig, not just the card. */
 .hang__arm:hover .hang__ring {
-  border-color: color-mix(in srgb, var(--cyan) 65%, rgba(255, 255, 255, 0.45));
+  border-color: color-mix(in srgb, var(--cyan) 65%, rgba(12, 11, 14, 0.324));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -505,7 +505,7 @@
   pointer-events: none;
   background: radial-gradient(circle, rgba(0, 0, 0, 0.55), transparent 72%);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px rgba(12, 11, 14, 0.158),
     inset 0 2px 5px rgba(0, 0, 0, 0.9);
 }
 .creditcard__grommet {
@@ -548,8 +548,8 @@
     linear-gradient(
       90deg,
       rgba(0, 0, 0, 0.55) 0%,
-      rgba(255, 255, 255, 0.42) 28%,
-      rgba(255, 255, 255, 0.12) 62%,
+      rgba(12, 11, 14, 0.302) 28%,
+      rgba(12, 11, 14, 0.086) 62%,
       rgba(0, 0, 0, 0.5) 100%
     ),
     linear-gradient(
@@ -577,8 +577,8 @@
     linear-gradient(
       90deg,
       rgba(0, 0, 0, 0.55) 0%,
-      rgba(255, 255, 255, 0.46) 28%,
-      rgba(255, 255, 255, 0.14) 62%,
+      rgba(12, 11, 14, 0.331) 28%,
+      rgba(12, 11, 14, 0.101) 62%,
       rgba(0, 0, 0, 0.5) 100%
     ),
     linear-gradient(
@@ -644,11 +644,11 @@
   overflow: hidden;
   border: 1px solid transparent;
   background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012) 55%) padding-box,
+    linear-gradient(165deg, rgba(12, 11, 14, 0.036), rgba(12, 11, 14, 0.03) 55%) padding-box,
     linear-gradient(
         165deg,
-        rgba(255, 255, 255, 0.24),
-        rgba(255, 255, 255, 0.05) 45%,
+        rgba(12, 11, 14, 0.173),
+        rgba(12, 11, 14, 0.036) 45%,
         color-mix(in srgb, var(--ac, var(--iris)) 45%, transparent)
       )
       border-box;
@@ -695,10 +695,10 @@
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 0.78rem;
-  color: #0a0a14;
+  color: var(--paper-3);
   background: linear-gradient(135deg, var(--a1, #fff), var(--a2, #888));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 1px 0 rgba(12, 11, 14, 0.252),
     0 10px 24px -12px color-mix(in srgb, var(--a2, #888) 85%, transparent);
 }
 .creditcard__idx {
@@ -743,7 +743,7 @@
   justify-content: center;
   /* Copy steps clear of the cut on the rod side. */
   padding: 1.2rem 1.35rem 1.2rem calc(var(--hole-r) + 0.9rem);
-  background: rgba(255, 255, 255, 0.022);
+  background: rgba(12, 11, 14, 0.03);
 }
 .creditcard__quote {
   font-size: 0.98rem;
@@ -1089,11 +1089,11 @@
   border: 1px solid transparent;
   background:
     var(--noise) padding-box,
-    linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012) 55%) padding-box,
+    linear-gradient(165deg, rgba(12, 11, 14, 0.036), rgba(12, 11, 14, 0.03) 55%) padding-box,
     linear-gradient(
         165deg,
-        rgba(255, 255, 255, 0.22),
-        rgba(255, 255, 255, 0.05) 45%,
+        rgba(12, 11, 14, 0.158),
+        rgba(12, 11, 14, 0.036) 45%,
         color-mix(in srgb, var(--tc, var(--cyan)) 42%, transparent)
       )
       border-box;

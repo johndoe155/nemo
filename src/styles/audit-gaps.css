@@ -32,12 +32,12 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(12, 11, 14, 0.158);
   transition: background 0.3s ease, box-shadow 0.3s ease, scale 0.3s ease;
 }
 .siderail__dot.active i {
-  background: var(--cyan, #3fe8ff);
-  box-shadow: 0 0 12px rgba(63, 232, 255, 0.55);
+  background: var(--cyan, var(--cyan));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--cyan) 63%, transparent);
   scale: 1.35;
 }
 .siderail__label {
@@ -45,7 +45,7 @@
   font-size: 0.58rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(12, 11, 14, 0.396);
   opacity: 0;
   translate: -6px 0;
   transition: opacity 0.25s ease, translate 0.25s ease;
@@ -61,9 +61,7 @@
   padding: 0.22rem 0.5rem;
   border-radius: 999px;
   background: rgba(5, 5, 10, 0.82);
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  border: 1px solid var(--line, rgba(12, 11, 14, 0.086));
 }
 .siderail__dot:hover .siderail__label,
 .siderail__dot:focus-visible .siderail__label,
@@ -77,7 +75,7 @@
    (and reads as ambient card lighting for transparent art). Static by policy
    — gdrift is banned on card-scale raster areas. */
 .ucard__media img {
-  background: radial-gradient(80% 70% at 50% 40%, rgba(255, 255, 255, 0.05), transparent 72%);
+  background: radial-gradient(80% 70% at 50% 40%, rgba(12, 11, 14, 0.036), transparent 72%);
   background-size: 220% 220%;
 }
 
@@ -107,12 +105,11 @@
   font-family: var(--font-mono, monospace);
   font-size: 0.58rem;
   letter-spacing: 0.24em;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(12, 11, 14, 0.432);
   background: rgba(8, 10, 18, 0.55);
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border: 1px solid var(--line, rgba(12, 11, 14, 0.086));
   border-radius: 999px;
   cursor: pointer;
-  backdrop-filter: blur(8px);
   transition: color 0.3s var(--ease-expo), border-color 0.3s var(--ease-expo),
     background-color 0.3s var(--ease-expo);
 }
@@ -126,7 +123,7 @@
 .soundtoggle:hover,
 .soundtoggle:focus-visible {
   color: #fff;
-  border-color: rgba(63, 232, 255, 0.5);
+  border-color: color-mix(in srgb, var(--cyan) 57%, transparent);
 }
 .soundtoggle__wave {
   display: inline-flex;
@@ -208,7 +205,7 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(12, 11, 14, 0.03);
 }
 .cg__flat figure {
   margin: 0;
@@ -321,7 +318,7 @@
   top: -3.4rem;
 }
 .sechead__num.gold-num {
-  -webkit-text-stroke: 1px rgba(255, 200, 87, 0.42);
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--gold) 48%, transparent);
 }
 
 /* ---- P3.12 · CrawlRise wrapper: the rise starts from a hard floor line,
@@ -405,7 +402,7 @@
   text-transform: uppercase;
   color: var(--gold);
   background: transparent;
-  border: 1px solid rgba(255, 200, 87, 0.55);
+  border: 1px solid color-mix(in srgb, var(--gold) 63%, transparent);
   border-radius: 99px;
   padding: 0.32rem 0.6rem;
   cursor: pointer;
@@ -413,7 +410,7 @@
   white-space: nowrap;
 }
 .wallet-chip:hover {
-  background: rgba(255, 200, 87, 0.08);
+  background: color-mix(in srgb, var(--gold) 9%, transparent);
   border-color: var(--gold);
 }
 @media (max-width: 860px) {

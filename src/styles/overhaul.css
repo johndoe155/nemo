@@ -31,7 +31,7 @@
   --section-tight: clamp(3.5rem, 6vw, 6.5rem);
 
   /* Fresh surfaces */
-  --glass-strong: rgba(255, 255, 255, 0.055);
+  --glass-strong: rgba(12, 11, 14, 0.04);
 
   /* The wide hero words (CANON / VERSIONS) are the page's highest-impact
      titles — they resolve to the Inktrap display face (via --font-display)
@@ -53,7 +53,7 @@
   font-weight: 800;
   line-height: 0.8;
   color: transparent;
-  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.1);
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--ink) 10%, transparent);
   user-select: none;
   pointer-events: none;
   white-space: nowrap;
@@ -74,8 +74,8 @@
   font-size: var(--fs-secnum);
   line-height: 0.9;
   color: transparent;
-  -webkit-text-stroke: 1.5px rgba(245, 243, 255, 0.18);
-  text-shadow: 0 8px 36px rgba(138, 77, 255, 0.15);
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--ink) 18%, transparent);
+  text-shadow: 0 8px 36px color-mix(in srgb, var(--iris) 17%, transparent);
   user-select: none;
   pointer-events: none;
   rotate: calc(var(--scroll-vel, 0) * 1.4deg);
@@ -83,8 +83,8 @@
 }
 .sechead--center .sechead__num { right: auto; left: 50%; transform: translateX(-50%); }
 .sechead__num.gold-num {
-  -webkit-text-stroke: 1.5px rgba(255, 200, 87, 0.35);
-  text-shadow: 0 8px 36px rgba(255, 200, 87, 0.25);
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--gold) 40%, transparent);
+  text-shadow: 0 8px 36px color-mix(in srgb, var(--gold) 29%, transparent);
 }
 
 /* ============================ ATMOSPHERIC DEPTH ============================ */
@@ -103,49 +103,49 @@
 @property --amb-a {
   syntax: '<color>';
   inherits: true;
-  initial-value: rgba(138, 77, 255, 0.32);
+  initial-value: color-mix(in srgb, var(--iris) 37%, transparent);
 }
 @property --amb-b {
   syntax: '<color>';
   inherits: true;
-  initial-value: rgba(63, 232, 255, 0.2);
+  initial-value: color-mix(in srgb, var(--cyan) 23%, transparent);
 }
 @property --amb-c {
   syntax: '<color>';
   inherits: true;
-  initial-value: rgba(255, 61, 154, 0.18);
+  initial-value: color-mix(in srgb, var(--magenta) 21%, transparent);
 }
 
 :root {
   /* arrival (hero) — the signature composition */
-  --amb-a: rgba(138, 77, 255, 0.32);
-  --amb-b: rgba(63, 232, 255, 0.2);
-  --amb-c: rgba(255, 61, 154, 0.18);
+  --amb-a: color-mix(in srgb, var(--iris) 37%, transparent);
+  --amb-b: color-mix(in srgb, var(--cyan) 23%, transparent);
+  --amb-c: color-mix(in srgb, var(--magenta) 21%, transparent);
 }
 html[data-scene='registry'] {
-  --amb-a: rgba(63, 232, 255, 0.22);
-  --amb-b: rgba(138, 77, 255, 0.24);
+  --amb-a: color-mix(in srgb, var(--cyan) 25%, transparent);
+  --amb-b: color-mix(in srgb, var(--iris) 28%, transparent);
   --amb-c: rgba(58, 91, 217, 0.18);
 }
 html[data-scene='signal'] {
-  --amb-a: rgba(63, 232, 255, 0.24);
+  --amb-a: color-mix(in srgb, var(--cyan) 28%, transparent);
   --amb-b: rgba(58, 91, 217, 0.18);
-  --amb-c: rgba(138, 77, 255, 0.12);
+  --amb-c: color-mix(in srgb, var(--iris) 14%, transparent);
 }
 html[data-scene='arsenal'] {
-  --amb-a: rgba(138, 77, 255, 0.3);
-  --amb-b: rgba(255, 61, 154, 0.16);
-  --amb-c: rgba(63, 232, 255, 0.16);
+  --amb-a: color-mix(in srgb, var(--iris) 34%, transparent);
+  --amb-b: color-mix(in srgb, var(--magenta) 18%, transparent);
+  --amb-c: color-mix(in srgb, var(--cyan) 18%, transparent);
 }
 html[data-scene='vault'] {
-  --amb-a: rgba(255, 200, 87, 0.26);
+  --amb-a: color-mix(in srgb, var(--gold) 30%, transparent);
   --amb-b: rgba(91, 43, 214, 0.28);
-  --amb-c: rgba(255, 61, 154, 0.14);
+  --amb-c: color-mix(in srgb, var(--magenta) 16%, transparent);
 }
 html[data-scene='constellation'] {
-  --amb-a: rgba(255, 61, 154, 0.22);
-  --amb-b: rgba(63, 232, 255, 0.18);
-  --amb-c: rgba(138, 77, 255, 0.2);
+  --amb-a: color-mix(in srgb, var(--magenta) 25%, transparent);
+  --amb-b: color-mix(in srgb, var(--cyan) 21%, transparent);
+  --amb-c: color-mix(in srgb, var(--iris) 23%, transparent);
 }
 /* abyss — lore (above the black hole) and connect (below it). Retuned toward
    the simulation's own palette so the page's sky meets the canvas's sky:
@@ -280,7 +280,7 @@ html[data-scene='singularity'] {
 }
 .cursor-glow {
   width: 110px; height: 110px;
-  background: radial-gradient(circle, rgba(138, 77, 255, 0.4), rgba(63, 232, 255, 0.08) 65%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--iris) 46%, transparent), color-mix(in srgb, var(--cyan) 9%, transparent) 65%);
   mix-blend-mode: screen;
   opacity: 0.7;
 }
@@ -313,7 +313,7 @@ html[data-scene='singularity'] {
   top: 0; left: 0; right: 0;
   height: 3px;
   z-index: 200;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(12, 11, 14, 0.043);
 }
 .scrollprog__bar {
   position: absolute;
@@ -324,7 +324,7 @@ html[data-scene='singularity'] {
   display: block;
   height: 100%;
   background: var(--grad-primary);
-  box-shadow: 0 0 16px rgba(63, 232, 255, 0.8);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--cyan) 92%, transparent);
 }
 
 /* ============================ NAV — ACTIVE SCROLLSPY ============================ */
@@ -332,7 +332,7 @@ html[data-scene='singularity'] {
 .nav__link { position: relative; }
 .nav__link.active {
   color: var(--ink);
-  background: rgba(63, 232, 255, 0.08);
+  background: color-mix(in srgb, var(--cyan) 9%, transparent);
 }
 .nav__link.active .num { color: var(--cyan); }
 .nav__link::after {
@@ -353,7 +353,7 @@ html[data-scene='singularity'] {
 /* ============================ COUNTDOWN LIVE SWITCH ============================ */
 
 .countdown.is-live .countdown__cell b { color: var(--gold); }
-.countdown.is-live .countdown__cell { border-color: rgba(255, 200, 87, 0.5); }
+.countdown.is-live .countdown__cell { border-color: color-mix(in srgb, var(--gold) 57%, transparent); }
 
 .live-pill {
   display: inline-flex;
@@ -368,7 +368,7 @@ html[data-scene='singularity'] {
   background: rgba(15, 15, 25, 0.6);
   padding: 0.5rem 1rem;
   border-radius: 999px;
-  box-shadow: 0 0 30px -10px rgba(255, 200, 87, 0.5);
+  box-shadow: 0 0 30px -10px color-mix(in srgb, var(--gold) 57%, transparent);
 }
 
 /* ============================ ROSTER CONTROLS ============================ */
@@ -388,7 +388,6 @@ html[data-scene='singularity'] {
   border-radius: 12px;
   border: 1px solid var(--line-strong);
   background: rgba(5, 5, 10, 0.6);
-  backdrop-filter: blur(8px);
   color: var(--ink);
   overflow: hidden; /* masks the arrow travel track */
   display: grid;
@@ -424,7 +423,7 @@ html[data-scene='singularity'] {
 .roster__arrow:hover:not(:disabled) {
   border-color: var(--cyan);
   color: var(--cyan);
-  background: rgba(63, 232, 255, 0.08);
+  background: color-mix(in srgb, var(--cyan) 9%, transparent);
 }
 .roster__arrow:disabled { opacity: 0.3; cursor: default; }
 
@@ -458,20 +457,20 @@ html[data-scene='singularity'] {
   height: 25px;
   border-radius: 3px;
   border: 1px solid var(--line-strong);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(12, 11, 14, 0.03);
   transform: translateX(-50%) scaleY(1);
   transform-origin: bottom;
   transition: transform 0.35s var(--ease-expo), border-color 0.3s var(--ease-expo),
     background-color 0.3s var(--ease-expo);
 }
 .roster__minimap button:hover::before {
-  border-color: rgba(63, 232, 255, 0.5);
-  background: rgba(63, 232, 255, 0.07);
+  border-color: color-mix(in srgb, var(--cyan) 57%, transparent);
+  background: color-mix(in srgb, var(--cyan) 8%, transparent);
 }
 .roster__minimap button.active::before {
   transform: translateX(-50%) scaleY(1.32); /* ≈ the old 26 → 34px grow */
   border-color: var(--cyan);
-  background: rgba(63, 232, 255, 0.12);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
 }
 .roster__minimap button span {
   position: absolute;
@@ -501,8 +500,8 @@ html[data-scene='singularity'] {
   font-size: clamp(6rem, 14vw, 16rem);
   line-height: 1;
   color: transparent;
-  -webkit-text-stroke: 1.5px rgba(245, 243, 255, 0.14);
-  text-shadow: 0 8px 40px color-mix(in srgb, var(--card-accent, #8a4dff) 35%, transparent);
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--ink) 14%, transparent);
+  text-shadow: 0 8px 40px color-mix(in srgb, var(--card-accent, var(--iris)) 35%, transparent);
   pointer-events: none;
   mix-blend-mode: screen;
   rotate: calc(var(--scroll-vel, 0) * 1.4deg);
@@ -741,14 +740,12 @@ html[data-scene='singularity'] {
 
   /* Refractive glass strip — subtle blur + hairline 1px top/bottom borders. */
   border-top: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(12, 11, 14, 0.05);
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.045),
-    rgba(255, 255, 255, 0.015)
+    rgba(12, 11, 14, 0.032),
+    rgba(12, 11, 14, 0.03)
   );
-  -webkit-backdrop-filter: blur(12px) saturate(1.12);
-  backdrop-filter: blur(12px) saturate(1.12);
   /* Edge dissolve — fade text at the band's borders into the void so the
      roll reads as an infinite band rather than a hard-clipped bar. */
   -webkit-mask-image: linear-gradient(
@@ -816,7 +813,7 @@ html[data-scene='singularity'] {
 .creds__phrase:not(.is-solid) .creds__txt {
   color: transparent;
   font-weight: 800;
-  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.34);
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--ink) 34%, transparent);
 }
 /* filled register (odd phrases) */
 .creds__phrase.is-solid .creds__txt {
@@ -868,7 +865,7 @@ html[data-scene='singularity'] {
   width: 100%;
   height: 100%; /* 1:1 — matches the square viewBox */
   overflow: visible;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.25));
+  filter: drop-shadow(0 0 4px rgba(12, 11, 14, 0.18));
   opacity: 0.92;
 }
 /* .cr-defs — gradient definition is zero-sized; keep it inert. */
@@ -991,15 +988,15 @@ html[data-scene='singularity'] {
   width: clamp(2.2rem, 1.6rem + 2vw, 3rem);
   height: auto;
   transition: transform 0.5s var(--ease-expo), filter 0.5s var(--ease-expo);
-  filter: drop-shadow(0 0 12px rgba(255, 200, 87, 0.22));
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--gold) 25%, transparent));
 }
 .footer__brand:hover img {
   transform: scale(1.08) rotate(-4deg);
-  filter: drop-shadow(0 0 20px rgba(255, 200, 87, 0.5));
+  filter: drop-shadow(0 0 20px color-mix(in srgb, var(--gold) 57%, transparent));
 }
 .footer__brand.is-holding img {
   transform: scale(1.15) rotate(-6deg);
-  filter: drop-shadow(0 0 30px rgba(255, 200, 87, 0.85));
+  filter: drop-shadow(0 0 30px color-mix(in srgb, var(--gold) 98%, transparent));
 }
 .signoff__prose {
   color: var(--ink-dim);
@@ -1110,7 +1107,7 @@ html[data-scene='singularity'] {
   padding: 0.62rem 1.15rem;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(12, 11, 14, 0.03);
   font-family: var(--font-mono);
   font-size: 0.66rem;
   font-weight: 700;
@@ -1124,8 +1121,8 @@ html[data-scene='singularity'] {
 .signoff__rewind:hover,
 .signoff__rewind:focus-visible {
   color: var(--cyan);
-  border-color: rgba(63, 232, 255, 0.45);
-  background: rgba(63, 232, 255, 0.05);
+  border-color: color-mix(in srgb, var(--cyan) 52%, transparent);
+  background: color-mix(in srgb, var(--cyan) 6%, transparent);
 }
 .signoff__rewind-chev {
   transition: transform 0.45s var(--ease-expo);
@@ -1212,10 +1209,10 @@ html[data-scene='singularity'] {
   text-transform: uppercase;
   color: var(--ink);
   background: rgba(8, 8, 18, 0.9);
-  border: 1px solid rgba(63, 232, 255, 0.5);
+  border: 1px solid color-mix(in srgb, var(--cyan) 57%, transparent);
   border-radius: 999px;
   padding: 0.7rem 1.2rem;
-  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.8), 0 0 30px -10px rgba(63, 232, 255, 0.5);
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.8), 0 0 30px -10px color-mix(in srgb, var(--cyan) 57%, transparent);
 }
 .toast::before {
   content: '✦';
@@ -1257,7 +1254,7 @@ html[data-scene='singularity'] {
   font-size: clamp(6rem, 24vw, 20rem);
   line-height: 0.8;
   color: transparent;
-  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.07);
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--ink) 7%, transparent);
   user-select: none;
   pointer-events: none;
   writing-mode: vertical-rl;
@@ -1339,9 +1336,9 @@ html[data-scene='singularity'] {
   box-shadow: none;
   border: none;
   padding: 0;
-  filter: drop-shadow(0px 0px 10px rgba(63, 232, 255, 0.35))
+  filter: drop-shadow(0px 0px 10px color-mix(in srgb, var(--cyan) 40%, transparent))
           drop-shadow(0px 0px 20px rgba(168, 85, 247, 0.5))
-          drop-shadow(0px 6px 32px rgba(255, 61, 154, 0.25));
+          drop-shadow(0px 6px 32px color-mix(in srgb, var(--magenta) 29%, transparent));
 }
 
 /* Animated gradient ink (CANON / VERSIONS). Background is clipped strictly
@@ -1370,7 +1367,7 @@ html[data-scene='singularity'] {
   display: inline-block;
   color: transparent;
   -webkit-text-stroke: 1.5px #ffffff;
-  filter: drop-shadow(0px 0px 14px rgba(255, 255, 255, 0.22));
+  filter: drop-shadow(0px 0px 14px rgba(12, 11, 14, 0.158));
 }
 
 /* Flat 2D periods after CANON. / VERSIONS. — solid white, no gradient, no glow. */
@@ -1441,8 +1438,8 @@ html[data-scene='singularity'] {
 }
 .hero__vers:hover .hero__char {
   text-shadow:
-    -2px 0 rgba(255, 61, 154, 0.9),
-     2px 0 rgba(63, 232, 255, 0.9);
+    -2px 0 color-mix(in srgb, var(--magenta) 100%, transparent),
+     2px 0 color-mix(in srgb, var(--cyan) 100%, transparent);
 }
 .hero__vers:hover .hero__char::before {
   opacity: 0.95;
@@ -1482,7 +1479,7 @@ html[data-scene='singularity'] {
 .hero__lede em {
   font-style: normal;
   font-weight: 600;
-  color: #f5f3ff;
+  color: var(--ink);
   background: none;
   background-color: transparent;
   padding: 0;
@@ -1522,13 +1519,11 @@ html[data-scene='singularity'] {
   letter-spacing: 0.28em;
   text-transform: uppercase;
   color: rgba(233, 237, 245, 0.72);
-  background: rgba(255, 255, 255, 0.045);
-  backdrop-filter: blur(26px) saturate(135%);
-  -webkit-backdrop-filter: blur(26px) saturate(135%);
+  background: rgba(12, 11, 14, 0.032);
   /* hairline of *light*, not a colored stroke — reads as a glass edge */
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.09),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.035),
+    inset 0 1px 0 rgba(12, 11, 14, 0.065),
+    inset 0 0 0 1px rgba(12, 11, 14, 0.03),
     0 18px 46px -26px rgba(0, 0, 0, 0.85);
   transition:
     background-color 0.55s var(--ease-expo, cubic-bezier(0.16, 1, 0.3, 1)),
@@ -1548,9 +1543,9 @@ html[data-scene='singularity'] {
   z-index: -1;
   background: linear-gradient(
     150deg,
-    rgba(255, 255, 255, 0.07),
-    rgba(255, 255, 255, 0) 42%,
-    rgba(255, 255, 255, 0.03)
+    rgba(12, 11, 14, 0.05),
+    rgba(12, 11, 14, 0.03) 42%,
+    rgba(12, 11, 14, 0.03)
   );
   opacity: 0.9;
 }
@@ -1560,11 +1555,11 @@ html[data-scene='singularity'] {
 .hero__marquee:hover,
 .hero__marquee:focus-visible,
 .hero__marquee.is-paused {
-  background: rgba(255, 255, 255, 0.075);
+  background: rgba(12, 11, 14, 0.054);
   color: rgba(245, 247, 252, 0.9);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(12, 11, 14, 0.101),
+    inset 0 0 0 1px rgba(12, 11, 14, 0.043),
     0 22px 54px -26px rgba(0, 0, 0, 0.9);
   outline: none;
 }
@@ -1572,7 +1567,7 @@ html[data-scene='singularity'] {
 /* Live state stays monochromatic — it simply resolves brighter. */
 .hero__marquee.live-pill {
   color: rgba(250, 251, 255, 0.92);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(12, 11, 14, 0.043);
 }
 
 .hero__marquee-viewport {
@@ -1627,9 +1622,7 @@ html[data-scene='singularity'] {
   padding: 0.7rem 1.15rem;
   border: none;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(12, 11, 14, 0.03);
   font-family: var(--font-mono), "IBM Plex Mono", "Share Tech Mono", ui-monospace, monospace;
   font-size: 0.7rem;
   font-weight: 600;
@@ -1642,12 +1635,12 @@ html[data-scene='singularity'] {
   color: #fff;
   font-weight: 700;
   letter-spacing: 0.22em;
-  text-shadow: 0 0 18px rgba(255, 255, 255, 0.18);
+  text-shadow: 0 0 18px rgba(12, 11, 14, 0.13);
   white-space: nowrap;
 }
 
 .hero__sub-desc {
-  color: var(--ink, #f5f3ff);
+  color: var(--ink, var(--ink));
   opacity: 0.7;
   font-weight: 500;
   letter-spacing: 0.22em;
@@ -1670,7 +1663,7 @@ html[data-scene='singularity'] {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.35));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--cyan) 35%, transparent));
   animation: heroSepShimmer 4.2s linear infinite;
   user-select: none;
   pointer-events: none;
@@ -1743,7 +1736,7 @@ html[data-scene='singularity'] {
   right: var(--gutter);
   bottom: 0;
   height: 2px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(12, 11, 14, 0.058);
   z-index: 3;
   border-radius: 99px;
   overflow: hidden;
@@ -1753,7 +1746,7 @@ html[data-scene='singularity'] {
   width: 100%;
   height: 100%;
   background: var(--grad-primary);
-  box-shadow: 0 0 16px rgba(63, 232, 255, 0.8);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--cyan) 92%, transparent);
   transform-origin: left;
   transition: width 1s var(--ease-expo);
 }
@@ -1793,12 +1786,12 @@ html[data-scene='singularity'] {
   width: 5px;
   height: 5px;
   background: rgba(240, 243, 249, 0.78);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 10px rgba(12, 11, 14, 0.252);
   animation: heroMarqueePulse 2.8s ease-in-out infinite;
 }
 
 .hero__marquee .pulse-dot::after {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(12, 11, 14, 0.158);
   animation: heroMarqueeRing 3.4s ease-out infinite;
 }
 
