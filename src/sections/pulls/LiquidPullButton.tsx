@@ -12,7 +12,7 @@
    ========================================================================== */
 
 import { useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import type * as ThreeNS from 'three';
 import gsap from 'gsap';
 import { webglSupported } from './webgl';
 
@@ -43,9 +43,20 @@ export default function LiquidPullButton({ onClick, disabled, spin, label, spinL
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const fine = window.matchMedia('(pointer: fine)').matches;
 
-    let renderer: THREE.WebGLRenderer | null = null;
+    /* three loads as an island (see ParticleField): the button's CSS face is
+       already painted, and the shader slab replaces it when the module
+       arrives. The fallback class is the same path used when WebGL is
+       unavailable, so there is exactly one degraded state. */
+    let cancelled = false;
+    let teardown: (() => void) | null = null;
+
+    void (async () => {
+    const three = await import('three');
+    if (cancelled) return;
+
+    let renderer: ThreeNS.WebGLRenderer | null = null;
     try {
-      renderer = new THREE.WebGLRenderer({
+      renderer = new three.WebGLRenderer({
         canvas,
         alpha: true,
         antialias: false,
@@ -61,16 +72,16 @@ export default function LiquidPullButton({ onClick, disabled, spin, label, spinL
       return;
     }
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const scene = new three.Scene();
+    const camera = new three.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     const uniforms = {
-      uRes: { value: new THREE.Vector2(1, 1) },
-      uMouse: { value: new THREE.Vector2(-999, -999) },
+      uRes: { value: new three.Vector2(1, 1) },
+      uMouse: { value: new three.Vector2(-999, -999) },
       uTime: { value: 0 },
       uHover: { value: 0 },
       uClick: { value: 0 },
     };
-    const material = new THREE.ShaderMaterial({
+    const material = new three.ShaderMaterial({
       vertexShader: CTA_VERT,
       fragmentShader: CTA_FRAG,
       uniforms,
@@ -78,7 +89,7 @@ export default function LiquidPullButton({ onClick, disabled, spin, label, spinL
       depthTest: false,
       depthWrite: false,
     });
-    scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
+    scene.add(new three.Mesh(new three.PlaneGeometry(2, 2), material));
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -159,7 +170,7 @@ export default function LiquidPullButton({ onClick, disabled, spin, label, spinL
     };
     canvas.addEventListener('webglcontextlost', onLost);
 
-    return () => {
+    teardown = () => {
       cancelAnimationFrame(raf);
       ro?.disconnect();
       io?.disconnect();
@@ -175,6 +186,12 @@ export default function LiquidPullButton({ onClick, disabled, spin, label, spinL
       material.dispose();
       scene.clear();
       renderer!.dispose();
+    };
+    })();
+
+    return () => {
+      cancelled = true;
+      teardown?.();
     };
   }, []);
 

@@ -11,7 +11,7 @@
    ========================================================================== */
 
 import { useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import type * as ThreeNS from 'three';
 import { webglSupported } from './webgl';
 
 interface Props {
@@ -42,12 +42,23 @@ export default function ParticleField({ obstacles, sectionRef }: Props) {
     // degrade silently — the CSS backdrop already carries the atmosphere
     if (!webglSupported()) return;
 
+    /* three is a ~124 kB gz island: it is imported the moment this section
+       approaches the viewport, never as part of the first paint. The markup
+       and the CSS backdrop are already on screen by then, so the field fades
+       in behind content that is fully readable without it. */
+    let cancelled = false;
+    let teardown: (() => void) | null = null;
+
+    void (async () => {
+    const three = await import('three');
+    if (cancelled) return;
+
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const fine = window.matchMedia('(pointer: fine)').matches;
 
-    let renderer: THREE.WebGLRenderer;
+    let renderer: ThreeNS.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({
+      renderer = new three.WebGLRenderer({
         canvas,
         alpha: true,
         antialias: false,
@@ -61,8 +72,8 @@ export default function ParticleField({ obstacles, sectionRef }: Props) {
     const H = () => section.clientHeight;
     const count = W() < 900 ? 340 : 760;
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(52, 1, 1, 6000);
+    const scene = new three.Scene();
+    const camera = new three.PerspectiveCamera(52, 1, 1, 6000);
     camera.position.set(0, 0, 700);
 
     const pos = new Float32Array(count * 3);
@@ -71,7 +82,7 @@ export default function ParticleField({ obstacles, sectionRef }: Props) {
     const particles: Particle[] = [];
     const bounds = { w: 0, h: 0 };
 
-    const material = new THREE.ShaderMaterial({
+    const material = new three.ShaderMaterial({
       vertexShader: FIELD_VERT,
       fragmentShader: FIELD_FRAG,
       uniforms: {
@@ -82,7 +93,7 @@ export default function ParticleField({ obstacles, sectionRef }: Props) {
       transparent: true,
       depthWrite: false,
       depthTest: false,
-      blending: THREE.AdditiveBlending,
+      blending: three.AdditiveBlending,
     });
 
     const fit = () => {
@@ -114,12 +125,12 @@ export default function ParticleField({ obstacles, sectionRef }: Props) {
       size[i] = p.size;
     }
 
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geometry.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
-    geometry.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+    const geometry = new three.BufferGeometry();
+    geometry.setAttribute('position', new three.BufferAttribute(pos, 3));
+    geometry.setAttribute('aSeed', new three.BufferAttribute(seed, 1));
+    geometry.setAttribute('aSize', new three.BufferAttribute(size, 1));
 
-    const points = new THREE.Points(geometry, material);
+    const points = new three.Points(geometry, material);
     points.frustumCulled = false;
     scene.add(points);
 
@@ -195,7 +206,7 @@ export default function ParticleField({ obstacles, sectionRef }: Props) {
     const onLost = (e: Event) => e.preventDefault();
     canvas.addEventListener('webglcontextlost', onLost);
 
-    return () => {
+    teardown = () => {
       cancelAnimationFrame(raf);
       ro?.disconnect();
       io?.disconnect();
@@ -205,6 +216,12 @@ export default function ParticleField({ obstacles, sectionRef }: Props) {
       geometry.dispose();
       material.dispose();
       renderer.dispose();
+    };
+    })();
+
+    return () => {
+      cancelled = true;
+      teardown?.();
     };
   }, [obstacles, sectionRef]);
 

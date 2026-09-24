@@ -478,18 +478,26 @@ static frame, the hold stills the water, StrictMode-safe teardown. `bh-hold`,
 
 | Metric | Before | Now | Target | State |
 |---|---|---|---|---|
-| Eager JS (gz) | 643.6 kB | **376.4 kB** | < 250 kB | −42%, target not met |
-| CSS (gz) | 39.5 kB | **38.6 kB** | < 25 kB | barely moved |
+| Eager JS (gz) | 643.6 kB | **252.9 kB** | < 250 kB | −60.7%, 1.1% over target |
+| CSS (gz) | 39.5 kB | **38.6 kB** | < 25 kB | target not met |
 | Binary assets in `public/models` | 31 MB | 0 | 0 | met |
 | `three` builds in the bundle | 2 (webgl + webgpu) | 1 | 1 | met |
 | GPU contexts | 11 | 6 | 6 | met |
 
-What still binds: the eager `three/webgl` chunk (123.7 kB gz) for the hero's
-particle field, and `captureSignoff`/`html2canvas` (49.4 kB gz, still lazy —
-correct). Two further cuts are available and are the next honest step:
-(a) render the hero field from a shader of the same shape as `VortexStage`
-(no three at all, −123.7 kB), (b) split the pulls canvases' `WebGLRenderer`
-usage behind the same dependency-free renderer (−~90 kB gz on first paint).
+The eager `three/webgl` chunk is gone from the first paint: the pulls section's
+two canvases (`ParticleField`, `LiquidPullButton`) now `await import('three')`
+inside their effects, so the library arrives as a **189.6 kB gz island** when
+that beat approaches, behind a CSS face that is already readable. (The hero
+field never needed three — it was never the cause.)
+
+What still binds: 2.9 kB of the JS target, and the CSS budget, which barely
+moved because the migration replaced colour-by-colour rather than deleting
+rules. Both remaining cuts are structural, not tuning:
+(a) port the pulls canvases to the `VortexStage` pattern (a raw WebGL2 context
+with no library) and delete `three` from the project entirely — the last
+189.6 kB gz, now lazy, disappears;
+(b) run the 28-breakpoint census (§12) and consolidate the layout rules that
+the reskin kept alive but that no longer have distinct treatments.
 
 ### Verification debt
 
