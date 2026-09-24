@@ -60,7 +60,11 @@ uniform vec3  uColA; uniform vec2 uPosA; uniform float uRadA;
 uniform vec3  uColB; uniform vec2 uPosB; uniform float uRadB;
 uniform vec3  uColC; uniform vec2 uPosC; uniform float uRadC;
 uniform float uVig;
-uniform float uWarm;
+uniform float uCaustic;
+uniform vec3  uBase;
+uniform vec3  uBase2;
+uniform vec3  uTint;
+uniform float uLight;
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -122,26 +126,31 @@ void main() {
   glow += uColB * (field(w, uPosB, uRadB, aspect) * (0.72 + 0.50 * (1.0 - fil)));
   glow += uColC * (field(w, uPosC, uRadC, aspect) * (0.78 + 0.36 * fil));
 
-  /* Gold ingress (vault district): faint rarity-light shafts from above. */
-  float shaft = fbm(vec2(ns.x * 2.3 + t * 0.45, st.y * 0.8 - t * 0.2));
-  glow += vec3(1.0, 0.78, 0.34) * (uWarm * 0.06 * shaft * shaft * (1.0 - st.y));
+  /* Caustic light sheets (reef/mid-water): crested fbm, sharper than the
+     aurora sheets so it reads as light through water, not as fog. */
+  float caus = pow(fbm(ns * 3.3 + vec2(t * 1.6, -t * 1.2) + (q - 0.5) * 0.8), 2.6);
+  float sheets = fbm(ns * 2.2 - vec2(t * 0.9, t * 0.5));
 
-  /* Cursor swell — a subtle atmospheric response, warm inside the vault. */
+  /* Cursor swell — a subtle atmospheric response, tinted by the zone. */
   vec2 md = st - uMouse;
   md.x *= aspect;
-  vec3 swell = mix(vec3(0.36, 0.42, 0.78), vec3(0.92, 0.74, 0.42), uWarm * 0.65);
-  glow += swell * (exp(-dot(md, md) * 7.5) * 0.13 * uMouseI);
+  glow += uTint * (exp(-dot(md, md) * 7.5) * 0.13 * uMouseI);
 
-  /* Gentle compression keeps overlap hotspots classy; base void untouched so
-     it matches the CSS --void behind rubber-band overscroll exactly. */
   glow = 1.0 - exp(-glow * 1.35);
-  vec3 col = vec3(0.0196, 0.0196, 0.0392) + glow;   /* #05050a */
 
-  /* In-shader vignette (replaces the .vignette div on the GL path). */
+  /* Two regimes (IDENTITY-SPEC §2.1): water ADDS light to darkness; paper
+     takes light away in sheets and lets caustic tint stain the stock. */
+  vec3 darkCol  = uBase + glow + uTint * (caus * uCaustic * 0.35);
+  vec3 lightCol = uBase * (0.965 + 0.055 * sheets)
+                + uTint * (caus * uCaustic * 0.10)
+                + glow * 0.22;
+  vec3 col = mix(darkCol, lightCol, uLight);
+
+  /* In-shader vignette: to black in water, to stock-shadow on paper. */
   vec2 vd = st - vec2(0.5, 0.42);
   vd.x *= 0.88;
   float vig = smoothstep(0.55, 1.15, length(vd) * 1.6);
-  col = mix(col, vec3(0.0), vig * uVig);
+  col = mix(col, uBase2, vig * uVig);
 
   /* Ordered-ish dither — kills banding on these very dark gradients. */
   col += (hash(mod(gl_FragCoord.xy, 289.0) + fract(uTime) * 61.7) - 0.5) * 0.006;
@@ -236,7 +245,11 @@ export default function Ambience() {
     const uColB = U('uColB'), uPosB = U('uPosB'), uRadB = U('uRadB');
     const uColC = U('uColC'), uPosC = U('uPosC'), uRadC = U('uRadC');
     const uVig = U('uVig');
-    const uWarm = U('uWarm');
+    const uWarm = U('uCaustic');
+    const uBase = U('uBase');
+    const uBase2 = U('uBase2');
+    const uTint = U('uTint');
+    const uLight = U('uLight');
 
     /* ---- State ---- */
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -276,6 +289,10 @@ export default function Ambience() {
       gl.uniform1f(uRadC, cur[17]);
       gl.uniform1f(uVig, cur[18]);
       gl.uniform1f(uWarm, cur[19]);
+      gl.uniform3f(uBase, cur[20], cur[21], cur[22]);
+      gl.uniform3f(uBase2, cur[23], cur[24], cur[25]);
+      gl.uniform3f(uTint, cur[26], cur[27], cur[28]);
+      gl.uniform1f(uLight, cur[29]);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 

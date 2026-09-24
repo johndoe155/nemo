@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Reveal, SectionHead, Verified, WalletButton, useMockWallet, MOCK_ADDRESS } from '../components/ui';
+import { Reveal, Verified, WalletButton, useMockWallet, MOCK_ADDRESS } from '../components/ui';
 import { useTilt } from '../components/motion';
 import { PERK_TIERS } from '../lib/data';
 
@@ -35,25 +35,12 @@ export default function Perks() {
   const wallet = useMockWallet();
 
   return (
-    <section className="section perks" id="perks">
+    <div className="perks" id="perks">
       <div className="shell">
-        <SectionHead
-          num="04"
-          kicker="04 · PILLAR 2 — TOKEN-GATED PERKS"
-          kickerGold
-          title={
-            <>
-              Hold the NFT. <span className="txt-gold">Open the doors first.</span>
-            </>
-          }
-          sub={
-            <>
-              Connect your wallet at the store. Holding the OC NFT — or a specific trait tier —
-              unlocks real perks, with first access to new Nemoverse universes as the headline
-              reward.
-            </>
-          }
-        />
+        <header className="part-head">
+          <span className="part-head__kicker">TOKEN-GATED PERKS</span>
+          <h3 className="part-head__title">Four trait tiers, escalating windows</h3>
+        </header>
 
         <div className="perks__grid">
           {PERK_TIERS.map((tier, i) => (
@@ -102,6 +89,6 @@ export default function Perks() {
           </p>
         </Reveal>
       </div>
-    </section>
+    </div>
   );
 }

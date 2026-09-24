@@ -9,7 +9,6 @@ import ReactDOM from 'react-dom/client';
 // --font-pp-* raw family tokens on :root; the canonical semantic tokens
 // (--font-display/heading/body/body-text/accent) are mapped in global.css.
 import '@fontsource-variable/space-grotesk';
-import '@fontsource/michroma';
 import './assets/fonts/pp-fonts.css';
 import './styles/global.css';
 // Tailwind v4 utility layer (theme + utilities, NO preflight) behind the
@@ -33,10 +32,6 @@ import './styles/typography.css';
 // 04 · PILLAR 3 — cyber-luxury split-canvas rebuild (loads after typography
 // so its scoped art direction wins where tokens overlap).
 import './styles/pulls.css';
-// 3D rotunda section chrome — scoped .cg-* layer for the section head,
-// badges, stage frame and hint. (The sphere stage itself is the
-// self-contained Tailwind component src/components/ui/img-sphere.tsx.)
-import './styles/circular-gallery.css';
 // Rod system — suspended roster (01), skewered credit plates (06) and the
 // drilling canon-timeline rod. Loaded LAST: its scoped rules intentionally
 // win over the base card/timeline layer they rebuild.
@@ -52,11 +47,13 @@ import './styles/nemo-particles.css';
 // the closing crawl: stage box, the seam gradients that dissolve the canvas
 // into the page, and the static fallback frame. Scoped to .singularity/.bh-*,
 // so it loads last without contending with anything above.
-import './styles/blackhole.css';
+import './styles/trench.css';
+import './styles/water.css';
 // The boot sequence — the topmost fixed layer the site owns (z 600: above
 // .grain, the nav HUD and the side rail; below the custom cursor at 1000).
 // Everything is scoped to .ldr/.ldr__*, so it contends with none of the above.
 import './styles/loader.css';
+import './styles/print.css';
 import App from './App';
 /* The single scroll authority (DESIGN_AUDIT P1) — init before React mounts
    so the boot loader can hold/release the engine as part of the sequence.

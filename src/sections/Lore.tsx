@@ -270,18 +270,13 @@ export default function Lore() {
   const drop = useCountdown(UNIVERSE_DROP_ISO);
 
   return (
-    <section className="section lore" id="lore">
+    <div className="lore" id="lore">
       <div className="shell lore__grid">
         <div className="lore__copy">
-          <SectionHead
-            num="08"
-            kicker="THE CORE IDENTITY"
-            title={
-              <>
-                Who is <span className="txt-grad">NEMO</span>?
-              </>
-            }
-          />
+          <header className="part-head">
+          <span className="part-head__kicker">THE CORE IDENTITY</span>
+          <h3 className="part-head__title">Who is <span className="txt-grad">NEMO</span>?</h3>
+        </header>
           <Reveal delay={0.08}>
             <p>
               <b>NEMO is one canon character</b> — a wanderer between timelines whose face is a
@@ -329,6 +324,6 @@ export default function Lore() {
         <SectionHead center kicker="CANON TIMELINE" title={<>The story so far</>} />
         <CanonTimeline />
       </div>
-    </section>
+    </div>
   );
 }

@@ -1,239 +1,121 @@
 /* ============================================================================
-   scenes — the section-aware ambient system ("the background knows where
-   you are").
+   scenes — the depth-zone system (IDENTITY-SPEC §2.1)
 
-   The page is divided into seven atmospheric "districts". As sections cross
-   the viewport centre band, observeScenes() stamps `data-scene` onto <html>
-   and notifies the renderer. Two consumers:
+   Was: eight space districts with their own hardcoded hexes. Now: a thin
+   mapping over src/lib/palette.ts, the single source of truth for colour
+   (SPEC §3.3). The page is a dive — surface → reef → mid-water → trench —
+   and scroll is depth. The mechanism is unchanged: observeScenes() stamps
+   `data-scene` on <html> as sections cross the reading line, and notifies
+   the renderer.
 
-     · Ambience.tsx (WebGL path) — receives the scene id, looks up the
-       palette below and glides its shader uniforms toward it on the GPU.
+   Two consumers:
+     · Ambience.tsx (WebGL path) — lerps its uniforms toward the zone palette.
+       The shader now paints the ZONE GROUND itself (uBase), so the canvas is
+       the page ground exactly as it was the page void before; light zones
+       get caustic light sheets instead of additive glow.
      · overhaul.css (no-WebGL fallback) — html[data-scene='…'] rules retarget
-       the --amb-* colour custom properties of the CSS nebula washes.
+       the --amb-* wash colours for the same four zones.
 
-   Palette intent (from the design system: gold is reserved for rarity):
-     arrival        hero              — the signature iris/cyan/magenta wash
-     registry       roster + rotunda  — cyan-led, archival, cooler
-     signal         persona           — mono-cool cyan/blue transmission
-     arsenal        perks             — iris-led, charged
-     vault          pulls + store     — gold ingress; rarity is the story here
-     constellation  artists           — magenta-led, celebratory
-     abyss          lore + credit crawl — near-black, vignette closing in (the crawl is now above the singularity)
-     singularity    the black hole    — the canvas's own palette, so the page
-                                        and the simulation read as one sky
+   The scene vector layout grew from 20 to 32 floats to carry the ground:
+     [0..17]  three colour fields (rgb·gain, x, y, rad)
+     [18]     vignette strength
+     [19]     caustic strength (was: gold warmth — gold is retired)
+     [20..22] base ground
+     [23..25] vignette target colour
+     [26..28] caustic tint
+     [29]     light-regime mix (1 = dry paper, 0 = water)
+============================================================================ */
 
-   The last two are a matched pair. The black hole section
-   (sections/Singularity.tsx) sits between the canon timeline and the closing
-   credit crawl, and its canvas paints its OWN opaque starfield/nebula
-   background from blackhole.config.js. So `abyss` — the district both of its
-   neighbours live in — is tuned toward that same palette (nebula navy
-   #071f44 / #010615, with an ember #7f1b00 hint low in the frame), and
-   `singularity` carries it the rest of the way: navy ingress above the canvas,
-   warm disk-light #a84b23 below it, deep void at the core. The result is a
-   continuous sky scrolling in and out of the simulation rather than a hard cut.
-   Both districts are mirrored in styles/overhaul.css for the no-WebGL path, and
-   the raw hexes live as --bh-* tokens in styles/global.css.
-   ========================================================================== */
+import {
+  DEFAULT_ZONE,
+  SECTION_ZONE,
+  ZONES,
+  floats,
+  type ZoneId,
+} from './palette';
 
-export type SceneId =
-  | 'arrival'
-  | 'registry'
-  | 'signal'
-  | 'arsenal'
-  | 'vault'
-  | 'constellation'
-  | 'abyss'
-  | 'singularity';
+export type SceneId = ZoneId;
 
 type RGB = readonly [number, number, number];
 type XY = readonly [number, number];
 
 interface SceneField {
-  /** Light colour, sRGB 0..1 */
   color: RGB;
-  /** Peak additive intensity — kept low so foreground contrast stays AAA */
   gain: number;
-  /** Anchor in viewport UV space (x 0..1 left→right, y 0..1 top→bottom;
-      values slightly outside push the core off-screen like the old blobs) */
   pos: XY;
-  /** Falloff radius in viewport-height units */
   rad: number;
 }
 
 export interface Scene {
   fields: readonly [SceneField, SceneField, SceneField];
-  /** Vignette strength 0..1 (edge darkening toward void) */
   vig: number;
-  /** Gold "rarity light" ingress 0..1 (vault scenes only) */
-  warm: number;
+  /** Caustic light-sheet strength. 0 on dry paper. */
+  caustic: number;
+  base: RGB;
+  base2: RGB;
+  tint: RGB;
+  light: number;
 }
 
-/* ---- Design-system palette, normalised ---- */
-const IRIS: RGB = [0.541, 0.302, 1.0]; //      #8a4dff
-const IRIS_DEEP: RGB = [0.357, 0.169, 0.839]; // #5b2bd6
-const CYAN: RGB = [0.247, 0.91, 1.0]; //       #3fe8ff
-const MAGENTA: RGB = [1.0, 0.239, 0.604]; //   #ff3d9a
-const GOLD: RGB = [1.0, 0.784, 0.341]; //      #ffc857
-const BLUE: RGB = [0.227, 0.357, 0.85]; //     #3a5bd9
+const BASE_BY_ZONE: Record<ZoneId, [string, string, string]> = {
+  /* [ground, vignette target, caustic tint] — all keys into palette.ts */
+  surface: ['paper', 'paper-2', 'manila'],
+  reef: ['paper', 'paper-2', 'water'],
+  midwater: ['mid-ground', 'deep', 'sky'],
+  trench: ['deep', 'deep-3', 'bio-cyan'],
+};
 
-/* ---- The black hole's own palette ----
-   Read off src/three/blackhole/blackhole.config.js (vendored verbatim, never
-   edited): nebula1Color / nebula2Color and the accretion disk's warm legacy
-   pair. Normalised to sRGB 0..1 like everything above, and exposed as the
-   --bh-* tokens in styles/global.css so the CSS layers read the same values.
-   These are not house hues — they belong to the simulation, and their only job
-   is to let the page's sky meet the canvas's sky without a seam. */
-const BH_NAVY: RGB = [0.075, 0.106, 0.165]; //       #131b2a  nebula layer 1
-const BH_NAVY_DEEP: RGB = [0.031, 0.039, 0.059]; //  #080a0f  nebula layer 2
-const BH_AMBER: RGB = [0.494, 0.290, 0.188]; //      #7e4a30  disk inner
-const BH_EMBER: RGB = [0.290, 0.153, 0.110]; //      #4a271c  disk outer
+function build(id: ZoneId): Scene {
+  const z = ZONES[id];
+  const [b, b2, t] = BASE_BY_ZONE[id];
+  return {
+    fields: z.fields.map((f) => ({
+      color: floats(f.c),
+      gain: f.gain,
+      pos: f.pos,
+      rad: f.rad,
+    })) as unknown as [SceneField, SceneField, SceneField],
+    vig: z.vig,
+    caustic: z.caustic,
+    base: floats(b as never),
+    base2: floats(b2 as never),
+    tint: floats(t as never),
+    light: z.light ? 1 : 0,
+  };
+}
 
 export const SCENES: Record<SceneId, Scene> = {
-  arrival: {
-    fields: [
-      { color: IRIS, gain: 0.16, pos: [0.14, 0.06], rad: 0.62 },
-      { color: CYAN, gain: 0.11, pos: [0.96, 0.38], rad: 0.52 },
-      { color: MAGENTA, gain: 0.1, pos: [0.38, 1.06], rad: 0.6 },
-    ],
-    vig: 0.5,
-    warm: 0,
-  },
-  registry: {
-    fields: [
-      { color: CYAN, gain: 0.12, pos: [0.08, 0.12], rad: 0.58 },
-      { color: IRIS, gain: 0.13, pos: [0.98, 0.34], rad: 0.56 },
-      { color: BLUE, gain: 0.1, pos: [0.52, 1.1], rad: 0.68 },
-    ],
-    vig: 0.54,
-    warm: 0,
-  },
-  signal: {
-    fields: [
-      { color: CYAN, gain: 0.13, pos: [0.86, 0.1], rad: 0.55 },
-      { color: BLUE, gain: 0.1, pos: [0.04, 0.58], rad: 0.6 },
-      { color: IRIS, gain: 0.07, pos: [0.5, 1.14], rad: 0.62 },
-    ],
-    vig: 0.6,
-    warm: 0,
-  },
-  arsenal: {
-    fields: [
-      { color: IRIS, gain: 0.16, pos: [0.84, 0.16], rad: 0.6 },
-      { color: MAGENTA, gain: 0.09, pos: [0.04, 0.72], rad: 0.55 },
-      { color: CYAN, gain: 0.09, pos: [0.4, 1.1], rad: 0.58 },
-    ],
-    vig: 0.55,
-    warm: 0,
-  },
-  vault: {
-    fields: [
-      { color: GOLD, gain: 0.14, pos: [0.78, 0.06], rad: 0.58 },
-      { color: IRIS_DEEP, gain: 0.15, pos: [0.05, 0.46], rad: 0.6 },
-      { color: MAGENTA, gain: 0.08, pos: [0.55, 1.1], rad: 0.58 },
-    ],
-    vig: 0.6,
-    warm: 1,
-  },
-  constellation: {
-    fields: [
-      { color: MAGENTA, gain: 0.12, pos: [0.12, 0.1], rad: 0.58 },
-      { color: CYAN, gain: 0.1, pos: [0.94, 0.52], rad: 0.54 },
-      { color: IRIS, gain: 0.11, pos: [0.46, 1.1], rad: 0.62 },
-    ],
-    vig: 0.55,
-    warm: 0,
-  },
-  /* Retuned for the black hole seam. `abyss` is the district BOTH neighbours of
-     the singularity live in — lore (the canon timeline, immediately above) and
-     the closing credit crawl (now above the singularity) — and nothing else
-     on the page maps to it, so tuning it here eases both sides of the canvas at
-     once. It was iris-led; it is now nebula-navy-led, with the ember sitting
-     low in the frame (toward the seam) and a faint iris thread kept on the
-     right so the district still reads as the Nemoverse rather than as a
-     different site. Gains are higher than the old values because navy is far
-     darker than iris: the perceived lift is comparable, foreground contrast is
-     untouched. */
-  abyss: {
-    fields: [
-      { color: BH_NAVY, gain: 0.19, pos: [0.5, -0.02], rad: 0.74 },
-      { color: BH_EMBER, gain: 0.05, pos: [0.5, 0.98], rad: 0.72 },
-      { color: IRIS_DEEP, gain: 0.05, pos: [0.94, 0.3], rad: 0.5 },
-    ],
-    vig: 0.82,
-    warm: 0,
-  },
-  /* The black hole's own sky, so the masked edge of the canvas has something
-     continuous to dissolve into. The stage is full-bleed and the simulation
-     paints opaquely, so what is actually visible of this district is the
-     ~9% band the stage mask fades out at the top and the bottom: navy above
-     (meeting the crawl now placed above), warm disk-light below (meeting
-     the sign-off footer), deep void at the core. Vignette is the strongest
-     on the page — the frame closes in as the hole opens. */
-  singularity: {
-    fields: [
-      { color: BH_NAVY, gain: 0.24, pos: [0.5, -0.04], rad: 0.78 },
-      { color: BH_AMBER, gain: 0.075, pos: [0.5, 1.06], rad: 0.62 },
-      { color: BH_NAVY_DEEP, gain: 0.5, pos: [0.5, 0.5], rad: 0.95 },
-    ],
-    vig: 0.9,
-    warm: 0,
-  },
+  surface: build('surface'),
+  reef: build('reef'),
+  midwater: build('midwater'),
+  trench: build('trench'),
 };
 
-export const DEFAULT_SCENE: SceneId = 'arrival';
+export const DEFAULT_SCENE: SceneId = DEFAULT_ZONE;
 
-/* Section id → scene. Ids match the live DOM (Hero renders header#top;
-   the footer is #connect and sits outside <main>, hence getElementById). */
-export const SECTION_SCENE: Record<string, SceneId> = {
-  top: 'arrival',
-  nemoverse: 'registry',
-  rotunda: 'registry',
-  persona: 'signal',
-  perks: 'arsenal',
-  pulls: 'vault',
-  store: 'vault',
-  artists: 'constellation',
-  lore: 'abyss',
-  singularity: 'singularity',
-  connect: 'abyss',
-};
+/* Section id → zone. Ids match the live DOM (Hero renders header#top; the
+   footer is #connect and sits outside <main>, hence getElementById). The
+   footer is the coda: the page surfaces, so it returns to paper. */
+export const SECTION_SCENE: Record<string, SceneId> = { ...SECTION_ZONE };
 
 /* ---------------------------------------------------------------------------
-   SCENE_TINTS — the district palette promoted into the CSS shell
-   (DESIGN_AUDIT 1.4 / P4.17).
-
-   The WebGL ambience always lerped its shader uniforms per district; the
-   CSS shell below it was static. These two variables close that gap:
-   `--scene-bg` retints the page ground (navy→ember around the black hole,
-   cool cyan around the persona's transmission, warm gold ingress in the
-   vault) and `--scene-line` carries the same temperature into card hairlines.
-   No new hues — every value is a temperature lean of colours the system
-   already ships (--void, the --bh-* hexes, the house accents), and the
-   deltas are single-digit luminance on purpose: luxury dark UIs get depth
-   from temperature drift, not from alpha.
-
-   Written by observeScenes' apply() — the same call that stamps
-   data-scene — so the CSS shell, the shader and the no-WebGL fallback
-   cannot drift apart: one scene authority, three renderers.
+   SCENE_TINTS — the zone palette promoted into the CSS shell.
+   `--scene-bg` retints the page ground (body background-color) and
+   `--scene-line` carries the regime into card hairlines. Written by
+   observeScenes' apply() — the same call that stamps data-scene — so the
+   CSS shell, the shader and the no-WebGL fallback cannot drift apart.
 --------------------------------------------------------------------------- */
 export const SCENE_TINTS: Record<SceneId, { bg: string; line: string }> = {
-  arrival: { bg: '#07060f', line: 'rgba(214, 205, 255, 0.10)' }, // iris-leaning
-  registry: { bg: '#05070d', line: 'rgba(200, 232, 255, 0.10)' }, // cooler, archival
-  signal: { bg: '#050a10', line: 'rgba(196, 238, 255, 0.10)' }, // cyan cast
-  arsenal: { bg: '#080610', line: 'rgba(216, 200, 255, 0.10)' }, // iris charge
-  vault: { bg: '#0a0806', line: 'rgba(255, 228, 176, 0.10)' }, // warm gold ingress
-  constellation: { bg: '#0a0510', line: 'rgba(255, 206, 232, 0.10)' }, // magenta-led
-  abyss: { bg: '#040409', line: 'rgba(196, 208, 236, 0.08)' }, // deeper than the void
-  singularity: { bg: '#080b12', line: 'rgba(232, 214, 198, 0.09)' }, // meets the canvas sky
+  surface: { bg: '#F2EEE2', line: 'rgba(12, 11, 14, 0.18)' },
+  reef: { bg: '#EEF0E4', line: 'rgba(12, 11, 14, 0.20)' },
+  midwater: { bg: '#0B3548', line: 'rgba(242, 238, 226, 0.20)' },
+  trench: { bg: '#06202F', line: 'rgba(242, 238, 226, 0.16)' },
 };
 
 /* ---------------------------------------------------------------------------
-   sceneVec — flatten a scene to the 20-float layout the shader loop lerps:
-     [ r·g, g·g, b·g, x, y, rad ] × 3 fields, then [ vig, warm ].
-   Gain is premultiplied into the colour so the shader adds one vec3 per
-   field and the CPU interpolates a single flat array between scenes.
+   sceneVec — flatten a scene to the 32-float layout the shader lerps.
 --------------------------------------------------------------------------- */
-export const SCENE_FLOATS = 20;
+export const SCENE_FLOATS = 32;
 
 export function sceneVec(s: Scene): Float32Array {
   const v = new Float32Array(SCENE_FLOATS);
@@ -248,15 +130,25 @@ export function sceneVec(s: Scene): Float32Array {
     v[o + 5] = f.rad;
   }
   v[18] = s.vig;
-  v[19] = s.warm;
+  v[19] = s.caustic;
+  v[20] = s.base[0];
+  v[21] = s.base[1];
+  v[22] = s.base[2];
+  v[23] = s.base2[0];
+  v[24] = s.base2[1];
+  v[25] = s.base2[2];
+  v[26] = s.tint[0];
+  v[27] = s.tint[1];
+  v[28] = s.tint[2];
+  v[29] = s.light;
   return v;
 }
 
 /* ---------------------------------------------------------------------------
    observeScenes — single IntersectionObserver over the mapped sections using
-   the same centre-band technique as SideRail (-38% / -52% root margins ≈ the
-   section crossing the reading line). Stamps data-scene on <html> and calls
-   the optional callback exactly once per scene change. Returns a cleanup fn.
+   the centre-band technique (-38% / -52% root margins ≈ the section crossing
+   the reading line). Stamps data-scene on <html> and calls the optional
+   callback exactly once per zone change. Returns a cleanup fn.
 --------------------------------------------------------------------------- */
 const MOBILE_SCENE_QUERY = '(max-width: 768px)';
 
@@ -268,8 +160,6 @@ export function observeScenes(onScene?: (id: SceneId) => void): () => void {
     if (id === current) return;
     current = id;
     root.dataset.scene = id;
-    /* 1.4 — the CSS shell reads the district too: the transition lives on
-       the consumers (audit-gaps.css), this writes the target values. */
     const tint = SCENE_TINTS[id];
     root.style.setProperty('--scene-bg', tint.bg);
     root.style.setProperty('--scene-line', tint.line);
@@ -284,9 +174,9 @@ export function observeScenes(onScene?: (id: SceneId) => void): () => void {
     };
   }
 
-  // On mobile the singularity section does not exist (see Singularity.tsx
-  // and blackhole.css). Exclude it from the observed set so the ambience
-  // never tries to transition to its district on phones.
+  // On mobile the trench stage does not exist (see Singularity.tsx). Exclude
+  // it from the observed set so the ambience never transitions to a zone
+  // whose geometry is absent on phones.
   const isMobile =
     typeof window !== 'undefined' && window.matchMedia(MOBILE_SCENE_QUERY).matches;
 

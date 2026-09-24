@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
-import { SectionHead } from '../components/ui';
 import { ARTISTS, UNIVERSES } from '../lib/data';
 
 /* ============================================================================
@@ -161,25 +160,12 @@ function CreditPlate({ a, i, n }: { a: (typeof ARTISTS)[number]; i: number; n: n
 
 export default function Artists() {
   return (
-    <section className="section artists" id="artists">
+    <div className="artists" id="artists">
       <div className="shell">
-        <SectionHead
-          num="07"
-          kicker="07 · PERMANENT PUBLIC CREDITS"
-          kickerGold
-          title={
-            <>
-              Every universe, <span className="txt-gold">credited forever</span>
-            </>
-          }
-          sub={
-            <>
-              The artists behind the Nemoverse are credited publicly on the Hub and in each
-              piece's own metadata. The spotlight is tied directly to Nemoverse credits — the
-              collection is only as strong as its canon.
-            </>
-          }
-        />
+        <header className="part-head">
+          <span className="part-head__kicker">PERMANENT PUBLIC CREDITS</span>
+          <h3 className="part-head__title">Every universe, credited forever</h3>
+        </header>
 
         <div className="credits">
           <span className="credits__rod" aria-hidden="true" />
@@ -188,6 +174,6 @@ export default function Artists() {
           ))}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

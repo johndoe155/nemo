@@ -68,16 +68,16 @@
    liquid beneath — contrast is computed by the shader's own palette */
 .hero__ctas .portal-btn--liquid .pk-layer {
   mix-blend-mode: exclusion;
-  color: #fff;
+  color: var(--ink);
   text-shadow: 0 0 14px rgba(5, 5, 12, 0.55);
 }
 
 @keyframes pk-breathe {
   from {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 12px 44px -10px rgba(120, 70, 255, 0.5);
+    box-shadow: 0 0 0 1px rgba(12, 11, 14, 0.058) inset, 0 12px 44px -10px rgba(120, 70, 255, 0.5);
   }
   to {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18) inset, 0 16px 60px -8px rgba(63, 232, 255, 0.62);
+    box-shadow: 0 0 0 1px rgba(12, 11, 14, 0.13) inset, 0 16px 60px -8px color-mix(in srgb, var(--cyan) 71%, transparent);
   }
 }
 
@@ -87,21 +87,21 @@
 }
 @keyframes pk-burst {
   0% {
-    box-shadow: -5px 0 0 0 rgba(255, 61, 154, 0.95), 5px 0 0 0 rgba(63, 232, 255, 0.95),
-      0 0 42px 4px rgba(138, 77, 255, 0.75);
+    box-shadow: -5px 0 0 0 color-mix(in srgb, var(--magenta) 100%, transparent), 5px 0 0 0 color-mix(in srgb, var(--cyan) 100%, transparent),
+      0 0 42px 4px color-mix(in srgb, var(--iris) 86%, transparent);
     filter: saturate(1.7) brightness(1.14);
   }
   45% {
-    box-shadow: -3px 0 0 0 rgba(255, 61, 154, 0.55), 3px 0 0 0 rgba(63, 232, 255, 0.55),
-      0 0 26px 2px rgba(138, 77, 255, 0.45);
+    box-shadow: -3px 0 0 0 color-mix(in srgb, var(--magenta) 63%, transparent), 3px 0 0 0 color-mix(in srgb, var(--cyan) 63%, transparent),
+      0 0 26px 2px color-mix(in srgb, var(--iris) 52%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 12px 44px -10px rgba(120, 70, 255, 0.5);
+    box-shadow: 0 0 0 1px rgba(12, 11, 14, 0.058) inset, 0 12px 44px -10px rgba(120, 70, 255, 0.5);
     filter: none;
   }
 }
 .hero__ctas .portal-btn--liquid.is-burst .pk-char-in {
-  text-shadow: -2px 0 rgba(255, 61, 154, 0.95), 2px 0 rgba(63, 232, 255, 0.95);
+  text-shadow: -2px 0 color-mix(in srgb, var(--magenta) 100%, transparent), 2px 0 color-mix(in srgb, var(--cyan) 100%, transparent);
 }
 
 /* ---------- SECONDARY — refractive glassmorphism ---------- */
@@ -115,18 +115,16 @@
     linear-gradient(180deg, rgba(20, 20, 36, 0.26), rgba(8, 8, 18, 0.44)) padding-box,
     linear-gradient(
         120deg,
-        rgba(255, 255, 255, 0.62) 0%,
-        rgba(255, 255, 255, 0.06) 30%,
-        rgba(63, 232, 255, 0.55) 52%,
-        rgba(255, 255, 255, 0.05) 74%,
-        rgba(138, 77, 255, 0.62) 100%
+        rgba(12, 11, 14, 0.446) 0%,
+        rgba(12, 11, 14, 0.043) 30%,
+        color-mix(in srgb, var(--cyan) 63%, transparent) 52%,
+        rgba(12, 11, 14, 0.036) 74%,
+        color-mix(in srgb, var(--iris) 71%, transparent) 100%
       )
       border-box;
   background-size: auto, 240% 240%;
-  backdrop-filter: blur(12px) saturate(1.5);
-  -webkit-backdrop-filter: blur(12px) saturate(1.5);
-  color: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 8px 32px -12px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: rgba(12, 11, 14, 0.662);
+  box-shadow: 0 8px 32px -12px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(12, 11, 14, 0.058);
   animation: pk-glass-border 8s ease-in-out infinite alternate;
 }
 @keyframes pk-glass-border {
@@ -145,17 +143,17 @@
     linear-gradient(180deg, rgba(20, 20, 36, 0.26), rgba(8, 8, 18, 0.44)) padding-box,
     linear-gradient(
         120deg,
-        rgba(255, 255, 255, 0.62) 0%,
-        rgba(255, 255, 255, 0.06) 30%,
-        rgba(63, 232, 255, 0.55) 52%,
-        rgba(255, 255, 255, 0.05) 74%,
-        rgba(138, 77, 255, 0.62) 100%
+        rgba(12, 11, 14, 0.446) 0%,
+        rgba(12, 11, 14, 0.043) 30%,
+        color-mix(in srgb, var(--cyan) 63%, transparent) 52%,
+        rgba(12, 11, 14, 0.036) 74%,
+        color-mix(in srgb, var(--iris) 71%, transparent) 100%
       )
       border-box;
   background-size: auto, 240% 240%;
-  color: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 10px 46px -12px rgba(63, 232, 255, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  color: rgba(12, 11, 14, 0.662);
+  box-shadow: 0 10px 46px -12px color-mix(in srgb, var(--cyan) 44%, transparent),
+    inset 0 1px 0 rgba(12, 11, 14, 0.115);
 }
 /* frosted sheen sweep across the pane */
 .hero__ctas .portal-btn--glass::after {
@@ -163,7 +161,7 @@
   position: absolute;
   inset: 0;
   z-index: 2;
-  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.16) 50%, transparent 62%);
+  background: linear-gradient(105deg, transparent 38%, rgba(12, 11, 14, 0.115) 50%, transparent 62%);
   transform: translateX(-130%);
   transition: transform 0.9s var(--ease-swift);
   pointer-events: none;
@@ -175,7 +173,7 @@
    scene behind the glass shifts */
 .hero__ctas .portal-btn--glass .pk-layer {
   mix-blend-mode: difference;
-  color: #fff;
+  color: var(--ink);
   text-shadow: 0 0 12px rgba(5, 5, 12, 0.4);
 }
 

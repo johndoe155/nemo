@@ -1,0 +1,125 @@
+/* ============================================================================
+   TRENCH — the finale seam (IDENTITY-SPEC §2.1 Z3, §8)
+   Was blackhole.css. The measured geometry keeps its names (SPEC §10):
+   `.bh-hold` is the scroll reservation SignoffHorizon grows, `.bh-frame` is
+   the box the consumption scene is framed on, `--bh-frame-fit` is the height
+   the framing solver spends. Only the picture changed: gravity → water.
+
+   The canvas paints its own opaque water, so the join with the page is the
+   visual problem, exactly as before: the stage masks its top and bottom 9%
+   to transparent and .bh-frame lays trench water above the canvas and
+   mouth-dark below it, so the two backgrounds meet as continuous depth
+   instead of a hard rectangle.
+============================================================================ */
+
+.singularity {
+  position: relative;
+  /* The trench is the only dark ground on the page; its padding is the
+     breath before the page goes under. */
+  padding-block: clamp(4rem, 8vw, 9rem) 0;
+  background: transparent;
+}
+
+/* Atmosphere bleed — the dark water rises into the canon beat above and
+   pools into the footer seam below, so the descent has no hard edge. */
+.singularity::before {
+  content: '';
+  position: absolute;
+  inset: -18vh 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in srgb, var(--deep) 55%, transparent) 26%,
+      var(--deep) 50%,
+      color-mix(in srgb, var(--deep) 55%, transparent) 76%,
+      transparent 100%
+    );
+}
+
+.bh-frame {
+  position: relative;
+  margin-inline: auto;
+  width: min(1400px, 100%);
+}
+
+/* Seam gradients: water above the canvas, mouth-dark below it. */
+.bh-frame::before,
+.bh-frame::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 9%;
+  z-index: 2;
+  pointer-events: none;
+}
+.bh-frame::before {
+  top: 0;
+  background: linear-gradient(180deg, var(--deep) 8%, color-mix(in srgb, var(--deep) 0%, transparent) 100%);
+}
+.bh-frame::after {
+  bottom: 0;
+  background: linear-gradient(0deg, #020a10 12%, transparent 100%);
+}
+
+.bh-stage {
+  position: relative;
+  width: 100%;
+  height: min(clamp(500px, 76vh, 860px), var(--bh-frame-fit, 860px));
+  overflow: hidden;
+  /* The no-WebGL2 still: a painted trench. The canvas covers it when live;
+     when the stage reports unsupported/error this IS the finale, and the
+     hold still works (it is layout, not paint — see singularityGate). */
+  background:
+    radial-gradient(58% 46% at 50% 58%, #02141d 0%, transparent 70%),
+    radial-gradient(30% 22% at 50% 56%, color-mix(in srgb, var(--bio-cyan) 16%, transparent) 0%, transparent 72%),
+    linear-gradient(180deg, var(--deep) 0%, #04141d 52%, #020a10 100%);
+}
+
+/* The water lips into the page: mask the stage's own top and bottom 9%. */
+.bh-stage {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
+}
+
+.bh-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Bioluminescent rim — the only glow left on the site (SPEC §4.2). */
+.bh-frame {
+  outline: 1px solid color-mix(in srgb, var(--bio-cyan) 26%, transparent);
+  outline-offset: -1px;
+}
+
+/* ---- the reservation ----------------------------------------------------
+   An empty box. SignoffHorizon writes its height for the span of the hold;
+   it must exist above the section and occupy nothing otherwise. */
+.bh-hold {
+  height: 0;
+}
+
+/* Mobile: the trench finale does not render (see Singularity.tsx). The
+   boxes are hidden pre-hydration too, so a stale reservation height can
+   never flash. */
+@media (max-width: 768px) {
+  .singularity,
+  .bh-hold {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The stage draws one static frame; nothing here animates anyway. */
+  .bh-frame::before,
+  .bh-frame::after {
+    transition: none;
+  }
+}

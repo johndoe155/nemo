@@ -23,85 +23,94 @@ npm run test:a11y   # axe-core WCAG gate over the whole page (desktop + mobile)
 
 ## What's on the page (top → bottom)
 
-0. **The Loader — "the typographic morph"** — the boot sequence that owns the
-   screen for its one pass (`components/Loader.tsx`). A massive, desaturated
-   percentage counter counts 0 → 100 dead centre, set in the site's own
-   PP Neue Machina Inktrap Ultrabold (extracted to vector outlines at build
-   time — no webfont dependency at boot), and its tracking *tightens* across
-   the climb: 0.19em down to 0.012em, the block re-centred every frame so it
-   never drifts. The instant it reaches 100%, GSAP's MorphSVG snaps the
-   numerals into the character's vector paths (`public/nemo.svg`, refit to a
-   morph-safe 1,279 cubics) under an aggressive `expo.inOut`, and the ink
-   adopts the holographic gradient in the same frame; the exact 3,823-cubic
-   artwork resolves on top once the character lands. Both morph frames are
-   baked by `scripts/generate-nemo-loader.mjs` and the pairing is replayed
-   through the real plugin by `scripts/verify-nemo-loader.mjs`.
+The page is **a dive** (see `IDENTITY-SPEC.md`): paper stock at the surface,
+saturated reef water in the registry, mid-water at the persona, and the trench
+at the finale. Scroll position is depth — `lib/scenes.ts` maps every section to
+a zone and stamps `data-scene` on `<html>`, and both the WebGL ambience and the
+CSS shell retint from the same palette table (`src/lib/palette.ts`).
+
+**Seven beats** (the deck's thirteen blocks merged into seven — see
+`IDENTITY-SPEC.md` §2.2):
+
+0. **The Loader — the typographic morph** — the boot sequence that owns the
+   screen for its one pass (`components/Loader.tsx`). A massive percentage
+   counter counts 0 → 100 dead centre, set in the site's own PP Neue Machina
+   Inktrap Ultrabold (extracted to vector outlines at build time — no webfont
+   dependency at boot), and its tracking *tightens* across the climb: 0.19em
+   down to 0.012em, re-centred every frame so it never drifts. The instant it
+   reaches 100%, GSAP's MorphSVG snaps the numerals into the character's vector
+   paths (`public/nemo.svg`, refit to a morph-safe 1,279 cubics), and the ink
+   adopts the artwork in the same frame. Both morph frames are baked by
+   `scripts/generate-nemo-loader.mjs` and the pairing is replayed through the
+   real plugin by `scripts/verify-nemo-loader.mjs`. Under the new identity the
+   loader is the site's first printed sheet: paper ground, ink type, and the
+   landing as a sticker slap rather than a glow bloom.
    `prefers-reduced-motion` skips straight to the landed character.
-1. **Hero** — full-viewport key art, split-line title reveal, orbiting rings,
-   parallax, live countdown badge, scroll progress rail. The CTAs are "portal
-   buttons": a liquid WebGL fragment shader (cursor-reactive swirl + ripples,
-   click shockwave) behind the primary CTA, refractive glassmorphism for the
-   secondary CTA, GSAP magnetic spring pull within a 60px threshold, kinetic
-   per-character label rollovers, and mix-blend-mode typography
-   (`src/components/PortalButton.tsx`, `src/styles/portal.css`).
-2. **The Nemoverse** — the anchor feature. A pinned horizontal roster of
-   numbered universes (U-001…U-009) driven by vertical scroll; filters by
-   rarity, sorts by date/rarity; each card opens a cinematic dialog with lore,
-   specs, artist credit, variant info, revenue split, and claim CTAs. The rail
-   ends on the next-drop teaser with a live countdown. (Mobile: wrapping grid.)
-3. **The Rotunda** — the same canon as the roster, hung on a draggable 3D
-   image sphere (`src/components/ui/img-sphere.tsx`, a self-contained
-   Tailwind component): Fibonacci-distributed plates, drag/flick with
-   momentum, ambient auto-rotation, and a tap-to-open plate spotlight. The
-   section chrome (heading, count badges, stage frame) stays on the site's
-   design-token system (`sections/Gallery.tsx` + `styles/circular-gallery.css`).
-4. **The Persona** — in-canon chat window (mock brain) with typing indicators,
-   quick replies, banter threads, and guardrail disclaimers.
-5. **Holder Perks** — four trait tiers (Genesis → Legendary) with escalating
-   early-claim windows, discounts, SKU unlocks; mock wallet verification shows
-   the "VERIFIED HOLDER" badge.
-6. **POP Pulls** — interactive Proof-of-Purchase simulator: weighted rarity
-   odds, holder bonus, pity on the 8th stamp, Golden Gate set bonus at 6
-   distinct universes, persistent stamp card, secret-universe chase.
-7. **Store** — demo Shopify catalog with holder-gated SKUs and holder pricing.
-8. **Artists** — permanent public credits, tied to Nemoverse canon.
-9. **Lore** — core identity, the 60/40 self-funding model, stat cards, and the
-   canon timeline.
-10. **The Singularity** — a live WebGPU black hole (raymarched gravitational
-    lensing, blackbody accretion disk, procedural starfield/nebula, HDR bloom),
-    sitting in the seam between the canon timeline's last node and the closing
-    credit crawl. Bare stage, no copy: the simulation is the statement. See
-    *The black hole* below.
-11. **The Loop** — the pitch's "How It All Connects" as an orbital diagram
-    around the Nemoverse core.
+1. **The Surface — Hero + tape ticker.** Full-viewport paper hero. The wordmark
+   is stacked flash lettering: line 1 solid ink, line 2 hollow outline, line 3
+   a pink sticker with an ink offset (`styles/print.css`). Live countdown badge
+   and a marquee rendered as a manila tape strip. The CTAs are still "portal
+   buttons" (liquid WebGL shader + magnetic spring) but re-shaded to water.
+2. **The Registry — Z1 reef.** A pinned horizontal roster (the *rod/rail*), the
+   wall of numbered universes (U-001…U-009) driven by vertical scroll; filters
+   as stamp seals, sorts by date/tier/price; each card opens a cinematic dialog
+   with lore, specs, artist credit, variant info, revenue split and claim CTAs.
+   The rail ends on the next-drop teaser with a live countdown. (Mobile:
+   wrapping grid.) The 3D rotunda sphere that duplicated this canon is gone.
+3. **The Stamp Book — Z1 reef.** The Proof-of-Purchase simulator: weighted
+   odds, holder bonus, pity on the 8th stamp, the Golden Gate set bonus at six
+   distinct universes, a persistent stamp card, the secret-universe chase.
+   Editions are numbered plates ("#9584") — tiers are treatments, not hues.
+4. **The Persona — Z2 mid-water.** The in-canon chat (mock brain: typing
+   indicators, quick replies, banter threads, guardrail disclaimers) beside the
+   character's portrait as a *printed glass plate* with tape, a serial and a
+   material caption. The 29.5 MB point-model stage is retired (SPEC §7); the
+   plate image is a repo placeholder at `public/art/persona-glass.jpg` until the
+   commissioned bust lands at the same path.
+5. **Holder Economics — Z2.** Perks tiers ⊕ the storefront as one argument:
+   four trait tiers with escalating early-claim windows, discounts and SKU
+   unlocks; the demo Shopify catalog with holder-gated SKUs and holder pricing;
+   mock wallet verification.
+6. **Canon & Credits — Z2 → the descent.** Core identity, the 60/40
+   self-funding model, stat cards and the canon timeline, closing on the
+   permanent public credits rod (the credit plates still bob on their pin).
+   The closing crawl reads as a flash-sheet wall.
+7. **The Trench — Z3.** A full-viewport water vortex
+   (`components/VortexStage.tsx`, dependency-free WebGL2): differential
+   rotation, caustics, marine snow rising against the pull, bioluminescent
+   points, and a mouth that opens as the sign-off is consumed. Bare stage, no
+   copy — the vortex is the statement. The scroll mechanic around it is
+   unchanged: `.bh-hold` reserves the page while the sign-off falls into the
+   water (`lib/spaghettification.ts`, `components/SignoffHorizon.tsx`).
 
 ## Architecture
 
 ```
 src/
+  lib/palette.ts           # THE colour source of truth (tokens + zones + GPU floats)
+  lib/scenes.ts            # the dive: section id → depth zone, ambience driver
   lib/scroll.ts            # THE scroll authority (Lenis + holds/locks/pageScrollTo)
   lib/fonts.ts             # critical-font gate awaited by the boot loader
+  lib/spaghettification.ts # the sign-off hold/warp math (mechanic, metaphor-agnostic)
   styles/global.css        # design tokens + system layer (edit tokens here)
+  styles/print.css         # the Z0 surface: flash lettering, nav, loader, cursor
+  styles/water.css         # the Z2/Z3 regime: prose on water, beat furniture, tape
+  styles/trench.css        # the finale seam (measured .bh-* geometry names)
   styles/components.css    # component rules
   lib/data.ts              # ALL content + business logic (odds, tiers, brain)
   lib/hooks.tsx            # useCountdown, useRevealText, scroll hooks
   lib/utils.ts             # cn() — the shadcn class-name helper
-  components/ui/           # shadcn-style UI primitives home:
-                           #   index.tsx — site primitives (Reveal, Marquee,
-                           #     WalletButton, Countdown, Starfield, badges…)
-                           #   img-sphere.tsx — the rotunda's 3D image sphere
+  components/ui/           # site UI primitives (Reveal, Marquee, WalletButton,
+                           #   Countdown, badges, dialogs…)
+  components/VortexStage.tsx   # beat 7 renderer — dependency-free WebGL2 vortex
   components/UniverseCard.tsx / UniverseDialog.tsx
   components/Loader.tsx        # the boot sequence — the typographic morph
   lib/nemoLoaderData.ts        # GENERATED — baked morph frames + type metrics
                                #   (rebuild: npm run generate:nemo-loader)
   lib/nemoMorph.ts             # runtime layout mirroring the generator's math
-  components/BlackHoleStage.tsx  # React mounting layer for the WebGPU sim
-  components/BlackHoleStill.tsx  # CSS/SVG static frame (no-WebGPU fallback)
-  three/blackhole/         # the simulation, vendored VERBATIM — do not edit
-                           #   (see PROVENANCE.md in that folder)
-  sections/                # one component per page section
+  sections/                # one component per beat (see the beat map above)
   App.tsx / main.tsx
-public/art/                # placeholder AI-generated canon art (replaceable)
+public/art/                # placeholder canon art (replaceable; swap at the same path)
 ```
 
 **Tailwind + shadcn/ui structure:** Tailwind v4 is installed
@@ -128,13 +137,19 @@ assets are content-hashed at build and the site deploys with `base: './'`, so
 the boot gate replaces the preload's guarantee with a stronger one (no swap
 at handoff, ever).
 
-**Theming:** every color, type, and motion value is a CSS custom property in
-`global.css:root`. Rarity/accent colors propagate via `--c` / `--card-accent`
-style tokens.
+**Theming:** colour lives in ONE place — `src/lib/palette.ts`. `global.css:root`
+mirrors those hexes as custom properties and a unit test
+(`tests/unit/palette.test.ts`) fails the build if the two ever drift; the WebGL
+layer reads the same table through `floats()` and `lib/scenes.ts`. Depth zones
+then flip only the ramps that are safe to flip globally (hairlines, panels,
+legacy accent aliases); text colour is opted into per section with
+`.zone-water`. Tier/accent colours still propagate via `--c` /
+`--card-accent`, and the retired rarity ramp (`--r-*`) now maps tiers to
+treatments rather than hues.
 
-**Card system:** all cards share one material (`--elev-rest` resting
-elevation + opacity-crossfaded `::before` bloom + `--noise` obsidian grain),
-one radius scale (`--r-xs…--r-xl`, inner = outer − 6px), and one physics
+**Card system:** all cards share one material — paper stock, `--noise` tooth,
+a 2px ink outline, an offset print shadow (`--shadow-print-*`) and a printed
+accent rule along the bottom edge — one radius scale (`--r-xs…--r-xl`), and one physics
 family (`useTilt` springs: tilt/lift/press/parallax — see the spring registry
 at the top of `styles/motion.css`). Two hard rules live there too: framer
 owns `transform` (stylesheet motion must use the independent
@@ -184,76 +199,43 @@ Split authority is deliberate: framer owns `transform` on the nodes it drives,
 GSAP owns the rod fill, and stylesheet-authored offsets use `translate` /
 `rotate` (see the rules block at the bottom of `styles/motion.css`).
 
-**The black hole (`src/three/blackhole/` + `components/BlackHoleStage.tsx`):**
-section 09 is a real-time WebGPU simulation — raymarched Schwarzschild lensing,
-a blackbody accretion disk with Keplerian differential rotation, two FBM nebula
-layers, a procedural starfield and an HDR bloom chain — rendered with three's
-TSL node materials (`three/webgpu` + `three/tsl`), not a classic
-`WebGLRenderer`/`ShaderMaterial`.
+**The trench vortex (`src/components/VortexStage.tsx` + `styles/trench.css`):**
+beat 7 is a full-viewport WebGL2 fragment shader on a single full-cover
+triangle — differential (inner-faster) rotation, fbm water sheets, caustic
+cresting, marine snow drifting up against the pull, bioluminescent points
+pinned to the rotating field, and a mouth whose radius opens with the sign-off
+consumption. It is deliberately dependency-free: the retired WebGPU raymarcher
+cost a vendored-verbatim constraint, a `three/webgpu` + `three/tsl` chunk
+(186 kB gz) and the dual-three-build tradeoff the old README documented. Both
+are gone; the finale now costs no library at all.
 
-Two hard rules, and one honest tradeoff:
-
-*The simulation is vendored verbatim.* `blackhole.js`, `blackhole-shader.js`,
-`blackhole.config.js` and `camera-animation.js` are byte-identical to
-`webgpu-black-hole-config-driven.zip` at the repo root (sha256s + a re-check
-command are in `src/three/blackhole/PROVENANCE.md`). `blackhole.config.js` is
-upstream's single source of truth for every tunable parameter, so it is never
-edited — including `camera.cinematicMode`, which ships `false`. When the
-compiler needs help with those plain `.js` files, the fix goes in config
-(`tsconfig.json` sets `allowJs: true` / `checkJs: false`), never in the files.
-
-*Everything around it is glue, and the glue carries the platform concerns.*
-Upstream's `main.js` is a standalone Vite entry point — it sizes off
-`window.innerWidth/innerHeight`, appends its canvas to `document.body` and
-never tears anything down — so `BlackHoleStage.tsx` re-writes only that
-orchestration: the canvas is appended to the section's own container and sized
-off that container's box via `ResizeObserver`; the loop pauses on an
-`IntersectionObserver` so the raymarcher costs nothing off-screen; teardown
-cancels the frame loop, disposes the bloom chain, the simulation mesh and the
-renderer (`renderer.dispose()` → `backend.dispose()` destroys the WebGPU
-device) and removes the canvas. The teardown is written for the async race, not
-just the happy path: React StrictMode double-invokes effects, and
-`Renderer.dispose()` only frees the backend once `init()` has resolved, so a
-cleanup that lands mid-init is followed by a second release pass — otherwise
-hot reload leaks a GPU context.
-
-Degradation is deliberate, because this app has no built-in WebGL fallback:
-`navigator.gpu` is probed *and* an adapter is requested (a browser can expose
-the interface and still hand back no adapter), `renderer.init()` is wrapped in
-try/catch, and any of those failing renders `BlackHoleStill` — an inline
-SVG/CSS still frame drawn from the simulation's own palette, with no binary
-asset added to the repo. The still doubles as the poster underneath the canvas
-while it boots, so there is never a blank gap.
-
-Policies worth knowing before you change them:
+The stage keeps the contracts the section always had, because they are the
+parts that made the old finale work:
 
 | Concern | Behaviour |
 | --- | --- |
-| Touch | Drag-to-orbit is **disabled outright** on coarse pointers, and `OrbitControls`' `touch-action: none` (set in `connect()`, and still scroll-blocking when `enabled` is false) is reset to `pan-y`. A thumb landing mid-page scrolls the page, never the camera. |
-| Wheel | `enableZoom` is off everywhere — a mid-page section must not trap page scroll. |
-| Cinematic camera | The glue starts `CameraAnimation` itself (upstream gates on `config.cinematicMode`, which is `false` and read-only), so the section has a live establishing move. `prefers-reduced-motion` vetoes it. |
-| Reduced motion | No cinematic orbit, no `OrbitControls` damping, and **no animation loop at all** — one static frame, re-drawn on resize. Same contract `Ambience.tsx` gives its static path. |
-| Off-screen | Loop stopped; resumed on re-entry (with an 18% root margin so the first visible frame is already warm). |
+| Status gate | `onStatusChange('live' \| 'unsupported' \| 'error')` — `singularityGate` only lets the sign-off warp when the renderer reports `live`; anything else costs the reader the frozen overlay, never the hold. |
+| No WebGL2 | The stage reports `unsupported` and the painted CSS trench in `styles/trench.css` *is* the finale — the scroll mechanic is layout, not paint. |
+| Reduced motion | **No animation loop at all** — one static frame, redrawn on resize. |
+| Off-screen | Loop paused on an `IntersectionObserver` (18% root margin so the first visible frame is warm). |
+| The hold | While the sign-off hold locks the screen the water goes **still** (time freezes; the consumption keeps feeding the mouth) — the same rigidly-static contract the cinematic camera used to give the raymarcher. |
+| Teardown | Loop cancelled, context lost via `WEBGL_lose_context`, canvas removed — StrictMode-safe. |
 
-*The tradeoff:* the page now ships **two** three builds — classic `three`
-(~545 kB min, the pulls canvases' `WebGLRenderer`) and `three/webgpu`
-(~659 kB min, the simulation) — because the vendored files must keep importing
-`three/webgpu` + `three/tsl` and the existing sections must keep working. Both
-are split into parallel chunks in `vite.config.ts` (`manualChunks`) so the hero
-shell still paints first. Unifying them would mean editing one side or the
-other, which the vendoring rule forbids.
+**The seam (`lib/scenes.ts` + `styles/trench.css`):** the canvas paints its own
+opaque water, so the join with the page is the visual problem — and it is solved
+by the same depth-zone system the rest of the dive uses, not a parallel one.
+`SECTION_ZONE` maps `#singularity` to the `trench` zone, which drives the page
+ground, the ambience uniforms and the CSS-shell tint from one table
+(`src/lib/palette.ts`). Locally, the stage masks its top and bottom 9% to
+transparent and `.bh-frame` lays trench water above the canvas and mouth-dark
+below it, so the two grounds meet as continuous depth instead of a hard
+rectangle.
 
-**The seam (`lib/scenes.ts` + `styles/blackhole.css`):** the canvas paints its
-own opaque sky, so the join with the page is the actual visual problem. It is
-solved with the existing scene system, not a parallel one: a new `singularity`
-district plus a retuned `abyss` (the district both neighbours — lore above,
-connect below — already share) ease the ambience toward the simulation's own
-palette, nebula navy `#071f44`/`#010615` with an ember `#7f1b00` hint at the
-seam. Those hexes live once, as `--bh-*` tokens in `global.css`, and are
-mirrored in `overhaul.css` for the no-WebGL ambience path. Locally, the stage
-masks its top and bottom 9% to transparent and `.bh-frame` lays navy above the
-canvas / ember below it, so the two backgrounds meet as continuous sky instead
-of a hard rectangle.
+**The measured names are intentional.** `.bh-hold`, `.bh-frame` and
+`--bh-frame-fit` kept their old names through the rewrite because
+`tests/signoff-horizon.spec.ts` measures them: the reservation the sign-off
+grows, the box the consumption scene is framed on, and the height the framing
+solver spends. Renaming measured geometry for cosmetics is how suites die.
 
 ## Production wiring (what the demo stubs)
 

@@ -256,7 +256,7 @@ export default function Nemoverse() {
       <div className="shell">
         <div className="mv__head">
           <div>
-            <span className="kicker">01 · THE ANCHOR FEATURE</span>
+            <span className="kicker">01 · THE REGISTRY</span>
             <h2 className="display" style={{ fontSize: 'var(--fs-h2)' }}>
               <Reveal>
                 The <span className="txt-grad">Nemoverse</span>

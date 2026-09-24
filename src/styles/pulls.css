@@ -24,15 +24,15 @@
   --obsidian: #0a0a0e;
   --obsidian-2: #101017;
   --silver: #e0e4ec;
-  --silver-dim: rgba(224, 228, 236, 0.58);
-  --silver-faint: rgba(224, 228, 236, 0.34);
-  --glass: rgba(224, 228, 236, 0.04);
-  --line: rgba(224, 228, 236, 0.1);
-  --line-strong: rgba(224, 228, 236, 0.19);
+  --silver-dim: rgba(12, 11, 14, 0.435);
+  --silver-faint: rgba(12, 11, 14, 0.255);
+  --glass: rgba(12, 11, 14, 0.03);
+  --line: rgba(12, 11, 14, 0.075);
+  --line-strong: rgba(12, 11, 14, 0.143);
   /* powered-down telemetry pod palette — cold slate blue */
-  --slate: rgba(147, 168, 196, 1);
-  --slate-line: rgba(147, 168, 196, 0.38);
-  --slate-dim: rgba(147, 168, 196, 0.3);
+  --slate: rgba(12, 11, 14, 0.75);
+  --slate-line: rgba(12, 11, 14, 0.285);
+  --slate-dim: rgba(12, 11, 14, 0.225);
   --pod-bg: #0d111a;
   /* Michroma stays loaded for future accent use (see .npx__serif note) */
   --font-serif: 'Michroma', var(--font-heading), sans-serif;
@@ -119,8 +119,8 @@
   z-index: 6;
   pointer-events: none;
   background:
-    radial-gradient(42rem 26rem at 50% 40%, rgba(63, 232, 255, 0.28), transparent 60%),
-    radial-gradient(30rem 18rem at 50% 42%, rgba(190, 225, 255, 0.32), transparent 55%);
+    radial-gradient(42rem 26rem at 50% 40%, color-mix(in srgb, var(--cyan) 32%, transparent), transparent 60%),
+    radial-gradient(30rem 18rem at 50% 42%, rgba(12, 11, 14, 0.24), transparent 55%);
   mix-blend-mode: screen;
   border-radius: 24px;
 }
@@ -134,14 +134,12 @@
   overflow: hidden;
   /* high-clarity premium glass — bright, clean, no fog */
   background:
-    linear-gradient(165deg, rgba(224, 228, 236, 0.05), rgba(224, 228, 236, 0.01) 52%, rgba(63, 232, 255, 0.02)),
+    linear-gradient(165deg, rgba(12, 11, 14, 0.038), rgba(12, 11, 14, 0.03) 52%, color-mix(in srgb, var(--cyan) 4%, transparent)),
     var(--glass);
-  -webkit-backdrop-filter: blur(36px) saturate(1.35);
-  backdrop-filter: blur(36px) saturate(1.35);
   border: 1px solid var(--line);
   box-shadow:
     0 40px 90px -44px rgba(0, 0, 0, 0.85),
-    0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+    0 0 0 1px rgba(12, 11, 14, 0.03) inset;
 }
 .npx__plate::after {
   content: '';
@@ -167,11 +165,11 @@
   padding: 1px;
   background: linear-gradient(
     120deg,
-    rgba(63, 232, 255, 0) 0%,
-    rgba(63, 232, 255, 0.28) 24%,
-    rgba(224, 228, 236, 0.1) 44%,
-    rgba(63, 232, 255, 0) 62%,
-    rgba(63, 232, 255, 0.22) 100%
+    color-mix(in srgb, var(--cyan) 4%, transparent) 0%,
+    color-mix(in srgb, var(--cyan) 32%, transparent) 24%,
+    rgba(12, 11, 14, 0.075) 44%,
+    color-mix(in srgb, var(--cyan) 4%, transparent) 62%,
+    color-mix(in srgb, var(--cyan) 25%, transparent) 100%
   );
   background-size: 240% 240%;
   animation: npxBorderPan 16s ease-in-out infinite alternate;
@@ -227,18 +225,18 @@
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   padding: 0.45rem 0.85rem;
-  background: rgba(224, 228, 236, 0.04);
+  background: rgba(12, 11, 14, 0.03);
   white-space: nowrap;
 }
 .npx__badge.is-live {
   color: var(--cyan);
-  border-color: rgba(63, 232, 255, 0.4);
-  background: rgba(63, 232, 255, 0.05);
+  border-color: color-mix(in srgb, var(--cyan) 46%, transparent);
+  background: color-mix(in srgb, var(--cyan) 6%, transparent);
   animation: npxLivePulse 4s ease-in-out infinite;
 }
 @keyframes npxLivePulse {
-  0%, 100% { box-shadow: 0 0 12px -8px rgba(63, 232, 255, 0.35); }
-  50% { box-shadow: 0 0 22px -8px rgba(63, 232, 255, 0.55); }
+  0%, 100% { box-shadow: 0 0 12px -8px color-mix(in srgb, var(--cyan) 40%, transparent); }
+  50% { box-shadow: 0 0 22px -8px color-mix(in srgb, var(--cyan) 63%, transparent); }
 }
 
 /* ------------------------------ stats (roll-up) ------------------------------ */
@@ -263,7 +261,7 @@
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--silver);
-  text-shadow: 0 0 40px var(--roll-glow, rgba(63, 232, 255, 0.25));
+  text-shadow: 0 0 40px var(--roll-glow, color-mix(in srgb, var(--cyan) 29%, transparent));
 }
 .npx__stat > span {
   font-family: var(--font-accent);
@@ -293,8 +291,8 @@
   animation: npxArmedGlow 2.4s ease-in-out infinite, gdrift 12s ease-in-out infinite;
 }
 @keyframes npxArmedGlow {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(63, 232, 255, 0.4)); }
-  50% { filter: drop-shadow(0 0 18px rgba(63, 232, 255, 0.7)); }
+  0%, 100% { filter: none; }
+  50% { filter: none; }
 }
 
 /* --------------------------- probability indicators --------------------------- */
@@ -314,10 +312,8 @@
   padding: 0 0.8rem 0 0.55rem;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: linear-gradient(150deg, rgba(224, 228, 236, 0.045), rgba(224, 228, 236, 0.012));
+  background: linear-gradient(150deg, rgba(12, 11, 14, 0.034), rgba(12, 11, 14, 0.03));
   background-size: 240% 240%;
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
   color: var(--silver);
   cursor: pointer;
   transition: border-color 0.35s var(--ease-expo), box-shadow 0.35s var(--ease-expo);
@@ -387,8 +383,8 @@
   /* visible glass housing — even if the liquid layer hasn't painted yet,
      the gauge reads as an instrument, never a solid black pill */
   background: linear-gradient(180deg, rgba(14, 16, 24, 0.92), rgba(9, 11, 16, 0.96));
-  border: 1px solid rgba(224, 228, 236, 0.14);
-  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.45), inset 0 0 12px rgba(224, 228, 236, 0.04),
+  border: 1px solid rgba(12, 11, 14, 0.105);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.45), inset 0 0 12px rgba(12, 11, 14, 0.03),
     0 18px 44px -18px rgba(0, 0, 0, 0.9), 0 0 30px -16px var(--cg);
   transition: transform 0.45s var(--ease-expo), opacity 0.3s ease;
 }
@@ -448,7 +444,7 @@
 }
 .npx__indicator.is-spinning p {
   color: var(--cyan);
-  text-shadow: 0 0 16px rgba(63, 232, 255, 0.5);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--cyan) 57%, transparent);
   animation: npxIndicatorPulse 0.9s ease-in-out infinite;
 }
 @keyframes npxIndicatorPulse {
@@ -486,9 +482,9 @@
   z-index: 0;
   pointer-events: none;
   box-shadow:
-    0 0 0 1px rgba(63, 232, 255, 0.16),
-    0 10px 44px -18px rgba(63, 232, 255, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    0 0 0 1px color-mix(in srgb, var(--cyan) 18%, transparent),
+    0 10px 44px -18px color-mix(in srgb, var(--cyan) 46%, transparent),
+    inset 0 1px 0 rgba(12, 11, 14, 0.05);
   animation: npxCtaGlow 6s ease-in-out infinite;
 }
 @keyframes npxCtaGlow {
@@ -528,7 +524,7 @@
   /* was `transition: left` — a layout property. Transform-only now;
      444% of the 45%-wide streak = the same −70% → +130% travel. */
   transform: translateX(0) skewX(-22deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09), transparent);
+  background: linear-gradient(90deg, transparent, rgba(12, 11, 14, 0.065), transparent);
   transition: transform 1.2s var(--ease-expo);
   will-change: transform;
 }
@@ -542,7 +538,7 @@
     -1.2px 0 rgba(74, 160, 255, 0.55);
 }
 .npx__cta[data-spin='true'] .npx__cta-label {
-  color: #bfeeff;
+  color: var(--ink);
   animation: npxIndicatorPulse 0.9s ease-in-out infinite;
 }
 .npx__cta:disabled {
@@ -550,22 +546,20 @@
 }
 
 .npx__cta:focus-visible {
-  outline: 2px solid rgba(63, 232, 255, 0.7);
+  outline: 2px solid color-mix(in srgb, var(--cyan) 80%, transparent);
   outline-offset: 4px;
 }
 /* WebGL fallback — CSS glass body */
 .npx__cta--fallback {
   background:
-    radial-gradient(120% 160% at 50% 0%, rgba(63, 232, 255, 0.1), transparent 55%),
-    linear-gradient(180deg, rgba(224, 228, 236, 0.07), rgba(10, 10, 14, 0.82));
+    radial-gradient(120% 160% at 50% 0%, color-mix(in srgb, var(--cyan) 12%, transparent), transparent 55%),
+    linear-gradient(180deg, rgba(12, 11, 14, 0.053), rgba(10, 10, 14, 0.82));
   background-size: 260% 260%, 200% 200%;
   animation: gdrift 20s ease-in-out infinite;
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(63, 232, 255, 0.2);
+  border: 1px solid color-mix(in srgb, var(--cyan) 23%, transparent);
   box-shadow:
-    0 10px 40px -16px rgba(63, 232, 255, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 10px 40px -16px color-mix(in srgb, var(--cyan) 40%, transparent),
+    inset 0 1px 0 rgba(12, 11, 14, 0.086);
 }
 .npx__cta--fallback .npx__cta-gl {
   display: none;
@@ -579,10 +573,10 @@
   font-size: 0.66rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #9fecff;
-  border: 1px solid rgba(63, 232, 255, 0.4);
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--cyan) 46%, transparent);
   background:
-    linear-gradient(180deg, rgba(63, 232, 255, 0.1), rgba(63, 232, 255, 0.02)),
+    linear-gradient(180deg, color-mix(in srgb, var(--cyan) 12%, transparent), color-mix(in srgb, var(--cyan) 4%, transparent)),
     rgba(10, 10, 14, 0.6);
   background-size: 240% 240%, 100% 100%;
   animation: gdrift 10s ease-in-out infinite;
@@ -600,7 +594,7 @@
   border-radius: inherit;
   background: radial-gradient(
     120px circle at var(--mx, 50%) var(--my, 50%),
-    rgba(63, 232, 255, 0.18),
+    color-mix(in srgb, var(--cyan) 21%, transparent),
     transparent 62%
   );
   opacity: 0;
@@ -620,7 +614,7 @@
   opacity: 1;
 }
 .npx__cta-mini:hover {
-  box-shadow: 0 0 26px -10px rgba(63, 232, 255, 0.6);
+  box-shadow: 0 0 26px -10px color-mix(in srgb, var(--cyan) 69%, transparent);
   transform: translateY(-2px);
 }
 /* Reset Archive — clear hierarchy, comfortably legible */
@@ -631,9 +625,9 @@
   font-size: 0.58rem;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(224, 228, 236, 0.82);
-  background: rgba(224, 228, 236, 0.05);
-  border: 1px solid rgba(224, 228, 236, 0.28);
+  color: rgba(12, 11, 14, 0.615);
+  background: rgba(12, 11, 14, 0.038);
+  border: 1px solid rgba(12, 11, 14, 0.21);
   border-radius: 999px;
   /* was 0.52rem 0.95rem (~28px tall) — AAA target: 44px effective hit */
   min-height: 40px;
@@ -651,10 +645,10 @@
   border-radius: inherit;
 }
 .npx__ghostbtn:hover:not(:disabled) {
-  color: #ffffff;
-  border-color: rgba(63, 232, 255, 0.55);
-  background: rgba(63, 232, 255, 0.07);
-  box-shadow: 0 0 18px -10px rgba(63, 232, 255, 0.6);
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--cyan) 63%, transparent);
+  background: color-mix(in srgb, var(--cyan) 8%, transparent);
+  box-shadow: 0 0 18px -10px color-mix(in srgb, var(--cyan) 69%, transparent);
 }
 .npx__ghostbtn:disabled {
   opacity: 0.35;
@@ -672,7 +666,7 @@
   border-radius: 10px;
   padding: 0.55rem 0.9rem;
   margin-top: 1.15rem;
-  background: rgba(224, 228, 236, 0.02);
+  background: rgba(12, 11, 14, 0.03);
 }
 .npx__mock b {
   color: var(--cyan);
@@ -689,14 +683,12 @@
   overflow: hidden;
   margin-bottom: 1.3rem;
   background:
-    radial-gradient(90% 110% at 50% 0%, rgba(63, 232, 255, 0.05), transparent 62%),
-    linear-gradient(170deg, rgba(224, 228, 236, 0.035), rgba(10, 10, 14, 0.14));
-  -webkit-backdrop-filter: blur(30px) saturate(1.3);
-  backdrop-filter: blur(30px) saturate(1.3);
+    radial-gradient(90% 110% at 50% 0%, color-mix(in srgb, var(--cyan) 6%, transparent), transparent 62%),
+    linear-gradient(170deg, rgba(12, 11, 14, 0.03), rgba(10, 10, 14, 0.14));
   border: 1px solid var(--line);
   box-shadow:
     0 40px 80px -48px rgba(0, 0, 0, 0.85),
-    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+    inset 0 1px 0 rgba(12, 11, 14, 0.032);
 }
 
 /* radar sweep canvas — feathered outer masking so the beam and grid never
@@ -716,7 +708,7 @@
   position: absolute;
   width: 18px;
   height: 18px;
-  border-color: rgba(63, 232, 255, 0.5);
+  border-color: color-mix(in srgb, var(--cyan) 57%, transparent);
   border-style: solid;
   border-width: 0;
 }
@@ -740,9 +732,9 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1px solid rgba(63, 232, 255, 0.4);
-  box-shadow: 0 0 16px -6px rgba(63, 232, 255, 0.6);
-  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.2), rgba(63, 232, 255, 0.05) 60%);
+  border: 1px solid color-mix(in srgb, var(--cyan) 46%, transparent);
+  box-shadow: 0 0 16px -6px color-mix(in srgb, var(--cyan) 69%, transparent);
+  background: radial-gradient(circle at 35% 30%, rgba(12, 11, 14, 0.144), color-mix(in srgb, var(--cyan) 6%, transparent) 60%);
   background-size: 260% 260%;
   animation: gdrift 16s ease-in-out infinite;
 }
@@ -777,8 +769,8 @@
   height: 190px;
   border-radius: 14px;
   overflow: hidden;
-  border: 1px solid rgba(63, 232, 255, 0.35);
-  box-shadow: 0 0 44px -14px rgba(63, 232, 255, 0.5);
+  border: 1px solid color-mix(in srgb, var(--cyan) 40%, transparent);
+  box-shadow: 0 0 44px -14px color-mix(in srgb, var(--cyan) 57%, transparent);
 }
 .npx__reveal-wheel img {
   position: absolute;
@@ -794,9 +786,9 @@
   background: repeating-linear-gradient(
     0deg,
     transparent 0 3px,
-    rgba(63, 232, 255, 0.1) 3px 4px,
+    color-mix(in srgb, var(--cyan) 12%, transparent) 3px 4px,
     transparent 4px 9px,
-    rgba(138, 77, 255, 0.07) 9px 10px
+    color-mix(in srgb, var(--iris) 8%, transparent) 9px 10px
   );
   animation: npxGlitch 0.32s steps(2) infinite;
 }
@@ -931,14 +923,12 @@
   border-radius: 24px;
   padding: clamp(1.3rem, 2.2vw, 1.8rem);
   background:
-    linear-gradient(165deg, rgba(224, 228, 236, 0.045), rgba(224, 228, 236, 0.01) 52%, rgba(63, 232, 255, 0.02)),
+    linear-gradient(165deg, rgba(12, 11, 14, 0.034), rgba(12, 11, 14, 0.03) 52%, color-mix(in srgb, var(--cyan) 4%, transparent)),
     var(--glass);
-  -webkit-backdrop-filter: blur(36px) saturate(1.35);
-  backdrop-filter: blur(36px) saturate(1.35);
   border: 1px solid var(--line);
   box-shadow:
     0 46px 90px -48px rgba(0, 0, 0, 0.9),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    inset 0 1px 0 rgba(12, 11, 14, 0.03);
 }
 .npx__stampcard::after {
   content: '';
@@ -974,7 +964,7 @@
   height: 6px;
   border-radius: 50%;
   background: var(--cyan);
-  box-shadow: 0 0 9px rgba(63, 232, 255, 0.6);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--cyan) 69%, transparent);
 }
 
 /* ------------------------------ slot grid ------------------------------ */
@@ -1024,8 +1014,8 @@
   border: 1px solid color-mix(in srgb, var(--sr, #e0e4ec) 60%, transparent);
   box-shadow:
     0 24px 50px -20px rgba(0, 0, 0, 0.85),
-    0 0 26px -10px var(--srg, rgba(224, 228, 236, 0.35)),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    0 0 26px -10px var(--srg, rgba(12, 11, 14, 0.262)),
+    inset 0 0 0 1px rgba(12, 11, 14, 0.03);
 }
 .npx__slot-front picture {
   position: absolute;
@@ -1043,7 +1033,7 @@
   inset: 0;
   background:
     linear-gradient(180deg, transparent 52%, rgba(5, 5, 10, 0.88) 100%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09), transparent 30%);
+    linear-gradient(180deg, rgba(12, 11, 14, 0.065), transparent 30%);
 }
 .npx__slot-code {
   position: absolute;
@@ -1054,7 +1044,7 @@
   font-weight: 700;
   font-size: clamp(0.58rem, 1.8cqw + 0.42rem, 0.66rem);
   letter-spacing: 0.14em;
-  color: #fff;
+  color: var(--ink);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
 }
 .npx__slot-name {
@@ -1069,7 +1059,7 @@
   font-size: clamp(0.56rem, 2.2cqw + 0.4rem, 0.68rem);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(12, 11, 14, 0.612);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1092,7 +1082,7 @@
   width: 46%;
   /* transform-only sweep (was `transition: left` — layout property) */
   transform: translateX(0) skewX(-24deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  background: linear-gradient(90deg, transparent, rgba(12, 11, 14, 0.115), transparent);
   transition: transform 1s var(--ease-expo);
   will-change: transform;
 }
@@ -1142,8 +1132,8 @@
   position: absolute;
   inset: clamp(8px, 12cqw, 12px);
   background:
-    repeating-linear-gradient(0deg, rgba(147, 168, 196, 0.05) 0 1px, transparent 1px 12px),
-    repeating-linear-gradient(90deg, rgba(147, 168, 196, 0.05) 0 1px, transparent 1px 12px);
+    repeating-linear-gradient(0deg, rgba(12, 11, 14, 0.038) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(90deg, rgba(12, 11, 14, 0.038) 0 1px, transparent 1px 12px);
   -webkit-mask-image: radial-gradient(120% 120% at 50% 46%, #000 40%, transparent 92%);
   mask-image: radial-gradient(120% 120% at 50% 46%, #000 40%, transparent 92%);
 }
@@ -1225,9 +1215,9 @@
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(226, 236, 250, 0.85) 0%,
-    rgba(158, 180, 208, 0.45) 45%,
-    rgba(158, 180, 208, 0) 100%
+    rgba(12, 11, 14, 0.637) 0%,
+    rgba(12, 11, 14, 0.338) 45%,
+    rgba(12, 11, 14, 0.03) 100%
   );
   background-size: 180% 180%;
   animation: gdrift 26s ease-in-out infinite;
@@ -1267,9 +1257,9 @@
   font-weight: 600;
   font-size: clamp(0.5rem, 1.4cqw + 0.38rem, 0.6rem);
   letter-spacing: 0.2em;
-  color: #e9eff8;
+  color: var(--ink);
   background: rgba(9, 12, 18, 0.94);
-  border: 1px solid rgba(147, 168, 196, 0.5);
+  border: 1px solid rgba(12, 11, 14, 0.375);
   border-radius: 999px;
   padding: 0.16rem 0.55rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
@@ -1279,20 +1269,20 @@
 /* -------------------- holographic NEXT slot (site accent) -------------------- */
 
 .npx__slot.is-next .npx__slot-back {
-  border: 1px solid rgba(63, 232, 255, 0.35);
+  border: 1px solid color-mix(in srgb, var(--cyan) 40%, transparent);
   animation: npxNextBorder 3s ease-in-out infinite;
 }
 @keyframes npxNextBorder {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(63, 232, 255, 0.1), 0 0 18px -6px rgba(63, 232, 255, 0.3); }
-  50% { box-shadow: 0 0 0 1px rgba(63, 232, 255, 0.34), 0 0 28px -5px rgba(63, 232, 255, 0.55); }
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--cyan) 12%, transparent), 0 0 18px -6px color-mix(in srgb, var(--cyan) 34%, transparent); }
+  50% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--cyan) 39%, transparent), 0 0 28px -5px color-mix(in srgb, var(--cyan) 63%, transparent); }
 }
 /* holographic mesh */
 .npx__slot-holo {
   position: absolute;
   inset: 0;
   background:
-    repeating-linear-gradient(0deg, rgba(63, 232, 255, 0.08) 0 1px, transparent 1px 12px),
-    repeating-linear-gradient(90deg, rgba(63, 232, 255, 0.08) 0 1px, transparent 1px 12px);
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--cyan) 9%, transparent) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--cyan) 9%, transparent) 0 1px, transparent 1px 12px);
   mix-blend-mode: screen;
 }
 /* glowing core — a smooth, soft radial gradient emanating from the card's
@@ -1304,9 +1294,9 @@
   background: radial-gradient(
     circle at 50% 50%,
     rgba(127, 230, 255, 0.34) 0%,
-    rgba(63, 232, 255, 0.16) 26%,
-    rgba(63, 232, 255, 0.06) 48%,
-    rgba(63, 232, 255, 0.015) 68%,
+    color-mix(in srgb, var(--cyan) 18%, transparent) 26%,
+    color-mix(in srgb, var(--cyan) 7%, transparent) 48%,
+    color-mix(in srgb, var(--cyan) 4%, transparent) 68%,
     transparent 78%
   );
   animation: npxCoreBreathe 3.6s ease-in-out infinite;
@@ -1333,8 +1323,8 @@
   font-size: 0.56rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #7fe6ff;
-  text-shadow: 0 0 14px rgba(63, 232, 255, 0.6);
+  color: var(--ink);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--cyan) 69%, transparent);
   text-align: center;
   animation: npxIndicatorPulse 3.2s ease-in-out infinite;
 }
@@ -1342,7 +1332,7 @@
   font-style: normal;
   font-size: 0.44rem;
   letter-spacing: 0.3em;
-  color: rgba(159, 236, 255, 0.85);
+  color: rgba(12, 11, 14, 0.637);
 }
 
 /* -------------------- unlock burst (linear sparks only) -------------------- */
@@ -1364,7 +1354,7 @@
   height: 9px;
   border-radius: 2px;
   background: linear-gradient(180deg, #fff, rgba(127, 216, 255, 0.85) 60%, transparent);
-  box-shadow: 0 0 10px rgba(63, 232, 255, 0.6);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cyan) 69%, transparent);
   transform: rotate(calc(var(--b) * 30deg)) translateY(-34px);
   animation: npxSpark 0.9s var(--ease-expo) both;
   animation-delay: calc(var(--b) * 0.03s);
@@ -1403,7 +1393,7 @@
   position: relative;
   height: 6px;
   border-radius: 999px;
-  background: rgba(224, 228, 236, 0.07);
+  background: rgba(12, 11, 14, 0.053);
   border: 1px solid var(--line);
   overflow: visible;
 }
@@ -1414,7 +1404,7 @@
   background: linear-gradient(90deg, var(--iris), var(--cyan));
   background-size: 240% 100%;
   animation: gdrift 12s ease-in-out infinite;
-  box-shadow: 0 0 16px rgba(63, 232, 255, 0.45);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--cyan) 52%, transparent);
   /* transform-only fill (was width 0.9s — layout property) */
   transform: scaleX(var(--p, 1));
   transform-origin: left;
@@ -1425,7 +1415,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  background: linear-gradient(90deg, transparent, rgba(12, 11, 14, 0.324), transparent);
   animation: npxTrackShimmer 3.2s linear infinite;
   transform: translateX(-100%);
 }
@@ -1442,12 +1432,12 @@
 .npx__progress-ticks em {
   width: 2px;
   height: 20px;
-  background: rgba(224, 228, 236, 0.14);
+  background: rgba(12, 11, 14, 0.105);
   transition: background 0.5s ease, box-shadow 0.5s ease;
 }
 .npx__progress-ticks em[data-on='true'] {
   background: var(--cyan);
-  box-shadow: 0 0 10px rgba(63, 232, 255, 0.7);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cyan) 80%, transparent);
 }
 
 /* ------------------------------ bonus ------------------------------ */
@@ -1456,9 +1446,9 @@
   display: flex;
   gap: 0.85rem;
   align-items: flex-start;
-  border: 1px solid rgba(63, 232, 255, 0.24);
+  border: 1px solid color-mix(in srgb, var(--cyan) 28%, transparent);
   background:
-    radial-gradient(120% 160% at 50% 0%, rgba(63, 232, 255, 0.06), transparent 60%),
+    radial-gradient(120% 160% at 50% 0%, color-mix(in srgb, var(--cyan) 7%, transparent), transparent 60%),
     rgba(10, 10, 14, 0.35);
   background-size: 260% 260%, 100% 100%;
   animation: gdrift 24s ease-in-out infinite;
@@ -1467,8 +1457,8 @@
   transition: border-color 0.5s ease, box-shadow 0.5s ease;
 }
 .npx__bonus.is-unlocked {
-  border-color: rgba(63, 232, 255, 0.55);
-  box-shadow: 0 0 34px -14px rgba(63, 232, 255, 0.5);
+  border-color: color-mix(in srgb, var(--cyan) 63%, transparent);
+  box-shadow: 0 0 34px -14px color-mix(in srgb, var(--cyan) 57%, transparent);
   animation: npxLivePulse 4s ease-in-out infinite;
 }
 .npx__bonus b {
@@ -1521,8 +1511,6 @@
   border-radius: 999px;
   padding: 0.42rem 0.9rem;
   background: rgba(10, 10, 14, 0.5);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
   box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.8);
   animation: npxChipFloat 7s ease-in-out infinite;
 }
@@ -1534,8 +1522,8 @@
 }
 .npx__float-chip.is-b {
   transform: translateZ(90px);
-  color: rgba(159, 236, 255, 0.85);
-  border-color: rgba(63, 232, 255, 0.3);
+  color: rgba(12, 11, 14, 0.637);
+  border-color: color-mix(in srgb, var(--cyan) 34%, transparent);
   animation-delay: -3.4s;
 }
 .npx__float-chip.is-c {

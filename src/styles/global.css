@@ -1,88 +1,136 @@
 /* ============================================================================
-   THE NEMOVERSE — DESIGN SYSTEM
-   Visual identity derived from the pitch:
-   "one canon character × infinite artist universes" → void-black canvas,
-   nebula gradients (iris → cyan → magenta), gold reserved for rarity/luxury,
-   glass surfaces with gradient borders, glow-based elevation (no flat shadows),
-   PP Neue Machina display / PP Neue Montreal body / Space Grotesk accent.
-   Motion: expo-out curves, scroll-bound parallax, marquees, sheen sweeps.
+   THE NEMOVERSE — DESIGN SYSTEM (IDENTITY-SPEC v0.1)
+   Street-print × reef. Paper stock ground, the character's cel palette as the
+   fill language, hard ink outlines, blur-free print shadows, torn-paper and
+   tape furniture, edition serials instead of rarity gems. Glass is rationed
+   to the persona bust and one foil seal.
+   Type: Machina Inktrap display (flash lettering) / Machina Plain headings /
+   Montreal body / Space Grotesk as the serial-and-data voice.
+   Motion: material — sticker slap, stamp thud, scribble draw (§8).
+   Retired here: aurora/gold strata buttons, conic glass rims, sheen sweeps,
+   bloom elevation, corner-bracket glow.
+   ========================================================================== */
+
+/* ============================================================================
+   TOKENS — IDENTITY-SPEC v0.1 (2026-09-24)
+   Street-print × reef. The ground is paper stock; the character's cel palette
+   (hot pink / mint / sky) is the fill language; hard ink outlines and blur-free
+   print shadows are the elevation language; glass is rationed (§4.5).
+
+   Every hex below is mirrored from src/lib/palette.ts — the single source of
+   truth shared with the WebGL layer (tests/unit/palette.test.ts fails the
+   build if the two drift). Values are still PROVISIONAL (§3.2): they re-swatch
+   when the final art set lands. Names and roles are final.
+
+   Legacy names (--void, --abyss, --iris, --cyan, --magenta, --gold, --r-*)
+   are retained as ALIASES so the existing ~200 token references resolve into
+   the new identity instead of needing a big-bang sweep; the reskin phases
+   replace them consumer by consumer.
    ========================================================================== */
 
 :root {
-  /* ---- Palette ---- */
-  --void: #05050a;
-  --abyss: #0a0a16;
-  /* P4.17 (audit 1.4): the void is not one value any more — two luminance
-     steps below it own the card wells (temperature, not alpha), and the
-     per-district tints written by lib/scenes.ts default to the plain void. */
-  --void-2: #090a13;
-  --void-3: #0d0f1b;
-  --scene-bg: var(--void);
+  /* ---- Core palette (palette.ts) ---- */
+  --paper: #f2eee2;      /* Z0–Z1 ground, card stock */
+  --paper-2: #e5decc;    /* panel wells, tape */
+  --manila: #e3cd9c;     /* edition plates, tape strips */
+  --ink: #0c0b0e;        /* all outlines, all text on light */
+  --pink: #e46fa5;       /* primary brand fill */
+  --mint: #93e2a4;       /* secondary fill, bio-light */
+  --sky: #7cc9e8;        /* tertiary fill */
+  --water: #25b4e4;      /* Z1 field, links */
+  --deep: #06202f;       /* Z3 ground */
+  --bio-cyan: #5fe3ff;   /* Z3 accent only */
+  --stamp: #d8452e;      /* poster ink — rationed */
+
+  /* ---- Stock steps ---- */
+  --paper-3: #eae4d3;
+  --paper-4: #e0d9c5;
+
+  /* ---- Contrast-safe accents (text/hairlines on paper, >=4.5:1) ---- */
+  --pink-ink: #a83a6b;
+  --water-ink: #0b6a8c;
+  --mint-ink: #2f7a46;
+  --sky-ink: #2c6e8a;
+  --stamp-ink: #b03a22;
+
+  /* ---- Grounds (legacy aliases → paper regime) ---- */
+  --void: var(--paper);
+  --abyss: var(--paper-2);
+  --void-2: var(--paper-3);
+  --void-3: var(--paper-4);
+  --scene-bg: var(--paper);
   --scene-line: var(--line);
-  --panel: rgba(255, 255, 255, 0.032);
-  --line: rgba(255, 255, 255, 0.09);
-  --line-strong: rgba(255, 255, 255, 0.18);
-  --ink: #f5f3ff;
-  --ink-dim: rgba(245, 243, 255, 0.66);
-  /* ---- ink-faint is a TEXT token — AA-correct by construction. -----------
-     It was rgba(...,0.38) ≈ 3.2:1 on void while applied to ~50 places of
-     10–12px tracked metadata: below AA for small text. The "dim" read is
-     now bought with weight, not with alpha (see the micro-label pass in
-     typography.css); the perceptual ghost survives, the contrast doesn't
-     fail an audit. The old value lives on as --ink-faint-decor for the few
-     consumers that paint non-text (hairlines, tick ghosts). */
-  --ink-faint: rgba(245, 243, 255, 0.56);
-  --ink-faint-decor: rgba(245, 243, 255, 0.38);
-  --iris: #8a4dff;
-  --iris-deep: #5b2bd6;
-  --cyan: #3fe8ff;
-  --magenta: #ff3d9a;
-  --gold: #ffc857;
+  /* "mid ground" is the Z2 water field — used by the ambience mirror and by
+     any panel that has to sit between reef and trench. */
+  --mid-ground: #0b3548;
+  --deep-2: #04141d;
+  --deep-3: #020a10;
 
-  --grad-primary: linear-gradient(100deg, #8a4dff 0%, #3fe8ff 60%, #ff3d9a 115%);
-  --grad-gold: linear-gradient(95deg, #f6d47c, #ffc857 45%, #c98a2e);
-  --grad-ghost: linear-gradient(180deg, rgba(245, 243, 255, 0.92), rgba(245, 243, 255, 0.35));
+  /* ---- Panel / line (dark on light by default; flipped per zone below) ---- */
+  --panel: rgba(12, 11, 14, 0.045);
+  --line: rgba(12, 11, 14, 0.18);
+  --line-strong: rgba(12, 11, 14, 0.34);
 
-  /* ---- Rarity ---- */
-  --r-common: #c8cfe0;
-  --r-rare: #3fe8ff;
-  --r-epic: #8a4dff;
-  --r-legendary: #ffc857;
-  --r-secret: #ff3d9a;
+  /* ---- Text ramps ---- */
+  /* ink ramp — text on light stock */
+  --ink-dim: rgba(12, 11, 14, 0.74);
+  --ink-faint: rgba(12, 11, 14, 0.62);
+  --ink-faint-decor: rgba(12, 11, 14, 0.38);
+  /* paper-ink ramp — text on water/trench grounds (§3.2). Section stylesheets
+     opt in explicitly; it is never applied wholesale. */
+  --paper-ink: var(--paper);
+  --paper-ink-dim: rgba(12, 11, 14, 0.54);
+  --paper-ink-faint: rgba(12, 11, 14, 0.45);
+  --paper-ink-decor: rgba(12, 11, 14, 0.255);
+  /* panel/line steps for water zones */
+  --panel-dark: rgba(12, 11, 14, 0.045);
+  --line-dark: rgba(12, 11, 14, 0.15);
+  --line-strong-dark: rgba(12, 11, 14, 0.27);
 
-  /* ---- The singularity palette ----
-     Not a new house hue family — these four are read straight off the vendored
-     simulation config (src/three/blackhole/blackhole.config.js, which is the
-     single source of truth for the shader and is never edited):
-       nebula1Color        #071f44   --bh-navy
-       nebula2Color        #010615   --bh-navy-deep
-       legacy diskInner    #a84b23   --bh-amber
-       legacy diskOuter    #7f1b00   --bh-ember
-     They exist because the black hole canvas paints its OWN opaque background,
-     so the host page has to meet it instead of clashing with it. Consumed by
-     styles/blackhole.css (stage mask + seam gradients) and mirrored in
-     lib/scenes.ts (GL ambience districts) and styles/overhaul.css (the
-     no-WebGL ambience wash). */
- --bh-navy: #0e0f15;
---bh-navy-deep: #080a0f;
---bh-amber: #1c2740;   /* was warm rust — now a lighter slate-blue step */
---bh-ember: #0a0e18;   /* was saturated red — now near navy-deep */    
-     /* ---- Type ----
-     Art-directed PP Neue Machina / Montreal stack (self-hosted, see
-     assets/fonts/pp-fonts.css). Five semantic roles:
-       --font-display     Inktrap  → hero titles, major H1s, display numbers,
-                                     high-impact interactive titles, callouts
-       --font-heading     Plain    → sub-headings (H2/H3), nav links,
-                                     active badges/pills, UI state indicators
-       --font-body        Montreal → primary body, card copy, forms, modals, UI
-       --font-body-text   Montreal Text → dense reading, micro-copy, legal,
-                                     tooltips, small captions
-       --font-accent      Space Grotesk → tech accents, metadata, dates,
-                                     tracked labels, stat counters, code/data
-     Legacy variable names are retained as aliases so the existing 200+ token
-     references resolve to the new stack without a sweep:
-       --font-mono → --font-accent  (Space Mono is retired; Grotesk replaces it)
-       --font-ui   → --font-body    (Inter is retired; Montreal prose UI)        */
+  /* ---- Legacy accent aliases ----
+     iris/cyan/magenta/gold were the house accents of the retired dark
+     identity. They now resolve to their cel-palette equivalents; the flips
+     below make them zone-aware so a graphic accent stays legible on paper
+     AND luminous underwater. */
+  --iris: var(--pink-ink);
+  --iris-deep: var(--pink-ink);
+  --cyan: var(--water-ink);
+  --magenta: var(--pink-ink);
+  --gold: var(--stamp-ink);
+
+  /* Fills (retired gradients map to flat cel colour — §4.4 bans gradient
+     fills; these aliases keep the old names resolvable while Phase 4 sweeps
+     the consumers). */
+  --grad-primary: linear-gradient(100deg, var(--pink) 0%, var(--pink) 100%);
+  --grad-gold: linear-gradient(95deg, var(--stamp) 0%, var(--stamp) 100%);
+  --grad-ghost: linear-gradient(180deg, rgba(12, 11, 14, 0.92), rgba(12, 11, 14, 0.35));
+
+  /* Rarity ramp retired (§6): tiers are treatments now, not hues. */
+  --r-common: var(--ink);
+  --r-rare: var(--water-ink);
+  --r-epic: var(--pink-ink);
+  --r-legendary: var(--manila);
+  --r-secret: var(--deep);
+
+  /* ---- Material: outline + print shadow (§4.1–4.2) ---- */
+  --outline: 2px solid var(--ink);
+  --outline-w: 2px;
+  --outline-w-strong: 3px;
+  --shadow-print-1: 4px 4px 0 var(--ink);
+  --shadow-print-2: 6px 6px 0 var(--ink);
+  --shadow-print-3: 10px 10px 0 var(--ink);
+  --shadow-print-4: 16px 16px 0 var(--ink);
+  /* Legacy elevation names → print shadows. --card-accent fed the old bloom
+     shadow; it is ignored here on purpose (no glow on light grounds). */
+  --elev-rest: var(--shadow-print-2);
+  --elev-raise: var(--shadow-print-3);
+  --shine: none;
+
+  /* 180px monochrome fractal-noise tile — the paper tooth (§4.3). */
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.16'/%3E%3C/svg%3E");
+  --glass-blur: none;
+
+  /* ---- Type ---- */
   --font-display: 'PP Neue Machina Inktrap', ui-sans-serif, system-ui, sans-serif;
   --font-heading: 'PP Neue Machina Plain', ui-sans-serif, system-ui, sans-serif;
   --font-body: 'PP Neue Montreal', ui-sans-serif, system-ui, sans-serif;
@@ -103,64 +151,57 @@
 
   /* ---- Layout ---- */
   --gutter: clamp(1.25rem, 4.2vw, 4.5rem);
-
-  /* Vertical dynamic range (DESIGN_AUDIT 1.3 / P3.14). Three sizes and the
-     discipline of USING them unevenly: --gap-l belongs to the two thresholds
-     of the scroll story — before the Singularity and before the Sign-off —
-     and nowhere else. */
   --gap-s: 10vw;
   --gap-m: 16vw;
   --gap-l: 26vw;
   --max: 1500px;
   --nav-h: 78px;
-  --r-card: 18px;
+  --r-card: 12px;
 
-  /* ---- Surface radius scale ----
-     One concentric system: outer radii come from the scale, inner (media)
-     radii derive as `calc(var(--r-lg) - 6px)` at the standard 12px inset.
-     Stamp slots keep their tactical 14px + chamfer language (--r-md). */
-  --r-xs: 6px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 18px;
-  --r-xl: 22px;
+  /* ---- Surface radius scale (§4.1: the 18–22px glass radii are retired) ---- */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 12px;
+  --r-xl: 16px;
   --r-pill: 999px;
 
-  /* ---- Elevation ----
-     Static resting treatment — applied directly (never transitioned; a
-     static box-shadow costs one paint, a transitioned one costs one per
-     frame). Hover/raise intensity is crossfaded separately via a
-     pseudo-element bloom (opacity only — see .card::before / .ucard::before).
-     --card-accent propagates the rarity/tier hue into the bloom shadow. */
-  --elev-rest:
-    inset 0 1px 0 rgba(255, 255, 255, 0.045),
-    0 24px 48px -24px rgba(0, 0, 0, 0.62),
-    0 8px 32px -16px color-mix(in srgb, var(--card-accent, #8a4dff) 22%, transparent);
-  --elev-raise:
-    inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    0 34px 64px -28px rgba(0, 0, 0, 0.72),
-    0 14px 48px -18px color-mix(in srgb, var(--card-accent, #8a4dff) 40%, transparent);
-
-  /* ---- Material ----
-     180px monochrome fractal-noise tile: the "obsidian" grain that keeps
-     glass surfaces from reading as flat plastic. Baked faint (~5% perceived
-     under any blend mode) so every consumer can use it as-is. */
-  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.16'/%3E%3C/svg%3E");
-  --glass-blur: blur(16px) saturate(140%);
-
   /* ---- Motion ---- */
-  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1); /* entrances / pointer-in */
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-swift: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-exit: cubic-bezier(0.76, 0, 0.24, 1); /* exits / collapses */
+  --ease-exit: cubic-bezier(0.76, 0, 0.24, 1);
+  /* Material motion (§8): sticker slap / stamp thud / scribble draw. */
+  --ease-slap: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-thud: cubic-bezier(0.2, 0.9, 0.3, 1);
   --dur-1: 0.5s;
   --dur-2: 0.9s;
   --dur-3: 1.4s;
 
-  /* ---- Type floors ----
-     Tracked-uppercase metadata never drops below these; below 10px the
-     Space Grotesk tracking collapses into noise. */
+  /* ---- Type floors ---- */
   --fs-meta-min: 0.625rem;
   --fs-meta-mobile: 0.6875rem;
+}
+
+/* ============================================================================
+   ZONE REGIMES (IDENTITY-SPEC §2.1) — depth zones, not districts.
+   observeScenes() stamps data-scene on <html>. Water zones flip the ramp
+   tokens that are safe to flip globally: hairline/panel washes and the legacy
+   accent aliases (so a "cyan" badge is legible ink on paper and bioluminescent
+   underwater). Text colour is NOT flipped here — section stylesheets opt into
+   the --paper-ink ramp explicitly, because a light sticker panel inside a
+   water zone must keep its own dark ink.
+   ========================================================================== */
+html[data-scene='midwater'],
+html[data-scene='trench'] {
+  --panel: var(--panel-dark);
+  --line: var(--line-dark);
+  --line-strong: var(--line-strong-dark);
+  --cyan: var(--bio-cyan);
+  --iris: var(--pink);
+  --magenta: var(--pink);
+  --gold: var(--manila);
+  --elev-rest: 6px 6px 0 var(--deep-3);
+  --elev-raise: 10px 10px 0 var(--deep-3);
 }
 
 /* Visually hidden, still screen-reader available (card action labels etc). */
@@ -285,8 +326,8 @@ select {
 }
 
 ::selection {
-  background: var(--cyan);
-  color: #02121a;
+  background: var(--pink);
+  color: var(--ink);
 }
 
 :focus-visible {
@@ -295,23 +336,20 @@ select {
   border-radius: 4px;
 }
 
-/* Scrollbar — thin, cosmic */
+/* Scrollbar — a printed rule down the edge of the page */
 ::-webkit-scrollbar {
-  width: 9px;
+  width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--void);
+  background: var(--paper-2);
 }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #3d2a77, #1b3a4d);
-  background-size: 100% 300%;
-  animation: gdrift 14s ease-in-out infinite;
-  border-radius: 99px;
-  border: 2px solid var(--void);
+  background: var(--pink);
+  border-radius: 0;
+  border: 2px solid var(--ink);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #5a3bd6, #1f7a93);
-  background-size: 100% 300%;
+  background: var(--stamp);
 }
 
 section[id] {
@@ -396,7 +434,7 @@ section[id] {
   font-weight: 800;
   text-transform: uppercase;
   color: transparent;
-  -webkit-text-stroke: 1px rgba(245, 243, 255, 0.09);
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--ink) 9%, transparent);
   line-height: 0.9;
   user-select: none;
   pointer-events: none;
@@ -405,93 +443,60 @@ section[id] {
 
 /* ============================ SURFACES ============================ */
 
-/* Glass card: gradient border + blur + inner gradient + obsidian material.
-   The border gradient is STATIC by policy: gdrift (background-position)
-   animation is reserved for small chrome (buttons/pills/avatars ≤64px tall);
-   animating it on card-scale surfaces rasterizes hundreds of thousands of
-   pixels per frame, forever. Card "life" comes from the cursor-tracked sheen
-   and the ::before bloom instead — both opacity-only. */
+/* THE PLATE — a printed paper card (SPEC §4.1–4.2).
+   Flat stock, paper tooth, 2px ink outline, blur-free offset shadow. No
+   gradient border, no backdrop blur, no bloom: elevation on a light ground is
+   bought with an offset, and interaction is the sticker lift — translate up
+   and left while the shadow steps out behind it. */
 .card {
   position: relative;
   border-radius: var(--r-card);
-  background:
-    var(--noise) padding-box,
-    linear-gradient(165deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012) 55%)
-      padding-box,
-    linear-gradient(
-        165deg,
-        rgba(255, 255, 255, 0.24),
-        rgba(255, 255, 255, 0.05) 45%,
-        color-mix(in srgb, var(--card-accent, var(--pc, var(--ac, #8a4dff))) 45%, transparent)
-      )
-      border-box;
-  background-size: 180px 180px, 100% 100%, 100% 100%;
-  background-blend-mode: overlay, normal, normal;
-  border: 1px solid transparent;
-  box-shadow: var(--elev-rest);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  background-color: var(--paper);
+  background-image: var(--noise);
+  background-size: 180px 180px;
+  background-blend-mode: multiply;
+  border: var(--outline-w) solid var(--ink);
+  box-shadow: var(--shadow-print-2);
+  transition:
+    transform 0.28s var(--ease-slap),
+    box-shadow 0.28s var(--ease-thud);
   overflow: hidden;
 }
-/* Raise bloom — accent-tinted inner light + brighter top specular, faded in
-   with opacity only (compositor-friendly; zero box-shadow transitions). */
+.card:hover,
+.card:focus-visible,
+.card:focus-within {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-print-3);
+}
+/* Accent rule — the card's tier/owner colour as a printed bar along the
+   bottom edge (tiers are treatments, not hues — SPEC §6). */
 .card::before {
   content: '';
   position: absolute;
-  inset: 0;
-  z-index: 4;
-  border-radius: inherit;
-  background:
-    radial-gradient(
-      130% 90% at 50% 115%,
-      color-mix(in srgb, var(--card-accent, var(--pc, var(--ac, #8a4dff))) 22%, transparent),
-      transparent 62%
-    ),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 18%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  opacity: 0;
-  transition: opacity 0.45s var(--ease-expo);
+  inset: auto 0 0 0;
+  height: 5px;
+  z-index: 5;
+  background: var(--card-accent, var(--pc, var(--ac, var(--pink))));
+  border-top: var(--outline-w) solid var(--ink);
   pointer-events: none;
 }
-.card:hover::before,
-.card:focus-visible::before,
-.card:focus-within::before {
-  opacity: 1;
-}
 
-/* Holographic glare — was a one-shot linear sweep on a timer; now a soft
-   light anchored to the cursor (--mx/--my fed by useCursorGlow) with an
-   opacity-only fade. Resting fallback: centred at 50%/50%. */
+/* .sheen survives as a class name only (it is written into components);
+   the holographic glare it carried is retired with the glass language. */
 .sheen::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    340px circle at var(--mx, 50%) var(--my, 50%),
-    rgba(255, 255, 255, 0.13),
-    transparent 62%
-  );
-  opacity: 0;
-  transition: opacity 0.45s var(--ease-expo);
-  pointer-events: none;
-}
-.sheen:hover::after,
-.sheen:focus-visible::after,
-.sheen:focus-within::after {
-  opacity: 1;
+  content: none;
 }
 
-/* Corner brackets (precision/hi-tech accent) — constant 26px geometry at a
-   rest scale of 18/26; hover magnifies via transform (was width/height 18→26
-   through `transition: all` — layout property, now composited). */
+/* Corner brackets → printer's registration marks: the same 26px geometry,
+   drawn in ink as crop guides on the stock rather than as neon chrome. */
 .brackets::before,
 .brackets::after {
   content: '';
   position: absolute;
   width: 26px;
   height: 26px;
-  border: 1.5px solid var(--cyan);
-  opacity: 0.55;
+  border: 2px solid var(--ink);
+  opacity: 0.3;
   pointer-events: none;
   transform: scale(0.6923);
   transition: transform 0.4s var(--ease-expo), opacity 0.4s var(--ease-expo);
@@ -529,257 +534,73 @@ section[id] {
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  padding: 1.05rem 1.7rem;
-  border-radius: 10px;
-  /* Strictly compositor-friendly channels only. `background` was dropped:
-     the gradients it targeted don't interpolate (dead declaration), and
-     box-shadow is intentionally NOT transitioned (paint) — glow arrives via
-     the pseudo bloom layer (opacity) in styles/motion.css instead. */
-  transition: transform 0.35s var(--ease-expo), filter 0.35s var(--ease-expo),
-    background-color 0.35s var(--ease-expo), border-color 0.35s var(--ease-expo),
-    color 0.35s var(--ease-expo);
+  padding: 1.02rem 1.7rem;
+  border: var(--outline-w) solid var(--ink);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-print-2);
+  transition:
+    transform 0.22s var(--ease-slap),
+    box-shadow 0.22s var(--ease-thud),
+    background-color 0.22s var(--ease-thud),
+    color 0.22s var(--ease-thud);
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
 }
 .btn:active {
   transform: scale(0.97);
+  box-shadow: var(--shadow-print-1);
+}
+.btn:hover,
+.btn:focus-visible {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-print-3);
 }
 
-/* ===== PRIMARY TIER — the living aurora material ==========================
-   The face everyone recognises from the reference frame (Connect Wallet /
-   Explore the Universes): an exact violet → cyan → pink strata drawn on a
-   200% canvas, background-position drifting 0% → 100% → 0% in a slow
-   10s ease-in-out loop. The strata lives on an inset:0 ::after — inside the
-   pill's own overflow clip — so the spark sweep, cursor bloom, magnetic
-   springs, press squash and kinetic labels are all untouched.
-
-   Performance: the loop repaints a single ~220×56px gradient per frame per
-   visible primary CTA (GPU raster thread), zero layout invalidation; the
-   hover backplate uses filter: drop-shadow() — the only glow channel that
-   escapes overflow:hidden and stays on the compositor.
-
-   Reduced motion: the global kill-switch freezes the loop at each button's
-   staggered phase — the static aurora reads as a variant marker, not a bug.
-   ========================================================================== */
+/* PRIMARY — flat cel pink, ink text (SPEC §3.4: ink on fill, never fill on
+   fill). The sticker lift on hover is the whole interaction: no aurora
+   strata, no drop-shadow backplate, no drift loop. */
 .btn-primary {
-  background: var(--grad-primary); /* boot/fallback face beneath the strata */
-  color: #07030f;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset,
-    0 12px 44px -10px rgba(124, 58, 237, 0.55);
-  filter: drop-shadow(0 6px 18px rgba(124, 58, 237, 0.22));
+  background: var(--pink);
+  color: var(--ink);
 }
-.btn-primary::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0; /* beneath bloom (::before, z1) and labels (z2/z3) */
-  border-radius: inherit;
-  background: linear-gradient(135deg, #7c3aed 0%, #22d3ee 50%, #ec4899 100%);
-  background-size: 200% 200%;
-  /* edge-light hairline carried on the strata (the aurora paints over the
-     button's own inset shadow, so the light line re-asserts itself here) */
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.22);
-  animation: btn-aurora-drift 10s ease-in-out infinite;
-  animation-delay: var(--aurora-phase, 0s);
-  pointer-events: none;
-}
-@keyframes btn-aurora-drift {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-/* Negative phase stagger — sections never breathe in unison (a luxury tic). */
-.nav__cta.btn-primary::after {
-  --aurora-phase: -8.5s;
-}
-.footer .btn-primary::after {
-  --aurora-phase: -3.4s;
-}
-.dialog .btn-primary::after {
-  --aurora-phase: -6.8s;
-}
-.store .btn-primary::after {
-  --aurora-phase: -1.7s;
-}
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) inset,
-    0 18px 60px -12px rgba(34, 211, 238, 0.5);
-  /* hover: ambient backplate intensifies across the cyan→pink spectrum */
-  filter: drop-shadow(0 10px 30px rgba(34, 211, 238, 0.4))
-    drop-shadow(0 4px 18px rgba(236, 72, 153, 0.42)) brightness(1.08) saturate(1.12);
-}
-/* hover subtly accelerates the drift loop */
-.btn-primary:hover::after {
-  animation-duration: 5s;
-}
-.btn-primary:focus-visible::after {
-  animation-duration: 5s;
-}
-.btn-primary:disabled::after {
-  animation-play-state: paused;
+.btn-primary:hover,
+.btn-primary:focus-visible {
+  background: color-mix(in srgb, var(--pink) 88%, var(--paper));
 }
 
-/* GHOST TIER — refractive glass: frosted fill + slowly orbiting conic rim.
-   The rim rotates via the registered --rim custom property (paint confined
-   to a 1px border ring) and never sleeps: a 14s patrol at rest, tightening
-   to a 5s sprint while engaged; beneath it, the cursor-anchored bloom
-   (motion.css) and the morphing GhostArrow carry the interaction. */
-@property --rim {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 205deg;
-}
+/* GHOST — unprinted stock: outline only, fills in on approach. */
 .btn-ghost {
-  border: 1px solid transparent;
+  background: transparent;
   color: var(--ink);
-  background:
-    linear-gradient(180deg, rgba(22, 22, 38, 0.3), rgba(8, 8, 18, 0.42)) padding-box,
-    conic-gradient(
-        from var(--rim) at 50% 50%,
-        rgba(63, 232, 255, 0.02) 0%,
-        rgba(63, 232, 255, 0.42) 12%,
-        rgba(138, 77, 255, 0.48) 30%,
-        rgba(255, 61, 154, 0.26) 52%,
-        rgba(63, 232, 255, 0.02) 74%
-      )
-      border-box;
-  backdrop-filter: blur(10px) saturate(1.4);
-  -webkit-backdrop-filter: blur(10px) saturate(1.4);
-}
-.btn-ghost {
-  /* the rim patrols at rest — engagement only changes cadence */
-  animation: btn-rim-orbit 14s linear infinite;
 }
 .btn-ghost:hover,
 .btn-ghost:focus-visible {
-  color: var(--cyan);
-  box-shadow: 0 10px 34px -14px rgba(63, 232, 255, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
-  animation-duration: 5s;
-}
-@keyframes btn-rim-orbit {
-  to {
-    --rim: 565deg; /* 205deg + 360deg — one continuous orbit */
-  }
+  background: var(--manila);
+  color: var(--ink);
 }
 
-/* GOLD TIER — the living molten strata. Same engine as the primary aurora,
-   luxury palette: luminous yellow-gold #FDE047 → rich amber #FACC15 →
-   #EAB308 → deep liquid bronze #D97706, dark-void ink (#080B11) for max
-   contrast (≈12:1 against amber — AAA). 11s drift (never in step with the
-   10s primary), hover accelerates + fires the amber/bronze backplate, and
-   the wrapper's ambient halo runs a hotter breath cycle while engaged. */
+/* FOIL — the retired gold tier, re-cast as a manila foil-stamp plate
+   (SPEC §4.5 ration: foil marks the legendary edition). */
 .btn-gold {
-  background: var(--grad-gold); /* boot/fallback face beneath the strata */
-  color: #080b11;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) inset, 0 12px 44px -10px rgba(255, 200, 87, 0.45);
-  filter: drop-shadow(0 6px 18px rgba(217, 119, 6, 0.22));
+  background: var(--manila);
+  color: var(--ink);
+  border-color: var(--ink);
 }
-.btn-gold::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  background: linear-gradient(135deg, #fde047 0%, #facc15 35%, #eab308 62%, #d97706 100%);
-  background-size: 200% 200%;
-  box-shadow: inset 0 0 0 1px rgba(60, 38, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  animation: btn-aurora-drift 11s ease-in-out infinite;
-  animation-delay: var(--aurora-phase, 0s);
-  pointer-events: none;
-}
-/* gold phase stagger — each luxury CTA breathes on its own clock */
-.dialog .btn-gold::after {
-  --aurora-phase: -4.9s;
-}
-.ucard .btn-gold::after {
-  --aurora-phase: -2.2s;
-}
-.btn-gold:hover {
-  transform: translateY(-2px);
-  filter: drop-shadow(0 10px 30px rgba(250, 204, 21, 0.42))
-    drop-shadow(0 4px 18px rgba(217, 119, 6, 0.45)) brightness(1.08);
-}
-.btn-gold:hover::after,
-.btn-gold:focus-visible::after {
-  animation-duration: 5.5s;
-}
-.btn-gold:disabled::after {
-  animation-play-state: paused;
-}
-.btn-gold:disabled {
-  filter: grayscale(0.5);
-}
-/* ambient gold backplate on the magnetic wrapper — breathes hotter on hover */
-.kcta:has(.btn-gold) {
-  position: relative;
-}
-.kcta:has(.btn-gold)::after {
-  content: '';
-  position: absolute;
-  inset: -7px;
-  z-index: -1; /* inside the wrapper's stacking context, behind the button */
-  border-radius: 16px;
-  background: radial-gradient(62% 90% at 50% 50%, rgba(250, 204, 21, 0.38), transparent 70%);
-  opacity: 0.4;
-  animation: btn-gold-breathe 3.2s ease-in-out infinite;
-  pointer-events: none;
-}
-.kcta:has(.btn-gold:hover)::after,
-.kcta:has(.btn-gold:focus-visible)::after {
-  animation: btn-gold-breathe-hot 2.4s ease-in-out infinite;
-}
-@keyframes btn-gold-breathe {
-  0%,
-  100% {
-    opacity: 0.3;
-    transform: scale(0.985);
-  }
-  50% {
-    opacity: 0.72;
-    transform: scale(1.02);
-  }
-}
-@keyframes btn-gold-breathe-hot {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.95;
-    transform: scale(1.07);
-  }
-}
-.kcta:has(.btn-gold:disabled)::after {
-  animation: none;
-  opacity: 0;
+.btn-gold:hover,
+.btn-gold:focus-visible {
+  background: color-mix(in srgb, var(--manila) 86%, var(--paper));
 }
 
 .btn:disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
-  filter: grayscale(0.5);
+  transform: none;
+  box-shadow: var(--shadow-print-1);
+  filter: grayscale(1);
 }
 .btn:disabled:hover {
   transform: none;
-}
-
-.btn .btn-spark {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.45) 50%, transparent 60%);
-  transform: translateX(-130%);
-  transition: transform 0.9s var(--ease-swift);
-  pointer-events: none;
-}
-.btn:hover .btn-spark {
-  transform: translateX(130%);
+  box-shadow: var(--shadow-print-1);
 }
 
 /* ============================ CHIPS / BADGES ============================ */
@@ -798,7 +619,7 @@ section[id] {
   border-radius: 999px;
   border: 1px solid var(--line-strong);
   color: var(--ink-dim);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(12, 11, 14, 0.03);
   /* was `transition: all` — now an explicit compositable channel list */
   transition: transform 0.3s var(--ease-expo), opacity 0.3s var(--ease-expo),
     border-color 0.3s var(--ease-expo), color 0.3s var(--ease-expo),
@@ -806,7 +627,7 @@ section[id] {
   white-space: nowrap;
 }
 .chip:hover {
-  border-color: rgba(63, 232, 255, 0.5);
+  border-color: color-mix(in srgb, var(--cyan) 57%, transparent);
   color: var(--ink);
 }
 /* invisible hit-slop: ~24px chip expands past the 44px AAA pointer floor
@@ -877,8 +698,8 @@ section[id] {
 .marquee {
   position: relative;
   overflow: hidden;
-  border-block: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.015);
+  border-block: var(--outline-w) solid var(--ink);
+  background: var(--manila);
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }
@@ -902,12 +723,11 @@ section[id] {
   font-weight: 700;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--ink-dim);
+  color: var(--ink);
   white-space: nowrap;
 }
 .marquee__item .star {
-  color: var(--cyan);
-  text-shadow: 0 0 10px rgba(63, 232, 255, 0.8);
+  color: var(--stamp);
 }
 @keyframes marquee {
   to {
@@ -920,7 +740,7 @@ section[id] {
 .progress {
   height: 4px;
   border-radius: 99px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(12, 11, 14, 0.05);
   overflow: hidden;
 }
 .progress > i {
@@ -928,10 +748,7 @@ section[id] {
   width: 100%;
   height: 100%;
   border-radius: 99px;
-  background: var(--grad-primary);
-  background-size: 240% 240%;
-  animation: gdrift 13s ease-in-out infinite;
-  box-shadow: 0 0 14px rgba(63, 232, 255, 0.6);
+  background: var(--pink);
   /* fills are driven with scaleX from JS — transform-only, zero relayout */
   transform: scaleX(var(--p, 1));
   transform-origin: left;
@@ -945,7 +762,7 @@ section[id] {
   height: 200%;
   pointer-events: none;
   z-index: 120;
-  opacity: 0.05;
+  opacity: 0.07;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   animation: grainShift 9s steps(10) infinite;
 }
@@ -963,8 +780,8 @@ section[id] {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(245, 243, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245, 243, 255, 0.05) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--ink) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--ink) 5%, transparent) 1px, transparent 1px);
   background-size: 72px 72px;
   -webkit-mask-image: radial-gradient(70% 60% at 50% 40%, #000 30%, transparent 78%);
   mask-image: radial-gradient(70% 60% at 50% 40%, #000 30%, transparent 78%);
@@ -1014,7 +831,7 @@ section[id] {
   position: absolute;
   inset: -5px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 200, 87, 0.65);
+  border: 1.5px solid color-mix(in srgb, var(--gold) 75%, transparent);
   animation: pulseRing 1.9s var(--ease-expo) infinite;
 }
 @keyframes pulseRing {
@@ -1040,7 +857,7 @@ section[id] {
 
 .input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(12, 11, 14, 0.03);
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   padding: 0.85rem 1rem;
@@ -1055,8 +872,8 @@ section[id] {
 }
 .input:focus {
   outline: none;
-  border-color: rgba(63, 232, 255, 0.65);
-  box-shadow: 0 0 0 3px rgba(63, 232, 255, 0.12);
+  border-color: color-mix(in srgb, var(--cyan) 75%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cyan) 14%, transparent);
 }
 
 .sort-dd {
@@ -1069,7 +886,7 @@ section[id] {
   gap: 0.85rem;
   min-width: 13.5rem;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(12, 11, 14, 0.03);
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   padding: 0.8rem 1rem;
@@ -1084,9 +901,9 @@ section[id] {
 }
 .sort-dd__trigger:hover,
 .sort-dd.is-open .sort-dd__trigger {
-  border-color: rgba(138, 77, 255, 0.7);
-  background: rgba(138, 77, 255, 0.08);
-  box-shadow: 0 0 22px -8px rgba(138, 77, 255, 0.55);
+  border-color: color-mix(in srgb, var(--iris) 80%, transparent);
+  background: color-mix(in srgb, var(--iris) 9%, transparent);
+  box-shadow: 0 0 22px -8px color-mix(in srgb, var(--iris) 63%, transparent);
 }
 .sort-dd__chev {
   color: var(--iris);
@@ -1107,13 +924,11 @@ section[id] {
   border-radius: 12px;
   background:
     linear-gradient(170deg, rgba(18, 16, 32, 0.96), rgba(8, 8, 16, 0.98)) padding-box,
-    linear-gradient(170deg, rgba(138, 77, 255, 0.55), rgba(63, 232, 255, 0.18) 55%, rgba(255, 61, 154, 0.35))
+    linear-gradient(170deg, color-mix(in srgb, var(--iris) 63%, transparent), color-mix(in srgb, var(--cyan) 21%, transparent) 55%, color-mix(in srgb, var(--magenta) 40%, transparent))
       border-box;
   background-size: 100% 100%, 260% 260%;
   border: 1px solid transparent;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.85), 0 0 40px -18px rgba(138, 77, 255, 0.45);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.85), 0 0 40px -18px color-mix(in srgb, var(--iris) 52%, transparent);
   transform-origin: top right;
   /* entry pop resolves and yields; the rim keeps drifting while the menu lives */
   animation: sortDdIn 0.28s var(--ease-expo) both, gdrift 14s ease-in-out infinite;
@@ -1143,7 +958,7 @@ section[id] {
 }
 .sort-dd__opt.is-active,
 .sort-dd__opt:hover {
-  background: rgba(138, 77, 255, 0.2);
+  background: color-mix(in srgb, var(--iris) 23%, transparent);
   color: var(--ink);
   /* the keyboard focus cue lives on the compositor-safe inset bar: the
      programmatically driven .is-active state is equivalent to :focus here */
@@ -1151,7 +966,7 @@ section[id] {
 }
 .sort-dd__opt.is-selected {
   color: var(--cyan);
-  background: rgba(63, 232, 255, 0.08);
+  background: color-mix(in srgb, var(--cyan) 9%, transparent);
 }
 /* menu items cascade in on open — stagger driven by --i set in JSX */
 .sort-dd.is-open .sort-dd__opt {

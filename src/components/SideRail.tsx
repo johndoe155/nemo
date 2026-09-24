@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
    (hidden via CSS below 1100px / on coarse pointers).
 
    MOBILE SINGULARITY REMOVAL — the singularity section does not exist on
-   mobile (see sections/Singularity.tsx + styles/blackhole.css). This rail
+   mobile (see sections/Singularity.tsx + styles/trench.css). This rail
    filters it out when the mobile breakpoint matches, and re-discovers on
    breakpoint changes so a desktop→mobile resize drops the dot immediately.
 --------------------------------------------------------------------------- */

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 
 import { SOUND, onSoundScrollTick, emitScrollTick, isSoundEnabled } from '../../src/lib/sound';
 import { haptic, HAPTIC } from '../../src/lib/haptics';
-import { SCENE_TINTS } from '../../src/lib/scenes';
 
 /* P4.15 — the registry is the contract: components call named voices, the
    tuning lives HERE. These tests pin the shape so a refactor can't silently
@@ -44,12 +43,3 @@ test('haptics are feature-detected and never throw where vibrate is absent', () 
   assert.equal(haptic(8), typeof navigator !== 'undefined' && 'vibrate' in navigator);
 });
 
-test('every scene district ships a CSS-shell tint pair (audit 1.4)', () => {
-  const ids = Object.keys(SCENE_TINTS);
-  assert.ok(ids.length >= 8, 'all eight districts present');
-  for (const id of ids) {
-    const t = SCENE_TINTS[id as keyof typeof SCENE_TINTS];
-    assert.match(t.bg, /^#[0-9a-f]{6}$/i, `${id}: bg must be a hex`);
-    assert.match(t.line, /^rgba?\(/, `${id}: line must be a translucent colour`);
-  }
-});
