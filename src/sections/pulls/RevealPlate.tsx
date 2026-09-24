@@ -1,22 +1,27 @@
 /* ============================================================================
-   RevealPlate — the holographic reveal stage of the 3D canvas.
+   RevealPlate — the area of the sheet the stamp comes down onto.
 
-   A top-to-bottom linear radar sweep (RadarGrid) crosses a barrel-tilted
-   grid behind the content. No rotating beams.
+   Was the "holographic reveal stage": a radar sweep over a barrel-tilted grid,
+   glitch tearing, chromatic aberration, a light-leak burst. That is the retired
+   material language. Now:
 
-   idle    → sealed archive slate with the sweep.
-   spinning→ fast-cycling universe portraits with glitch tearing + scanlines.
-   done    → the pulled piece materialises: chromatic-aberration entrance,
-             rarity rim light, mint roll-up, next actions.
-   ========================================================================== */
+     idle     → a sealed page: the stamp position is marked as a dashed CUT
+                LINE, with the page's ghost word set behind it.
+     spinning → the set cycles through a reading slit that travels down the
+                plate (the press is reading the sheet, not glitching).
+     done     → the impression LANDS: overshoot + settle on the material
+                easing (stamp thud), with the tier, the name and the mint
+                serial printed beneath it.
+
+   The action contract is unchanged (onPull / onDone), as is the phase machine.
+============================================================================ */
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { RARITY } from '../../lib/data';
 import { RARITY_ACCENT, spinPool, type PullPhase, type PullResult } from './usePullEngine';
 import { StatRoll } from './StatRoll';
-import RadarGrid from './RadarGrid';
-import { MagneticButton, RollText } from '../../components/motion';
 import CardImage from '../../components/CardImage';
+import { plateSerial } from '../../lib/serials';
 
 interface RevealPlateProps {
   phase: PullPhase;
@@ -28,99 +33,86 @@ interface RevealPlateProps {
 
 export default function RevealPlate({ phase, spinIdx, result, onPull, onDone }: RevealPlateProps) {
   return (
-    <div className={`npx__reveal is-${phase}`}>
-      <RadarGrid spin={phase === 'spinning'} />
-      <span className="npx__reveal-corners" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <i />
+    <div className={`reveal is-${phase}`}>
+      <span className="reveal__watermark" aria-hidden="true">
+        STAMPED
       </span>
 
       <AnimatePresence mode="wait">
         {phase === 'idle' && (
           <motion.div
             key="idle"
-            className="npx__reveal-idle"
+            className="reveal__idle"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, filter: 'blur(6px)' }}
-            transition={{ duration: 0.4 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
           >
-            <span className="npx__reveal-seal" aria-hidden="true" />
-            <p>ARCHIVE SEALED</p>
-            <em>THE NEXT PIECE IS ALREADY NUMBERED. PULL TO BREAK THE SEAL.</em>
+            <span className="reveal__cutline" aria-hidden="true">
+              CUT HERE
+            </span>
+            <p>The sheet is unmarked</p>
+            <em>
+              The next piece is already numbered. Press the stamp and it lands here.
+            </em>
           </motion.div>
         )}
 
         {phase === 'spinning' && (
           <motion.div
             key="spin"
-            className="npx__reveal-spin"
+            className="reveal__spin"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="npx__reveal-wheel">
+            <div className="reveal__wheel">
               <AnimatePresence mode="popLayout">
                 <motion.img
                   key={spinIdx}
                   src={spinPool[spinIdx].image}
                   alt=""
-                  initial={{ opacity: 0.25, scale: 0.92, rotate: -3, filter: 'blur(6px)' }}
-                  animate={{ opacity: 1, scale: 1, rotate: 0, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, rotate: 3, filter: 'blur(8px)' }}
+                  initial={{ opacity: 0.35 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                   transition={{ duration: 0.12 }}
                 />
               </AnimatePresence>
-              <span className="npx__reveal-glitch" aria-hidden="true" />
             </div>
-            <p className="npx__reveal-status">REVEALING FROM THE ARCHIVE…</p>
+            <p className="reveal__status">READING THE SET…</p>
           </motion.div>
         )}
 
         {phase === 'done' && result && (
           <motion.div
             key="done"
-            className={`npx__reveal-done ${result.r === 'common' ? 'is-common' : ''}`}
-            initial={{ opacity: 0, scale: 0.82, filter: 'blur(14px)' }}
-            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, scale: 1.04, filter: 'blur(10px)' }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="reveal__done"
             style={{ '--rr': RARITY_ACCENT[result.r].color } as React.CSSProperties}
           >
-            <span className="npx__reveal-burst" aria-hidden="true" />
-            <div className="npx__reveal-portrait">
-              <CardImage src={result.u.image} alt={`${result.u.name} pull`} eager sizes="300px" />
-              <span className="npx__reveal-rim" aria-hidden="true" />
+            <div className={`reveal__portrait${result.u.image ? '' : ' reveal__portrait--sealed'}`}>
+              {result.u.image ? (
+                <CardImage src={result.u.image} alt={`${result.u.name} pull`} eager sizes="300px" />
+              ) : (
+                <span>SEALED</span>
+              )}
             </div>
-            <span className="npx__reveal-badge">
+            <span className="reveal__tier">
               {RARITY[result.r].label}
               {result.r === 'secret' ? ' · ANOMALY' : ''}
             </span>
-            <span className="npx__reveal-name">{result.u.name}</span>
-            <span className="npx__reveal-code">
-              {result.u.code} · MINT <StatRoll value={parseInt(result.mintNo, 10) || 0} pad={3} /> / {result.u.supply}
+            <span className="reveal__name">{result.u.name}</span>
+            <span className="reveal__serial">
+              {plateSerial(result.u.code)} · MINT{' '}
+              <StatRoll value={parseInt(result.mintNo, 10) || 0} pad={3} /> / {result.u.supply}
             </span>
-            <div className="npx__reveal-actions">
-              <MagneticButton
-                type="button"
-                preset="chrome"
-                className="npx__cta-mini"
-                onClick={onPull}
-                data-cursor="PULL"
-              >
-                <RollText text="PULL AGAIN" />
-              </MagneticButton>
-              <MagneticButton
-                type="button"
-                preset="chrome"
-                className="npx__ghostbtn"
-                onClick={onDone}
-              >
-                <RollText text="DONE" />
-              </MagneticButton>
+            <div className="reveal__actions">
+              <button type="button" onClick={onPull} data-cursor="STAMP">
+                STAMP AGAIN
+              </button>
+              <button type="button" onClick={onDone} data-cursor="DONE">
+                KEEP THE PAGE
+              </button>
             </div>
           </motion.div>
         )}

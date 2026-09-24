@@ -1,0 +1,893 @@
+/* ============================================================================
+   THE STAMP BOOK — beat 3 · zone Z1 (reef)  ·  IDENTITY-SPEC §2.2
+
+   An open book, two pages, printed on the reef's paper stock:
+     · LEFT  — THE PRESS: the pull machine as a stamp press on a workbench
+               (printed readouts, odds as inked probability bars, an ink
+               roller line, and the pad you press).
+     · RIGHT — THE SHEET: the stamp sheet where each pull lands as an ink
+               impression, plus the reveal area the stamp comes down onto.
+
+   Everything in this file replaces the retired "liquid glass / holographic
+   archive" language: no glow, no blur, no shader slabs. Materials are ink,
+   manila, paper and print shadow.
+============================================================================ */
+
+.npx {
+  position: relative;
+}
+.npx__shell {
+  position: relative;
+  z-index: 2;
+}
+
+/* ---------------------------------------------------------------- the book */
+.book {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
+  gap: clamp(1rem, 2.4vw, 2.4rem);
+  margin-top: clamp(2rem, 4vw, 3.4rem);
+  padding: clamp(1rem, 2.4vw, 2.2rem);
+  background-color: var(--paper);
+  background-image: var(--noise);
+  background-size: 180px 180px;
+  background-blend-mode: multiply;
+  border: var(--outline-w-strong) solid var(--ink);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-print-4);
+}
+/* the spine: stitching + a folded shadow down the middle */
+.book::before {
+  content: '';
+  position: absolute;
+  top: clamp(1rem, 2.4vw, 2.2rem);
+  bottom: clamp(1rem, 2.4vw, 2.2rem);
+  left: calc(clamp(1rem, 2.4vw, 2.2rem) + min(0.86fr, 100%));
+  width: 0;
+  border-left: 2px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+  pointer-events: none;
+}
+.book__page {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.9rem, 1.6vw, 1.4rem);
+}
+.book__page--press {
+  padding-right: clamp(0.6rem, 1.4vw, 1.4rem);
+}
+.book__page--sheet {
+  padding-left: clamp(0.6rem, 1.4vw, 1.4rem);
+}
+
+/* ----------------------------------------------------------------- the press */
+.press__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 2px solid var(--ink);
+}
+.press__title {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  font-size: clamp(1.05rem, 0.9rem + 0.4vw, 1.3rem);
+  color: var(--ink);
+}
+.press__badge {
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 2px;
+  padding: 0.3rem 0.5rem;
+  background: var(--paper-2);
+  white-space: nowrap;
+}
+.press__badge.is-live {
+  background: var(--manila);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* readouts: a printed 2×2 cell block */
+.press__readouts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--paper-2);
+}
+.press__cell {
+  padding: 0.7rem 0.8rem;
+  border-right: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.press__cell:nth-child(2n) {
+  border-right: none;
+}
+.press__cell:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+.press__cell b {
+  font-family: var(--font-accent);
+  font-weight: 700;
+  font-size: clamp(1.3rem, 1rem + 1vw, 1.9rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ink);
+}
+.press__cell span {
+  font-family: var(--font-accent);
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.press__cell.is-armed {
+  background: color-mix(in srgb, var(--stamp) 12%, var(--paper-2));
+}
+
+/* odds: inked probability bars */
+.odds {
+  display: grid;
+  gap: 0.45rem;
+}
+.odds__row {
+  display: grid;
+  grid-template-columns: 5.6rem minmax(0, 1fr) 3.1rem;
+  align-items: center;
+  gap: 0.6rem;
+}
+.odds__label {
+  font-family: var(--font-accent);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.odds__track {
+  position: relative;
+  height: 12px;
+  border: 1px solid var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  overflow: hidden;
+}
+.odds__fill {
+  display: block;
+  height: 100%;
+  width: var(--w, 0%);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--ink-color, var(--ink)) 0 4px,
+    color-mix(in srgb, var(--ink-color, var(--ink)) 55%, var(--paper)) 4px 8px
+  );
+  transition: width 0.6s var(--ease-thud);
+}
+.odds__pct {
+  font-family: var(--font-accent);
+  font-size: 0.66rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink);
+}
+.odds__row.is-bonus .odds__label {
+  color: var(--stamp-ink);
+}
+
+/* the roller line (FreqLine canvas) sits on an ink rule */
+.press__roller {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 0.6rem;
+  border-top: 2px solid var(--ink);
+}
+.press__roller p {
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.press__note {
+  font-family: var(--font-accent);
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  line-height: 1.7;
+}
+
+/* ---------------------------------------------------------- the press pad */
+.stamp-press {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: clamp(1rem, 1.6vw, 1.3rem) clamp(1rem, 2vw, 1.6rem);
+  background: var(--pink);
+  border: var(--outline-w-strong) solid var(--ink);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-print-3);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform 0.2s var(--ease-slap),
+    box-shadow 0.2s var(--ease-thud),
+    background-color 0.2s var(--ease-thud);
+}
+.stamp-press__face {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 0.1rem 0.8rem;
+  align-items: center;
+}
+.stamp-press__seal {
+  grid-row: 1 / span 2;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+}
+.stamp-press__seal svg {
+  width: 22px;
+  height: 22px;
+  color: var(--ink);
+}
+.stamp-press__label {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.005em;
+  font-size: clamp(0.95rem, 0.85rem + 0.35vw, 1.2rem);
+  color: var(--ink);
+}
+.stamp-press__sub {
+  font-family: var(--font-accent);
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 78%, transparent);
+}
+/* the felt pad edge */
+.stamp-press__pad {
+  position: absolute;
+  inset: 5px;
+  border: 2px dashed color-mix(in srgb, var(--ink) 34%, transparent);
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 1;
+}
+/* the roller: ink stripes that travel while the press is reading the set */
+.stamp-press__roller {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 6px;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--ink) 0 6px,
+    transparent 6px 12px
+  );
+  opacity: 0.5;
+  background-size: 24px 100%;
+}
+.stamp-press:hover:not(:disabled),
+.stamp-press:focus-visible:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-print-4);
+  background: color-mix(in srgb, var(--pink) 86%, var(--manila));
+}
+/* THE PRESS: down 3px, shadow collapses to 4px — a stamp hitting paper */
+.stamp-press.is-pressing:not(:disabled),
+.stamp-press:active:not(:disabled) {
+  transform: translate(2px, 2px) scale(0.985);
+  box-shadow: var(--shadow-print-1);
+}
+.stamp-press:disabled {
+  cursor: progress;
+  background: var(--manila);
+}
+.stamp-press.is-spinning .stamp-press__roller {
+  animation: press-roll 0.9s linear infinite;
+}
+@keyframes press-roll {
+  to {
+    background-position: 24px 0;
+  }
+}
+.stamp-press.is-spinning .stamp-press__seal svg {
+  animation: press-seal 1.1s linear infinite;
+}
+@keyframes press-seal {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================================
+   THE SHEET — the reveal area and the stamp windows
+============================================================================ */
+
+.sheet__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 2px solid var(--ink);
+}
+.sheet__title {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(1.05rem, 0.9rem + 0.4vw, 1.3rem);
+  color: var(--ink);
+}
+.sheet__meta {
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ---- the reveal area: the page the stamp comes down onto ---- */
+.reveal {
+  position: relative;
+  min-height: clamp(230px, 30vw, 310px);
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 2vw, 1.6rem);
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper-2);
+  overflow: hidden;
+}
+.reveal__watermark {
+  position: absolute;
+  inset: auto 0 -0.5rem 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(2.6rem, 6vw, 5rem);
+  letter-spacing: -0.02em;
+  color: transparent;
+  -webkit-text-stroke: 2px color-mix(in srgb, var(--ink) 13%, transparent);
+  pointer-events: none;
+}
+/* idle: a sealed page with the stamp position marked as a cut line */
+.reveal__idle {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  text-align: center;
+}
+.reveal__cutline {
+  width: clamp(120px, 16vw, 168px);
+  aspect-ratio: 1;
+  border: 2px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+  border-radius: 3px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  transform: rotate(-4deg);
+}
+.reveal__idle p {
+  font-family: var(--font-accent);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.reveal__idle em {
+  font-style: normal;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  max-width: 26ch;
+}
+
+/* spinning: the set cycles under the roller */
+.reveal__spin {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 0.7rem;
+}
+.reveal__wheel {
+  position: relative;
+  width: clamp(140px, 17vw, 190px);
+  aspect-ratio: 3 / 4;
+  border: var(--outline-w) solid var(--ink);
+  background: var(--paper);
+  overflow: hidden;
+}
+.reveal__wheel img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* the reading slit travelling down the plate */
+.reveal__wheel::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  height: 14%;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--pink) 55%, transparent),
+    transparent
+  );
+  animation: wheel-scan 1.1s ease-in-out infinite;
+}
+@keyframes wheel-scan {
+  0% {
+    top: -14%;
+  }
+  100% {
+    top: 100%;
+  }
+}
+.reveal__status {
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* done: the impression has landed */
+.reveal__done {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 0.45rem;
+  text-align: center;
+  /* the landing thud: overshoot in, settle on the material easing */
+  animation: stamp-land 0.42s var(--ease-slap) both;
+}
+@keyframes stamp-land {
+  0% {
+    transform: scale(1.14) rotate(-2.5deg);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+.reveal__portrait {
+  position: relative;
+  width: clamp(132px, 15vw, 172px);
+  aspect-ratio: 3 / 4;
+  border: var(--outline-w) solid var(--ink);
+  overflow: hidden;
+  box-shadow: var(--shadow-print-2);
+}
+.reveal__portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.reveal__portrait--sealed {
+  display: grid;
+  place-items: center;
+  background: var(--deep);
+  color: var(--paper-ink);
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.reveal__tier {
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  padding: 0.16rem 0.45rem;
+  background: color-mix(in srgb, var(--rr, var(--ink)) 16%, var(--paper));
+}
+.reveal__name {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(0.95rem, 0.85rem + 0.4vw, 1.2rem);
+  color: var(--ink);
+}
+.reveal__serial {
+  font-family: var(--font-accent);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+}
+.reveal__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+.reveal__actions .btn,
+.reveal__actions button {
+  border: var(--outline-w) solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  border-radius: var(--r-xs);
+  font-family: var(--font-accent);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.85rem;
+}
+.reveal__actions .btn:hover,
+.reveal__actions button:hover {
+  background: var(--manila);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* ---- the stamp sheet ---- */
+.stampcard {
+  display: grid;
+  gap: 0.9rem;
+}
+.stampcard__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+.stampcard__kicker {
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.stampcard__slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(0.4rem, 0.9vw, 0.7rem);
+}
+/* each slot is a perforated window on the sheet */
+.slot {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border: 2px dashed color-mix(in srgb, var(--ink) 42%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--paper-2) 70%, transparent);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.slot__serial {
+  position: absolute;
+  left: 5px;
+  bottom: 4px;
+  font-family: var(--font-accent);
+  font-size: 0.46rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+.slot__wait {
+  font-family: var(--font-accent);
+  font-size: 0.44rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 42%, transparent);
+  text-align: center;
+  line-height: 1.5;
+}
+/* next slot: the window the press is about to hit */
+.slot.is-next {
+  border-style: solid;
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--pink) 10%, var(--paper));
+}
+.slot.is-next .slot__wait {
+  color: var(--ink);
+}
+/* filled: an ink impression sitting on the sheet */
+.slot.is-filled {
+  border: none;
+  background: none;
+  overflow: visible;
+}
+.slot__stamp {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transform: rotate(var(--rot, -6deg));
+  animation: stamp-land 0.42s var(--ease-slap) both;
+}
+.slot__impression {
+  position: absolute;
+  inset: 3px;
+  border: 2.5px solid var(--ink-color, var(--ink));
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ink-color, var(--ink)) 12%, transparent);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='120'%3E%3Cfilter id='r'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='3'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 1 1 1 1 1 1 1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='90' height='120' filter='url(%23r)'/%3E%3C/svg%3E");
+  mask-size: 90px 120px;
+}
+.slot__art {
+  position: relative;
+  width: 78%;
+  aspect-ratio: 3 / 4;
+  border: 1.5px solid var(--ink);
+  overflow: hidden;
+  filter: saturate(0.92) contrast(1.05);
+}
+.slot__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.slot__code {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-family: var(--font-accent);
+  font-size: 0.46rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink-color, var(--ink)) 22%, var(--paper));
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  padding: 0.06rem 0.24rem;
+}
+.slot__name {
+  position: absolute;
+  bottom: 5px;
+  left: 6px;
+  right: 6px;
+  font-family: var(--font-accent);
+  font-size: 0.44rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-align: left;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slot.is-latest .slot__impression {
+  box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink-color, var(--ink));
+}
+
+/* progress: a perforated strip */
+.stampcard__progress {
+  display: grid;
+  gap: 0.35rem;
+}
+.stampcard__progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-accent);
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.stampcard__progress-labels b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.stampcard__track {
+  position: relative;
+  height: 14px;
+  border: var(--outline-w) solid var(--ink);
+  background: var(--paper);
+  display: flex;
+  overflow: hidden;
+}
+.stampcard__track > i {
+  position: absolute;
+  inset: 0;
+  background: var(--pink);
+  transform: scaleX(var(--p, 0));
+  transform-origin: left;
+  transition: transform 0.7s var(--ease-thud);
+}
+.stampcard__ticks {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+}
+.stampcard__ticks em {
+  flex: 1;
+  border-right: 1px dashed color-mix(in srgb, var(--ink) 45%, transparent);
+}
+.stampcard__ticks em:last-child {
+  border-right: none;
+}
+
+/* the set bonus: a plate that's either empty or pressed */
+.stampcard__bonus {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.75rem 0.85rem;
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper-2);
+}
+.stampcard__bonus b {
+  font-family: var(--font-accent);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.stampcard__bonus p {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-dim);
+  margin-top: 0.15rem;
+}
+.stampcard__bonus.is-unlocked {
+  background: var(--manila);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.stampcard__bonus-seal {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  background: var(--paper);
+  transform: rotate(-8deg);
+}
+.stampcard__bonus.is-unlocked .stampcard__bonus-seal {
+  background: var(--stamp);
+  color: var(--paper);
+}
+
+/* the pull button in the sheet header keeps the ghost language */
+.sheet__reset {
+  border: var(--outline-w) solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: var(--r-xs);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.7rem;
+}
+.sheet__reset:hover:not(:disabled) {
+  background: var(--manila);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.sheet__reset:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+/* ---- printed margin notes at the foot of the book ---- */
+.npx__foot {
+  font-family: var(--font-accent);
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  line-height: 1.9;
+  margin-top: clamp(1.4rem, 3vw, 2.4rem);
+  padding-top: 0.9rem;
+  border-top: 2px solid var(--ink);
+}
+
+/* ------------------------------------------------------------- responsive */
+@media (max-width: 1080px) {
+  .book {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .book::before {
+    display: none;
+  }
+  .book__page--press {
+    padding-right: 0;
+    border-bottom: 2px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+    padding-bottom: 1.2rem;
+  }
+  .book__page--sheet {
+    padding-left: 0;
+  }
+}
+@media (max-width: 560px) {
+  .stampcard__slots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .press__readouts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .press__cell {
+    border-right: none;
+  }
+  .press__cell:nth-last-child(2) {
+    border-bottom: 1px solid color-mix(in srgb, var(--ink) 28%, transparent);
+  }
+  .odds__row {
+    grid-template-columns: 4.6rem minmax(0, 1fr) 2.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal__wheel::after,
+  .stamp-press.is-spinning .stamp-press__roller,
+  .stamp-press.is-spinning .stamp-press__seal svg {
+    animation: none;
+  }
+  .slot__stamp,
+  .reveal__done {
+    animation: none;
+  }
+}

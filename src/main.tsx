@@ -56,6 +56,8 @@ import './styles/loader.css';
 import './styles/print.css';
 // Beat 2 — the registry: sounding-line rail + specimen plates.
 import './styles/registry.css';
+// Beat 3 — the stamp book: the press, the sheet, the impressions.
+import './styles/stampbook.css';
 import App from './App';
 /* The single scroll authority (DESIGN_AUDIT P1) — init before React mounts
    so the boot loader can hold/release the engine as part of the sequence.

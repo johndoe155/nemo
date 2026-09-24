@@ -1,18 +1,18 @@
 /* ============================================================================
-   04 · PILLAR 3 — PROOF-OF-PURCHASE COLLECTIBLES
-   ----------------------------------------------------------------------------
-   The Awwwards-grade rebuild. A rigid two-column card stack becomes an
-   asymmetric floating canvas:
+   03 · THE STAMP BOOK — beat 3 · zone Z1 (reef)  ·  IDENTITY-SPEC §2.2
 
-     · LEFT  — sticky high-contrast control rail (the Pull Simulator):
-               oversized roll-up numerals, kinetic probability nodes with
-               liquid shader gauges, the audio-visual frequency line, and the
-               Three.js liquid-glass PULL CTA with GSAP magnetic physics.
-     · RIGHT — a perspective-skewed interactive 3D canvas (perspective(1400px)
-               rotateY(-6deg)) holding the holographic reveal plate and the
-               obsidian-etched stamp ledger with spring-flip unlocks.
-     · UNDER — a WebGL particle field that bends around both panels on cursor
-               velocity and gravity vectors.
+   An open book, two pages. The pull machine left the "liquid glass archive"
+   behind (shader slabs, holographic nodes, telemetry pods, floating chips) and
+   became a stamp press on a workbench:
+
+     · LEFT  — THE PRESS: printed readouts, odds as inked probability bars
+               (replacing five per-node WebGL gauges), an ink roller line, and
+               the press pad itself (StampPress — CSS, no library).
+     · RIGHT — THE SHEET: the stamp sheet where every pull lands as an ink
+               impression, with the reveal area the stamp comes down onto.
+
+   The engine (usePullEngine) is untouched: odds, holder bonus, pity on the
+   eighth stamp and the set bonus are the same mechanics, re-dressed.
    ========================================================================== */
 
 import { useMemo, useRef } from 'react';
@@ -21,8 +21,7 @@ import { SectionHead } from '../../components/ui';
 import { RARITY, SET_BONUS_AT, STAMP_SLOTS } from '../../lib/data';
 import { RARITY_ACCENT, usePullEngine } from './usePullEngine';
 import ParticleField from './ParticleField';
-import LiquidPullButton from './LiquidPullButton';
-import { ProbabilityNode } from './LiquidGauge';
+import StampPress from './StampPress';
 import { FreqLine } from './FreqLine';
 import StampCard from './StampCard';
 import RevealPlate from './RevealPlate';
@@ -31,12 +30,12 @@ import { StatRoll } from './StatRoll';
 export default function Pulls() {
   const engine = usePullEngine();
   const sectionRef = useRef<HTMLElement | null>(null);
-  const railRef = useRef<HTMLDivElement | null>(null);
-  const stageRef = useRef<HTMLDivElement | null>(null);
+  const pressRef = useRef<HTMLDivElement | null>(null);
+  const sheetRef = useRef<HTMLDivElement | null>(null);
 
   // Stable identity across renders: a fresh array here would tear down and
   // rebuild the whole WebGL particle field on every state change.
-  const obstacles = useMemo(() => [railRef, stageRef], []);
+  const obstacles = useMemo(() => [pressRef, sheetRef], []);
 
   const pityLeft = Math.max(0, STAMP_SLOTS - 1 - engine.stamps);
 
@@ -63,108 +62,115 @@ export default function Pulls() {
           }
         />
 
-        <div className="npx__layout">
-          {/* ============================ CONTROL RAIL ============================ */}
-          <motion.aside
-            className="npx__rail"
-            ref={railRef}
-            initial={{ opacity: 0, y: 42, filter: 'blur(8px)' }}
-            whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.95, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="npx__plate npx__pullsim">
-              <span className="npx__plate-borderglow" aria-hidden="true" />
-
-              <div className="npx__plate-head">
-                <div>
-                  <span className="npx__plate-title">PULL SIMULATOR</span>
-                </div>
-                <span className={`npx__badge ${engine.bonusReached ? 'is-live' : ''}`}>
+        <motion.div
+          className="book"
+          initial={{ opacity: 0, y: 42 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {/* =============================== PAGE 1 · THE PRESS =============================== */}
+          <div className="book__page book__page--press">
+            <div ref={pressRef} style={{ display: 'grid', gap: 'clamp(0.9rem, 1.6vw, 1.4rem)' }}>
+              <header className="press__head">
+                <span className="press__title">The Press</span>
+                <span className={`press__badge ${engine.bonusReached ? 'is-live' : ''}`}>
                   {engine.bonusReached ? 'GOLDEN GATE OPEN' : `${engine.stamps}/${SET_BONUS_AT} TOWARD SET BONUS`}
                 </span>
-              </div>
+              </header>
 
-              <div className="npx__stats">
-                <div className="npx__stat">
-                  <StatRoll value={engine.pulls.length} className="npx__stat-num" />
-                  <span>TOTAL PULLS</span>
+              <div className="press__readouts">
+                <div className="press__cell">
+                  <StatRoll value={engine.pulls.length} className="press__num" />
+                  <span>Total pulls</span>
                 </div>
-                <div className="npx__stat">
-                  <StatRoll value={engine.stamps} className="npx__stat-num" />
-                  <span>DISTINCT UNIVERSES</span>
+                <div className="press__cell">
+                  <StatRoll value={engine.stamps} className="press__num" />
+                  <span>Distinct universes</span>
                 </div>
-                <div className="npx__stat npx__stat--best">
+                <div className="press__cell">
                   <StatRoll
                     value={engine.pulls.length ? RARITY[engine.best].tier : 0}
                     pad={2}
                     color={engine.pulls.length ? RARITY_ACCENT[engine.best].color : undefined}
-                    className="npx__stat-num"
+                    className="press__num"
                   />
                   <span>
-                    BEST PULL ·{' '}
+                    Best pull ·{' '}
                     <b style={{ color: engine.pulls.length ? RARITY_ACCENT[engine.best].color : undefined }}>
                       {engine.pulls.length ? RARITY[engine.best].label : 'UNSEALED'}
                     </b>
                   </span>
                 </div>
-                <div className={`npx__stat npx__stat--pity ${engine.pityActive ? 'is-armed' : ''}`}>
-                  <StatRoll value={pityLeft} className="npx__stat-num" color="#3fe8ff" />
-                  <span>
-                    PITY · 8TH STAMP{engine.pityActive ? ' — ARMED' : ` IN ${pityLeft}`}
-                  </span>
+                <div className={`press__cell ${engine.pityActive ? 'is-armed' : ''}`}>
+                  <StatRoll value={pityLeft} className="press__num" color="var(--stamp-ink)" />
+                  <span>Pity · 8th stamp{engine.pityActive ? ' — ARMED' : ` in ${pityLeft}`}</span>
                 </div>
               </div>
 
-              <div className="npx__odds" role="group" aria-label="Live pull probability nodes">
-                {engine.odds.map((o, i) => (
-                  <ProbabilityNode key={o.rarity} rarity={o.rarity} pct={o.pct} index={i} />
+              {/* live odds as inked bars (replaces five shader gauges) */}
+              <div className="odds" role="group" aria-label="Live pull probability">
+                {engine.odds.map((o) => (
+                  <div className="odds__row" key={o.rarity}>
+                    <span className="odds__label">{RARITY[o.rarity].label}</span>
+                    <span className="odds__track">
+                      <i
+                        className="odds__fill"
+                        style={
+                          {
+                            '--w': `${Math.min(100, o.pct)}%`,
+                            '--ink-color': RARITY_ACCENT[o.rarity].color,
+                          } as React.CSSProperties
+                        }
+                      />
+                    </span>
+                    <span className="odds__pct">{o.pct.toFixed(1)}%</span>
+                  </div>
                 ))}
                 {engine.holderBonus && (
-                  <span className="npx__node npx__node--holder">
-                    <span className="npx__node-orb" aria-hidden="true">
-                      <i />
+                  <div className="odds__row is-bonus">
+                    <span className="odds__label">Holder</span>
+                    <span className="odds__track">
+                      <i className="odds__fill" style={{ '--w': '10%', '--ink-color': 'var(--stamp)' } as React.CSSProperties} />
                     </span>
-                    <span className="npx__node-tag">
-                      HOLDER <b>+10%</b>
-                    </span>
-                  </span>
+                    <span className="odds__pct">+10%</span>
+                  </div>
                 )}
               </div>
 
-              <div className={`npx__indicator ${engine.phase === 'spinning' ? 'is-spinning' : ''}`}>
+              <div className={`press__roller ${engine.phase === 'spinning' ? 'is-spinning' : ''}`}>
                 <FreqLine spin={engine.phase === 'spinning'} />
                 <p>
                   {engine.phase === 'spinning'
-                    ? 'THE ARCHIVE IS SPLITTING — SIGNAL LOCK IN PROGRESS'
-                    : 'THE ARCHIVE IS SHUFFLED'}
+                    ? 'THE SET IS RUNNING THROUGH THE PRESS'
+                    : 'THE SHEET IS READY · PRESS WHEN YOU ARE'}
                 </p>
               </div>
 
-              <LiquidPullButton
+              <StampPress
                 onClick={engine.doPull}
                 disabled={engine.phase !== 'idle'}
                 spin={engine.phase === 'spinning'}
-                label="PULL FROM THE NEMOVERSE"
-                spinLabel="ARCHIVE SPLITTING…"
+                label="Press to stamp"
+                spinLabel="Pressing…"
               />
 
-              <p className="npx__mock">
-                DEMO MINT — REAL FLOW: SHOPIFY WEBHOOK → MINT ON <b>BASE</b> → WALLET OR EMAIL
+              <p className="press__note">
+                DEMO MINT — REAL FLOW: SHOPIFY WEBHOOK → MINT ON BASE → WALLET OR EMAIL
               </p>
             </div>
-          </motion.aside>
+          </div>
 
-          {/* ============================ 3D CANVAS ============================ */}
-          <motion.div
-            className="npx__stage"
-            ref={stageRef}
-            initial={{ opacity: 0, y: 56, filter: 'blur(10px)' }}
-            whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 1.1, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="npx__stage-tilt">
+          {/* =============================== PAGE 2 · THE SHEET =============================== */}
+          <div className="book__page book__page--sheet">
+            <div ref={sheetRef} style={{ display: 'grid', gap: 'clamp(0.9rem, 1.6vw, 1.4rem)' }}>
+              <header className="sheet__head">
+                <span className="sheet__title">The Sheet</span>
+                <span className="sheet__meta">
+                  {engine.stamps} of {STAMP_SLOTS} stamped · {engine.pulls.length} pulls
+                </span>
+              </header>
+
               <RevealPlate
                 phase={engine.phase}
                 spinIdx={engine.spinIdx}
@@ -172,6 +178,7 @@ export default function Pulls() {
                 onPull={engine.doPull}
                 onDone={engine.done}
               />
+
               <StampCard
                 stamps={engine.stamps}
                 distinct={engine.distinct}
@@ -181,15 +188,9 @@ export default function Pulls() {
                 pulls={engine.pulls}
                 onReset={engine.reset}
               />
-              <div className="npx__float-chips" aria-hidden="true">
-                <span className="npx__float-chip is-a">LIVE ODDS · BOUND TO THE ARCHIVE</span>
-                <span className="npx__float-chip is-b">LOW-FEE CHAIN · POLYGON / BASE</span>
-                <span className="npx__float-chip is-c">METADATA ON IPFS</span>
-              </div>
             </div>
-            <StageFlash n={engine.flash} />
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
 
         <p className="npx__foot">
           SHOPIFY WEBHOOK TRIGGERS THE MINT AFTER CHECKOUT · DRAWING FROM THE LIVE NEMOVERSE
@@ -200,21 +201,5 @@ export default function Pulls() {
         </p>
       </div>
     </section>
-  );
-}
-
-/* ------------------- gold light-leak flash on unlock ------------------- */
-
-function StageFlash({ n }: { n: number }) {
-  if (n <= 0) return null;
-  return (
-    <motion.div
-      key={n}
-      className="npx__stage-flash"
-      aria-hidden="true"
-      initial={{ opacity: 0.85, scale: 0.9 }}
-      animate={{ opacity: 0, scale: 1.25 }}
-      transition={{ duration: 1.3, ease: [0.16, 1, 0.3, 1] }}
-    />
   );
 }
