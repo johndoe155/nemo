@@ -1,18 +1,24 @@
 /* ============================================================================
    ParticleField — the atmospheric WebGL layer of the split canvas.
 
-   A field of ~700 additive particles (gold / silver / hyper-violet) drifts
-   under a gravity vector + organic curl flow. The field actively *bends
-   around* the two active panels (control rail + 3D stage): particles within
-   a panel's influence radius are pushed along its silhouette instead of
-   passing through it. Cursor movement injects velocity — fast sweeps swirl
-   the field behind the pointer. Rendered with Three.js Points + custom
-   shaders, paused offscreen, static under reduced motion.
+   A field of ~700 additive particles — reef bubble-white, bioluminescent
+   cyan and mint (IDENTITY-SPEC §2.1) — drifting under a gravity vector plus
+   an organic curl flow. The field actively *bends around* the two active
+   panels (the press and the sheet): particles within a panel's influence
+   radius are pushed along its silhouette instead of passing through it.
+   Cursor movement injects velocity; fast sweeps swirl the field behind the
+   pointer.
+
+   Rendered by particleGL.ts — a raw WebGL context, no 3D library (§13 phase 6
+   structural cut: this and the retired LiquidPullButton were the last two
+   consumers of `three`, so the dependency left the project entirely).
+   Paused off-screen, static under reduced motion.
    ========================================================================== */
 
 import { useEffect, useRef } from 'react';
-import type * as ThreeNS from 'three';
+
 import { webglSupported } from './webgl';
+import { createFieldGL, type FieldGL } from './particleGL';
 
 interface Props {
   /** DOM nodes whose silhouettes the field must bend around */
@@ -20,7 +26,6 @@ interface Props {
   sectionRef: React.RefObject<HTMLElement | null>;
 }
 
-import { FIELD_VERT, FIELD_FRAG } from './shaders';
 
 interface Particle {
   x: number;
@@ -39,81 +44,29 @@ export default function ParticleField({ obstacles, sectionRef }: Props) {
     const section = sectionRef.current;
     const canvas = canvasRef.current;
     if (!section || !canvas) return;
-    // degrade silently — the CSS backdrop already carries the atmosphere
+    // degrade silently — the book, the odds bars and the CSS ground all stand alone
     if (!webglSupported()) return;
-
-    /* three is a ~124 kB gz island: it is imported the moment this section
-       approaches the viewport, never as part of the first paint. The markup
-       and the CSS backdrop are already on screen by then, so the field fades
-       in behind content that is fully readable without it. */
-    let cancelled = false;
-    let teardown: (() => void) | null = null;
-
-    void (async () => {
-    const three = await import('three');
-    if (cancelled) return;
 
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const fine = window.matchMedia('(pointer: fine)').matches;
-
-    let renderer: ThreeNS.WebGLRenderer;
-    try {
-      renderer = new three.WebGLRenderer({
-        canvas,
-        alpha: true,
-        antialias: false,
-        powerPreference: 'high-performance',
-      });
-    } catch {
-      return;
-    }
 
     const W = () => section.clientWidth;
     const H = () => section.clientHeight;
     const count = W() < 900 ? 340 : 760;
 
-    const scene = new three.Scene();
-    const camera = new three.PerspectiveCamera(52, 1, 1, 6000);
-    camera.position.set(0, 0, 700);
-
+    /* ---- particles: CPU-simulated, uploaded per frame (§ the field never
+       moved to the GPU: the obstacle bending is a CPU concern) ---- */
     const pos = new Float32Array(count * 3);
     const seed = new Float32Array(count);
     const size = new Float32Array(count);
     const particles: Particle[] = [];
     const bounds = { w: 0, h: 0 };
-
-    const material = new three.ShaderMaterial({
-      vertexShader: FIELD_VERT,
-      fragmentShader: FIELD_FRAG,
-      uniforms: {
-        uTime: { value: 0 },
-        uPx: { value: Math.min(window.devicePixelRatio || 1, 2) },
-        uPointScale: { value: 400 },
-      },
-      transparent: true,
-      depthWrite: false,
-      depthTest: false,
-      blending: three.AdditiveBlending,
-    });
-
-    const fit = () => {
-      bounds.w = W();
-      bounds.h = H();
-      const aspect = bounds.w / Math.max(1, bounds.h);
-      camera.aspect = aspect;
-      // pull the camera back so the particle plane frames the whole section
-      const fov = (52 * Math.PI) / 180;
-      const dist = bounds.h / 2 / Math.tan(fov / 2) + 320;
-      camera.position.z = dist;
-      material.uniforms.uPointScale.value = dist * 0.55;
-      camera.updateProjectionMatrix();
-    };
-    fit();
+    const cameraZ = { value: 700 };
 
     for (let i = 0; i < count; i++) {
       const p: Particle = {
-        x: (Math.random() - 0.5) * (bounds.w + 240),
-        y: (Math.random() - 0.5) * (bounds.h + 240),
+        x: (Math.random() - 0.5) * 800,
+        y: (Math.random() - 0.5) * 600,
         z: 60 + Math.random() * 360,
         vx: 0,
         vy: 0,
@@ -125,30 +78,52 @@ export default function ParticleField({ obstacles, sectionRef }: Props) {
       size[i] = p.size;
     }
 
-    const geometry = new three.BufferGeometry();
-    geometry.setAttribute('position', new three.BufferAttribute(pos, 3));
-    geometry.setAttribute('aSeed', new three.BufferAttribute(seed, 1));
-    geometry.setAttribute('aSize', new three.BufferAttribute(size, 1));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let field: FieldGL;
+    try {
+      field = createFieldGL(canvas, count, seed, size, pos, dpr);
+    } catch {
+      return; // no GL: the reef's paper ground already carries the atmosphere
+    }
 
-    const points = new three.Points(geometry, material);
-    points.frustumCulled = false;
-    scene.add(points);
-
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(fit) : null;
-    ro?.observe(section);
-
+    let pointScale = 400;
+    let ro: ResizeObserver | null = null;
+    let io: IntersectionObserver | null = null;
     let raf = 0;
     let visible = true;
-    const io =
-      typeof IntersectionObserver !== 'undefined'
-        ? new IntersectionObserver(
-            (entries) => {
-              visible = entries[0].isIntersecting;
-            },
-            { threshold: 0 },
-          )
-        : null;
-    io?.observe(section);
+
+    const fit = () => {
+      bounds.w = W();
+      bounds.h = H();
+      const aspect = bounds.w / Math.max(1, bounds.h);
+      // pull the camera back so the particle plane frames the whole section
+      const fov = (52 * Math.PI) / 180;
+      const dist = bounds.h / 2 / Math.tan(fov / 2) + 320;
+      cameraZ.value = dist;
+      pointScale = dist * 0.55;
+      field.resize(bounds.w, bounds.h, dist);
+      for (const p of particles) {
+        if (p.x > bounds.w || p.x < -bounds.w) p.x = (Math.random() - 0.5) * (bounds.w + 240);
+        if (p.y > bounds.h || p.y < -bounds.h) p.y = (Math.random() - 0.5) * (bounds.h + 240);
+      }
+      void aspect;
+    };
+    fit();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(fit);
+      ro.observe(section);
+    }
+
+    if (typeof IntersectionObserver !== 'undefined') {
+      io = new IntersectionObserver(
+        (entries) => {
+          visible = entries[0].isIntersecting;
+        },
+        { threshold: 0 },
+      );
+      io.observe(section);
+    }
     const onVis = () => {
       if (document.hidden) visible = false;
     };
@@ -167,7 +142,7 @@ export default function ParticleField({ obstacles, sectionRef }: Props) {
     };
     if (fine && !reduce) window.addEventListener('pointermove', onPointer, { passive: true });
 
-    /* ---- per-frame state ---- */
+    /* ---- per-frame loop ---- */
     let last = performance.now();
     const sim = (t: number) => {
       raf = requestAnimationFrame(sim);
@@ -197,31 +172,22 @@ export default function ParticleField({ obstacles, sectionRef }: Props) {
         pos[i * 3 + 1] = p.y;
         pos[i * 3 + 2] = p.z;
       }
-      geometry.attributes.position.needsUpdate = true;
-      material.uniforms.uTime.value = t / 1000;
-      renderer.render(scene, camera);
+      field.setPositions(pos);
+      field.draw(t / 1000, pointScale);
     };
     raf = requestAnimationFrame(sim);
 
     const onLost = (e: Event) => e.preventDefault();
     canvas.addEventListener('webglcontextlost', onLost);
 
-    teardown = () => {
+    return () => {
       cancelAnimationFrame(raf);
       ro?.disconnect();
       io?.disconnect();
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('pointermove', onPointer);
       canvas.removeEventListener('webglcontextlost', onLost);
-      geometry.dispose();
-      material.dispose();
-      renderer.dispose();
-    };
-    })();
-
-    return () => {
-      cancelled = true;
-      teardown?.();
+      field.dispose();
     };
   }, [obstacles, sectionRef]);
 

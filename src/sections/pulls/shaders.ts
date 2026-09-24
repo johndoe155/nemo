@@ -1,11 +1,19 @@
 /* ============================================================================
-   shaders — every GLSL program of the pulls canvas in one module.
+   shaders — the GLSL of the reef's particle field.
 
-   Written as WebGL1-style GLSL (three.js ShaderMaterial conventions: built-in
-   attributes `position`/`uv`, `varying`, `gl_FragColor`). Three.js adapts
-   these to WebGL2 automatically. Keeping them here lets the build-time QA
-   validator compile them against ES 3.00 semantics.
+   GLSL ES 1.00, written for a raw WebGL context (particleGL.ts). It used to be
+   consumed as a three.js ShaderMaterial, which is why the vertex stage refers
+   to three's built-in `projectionMatrix` / `modelViewMatrix` uniforms: those
+   are now supplied explicitly by FIELD_MATRIX_PRELUDE, and the matrix layout is
+   documented in particleGL.ts. The point size is clamped to the driver's own
+   ceiling (uSizeMax), which three did internally and a raw context must ask for.
    ========================================================================== */
+
+/** The two uniforms three.js used to inject into every ShaderMaterial. */
+export const FIELD_MATRIX_PRELUDE = /* glsl */ `
+uniform mat4 projectionMatrix;
+uniform mat4 modelViewMatrix;
+`;
 
 /* ------------------------------ particle field ------------------------------ */
 
@@ -16,6 +24,7 @@ attribute float aSize;
 uniform float uTime;
 uniform float uPx;
 uniform float uPointScale;
+uniform float uSizeMax;
 varying float vSeed;
 varying float vFade;
 void main() {
@@ -25,7 +34,7 @@ void main() {
   vFade = smoothstep(60.0, 300.0, position.z);
   gl_Position = projectionMatrix * mv;
   float tw = 0.7 + 0.3 * sin(uTime * 1.4 + aSeed * 40.0);
-  gl_PointSize = aSize * uPx * (uPointScale / max(1.0, depth)) * tw;
+  gl_PointSize = min(aSize * uPx * (uPointScale / max(1.0, depth)) * tw, uSizeMax);
 }
 `;
 
@@ -40,14 +49,17 @@ void main() {
   float a = 1.0 - smoothstep(0.08, 0.5, d);
   if (a < 0.01) discard;
 
-  vec3 silver = vec3(0.878, 0.894, 0.925);
-  vec3 cyan   = vec3(0.247, 0.91, 1.0);
-  vec3 iris   = vec3(0.541, 0.302, 1.0);
+  /* Reef field (IDENTITY-SPEC §2.1/§3.2): bubble white, bioluminescent cyan
+     and mint — the retired neon-on-void ramp is gone. Values mirror
+     src/lib/palette.ts (paper / bio-cyan / mint). */
+  vec3 bubble = vec3(0.949, 0.933, 0.886);
+  vec3 bio    = vec3(0.373, 0.89, 1.0);
+  vec3 mint   = vec3(0.576, 0.886, 0.643);
 
   vec3 col;
-  if (vSeed < 0.14) col = cyan;
-  else if (vSeed < 0.28) col = iris;
-  else col = silver;
+  if (vSeed < 0.14) col = bio;
+  else if (vSeed < 0.28) col = mint;
+  else col = bubble;
 
   float tw = 0.55 + 0.45 * sin(uTime * (0.6 + vSeed * 1.6) + vSeed * 90.0);
   gl_FragColor = vec4(col * tw * a * vFade, a * vFade * 0.8);

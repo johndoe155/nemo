@@ -27,25 +27,19 @@ export default defineConfig({
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {
-        // three + gsap are multi-hundred-kB libs used below the fold
-        // (ambient WebGL, magnetic pull) — split them so the hero shell
-        // (react + framer) paints while the heavy chunks stream in parallel.
+        // gsap is the only multi-hundred-kB library left in the graph: it
+        // drives the scroll/motion layer below the fold. Split it so the hero
+        // shell (react + framer) paints while it streams in parallel.
         //
-        // The singularity's WebGPU/TSL stack is a SECOND three build: the
-        // classic `three` above has no three/webgpu, and `three/tsl` is a thin
-        // re-export layer over it (34 kB). Both are split out the same way, so
-        // the two builds download as parallel chunks instead of landing in the
-        // entry. Tradeoff, stated plainly: the page ships two three builds
-        // (~365 kB + ~668 kB min) because the vendored simulation must keep
-        // importing three/webgpu + three/tsl verbatim and the existing pulls
-        // canvases keep using WebGLRenderer. Unifying them would mean editing
-        // one side or the other, which the integration brief forbids.
+        // `three` used to need three more rules here (webgl / webgpu / r3f).
+        // Phase 6 of IDENTITY-SPEC §13 ported the particle field to a raw
+        // WebGL context (src/sections/pulls/particleGL.ts) and deleted the last
+        // four consumers, so the library and its chunk rules left the project.
         manualChunks(id) {
           const moduleId = id.replaceAll('\\\\', '/');
 
-          // Explicitly keep React out of the r3f chunk. If the shared runtime
-          // lands there, Rollup makes the app entry import (and therefore
-          // preload) the desktop-only Persona stack on every viewport.
+          // Framework first: React must never land in a lazily-imported
+          // chunk, or Rollup hoists that island into the entry's preload set.
           if (
             moduleId.includes('/node_modules/react/') ||
             moduleId.includes('/node_modules/react-dom/') ||
@@ -53,24 +47,6 @@ export default defineConfig({
             moduleId.includes('vite/preload-helper')
           ) {
             return 'framework';
-          }
-          if (
-            moduleId.includes('/node_modules/@react-three/fiber/') ||
-            moduleId.includes('/node_modules/@react-three/drei/')
-          ) {
-            return 'r3f';
-          }
-          if (
-            moduleId.endsWith('/node_modules/three/build/three.webgpu.js') ||
-            moduleId.endsWith('/node_modules/three/build/three.tsl.js')
-          ) {
-            return 'webgpu';
-          }
-          if (
-            moduleId.endsWith('/node_modules/three/build/three.module.js') ||
-            moduleId.endsWith('/node_modules/three/build/three.core.js')
-          ) {
-            return 'webgl';
           }
           if (moduleId.includes('/node_modules/gsap/')) return 'animation';
         },

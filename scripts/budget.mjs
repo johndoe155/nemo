@@ -41,14 +41,11 @@ for (const asset of [...eager].sort()) {
   totalGz += gz;
   rows.push([asset, `${(statSync(file).size / 1024).toFixed(1)} kB`, `${(gz / 1024).toFixed(1)} kB`]);
 }
-/* The non-negotiable gate: these must never be in the eager graph. The two
-   three.js chunks (webgl/webgpu) ARE eager by DESIGN — both three flavours
-   are statically reachable from the hero field and the black hole glue, and
-   the README documents the trade as measured and accepted (splitting them
-   into manualChunks keeps React and the desktop Persona stack out of the
-   shared path; see vite.config.ts). The css-only caveat: adding ANOTHER
-   eager island — or re-merging these under a new name — gets caught below
-   by the ratchet, not by a rule this script invented. */
+/* The non-negotiable gate: these must never be in the eager graph. Since the
+   phase-6 port (raw WebGL particle field, `three` deleted) the eager set is
+   just framework + animation + entry + one stylesheet — no 3D runtime is
+   statically reachable from anything any more. Adding ANOTHER eager island,
+   or re-merging these under a new name, gets caught below by the ratchet. */
 const LAZY = ['captureSignoff', 'html2canvas'];
 const leaked = LAZY.filter((name) => [...eager].some((asset) => asset.includes(name)));
 
@@ -67,12 +64,14 @@ for (const [a, raw, gz] of rows) console.log(`  ${a.padEnd(table.asset)}  ${raw.
 console.log(`  ${'TOTAL JS (eager)'.padEnd(table.asset)}  ${'—'.padStart(table.raw)}  ${(totalGz / 1024).toFixed(1)} kB`);
 console.log(`  lazy islands kept lazy: ${LAZY.filter((l) => !leaked.includes(l)).join(', ') || '—'}`);
 
-/* Ratchet, not a wish: 2026-09-15 measures 643 kB gz of eager JS (framework
-   47 + animation 53 + entry 175 + three/webgl 186 + three/webgpu 182).
-   Budget = measured + 3% headroom — future gains should LOWER this number
-   (attack list in DESIGN_AUDIT P5), and an unexplained +20 kB cannot
-   silently become the new baseline. */
-const BUDGET_JS_KB = 662;
+/* Ratchet, not a wish — every time the number drops, the ratchet follows.
+   2026-09-15: 643 kB gz (framework 45 + animation 53 + entry 175 + two three
+   builds). After the phase-6 three deletion the graph measures 248.7 kB gz
+   (framework 44.9 + animation 53.3 + entry 150.4), which finally clears the
+   §6 target of < 250 kB gz eager. Budget = measured + 3.7% headroom: real
+   movement must be *measured* and this constant lowered with it, and an
+   unexplained +10 kB cannot silently become the new baseline. */
+const BUDGET_JS_KB = 258;
 if (totalGz > BUDGET_JS_KB * 1024) {
   console.error(`budget: eager JS ${(totalGz / 1024).toFixed(1)} kB gz exceeds ${BUDGET_JS_KB} kB — the ratchet moved without a measurement note in DESIGN_AUDIT.`);
   process.exit(1);
