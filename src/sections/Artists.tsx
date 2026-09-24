@@ -3,34 +3,26 @@ import { motion, useMotionValue, useReducedMotion, useSpring } from 'framer-moti
 import { ARTISTS, UNIVERSES } from '../lib/data';
 
 /* ============================================================================
-   06 · PERMANENT PUBLIC CREDITS — the credit rod
+   06b · THE SIGNED PRINTS WALL — beat 6 (zone Z2 → the descent)
 
-   ONE centred spine, ONE column. The masonry is replaced by a vertical rod
-   running the exact centre of the section's Y-axis (masked so it fades in at
-   the top and phases out at the bottom), with the credit plates stacked
-   uniformly on top of each other — no left/right stagger; that language
-   belongs to the canon timeline.
+   ONE centred spine, ONE column — the credit rod. That rig was always the
+   best-engineered furniture on the page (a masked rod that genuinely passes
+   THROUGH each plate via a punched hole, plates that fly in from alternating
+   sides, halt on the rod, and ring off an under-damped spring when nudged), so
+   the physics is untouched and only the plate changed:
 
-   THE ROD DISSECTS THE PLATE
-     Each plate is centred on the rod, and the plate's own segment boundary is
-     placed on that same centre line, so the rod is the divider between the
-     two contrasting fills:
-       · left  — the detail block  (accent over --abyss): index, avatar,
-                 artist, handle, permanent canon credits
-       · right — the quote block   (glass panel): the artist's own words
-     A circular hole is CUT out of the plate dead centre with a radial-gradient
-     mask, so the rod behind is genuinely visible passing through the card —
-     entering above it, showing in the hole, exiting below.
+     · the plate is now a SIGNED PRINT: an index number and the artist's
+       stamped initials, the canon codes printed as a row of ink stamps, the
+       artist's own words under a quote rule, and a signature line with the
+       SIGNED seal at the foot.
+     · the rod is a steel cable: ink, with the length that crosses a plate
+       tinted by that print's own accent (the ramp is ink → pink → water now,
+       not gold → iris → cyan).
+     · the wall behind them is ruled like a gallery hanging plan.
 
-   MOTION
-     · Entrance — plates still fly in horizontally from alternating sides and
-       halt centred on the rod (outer node owns x/opacity).
-     · Rest — an alternating static tilt (clockwise / counter-clockwise by
-       index), pivoted on the hole so the pin never leaves the rod.
-     · Click — an under-damped spring impulse: the plate bobs on its pin and
-       rings back down to its resting tilt (inner node owns rotate/y).
-   Splitting the two across nested nodes keeps a single framer transform
-   authority per element, per styles/motion.css.
+   The rod's own measurement contract survives: the collar behind the hole, the
+   exit length in front of the plate, and the punched grommet are the same
+   elements with the same class names.
    ========================================================================== */
 
 /** Resting tilt, in degrees. CSS-positive = clockwise. */
@@ -42,19 +34,38 @@ const BOB_HOLD = 110;
 
 const EASE_EXPO = [0.16, 1, 0.3, 1] as const;
 
-/* The rod's own colour at a given fraction of its length.
-
-   The rod is painted gold → iris (50%) → cyan. The length that passes IN
-   FRONT of a plate is a separate element, so it has to be told which slice of
-   that ramp it represents — otherwise the front half and the back half of the
-   same rod are two different colours. Two chained color-mix()es reproduce the
-   three-stop ramp exactly, using nothing but existing palette tokens. */
+/* The rod's own colour at a given fraction of its length (IDENTITY-SPEC §3):
+   ink at the top, the character's pink through the middle, water at the foot.
+   The length that passes IN FRONT of a plate is a separate element, so it has
+   to be told which slice of the ramp it represents — otherwise the front half
+   and the back half of the same rod are two different colours. */
 function rodHueAt(t: number) {
   const first = t < 0.5;
-  const from = first ? 'var(--gold)' : 'var(--iris)';
-  const to = first ? 'var(--iris)' : 'var(--cyan)';
+  const from = first ? 'var(--ink)' : 'var(--pink)';
+  const to = first ? 'var(--pink)' : 'var(--water)';
   const p = ((first ? t : t - 0.5) * 200).toFixed(2);
   return `color-mix(in srgb, ${to} ${p}%, ${from})`;
+}
+
+/** The hand voice (SPEC §4.3): a drawn signature, inline SVG, never a font. */
+function Signature({ id }: { id: string }) {
+  return (
+    <svg className="print__signature" viewBox="0 0 132 26" aria-hidden="true">
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="currentColor" stopOpacity="0.15" />
+          <stop offset="1" stopColor="currentColor" stopOpacity="0.15" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M2 19c7-1 9-13 14-13s3 12 8 12 8-9 13-9 4 8 10 8 9-11 15-11 5 9 11 9 8-6 12-6 5 4 9 4 8-3 12-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
 function CreditPlate({ a, i, n }: { a: (typeof ARTISTS)[number]; i: number; n: number }) {
@@ -65,7 +76,7 @@ function CreditPlate({ a, i, n }: { a: (typeof ARTISTS)[number]; i: number; n: n
   const rest = i % 2 === 0 ? TILT : -TILT;
 
   const credited = UNIVERSES.filter((u) => u.artist.name === a.name);
-  const codes = credited.map((u) => u.code).join(' · ') || 'UPCOMING';
+  const codes = credited.map((u) => u.code) || ['UPCOMING'];
 
   /* --- click physics: an under-damped spring around the resting tilt ------ */
   const rotRaw = useMotionValue(rest);
@@ -124,26 +135,44 @@ function CreditPlate({ a, i, n }: { a: (typeof ARTISTS)[number]; i: number; n: n
             }
           }}
           tabIndex={0}
-          aria-label={`${a.name} — ${a.handle}. Canon credit: ${codes}`}
+          aria-label={`${a.name} — ${a.handle}. Canon credit: ${codes.join(', ')}`}
           data-cursor="NUDGE"
         >
-          <div className="creditcard sheen">
-            {/* Segment A — details, left of the rod. */}
+          <div className="creditcard print">
+            {/* Segment A — the print's identity, left of the rod. */}
             <div className="creditcard__seg">
-              <div className="creditcard__id">
-                <span className="creditcard__ava" aria-hidden="true">{a.initials}</span>
-                <span className="creditcard__idx">{String(i + 1).padStart(2, '0')}</span>
+              <div className="print__index">
+                <span>{String(i + 1).padStart(2, '0')}</span>
+                <em>/{String(n).padStart(2, '0')}</em>
               </div>
-              <div className="creditcard__who">
-                <b>{a.name}</b>
-                <span className="creditcard__handle">{a.handle}</span>
+              <div className="print__who">
+                <span className="print__stamp" aria-hidden="true">{a.initials}</span>
+                <span className="print__who-text">
+                  <b>{a.name}</b>
+                  <em>{a.handle}</em>
+                </span>
               </div>
-              <span className="creditcard__codes">CANON · {codes}</span>
+              <div className="print__canon">
+                <span className="print__canon-label">CANON</span>
+                <span className="print__canon-codes">
+                  {codes.map((c) => (
+                    <i key={c}>{c}</i>
+                  ))}
+                </span>
+              </div>
             </div>
-            {/* Segment B — the quote, right of the rod. */}
+
+            {/* Segment B — the artist's own words, right of the rod. */}
             <div className="creditcard__main">
-              <p className="creditcard__quote">{a.quote}</p>
+              <blockquote className="print__quote">{a.quote}</blockquote>
+              <div className="print__footer">
+                <Signature id={`sig-${i}`} />
+                <span className="print__seal" aria-hidden="true">
+                  SIGNED
+                </span>
+              </div>
             </div>
+
             {/* Bevelled rim of the punched hole (its centre is cut away). */}
             <span className="creditcard__grommet" aria-hidden="true" />
           </div>
@@ -152,7 +181,7 @@ function CreditPlate({ a, i, n }: { a: (typeof ARTISTS)[number]; i: number; n: n
       {/* The rod's exit: from the hole's centre downward the rod is painted
           IN FRONT of the plate (and over its bottom edge), while above the
           hole it stays behind — the two halves read as one rod piercing the
-          card. See suspension.css → "3D penetration". */}
+          card. See credits.css → the sleeve. */}
       <span className="credits__exit" aria-hidden="true" />
     </div>
   );

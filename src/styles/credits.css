@@ -1,0 +1,243 @@
+/* ============================================================================
+   THE SIGNED PRINTS WALL — beat 6 (canon & credits) · IDENTITY-SPEC §2.2
+
+   The credit rod is kept exactly as it was engineered: the masked rod, the
+   punched hole, the front/back halves, the alternating tilt, the under-damped
+   bob. What changed is the plate — a signed print rather than a glass tile —
+   and the rod's hue ramp (ink → pink → water).
+
+   Load order: after suspension.css, which owns the rod geometry; the rules
+   here only re-dress it. Nothing in this file moves an element the geometry
+   depends on.
+============================================================================ */
+
+/* the wall: a faint hanging plan ruled behind the prints */
+.credits {
+  position: relative;
+  padding-block: clamp(1rem, 3vw, 2.4rem);
+}
+.credits::before {
+  content: '';
+  position: absolute;
+  inset: 0 calc(-1 * var(--gutter));
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--paper-ink) 7%, transparent) 0 1px,
+      transparent 1px 96px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--paper-ink) 7%, transparent) 0 1px,
+      transparent 1px 96px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* the rod itself: a steel cable, not a light beam */
+.credits__rod {
+  background: linear-gradient(
+    180deg,
+    var(--ink) 0%,
+    color-mix(in srgb, var(--pink) 85%, var(--ink)) 50%,
+    var(--water) 100%
+  );
+  width: 3px;
+  opacity: 0.9;
+}
+.credits__collar {
+  background: var(--manila);
+  border: 2px solid var(--ink);
+  box-shadow: none;
+}
+.credits__exit {
+  background: var(--rod-hue, var(--ink));
+  width: 3px;
+  opacity: 0.9;
+}
+
+/* ---------------------------------------------------------------- the plate */
+.print {
+  position: relative;
+  background-color: var(--paper);
+  background-image: var(--noise);
+  background-size: 180px 180px;
+  background-blend-mode: multiply;
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 2px;
+  box-shadow: var(--shadow-print-3);
+  overflow: visible;
+}
+/* the accent rule: the print's own ink along its foot */
+.print::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 5px;
+  background: var(--card-accent, var(--pink));
+  border-top: var(--outline-w) solid var(--ink);
+  pointer-events: none;
+}
+.creditpin:hover .print,
+.creditpin:focus-visible .print {
+  box-shadow: var(--shadow-print-4);
+}
+
+/* ---- segment A: identity ---- */
+.print__index {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-family: var(--font-accent);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.print__index span {
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.print__index em {
+  font-style: normal;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+.print__who {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.55rem;
+}
+.print__stamp {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--a1, var(--mint));
+  font-family: var(--font-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink);
+  transform: rotate(-6deg);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.print__who-text {
+  display: grid;
+  min-width: 0;
+}
+.print__who-text b {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.98rem;
+  letter-spacing: -0.005em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.print__who-text em {
+  font-style: normal;
+  font-family: var(--font-accent);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+.print__canon {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.print__canon-label {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--ink-faint);
+}
+.print__canon-codes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+/* each canon credit is an ink stamp */
+.print__canon-codes i {
+  font-style: normal;
+  font-family: var(--font-accent);
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  padding: 0.12rem 0.32rem;
+  background: color-mix(in srgb, var(--card-accent, var(--pink)) 14%, transparent);
+}
+
+/* ---- segment B: the artist's words ---- */
+.print__quote {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--ink);
+  border-left: 3px solid var(--card-accent, var(--pink));
+  padding-left: 0.85rem;
+}
+.print__footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-top: 0.9rem;
+}
+.print__signature {
+  width: clamp(90px, 9vw, 132px);
+  height: auto;
+  color: var(--ink);
+  opacity: 0.85;
+}
+.print__seal {
+  font-family: var(--font-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--stamp);
+  border: 2px solid var(--stamp);
+  border-radius: 50%;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  transform: rotate(-9deg);
+  background: color-mix(in srgb, var(--stamp) 8%, var(--paper));
+}
+
+/* the grommet (rim of the punched hole) reads as hardware now */
+.creditcard__grommet {
+  border-color: var(--ink);
+  opacity: 0.55;
+}
+.creditcard__seg {
+  color: var(--ink);
+}
+
+@media (max-width: 720px) {
+  .print__quote {
+    font-size: 0.9rem;
+  }
+  .print__signature {
+    width: 78px;
+  }
+  .print__seal {
+    width: 44px;
+    height: 44px;
+    font-size: 0.44rem;
+  }
+}

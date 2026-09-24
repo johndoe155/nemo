@@ -1,0 +1,424 @@
+/* ============================================================================
+   THE PRINT SHOP — beat 5 (holder economics, zone Z2) · IDENTITY-SPEC §2.2
+
+   An order sheet and the proof it is describing. Left/right on wide screens,
+   sheet-below-proof on narrow. All material is ink, paper, manila and print
+   shadow — the retired versions (gradient scrim hero card, glass product
+   cards, glowing add-to-cart pills, a shimmer skeleton) are gone.
+============================================================================ */
+
+.shop__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(1.4rem, 3vw, 3rem);
+  align-items: start;
+  margin-top: clamp(1rem, 2vw, 1.6rem);
+}
+
+/* ------------------------------------------------------------------ proof */
+.shop__proof {
+  position: relative;
+  margin: 0;
+  padding: 14px 14px 0;
+  background-color: var(--paper);
+  background-image: var(--noise);
+  background-size: 180px 180px;
+  background-blend-mode: multiply;
+  border: var(--outline-w-strong) solid var(--ink);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-print-4);
+  transform: rotate(0.8deg);
+  transition: transform 0.3s var(--ease-slap), box-shadow 0.3s var(--ease-thud);
+}
+.shop__proof:hover {
+  transform: rotate(0.8deg) translate(-2px, -2px);
+  box-shadow: 18px 18px 0 var(--ink);
+}
+.shop__window {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 3px;
+  background: var(--deep);
+}
+.shop__plate {
+  position: absolute;
+  inset: 0;
+}
+.shop__plate img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05) contrast(1.03);
+}
+/* the holder gate is printed on the proof, not floated as a badge */
+.shop__gate {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-7deg);
+  font-family: var(--font-accent);
+  font-size: clamp(0.8rem, 0.7rem + 0.6vw, 1.15rem);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--stamp);
+  border: 3px double var(--stamp);
+  border-radius: 3px;
+  padding: 0.4rem 0.9rem;
+  background: color-mix(in srgb, var(--paper) 82%, transparent);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+.shop__edition {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 2px;
+  padding: 0.16rem 0.45rem;
+}
+.shop__caption {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.9rem 0.2rem 1.1rem;
+}
+.shop__sku {
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--ink-faint);
+}
+.shop__name {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.012em;
+  line-height: 1.06;
+  font-size: clamp(1.15rem, 0.95rem + 0.6vw, 1.6rem);
+  color: var(--ink);
+}
+.shop__kind {
+  font-family: var(--font-accent);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.shop__note {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink-dim);
+  margin-top: 0.2rem;
+}
+.shop__price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 2px solid var(--ink);
+}
+.shop__price {
+  display: grid;
+  font-family: var(--font-accent);
+  font-weight: 700;
+  font-size: clamp(1.3rem, 1rem + 0.8vw, 1.8rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ink);
+}
+.shop__price em {
+  font-style: normal;
+  font-size: 0.54rem;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  margin-top: 0.25rem;
+}
+.shop__cta {
+  font-family: var(--font-accent);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--pink);
+  border: var(--outline-w) solid var(--ink);
+  border-radius: var(--r-xs);
+  box-shadow: var(--shadow-print-2);
+  padding: 0.8rem 1.1rem;
+  transition: transform 0.2s var(--ease-slap), box-shadow 0.2s var(--ease-thud),
+    background-color 0.2s var(--ease-thud);
+}
+.shop__cta:hover,
+.shop__cta:focus-visible {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-print-3);
+  background: var(--manila);
+}
+.shop__cta:active {
+  transform: translate(1px, 1px);
+  box-shadow: var(--shadow-print-1);
+}
+
+/* ------------------------------------------------------------- order sheet */
+.shop__sheet {
+  position: relative;
+  padding: clamp(0.9rem, 1.6vw, 1.3rem);
+  background-color: var(--paper);
+  background-image: var(--noise);
+  background-size: 180px 180px;
+  background-blend-mode: multiply;
+  border: var(--outline-w-strong) solid var(--ink);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-print-3);
+  display: grid;
+  gap: 0.9rem;
+}
+.shop__sheet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--font-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.shop__sheet-head span:last-child {
+  color: var(--ink-faint);
+}
+.shop__table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.shop__table thead th {
+  font-family: var(--font-accent);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 0 0.5rem 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 45%, transparent);
+}
+.shop__table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s var(--ease-thud);
+}
+.shop__table tbody tr + tr th,
+.shop__table tbody tr + tr td {
+  border-top: 1px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+}
+.shop__table tbody tr:hover,
+.shop__table tbody tr[data-active='true'] {
+  background: color-mix(in srgb, var(--manila) 38%, transparent);
+}
+.shop__table tbody tr[data-active='true'] .shop__idx {
+  background: var(--ink);
+  color: var(--paper);
+}
+.shop__table th,
+.shop__table td {
+  padding: 0.6rem 0.5rem;
+  vertical-align: middle;
+}
+.shop__idx {
+  width: 2.2rem;
+  font-family: var(--font-accent);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  color: var(--ink);
+  transition: background-color 0.2s var(--ease-thud), color 0.2s var(--ease-thud);
+}
+.shop__cell-name {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 12rem;
+}
+.shop__cell-name b {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.shop__cell-name span {
+  font-family: var(--font-accent);
+  font-size: 0.54rem;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+}
+.shop__cell-kind {
+  font-family: var(--font-accent);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  max-width: 13rem;
+}
+.shop__num {
+  font-family: var(--font-accent);
+  font-weight: 700;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  text-align: right;
+  white-space: nowrap;
+}
+.shop__num em {
+  font-style: normal;
+  font-size: 0.54rem;
+  color: var(--stamp-ink);
+  letter-spacing: 0.1em;
+}
+.shop__act {
+  width: 7.6rem;
+  text-align: right;
+}
+/* the action is a stamp, not a pill */
+.shop__stamp {
+  display: inline-block;
+  font-family: var(--font-accent);
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 2px 2px 0 var(--ink);
+  padding: 0.32rem 0.5rem;
+  white-space: nowrap;
+}
+button.shop__stamp:hover,
+button.shop__stamp:focus-visible {
+  background: var(--pink);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.shop__stamp--lock {
+  color: var(--stamp);
+  border-color: var(--stamp);
+  box-shadow: none;
+  border-style: double;
+  border-width: 3px;
+  transform: rotate(-3deg);
+}
+
+/* ------------------------------------------------------------ verification */
+.shop__verify {
+  display: grid;
+  gap: 0.7rem;
+  padding-top: 0.9rem;
+  border-top: 2px solid var(--ink);
+}
+.shop__verify-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+.shop__verify-copy b {
+  font-family: var(--font-accent);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.shop__verify-copy span {
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+.shop__verify-act {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: center;
+}
+.shop__verify-act .holderline {
+  font-family: var(--font-accent);
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--manila);
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 2px;
+  padding: 0.3rem 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.shop__verify-act .holderline code {
+  font-family: var(--font-accent);
+  letter-spacing: 0.06em;
+}
+.shop__foot {
+  font-family: var(--font-accent);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  line-height: 1.9;
+  padding-top: 0.7rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+}
+.shop__foot b {
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------- responsive */
+@media (max-width: 1080px) {
+  .shop__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .shop__proof {
+    transform: none;
+  }
+  .shop__proof:hover {
+    transform: translate(-2px, -2px);
+  }
+  .shop__window {
+    aspect-ratio: 16 / 10;
+  }
+}
+@media (max-width: 640px) {
+  .shop__cell-kind {
+    display: none;
+  }
+  .shop__table thead th:nth-child(3) {
+    display: none;
+  }
+  .shop__act {
+    width: auto;
+  }
+  .shop__price-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.7rem;
+  }
+}

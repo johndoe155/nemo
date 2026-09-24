@@ -58,6 +58,10 @@ import './styles/print.css';
 import './styles/registry.css';
 // Beat 3 — the stamp book: the press, the sheet, the impressions.
 import './styles/stampbook.css';
+// Beat 5 — the print shop: the order sheet and the proof it describes.
+import './styles/printshop.css';
+// Beat 6 — the signed prints wall (credit rod re-dressed).
+import './styles/credits.css';
 import App from './App';
 /* The single scroll authority (DESIGN_AUDIT P1) — init before React mounts
    so the boot loader can hold/release the engine as part of the sequence.
