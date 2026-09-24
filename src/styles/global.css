@@ -79,13 +79,13 @@
   /* paper-ink ramp — text on water/trench grounds (§3.2). Section stylesheets
      opt in explicitly; it is never applied wholesale. */
   --paper-ink: var(--paper);
-  --paper-ink-dim: rgba(242, 238, 226, 0.72);
-  --paper-ink-faint: rgba(242, 238, 226, 0.6);
-  --paper-ink-decor: rgba(242, 238, 226, 0.34);
+  --paper-ink-dim: rgba(12, 11, 14, 0.54);
+  --paper-ink-faint: rgba(12, 11, 14, 0.45);
+  --paper-ink-decor: rgba(12, 11, 14, 0.255);
   /* panel/line steps for water zones */
-  --panel-dark: rgba(242, 238, 226, 0.06);
-  --line-dark: rgba(242, 238, 226, 0.2);
-  --line-strong-dark: rgba(242, 238, 226, 0.36);
+  --panel-dark: rgba(12, 11, 14, 0.045);
+  --line-dark: rgba(12, 11, 14, 0.15);
+  --line-strong-dark: rgba(12, 11, 14, 0.27);
 
   /* ---- Legacy accent aliases ----
      iris/cyan/magenta/gold were the house accents of the retired dark
@@ -326,8 +326,8 @@ select {
 }
 
 ::selection {
-  background: var(--cyan);
-  color: #02121a;
+  background: var(--pink);
+  color: var(--ink);
 }
 
 :focus-visible {
@@ -336,23 +336,20 @@ select {
   border-radius: 4px;
 }
 
-/* Scrollbar — thin, cosmic */
+/* Scrollbar — a printed rule down the edge of the page */
 ::-webkit-scrollbar {
-  width: 9px;
+  width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--void);
+  background: var(--paper-2);
 }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #3d2a77, #1b3a4d);
-  background-size: 100% 300%;
-  animation: gdrift 14s ease-in-out infinite;
-  border-radius: 99px;
-  border: 2px solid var(--void);
+  background: var(--pink);
+  border-radius: 0;
+  border: 2px solid var(--ink);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #5a3bd6, #1f7a93);
-  background-size: 100% 300%;
+  background: var(--stamp);
 }
 
 section[id] {

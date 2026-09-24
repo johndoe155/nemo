@@ -66,6 +66,8 @@ export const DERIVED = {
   'sky-ink': '#2C6E8A',
   'stamp-ink': '#B03A22',
   /* paper stock steps (card wells, sunken panels) */
+  /* paper seen through a metre of water — the reef zone's ground */
+  'paper-water': '#EEF0E4',
   'paper-3': '#EAE4D3',
   'paper-4': '#E0D9C5',
   /* text-on-light ramp */

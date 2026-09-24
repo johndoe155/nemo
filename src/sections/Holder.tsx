@@ -14,7 +14,7 @@ import Store from './Store';
 
 export default function Holder() {
   return (
-    <section className="section holder" id="holder">
+    <section className="section holder zone-water" id="holder">
       <div className="shell">
         <SectionHead
           num="04"

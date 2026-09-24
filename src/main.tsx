@@ -48,10 +48,12 @@ import './styles/nemo-particles.css';
 // into the page, and the static fallback frame. Scoped to .singularity/.bh-*,
 // so it loads last without contending with anything above.
 import './styles/trench.css';
+import './styles/water.css';
 // The boot sequence — the topmost fixed layer the site owns (z 600: above
 // .grain, the nav HUD and the side rail; below the custom cursor at 1000).
 // Everything is scoped to .ldr/.ldr__*, so it contends with none of the above.
 import './styles/loader.css';
+import './styles/print.css';
 import App from './App';
 /* The single scroll authority (DESIGN_AUDIT P1) — init before React mounts
    so the boot loader can hold/release the engine as part of the sequence.

@@ -24,15 +24,15 @@
   --obsidian: #0a0a0e;
   --obsidian-2: #101017;
   --silver: #e0e4ec;
-  --silver-dim: rgba(224, 228, 236, 0.58);
-  --silver-faint: rgba(224, 228, 236, 0.34);
-  --glass: rgba(224, 228, 236, 0.04);
-  --line: rgba(224, 228, 236, 0.1);
-  --line-strong: rgba(224, 228, 236, 0.19);
+  --silver-dim: rgba(12, 11, 14, 0.435);
+  --silver-faint: rgba(12, 11, 14, 0.255);
+  --glass: rgba(12, 11, 14, 0.03);
+  --line: rgba(12, 11, 14, 0.075);
+  --line-strong: rgba(12, 11, 14, 0.143);
   /* powered-down telemetry pod palette — cold slate blue */
-  --slate: rgba(147, 168, 196, 1);
-  --slate-line: rgba(147, 168, 196, 0.38);
-  --slate-dim: rgba(147, 168, 196, 0.3);
+  --slate: rgba(12, 11, 14, 0.75);
+  --slate-line: rgba(12, 11, 14, 0.285);
+  --slate-dim: rgba(12, 11, 14, 0.225);
   --pod-bg: #0d111a;
   /* Michroma stays loaded for future accent use (see .npx__serif note) */
   --font-serif: 'Michroma', var(--font-heading), sans-serif;
@@ -120,7 +120,7 @@
   pointer-events: none;
   background:
     radial-gradient(42rem 26rem at 50% 40%, color-mix(in srgb, var(--cyan) 32%, transparent), transparent 60%),
-    radial-gradient(30rem 18rem at 50% 42%, rgba(190, 225, 255, 0.32), transparent 55%);
+    radial-gradient(30rem 18rem at 50% 42%, rgba(12, 11, 14, 0.24), transparent 55%);
   mix-blend-mode: screen;
   border-radius: 24px;
 }
@@ -134,7 +134,7 @@
   overflow: hidden;
   /* high-clarity premium glass — bright, clean, no fog */
   background:
-    linear-gradient(165deg, rgba(224, 228, 236, 0.05), rgba(224, 228, 236, 0.01) 52%, color-mix(in srgb, var(--cyan) 4%, transparent)),
+    linear-gradient(165deg, rgba(12, 11, 14, 0.038), rgba(12, 11, 14, 0.03) 52%, color-mix(in srgb, var(--cyan) 4%, transparent)),
     var(--glass);
   border: 1px solid var(--line);
   box-shadow:
@@ -167,7 +167,7 @@
     120deg,
     color-mix(in srgb, var(--cyan) 4%, transparent) 0%,
     color-mix(in srgb, var(--cyan) 32%, transparent) 24%,
-    rgba(224, 228, 236, 0.1) 44%,
+    rgba(12, 11, 14, 0.075) 44%,
     color-mix(in srgb, var(--cyan) 4%, transparent) 62%,
     color-mix(in srgb, var(--cyan) 25%, transparent) 100%
   );
@@ -225,7 +225,7 @@
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   padding: 0.45rem 0.85rem;
-  background: rgba(224, 228, 236, 0.04);
+  background: rgba(12, 11, 14, 0.03);
   white-space: nowrap;
 }
 .npx__badge.is-live {
@@ -312,7 +312,7 @@
   padding: 0 0.8rem 0 0.55rem;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: linear-gradient(150deg, rgba(224, 228, 236, 0.045), rgba(224, 228, 236, 0.012));
+  background: linear-gradient(150deg, rgba(12, 11, 14, 0.034), rgba(12, 11, 14, 0.03));
   background-size: 240% 240%;
   color: var(--silver);
   cursor: pointer;
@@ -383,8 +383,8 @@
   /* visible glass housing — even if the liquid layer hasn't painted yet,
      the gauge reads as an instrument, never a solid black pill */
   background: linear-gradient(180deg, rgba(14, 16, 24, 0.92), rgba(9, 11, 16, 0.96));
-  border: 1px solid rgba(224, 228, 236, 0.14);
-  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.45), inset 0 0 12px rgba(224, 228, 236, 0.04),
+  border: 1px solid rgba(12, 11, 14, 0.105);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.45), inset 0 0 12px rgba(12, 11, 14, 0.03),
     0 18px 44px -18px rgba(0, 0, 0, 0.9), 0 0 30px -16px var(--cg);
   transition: transform 0.45s var(--ease-expo), opacity 0.3s ease;
 }
@@ -538,7 +538,7 @@
     -1.2px 0 rgba(74, 160, 255, 0.55);
 }
 .npx__cta[data-spin='true'] .npx__cta-label {
-  color: #bfeeff;
+  color: var(--ink);
   animation: npxIndicatorPulse 0.9s ease-in-out infinite;
 }
 .npx__cta:disabled {
@@ -553,7 +553,7 @@
 .npx__cta--fallback {
   background:
     radial-gradient(120% 160% at 50% 0%, color-mix(in srgb, var(--cyan) 12%, transparent), transparent 55%),
-    linear-gradient(180deg, rgba(224, 228, 236, 0.07), rgba(10, 10, 14, 0.82));
+    linear-gradient(180deg, rgba(12, 11, 14, 0.053), rgba(10, 10, 14, 0.82));
   background-size: 260% 260%, 200% 200%;
   animation: gdrift 20s ease-in-out infinite;
   border: 1px solid color-mix(in srgb, var(--cyan) 23%, transparent);
@@ -573,7 +573,7 @@
   font-size: 0.66rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #9fecff;
+  color: var(--ink);
   border: 1px solid color-mix(in srgb, var(--cyan) 46%, transparent);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--cyan) 12%, transparent), color-mix(in srgb, var(--cyan) 4%, transparent)),
@@ -625,9 +625,9 @@
   font-size: 0.58rem;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(224, 228, 236, 0.82);
-  background: rgba(224, 228, 236, 0.05);
-  border: 1px solid rgba(224, 228, 236, 0.28);
+  color: rgba(12, 11, 14, 0.615);
+  background: rgba(12, 11, 14, 0.038);
+  border: 1px solid rgba(12, 11, 14, 0.21);
   border-radius: 999px;
   /* was 0.52rem 0.95rem (~28px tall) — AAA target: 44px effective hit */
   min-height: 40px;
@@ -645,7 +645,7 @@
   border-radius: inherit;
 }
 .npx__ghostbtn:hover:not(:disabled) {
-  color: #ffffff;
+  color: var(--ink);
   border-color: color-mix(in srgb, var(--cyan) 63%, transparent);
   background: color-mix(in srgb, var(--cyan) 8%, transparent);
   box-shadow: 0 0 18px -10px color-mix(in srgb, var(--cyan) 69%, transparent);
@@ -666,7 +666,7 @@
   border-radius: 10px;
   padding: 0.55rem 0.9rem;
   margin-top: 1.15rem;
-  background: rgba(224, 228, 236, 0.02);
+  background: rgba(12, 11, 14, 0.03);
 }
 .npx__mock b {
   color: var(--cyan);
@@ -684,7 +684,7 @@
   margin-bottom: 1.3rem;
   background:
     radial-gradient(90% 110% at 50% 0%, color-mix(in srgb, var(--cyan) 6%, transparent), transparent 62%),
-    linear-gradient(170deg, rgba(224, 228, 236, 0.035), rgba(10, 10, 14, 0.14));
+    linear-gradient(170deg, rgba(12, 11, 14, 0.03), rgba(10, 10, 14, 0.14));
   border: 1px solid var(--line);
   box-shadow:
     0 40px 80px -48px rgba(0, 0, 0, 0.85),
@@ -923,7 +923,7 @@
   border-radius: 24px;
   padding: clamp(1.3rem, 2.2vw, 1.8rem);
   background:
-    linear-gradient(165deg, rgba(224, 228, 236, 0.045), rgba(224, 228, 236, 0.01) 52%, color-mix(in srgb, var(--cyan) 4%, transparent)),
+    linear-gradient(165deg, rgba(12, 11, 14, 0.034), rgba(12, 11, 14, 0.03) 52%, color-mix(in srgb, var(--cyan) 4%, transparent)),
     var(--glass);
   border: 1px solid var(--line);
   box-shadow:
@@ -1014,7 +1014,7 @@
   border: 1px solid color-mix(in srgb, var(--sr, #e0e4ec) 60%, transparent);
   box-shadow:
     0 24px 50px -20px rgba(0, 0, 0, 0.85),
-    0 0 26px -10px var(--srg, rgba(224, 228, 236, 0.35)),
+    0 0 26px -10px var(--srg, rgba(12, 11, 14, 0.262)),
     inset 0 0 0 1px rgba(12, 11, 14, 0.03);
 }
 .npx__slot-front picture {
@@ -1044,7 +1044,7 @@
   font-weight: 700;
   font-size: clamp(0.58rem, 1.8cqw + 0.42rem, 0.66rem);
   letter-spacing: 0.14em;
-  color: #fff;
+  color: var(--ink);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
 }
 .npx__slot-name {
@@ -1132,8 +1132,8 @@
   position: absolute;
   inset: clamp(8px, 12cqw, 12px);
   background:
-    repeating-linear-gradient(0deg, rgba(147, 168, 196, 0.05) 0 1px, transparent 1px 12px),
-    repeating-linear-gradient(90deg, rgba(147, 168, 196, 0.05) 0 1px, transparent 1px 12px);
+    repeating-linear-gradient(0deg, rgba(12, 11, 14, 0.038) 0 1px, transparent 1px 12px),
+    repeating-linear-gradient(90deg, rgba(12, 11, 14, 0.038) 0 1px, transparent 1px 12px);
   -webkit-mask-image: radial-gradient(120% 120% at 50% 46%, #000 40%, transparent 92%);
   mask-image: radial-gradient(120% 120% at 50% 46%, #000 40%, transparent 92%);
 }
@@ -1215,9 +1215,9 @@
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(226, 236, 250, 0.85) 0%,
-    rgba(158, 180, 208, 0.45) 45%,
-    rgba(158, 180, 208, 0) 100%
+    rgba(12, 11, 14, 0.637) 0%,
+    rgba(12, 11, 14, 0.338) 45%,
+    rgba(12, 11, 14, 0.03) 100%
   );
   background-size: 180% 180%;
   animation: gdrift 26s ease-in-out infinite;
@@ -1257,9 +1257,9 @@
   font-weight: 600;
   font-size: clamp(0.5rem, 1.4cqw + 0.38rem, 0.6rem);
   letter-spacing: 0.2em;
-  color: #e9eff8;
+  color: var(--ink);
   background: rgba(9, 12, 18, 0.94);
-  border: 1px solid rgba(147, 168, 196, 0.5);
+  border: 1px solid rgba(12, 11, 14, 0.375);
   border-radius: 999px;
   padding: 0.16rem 0.55rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
@@ -1323,7 +1323,7 @@
   font-size: 0.56rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #7fe6ff;
+  color: var(--ink);
   text-shadow: 0 0 14px color-mix(in srgb, var(--cyan) 69%, transparent);
   text-align: center;
   animation: npxIndicatorPulse 3.2s ease-in-out infinite;
@@ -1332,7 +1332,7 @@
   font-style: normal;
   font-size: 0.44rem;
   letter-spacing: 0.3em;
-  color: rgba(159, 236, 255, 0.85);
+  color: rgba(12, 11, 14, 0.637);
 }
 
 /* -------------------- unlock burst (linear sparks only) -------------------- */
@@ -1393,7 +1393,7 @@
   position: relative;
   height: 6px;
   border-radius: 999px;
-  background: rgba(224, 228, 236, 0.07);
+  background: rgba(12, 11, 14, 0.053);
   border: 1px solid var(--line);
   overflow: visible;
 }
@@ -1432,7 +1432,7 @@
 .npx__progress-ticks em {
   width: 2px;
   height: 20px;
-  background: rgba(224, 228, 236, 0.14);
+  background: rgba(12, 11, 14, 0.105);
   transition: background 0.5s ease, box-shadow 0.5s ease;
 }
 .npx__progress-ticks em[data-on='true'] {
@@ -1522,7 +1522,7 @@
 }
 .npx__float-chip.is-b {
   transform: translateZ(90px);
-  color: rgba(159, 236, 255, 0.85);
+  color: rgba(12, 11, 14, 0.637);
   border-color: color-mix(in srgb, var(--cyan) 34%, transparent);
   animation-delay: -3.4s;
 }

@@ -1,0 +1,231 @@
+/* ============================================================================
+   PRINT — the Z0 SURFACE layer (IDENTITY-SPEC §5, §8)
+
+   The surface of the dive: the hero wordmark, the nav, the loader and the
+   fixed chrome that sits on paper stock. This layer states the display-type
+   treatment — FLASH LETTERING — and the paper treatment of global chrome.
+
+   Flash lettering (§5): display words carry a flat cel fill, a hard ink
+   outline and a blur-free ink offset that behaves like a printed drop — the
+   tattoo-flash language of the reference "NEMO" stack. The hero already
+   stacks three lines; this layer gives each line one of the three treatments:
+   line 1 solid ink, line 2 hollow outline, line 3 filled sticker.
+============================================================================ */
+
+/* ---- display type system ------------------------------------------------ */
+.hero__title {
+  color: var(--ink);
+  text-shadow: none;
+}
+.hero__one {
+  color: var(--ink);
+  -webkit-text-stroke: 2px var(--ink);
+}
+/* CANON — the sticker: pink fill, ink outline, ink offset. */
+.hero__grad {
+  background-image: none;
+  background-color: transparent;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: var(--pink);
+  -webkit-text-fill-color: var(--pink);
+  -webkit-text-stroke: 2.5px var(--ink);
+  paint-order: stroke fill;
+  text-shadow:
+    7px 7px 0 var(--ink),
+    -1px -1px 0 var(--ink);
+  animation: none;
+}
+@keyframes heroGradientFlow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+}
+/* the retired glow wrapper — no filter, the offset does the work */
+.hero__glow {
+  filter: none;
+}
+/* INFINITE — hollow: outline only, no fill. */
+.hero__hollow {
+  color: transparent;
+  -webkit-text-stroke: 2.5px var(--ink);
+  filter: none;
+}
+.hero__period {
+  color: var(--ink);
+  -webkit-text-fill-color: var(--ink);
+}
+/* the chromatic-aberration glitch is retired (§8) */
+.hero__char::before,
+.hero__char::after {
+  content: none;
+}
+.hero__watermark {
+  color: var(--paper-2);
+  -webkit-text-stroke: 2px color-mix(in srgb, var(--ink) 12%, transparent);
+  opacity: 1;
+}
+
+/* ---- hero chrome -------------------------------------------------------- */
+/* The hero ground itself is painted by the Ambience quad (paper wash in Z0);
+   the CRT scanline overlay is retired with the space metaphor. */
+.hero__scanlines {
+  display: none;
+}
+.hero__wash {
+  background:
+    radial-gradient(60% 50% at 78% 12%, color-mix(in srgb, var(--sky) 22%, transparent), transparent 70%),
+    radial-gradient(50% 40% at 6% 88%, color-mix(in srgb, var(--mint) 20%, transparent), transparent 72%),
+    var(--paper);
+}
+.hero__telemetry {
+  color: var(--ink-faint);
+}
+.hero__telemetry b {
+  color: var(--stamp);
+}
+.hero__lede em {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+/* the countdown pill becomes a tape-and-ink plate */
+.hero__badge,
+.hero__marquee {
+  background: var(--paper-2);
+  border: var(--outline-w) solid var(--ink);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-print-1);
+  color: var(--ink);
+}
+.hero__badge::after,
+.hero__marquee::after {
+  content: none;
+}
+.hero__badge:hover,
+.hero__badge:focus-visible,
+.hero__marquee:hover,
+.hero__marquee:focus-visible,
+.hero__marquee.is-paused {
+  background: var(--manila);
+  color: var(--ink);
+  box-shadow: var(--shadow-print-2);
+  transform: translate(-2px, -2px);
+}
+.hero__marquee.live-pill {
+  color: var(--ink);
+  background: var(--manila);
+}
+.hero__hint {
+  color: var(--ink-faint);
+}
+.hero__progress {
+  background: var(--line);
+}
+.hero__progress > i {
+  background: var(--pink);
+}
+
+/* ---- nav ---------------------------------------------------------------- */
+/* Paper stock bar, ink rule, no glass. */
+.nav {
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  border-bottom: var(--outline-w) solid var(--ink);
+  box-shadow: none;
+}
+.nav.is-scrolled,
+.nav.scrolled {
+  background: var(--paper);
+  box-shadow: 0 4px 0 -2px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.nav a,
+.nav__link {
+  color: var(--ink);
+}
+.nav__link::after {
+  background: var(--stamp);
+}
+.nav__brand,
+.nav__logo {
+  color: var(--ink);
+}
+.nav__cta {
+  background: var(--pink);
+  color: var(--ink);
+  border: var(--outline-w) solid var(--ink);
+  box-shadow: var(--shadow-print-1);
+}
+.nav__cta:hover,
+.nav__cta:focus-visible {
+  background: var(--manila);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-print-2);
+}
+
+/* ---- side rail → depth gauge (SPEC §7) ---------------------------------- */
+/* The rail's own colour language is re-pointed at the depth gauge: ticks read
+   as a sounding line, the active mark takes the zone accent. */
+.siderail__tick,
+.rail__tick {
+  background: var(--line-strong);
+}
+.siderail__tick.is-active,
+.rail__tick.is-active {
+  background: var(--pink);
+}
+
+/* ---- loader — the stock sheet the site is printed on (SPEC §8) ---------- */
+.ldr {
+  background: var(--paper);
+}
+.ldr__bg {
+  background:
+    radial-gradient(60% 50% at 70% 20%, color-mix(in srgb, var(--sky) 18%, transparent), transparent 70%),
+    var(--paper);
+}
+.ldr__glow {
+  opacity: 0.18;
+}
+.ldr__pct,
+.ldr__digit,
+.ldr__exact {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.ldr__morph svg,
+.ldr__art svg {
+  color: var(--ink);
+}
+.ldr__skip {
+  color: var(--ink);
+  border: var(--outline-w) solid var(--ink);
+  background: var(--paper);
+  box-shadow: var(--shadow-print-1);
+}
+.ldr__skip:hover,
+.ldr__skip:focus-visible {
+  background: var(--manila);
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-print-2);
+}
+
+/* ---- custom cursor → marker dot (SPEC §7) -------------------------------- */
+.cursor-dot {
+  background: var(--ink);
+}
+.cursor-glow {
+  background: color-mix(in srgb, var(--sky) 30%, transparent);
+  mix-blend-mode: multiply;
+}
+.cursor-label {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--r-xs);
+}
+
+/* ---- selection ---------------------------------------------------------- */
+::selection {
+  background: var(--pink);
+  color: var(--ink);
+}

@@ -15,7 +15,7 @@ import Artists from './Artists';
 
 export default function Canon() {
   return (
-    <section className="section canon" id="canon">
+    <section className="section canon zone-water" id="canon">
       <div className="shell">
         <SectionHead
           num="05"

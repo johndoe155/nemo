@@ -175,10 +175,10 @@
   --bloom: color-mix(in srgb, var(--cyan) 32%, transparent);
 }
 .btn-gold {
-  --bloom: rgba(255, 240, 200, 0.3);
+  --bloom: rgba(12, 11, 14, 0.225);
 }
 .btn-gold:active::before {
-  --bloom: rgba(255, 244, 214, 0.42);
+  --bloom: rgba(12, 11, 14, 0.315);
 }
 /* existing sheen sweeps over the label, as in the hero's portal buttons */
 .btn .btn-spark {

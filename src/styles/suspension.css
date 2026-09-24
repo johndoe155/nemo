@@ -846,11 +846,11 @@
      card and over the bare page, so one bar can go under a card and come back
      out the other side without a seam giving the trick away. Silver rather
      than white so it reads as METAL catching the key light, not as a glow. */
-  --rod-spec: rgba(235, 240, 248, 0.74); /* the turned highlight */
-  --rod-body: rgba(178, 190, 208, 0.42); /* brushed silver */
+  --rod-spec: rgba(12, 11, 14, 0.555); /* the turned highlight */
+  --rod-body: rgba(12, 11, 14, 0.315); /* brushed silver */
   --rod-fall: rgba(120, 132, 152, 0.3); /* falloff before the edge */
   --rod-shade: rgba(5, 6, 12, 0.92); /* edges — this is what makes it round */
-  --rod-glow: rgba(203, 213, 225, 0.4); /* slate-300 halo, separation only */
+  --rod-glow: rgba(12, 11, 14, 0.3); /* slate-300 halo, separation only */
 
   /* Front-half mask — one window per row, measured in CanonTimeline(). Hidden
      until measured, so an unmeasured rod can never paint itself over a card. */
@@ -907,7 +907,7 @@
   translate: -50% 0;
   border-radius: var(--r-pill);
   /* The groove is silver too — a shade of the same metal, not a second hue. */
-  background: linear-gradient(180deg, rgba(203, 213, 225, 0.12), rgba(203, 213, 225, 0.035));
+  background: linear-gradient(180deg, rgba(12, 11, 14, 0.09), rgba(12, 11, 14, 0.03));
 }
 
 /* Front half — the length that has come through, promoted over the cards.
@@ -955,9 +955,9 @@
     ),
     linear-gradient(
       180deg,
-      rgba(226, 232, 240, 0.22),
-      rgba(148, 163, 184, 0.08) 46%,
-      rgba(203, 213, 225, 0.18)
+      rgba(12, 11, 14, 0.165),
+      rgba(12, 11, 14, 0.06) 46%,
+      rgba(12, 11, 14, 0.135)
     );
   background-blend-mode: normal;
   mix-blend-mode: normal;

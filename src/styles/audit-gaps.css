@@ -122,7 +122,7 @@
 }
 .soundtoggle:hover,
 .soundtoggle:focus-visible {
-  color: #fff;
+  color: var(--ink);
   border-color: color-mix(in srgb, var(--cyan) 57%, transparent);
 }
 .soundtoggle__wave {

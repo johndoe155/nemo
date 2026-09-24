@@ -16,7 +16,7 @@ import NemoChat from '../components/NemoChat';
 
 export default function Persona() {
   return (
-    <section className="section persona" id="persona">
+    <section className="section persona zone-water" id="persona">
       <div className="shell persona__layout">
         <div className="persona__head">
           <SectionHead

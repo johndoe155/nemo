@@ -158,7 +158,7 @@
     ),
     radial-gradient(
       120% 60% at calc(var(--mx) * 100%) -18%,
-      rgba(214, 232, 255, 0.07),
+      rgba(12, 11, 14, 0.053),
       transparent 60%
     );
 }
@@ -205,7 +205,7 @@
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.2em;
-  color: #fff;
+  color: var(--ink);
 }
 .nchat__ident em {
   font-family: var(--font-ui);
@@ -338,7 +338,7 @@
   box-shadow:
     inset 0 0 0 1px color-mix(in srgb, var(--gold) 32%, transparent),
     0 0 20px -8px color-mix(in srgb, var(--gold) 80%, transparent);
-  color: rgba(255, 226, 168, 0.95);
+  color: rgba(12, 11, 14, 0.712);
 }
 
 .nmsg__stack {
@@ -372,7 +372,7 @@
   font-size: clamp(0.94rem, 0.9rem + 0.15vw, 1.02rem);
   line-height: 1.62;
   letter-spacing: -0.002em;
-  color: #fff;
+  color: var(--ink);
   background: rgba(12, 11, 14, 0.03);
   box-shadow: inset 0 0 0 1px rgba(12, 11, 14, 0.043);
   border-radius: 16px 16px 16px 5px;
@@ -554,7 +554,7 @@
 }
 .npill:hover,
 .npill:focus-visible {
-  color: #fff;
+  color: var(--ink);
   background: rgba(12, 11, 14, 0.061);
   box-shadow: inset 0 0 0 1px rgba(12, 11, 14, 0.144);
 }
@@ -590,7 +590,7 @@
 .nchat__field:focus-within {
   background: rgba(12, 11, 14, 0.054);
   box-shadow:
-    inset 0 0 0 1px rgba(160, 220, 255, 0.22),
+    inset 0 0 0 1px rgba(12, 11, 14, 0.165),
     inset 0 1px 0 rgba(12, 11, 14, 0.13),
     0 0 46px -20px color-mix(in srgb, var(--cyan) 57%, transparent);
 }
@@ -606,7 +606,7 @@
   background: none;
   border: 0;
   padding: 10px 0;
-  color: #fff;
+  color: var(--ink);
   caret-color: var(--cyan);
   font-family: var(--font-ui);
   font-size: 0.95rem;
@@ -631,7 +631,7 @@
   font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.24em;
-  color: #fff;
+  color: var(--ink);
   background: rgba(12, 11, 14, 0.058);
   box-shadow:
     inset 0 0 0 1px rgba(12, 11, 14, 0.115),

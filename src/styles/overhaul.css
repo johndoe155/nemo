@@ -817,7 +817,7 @@ html[data-scene='singularity'] {
 }
 /* filled register (odd phrases) */
 .creds__phrase.is-solid .creds__txt {
-  color: rgba(248, 250, 255, 0.78);
+  color: rgba(12, 11, 14, 0.585);
   font-weight: 600;
   -webkit-text-stroke: 0;
 }
@@ -1310,7 +1310,7 @@ html[data-scene='singularity'] {
 /* Solid block "ONE" */
 .hero__one {
   display: inline-block;
-  color: #fff;
+  color: var(--ink);
   font-weight: 800;
 }
 
@@ -1375,8 +1375,8 @@ html[data-scene='singularity'] {
   display: inline;
   font-family: var(--font-display-ext);
   font-weight: 800;
-  color: #ffffff;
-  -webkit-text-fill-color: #ffffff;
+  color: var(--ink);
+  -webkit-text-fill-color: var(--ink);
   background: none;
   background-image: none;
   background-color: transparent;
@@ -1518,7 +1518,7 @@ html[data-scene='singularity'] {
   /* tracking-widest */
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: rgba(233, 237, 245, 0.72);
+  color: rgba(12, 11, 14, 0.54);
   background: rgba(12, 11, 14, 0.032);
   /* hairline of *light*, not a colored stroke — reads as a glass edge */
   box-shadow:
@@ -1556,7 +1556,7 @@ html[data-scene='singularity'] {
 .hero__marquee:focus-visible,
 .hero__marquee.is-paused {
   background: rgba(12, 11, 14, 0.054);
-  color: rgba(245, 247, 252, 0.9);
+  color: rgba(12, 11, 14, 0.675);
   box-shadow:
     inset 0 1px 0 rgba(12, 11, 14, 0.101),
     inset 0 0 0 1px rgba(12, 11, 14, 0.043),
@@ -1566,7 +1566,7 @@ html[data-scene='singularity'] {
 
 /* Live state stays monochromatic — it simply resolves brighter. */
 .hero__marquee.live-pill {
-  color: rgba(250, 251, 255, 0.92);
+  color: rgba(12, 11, 14, 0.69);
   background: rgba(12, 11, 14, 0.043);
 }
 
@@ -1632,7 +1632,7 @@ html[data-scene='singularity'] {
 }
 
 .hero__sub-brand {
-  color: #fff;
+  color: var(--ink);
   font-weight: 700;
   letter-spacing: 0.22em;
   text-shadow: 0 0 18px rgba(12, 11, 14, 0.13);
@@ -1785,7 +1785,7 @@ html[data-scene='singularity'] {
 .hero__marquee .pulse-dot {
   width: 5px;
   height: 5px;
-  background: rgba(240, 243, 249, 0.78);
+  background: rgba(12, 11, 14, 0.585);
   box-shadow: 0 0 10px rgba(12, 11, 14, 0.252);
   animation: heroMarqueePulse 2.8s ease-in-out infinite;
 }
