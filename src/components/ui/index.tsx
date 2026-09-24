@@ -3,8 +3,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { useCountdown } from '../../lib/hooks';
 import { KineticButton, MagneticButton, RollText } from '../motion';
-import type { Rarity } from '../../lib/data';
-import { RARITY } from '../../lib/data';
+import type { EditionTier } from '../../lib/data';
+import { TIERS } from '../../lib/data';
 
 /* ------------------------------ Verified mark ------------------------------ */
 
@@ -396,18 +396,18 @@ export function WalletButton({
   );
 }
 
-/* ------------------------------ Rarity badge ------------------------------ */
+/* ------------------------------ EditionTier badge ------------------------------ */
 
-export function RarityBadge({
-  rarity,
+export function TierBadge({
+  tier,
   small,
   className = 'badge',
 }: {
-  rarity: Rarity;
+  tier: EditionTier;
   small?: boolean;
   className?: string;
 }) {
-  const r = RARITY[rarity];
+  const r = TIERS[tier];
   return (
     <span className={className} style={{ '--c': r.color, fontSize: small ? '0.56rem' : undefined }}>
       {r.label}
@@ -420,19 +420,19 @@ export function RarityBadge({
 
 /* ------------------------------ Sort dropdown ------------------------------ */
 
-export type SortMode = 'newest' | 'oldest' | 'rarity' | 'price';
+export type SortMode = 'newest' | 'oldest' | 'tier' | 'price';
 
 export const SORT_OPTIONS: { value: SortMode; label: string }[] = [
   { value: 'newest', label: 'NEWEST FIRST' },
   { value: 'oldest', label: 'OLDEST FIRST' },
-  { value: 'rarity', label: 'BY RARITY' },
+  { value: 'tier', label: 'BY EDITION TIER' },
   { value: 'price', label: 'BY PRICE' },
 ];
 
 export function SortDropdown({
   value,
   onChange,
-  label = 'Sort universes',
+  label = 'Sort the registry',
 }: {
   value: SortMode;
   onChange: (next: SortMode) => void;

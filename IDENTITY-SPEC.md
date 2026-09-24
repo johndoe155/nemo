@@ -452,14 +452,24 @@ by the gate named beside it.
 - Legacy names (`--void`, `--abyss`, `--iris`, `--cyan`, `--magenta`, `--gold`,
   `--grad-*`, `--r-*`, `--elev-*`) survive as aliases into the new identity.
 
-### Phase 3 — edition/card system (§6) — PARTIAL
+### Phase 3 — edition/card system (§6) — DONE
 
 Delivered: the manila wanted-poster plate language (tape, accent rule, serial
 caption, ink outline, offset print shadow), the persona glass plate as ration
-slot 1, and the tier→treatment mapping in tokens. **Not** delivered: the
-`lib/data.ts` decoupling of `RARITY`/`SORT_OPTIONS` from hue (the ramp token now
-maps to treatments, so nothing renders a rarity gem, but the sort control's
-labels still read "rarity").
+slot 1, and the tier→treatment mapping in tokens; then the recomposes carried
+the language into every surface (registry specimen plates, the stamp book's
+perforated sheet, the print shop's order sheet, the signed prints wall).
+
+**The vocabulary debt is paid.** `RARITY` is now `TIERS` / `EditionTier` /
+`u.tier`, and the ladder is a print shop's, not a game's: OPEN EDITION →
+LIMITED RUN → NUMBERED RUN → ARTIST PROOF → CANCELLED PLATE, each with the
+treatment the plate prints in (black ink on stock, water seal, pink seal,
+manila + foil line, sealed blackout). `label` is the plate's long form, `short`
+the rail chip's and the odds bar's, so no surface has to invent its own wording
+— and the registry rail's chips are now *derived* from the table instead of a
+hardcoded duplicate list. The sort control reads BY EDITION TIER over the tier
+order. `grep -rn rarity src/` returns one line: the comment that explains what
+it used to be called.
 
 ### Phase 4 — section reskins — PARTIAL (the honest part)
 

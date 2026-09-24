@@ -6,13 +6,13 @@ import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion
 import { KineticLink } from './motion';
 import CardImage from './CardImage';
 import type { Universe } from '../lib/data';
-import { RARITY } from '../lib/data';
+import { TIERS } from '../lib/data';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: () => void }) {
-  const rarity = RARITY[u.rarity];
-  const accent = rarity.color;
+  const tier = TIERS[u.tier];
+  const accent = tier.color;
   const soldPct = u.supply ? Math.round((u.minted / u.supply) * 100) : 0;
   const panelRef = useRef<HTMLDivElement | null>(null);
   const mediaRef = useRef<HTMLDivElement | null>(null);
@@ -137,11 +137,11 @@ export default function UniverseDialog({ u, onClose }: { u: Universe; onClose: (
             <div className="dialog__specs">
               <div className="dialog__spec">
                 <span>EDITION TIER</span>
-                <b style={{ color: accent }}>{rarity.label}</b>
+                <b style={{ color: accent }}>{tier.label}</b>
               </div>
               <div className="dialog__spec">
                 <span>TREATMENT</span>
-                <b>{rarity.treatment}</b>
+                <b>{tier.treatment}</b>
               </div>
               <div className="dialog__spec">
                 <span>EDITION</span>

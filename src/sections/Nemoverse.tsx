@@ -5,8 +5,8 @@ import UniverseCard from '../components/UniverseCard';
 import UniverseDialog from '../components/UniverseDialog';
 import { Countdown, Reveal, SortDropdown, type SortMode } from '../components/ui';
 import { KineticLink, Magnetic, MagneticButton, RollText } from '../components/motion';
-import type { Rarity, Universe } from '../lib/data';
-import { DROP_LABEL, RARITY, UNIVERSE_DROP_ISO, UNIVERSES, visibleUniverses } from '../lib/data';
+import type { EditionTier, Universe } from '../lib/data';
+import { DROP_LABEL, TIERS, UNIVERSE_DROP_ISO, UNIVERSES, visibleUniverses } from '../lib/data';
 import { useCountdown, useCountUp } from '../lib/hooks';
 import { pageScrollTo } from '../lib/scroll';
 import { rodRing } from '../lib/sound';
@@ -14,12 +14,12 @@ import { rodRing } from '../lib/sound';
 const SORTS: Record<SortMode, (a: Universe, b: Universe) => number> = {
   newest: (a, b) => new Date(b.released).getTime() - new Date(a.released).getTime(),
   oldest: (a, b) => new Date(a.released).getTime() - new Date(b.released).getTime(),
-  rarity: (a, b) => RARITY[b.rarity].tier - RARITY[a.rarity].tier,
+  tier: (a, b) => TIERS[b.tier].tier - TIERS[a.tier].tier,
   price: (a, b) => b.price - a.price,
 };
 
 export default function Nemoverse() {
-  const [filter, setFilter] = useState<Rarity | 'all'>('all');
+  const [filter, setFilter] = useState<EditionTier | 'all'>('all');
   const [sort, setSort] = useState<SortMode>('newest');
   const [selected, setSelected] = useState<Universe | null>(null);
 
@@ -218,7 +218,7 @@ export default function Nemoverse() {
     };
   }, [isDragging, isMobile, maxX, dragX, x]);
 
-  const list = visibleUniverses.filter((u) => filter === 'all' || u.rarity === filter).sort(SORTS[sort]);
+  const list = visibleUniverses.filter((u) => filter === 'all' || u.tier === filter).sort(SORTS[sort]);
   const cardCount = list.length + 1; // + DropTeaserCard
   cardCountRef.current = cardCount;
 
@@ -242,13 +242,11 @@ export default function Nemoverse() {
 
   const totalMinted = UNIVERSES.reduce((s, u) => s + u.minted, 0);
 
-  const rarityChips: Array<{ id: Rarity | 'all'; label: string }> = [
+  /* Chips read the tier table itself: the rail cannot drift from the plates.
+     The short form is the chip's, the long form belongs on the plate. */
+  const tierChips: Array<{ id: EditionTier | 'all'; label: string }> = [
     { id: 'all', label: 'ALL' },
-    { id: 'common', label: 'COMMON' },
-    { id: 'rare', label: 'RARE' },
-    { id: 'epic', label: 'EPIC' },
-    { id: 'legendary', label: 'LEGENDARY' },
-    { id: 'secret', label: 'SECRET' },
+    ...(Object.keys(TIERS) as EditionTier[]).map((id) => ({ id, label: TIERS[id].short })),
   ];
 
   return (
@@ -265,7 +263,7 @@ export default function Nemoverse() {
             <Reveal delay={0.1}>
               <p className="sub" style={{ color: 'var(--ink-dim)', maxWidth: '44rem', marginTop: '0.8rem' }}>
                 One canon collection. Infinite versions of the OC — every commissioned artist creates
-                their own official, numbered universe. Browse by artist, release date, or rarity.
+                their own official, numbered universe. Browse by artist, release date, or tier.
               </p>
             </Reveal>
           </div>
@@ -284,12 +282,12 @@ export default function Nemoverse() {
         </div>
 
         <div className="mv__filters">
-          {rarityChips.map((c) => (
+          {tierChips.map((c) => (
             <MagneticButton
               key={c.id}
               preset="chrome"
               className={`chip ${filter === c.id ? 'active' : ''}`}
-              style={{ '--c': c.id === 'all' ? 'var(--cyan)' : RARITY[c.id as Rarity].color } as React.CSSProperties}
+              style={{ '--c': c.id === 'all' ? 'var(--cyan)' : TIERS[c.id as EditionTier].color } as React.CSSProperties}
               aria-pressed={filter === c.id}
               onClick={() => setFilter(c.id)}
             >

@@ -17,8 +17,8 @@
 ============================================================================ */
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { RARITY } from '../../lib/data';
-import { RARITY_ACCENT, spinPool, type PullPhase, type PullResult } from './usePullEngine';
+import { TIERS } from '../../lib/data';
+import { TIER_ACCENT, spinPool, type PullPhase, type PullResult } from './usePullEngine';
 import { StatRoll } from './StatRoll';
 import CardImage from '../../components/CardImage';
 import { plateSerial } from '../../lib/serials';
@@ -88,7 +88,7 @@ export default function RevealPlate({ phase, spinIdx, result, onPull, onDone }: 
           <motion.div
             key="done"
             className="reveal__done"
-            style={{ '--rr': RARITY_ACCENT[result.r].color } as React.CSSProperties}
+            style={{ '--rr': TIER_ACCENT[result.r].color } as React.CSSProperties}
           >
             <div className={`reveal__portrait${result.u.image ? '' : ' reveal__portrait--sealed'}`}>
               {result.u.image ? (
@@ -98,7 +98,7 @@ export default function RevealPlate({ phase, spinIdx, result, onPull, onDone }: 
               )}
             </div>
             <span className="reveal__tier">
-              {RARITY[result.r].label}
+              {TIERS[result.r].short}
               {result.r === 'secret' ? ' · ANOMALY' : ''}
             </span>
             <span className="reveal__name">{result.u.name}</span>

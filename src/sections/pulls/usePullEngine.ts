@@ -12,28 +12,28 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { nearMissGliss, pullWhoosh, stampThud } from '../../lib/sound';
 import { haptic, HAPTIC } from '../../lib/haptics';
 import { useMockWallet } from '../../components/ui';
-import type { Rarity, Universe } from '../../lib/data';
+import type { EditionTier, Universe } from '../../lib/data';
 import {
-  RARITY,
+  TIERS,
   SET_BONUS_AT,
   STAMP_SLOTS,
   UNIVERSES,
   pullOdds,
-  rollRarity,
+  rollTier,
   universeForPull,
 } from '../../lib/data';
 
 export interface StoredPull {
   uid: string;
   ts: number;
-  rarity: Rarity;
+  tier: EditionTier;
 }
 
 export type PullPhase = 'idle' | 'spinning' | 'done';
 
 export interface PullResult {
   u: Universe;
-  r: Rarity;
+  r: EditionTier;
   mintNo: string;
 }
 
@@ -50,15 +50,15 @@ function loadPulls(): StoredPull[] {
     const parsed = JSON.parse(raw) as StoredPull[];
     if (!Array.isArray(parsed)) return [];
     // Sanitise persisted state: every entry must reference a real universe
-    // with a known rarity tier, otherwise stale/corrupt data can produce
+    // with a known tier tier, otherwise stale/corrupt data can produce
     // broken renders after a reload.
     return parsed.filter(
       (p) =>
         p &&
         typeof p.uid === 'string' &&
         p.uid.length > 0 &&
-        typeof p.rarity === 'string' &&
-        p.rarity in RARITY &&
+        typeof p.tier === 'string' &&
+        p.tier in TIERS &&
         UNIVERSES.some((u) => String(u.id) === p.uid),
     );
   } catch {
@@ -69,7 +69,7 @@ function loadPulls(): StoredPull[] {
 /* IDENTITY-SPEC §6 — the seal inks, straight from src/lib/palette.ts. `color`
    is the ink a tier's stamp prints in; `glow` is the ink pad's halo, built
    with color-mix so it stays a token expression rather than a literal. */
-export const RARITY_ACCENT: Record<Rarity, { color: string; glow: string }> = {
+export const TIER_ACCENT: Record<EditionTier, { color: string; glow: string }> = {
   common: { color: 'var(--ink)', glow: 'color-mix(in srgb, var(--ink) 32%, transparent)' },
   rare: { color: 'var(--water-ink)', glow: 'color-mix(in srgb, var(--water) 34%, transparent)' },
   epic: { color: 'var(--pink-ink)', glow: 'color-mix(in srgb, var(--pink) 34%, transparent)' },
@@ -92,7 +92,7 @@ export function usePullEngine() {
   const pityActive = stamps >= STAMP_SLOTS - 1;
   const bonusReached = stamps >= SET_BONUS_AT;
   const latestUid = pulls.length ? pulls[pulls.length - 1].uid : null;
-  const best = bestRarity(pulls);
+  const best = bestTier(pulls);
 
   useEffect(() => {
     try {
@@ -109,7 +109,7 @@ export function usePullEngine() {
     [stamps, secretUnlocked, wallet.connected],
   );
 
-  /** Normalised real pull probability per rarity (weight / pool total). */
+  /** Normalised real pull probability per tier (weight / pool total). */
   const oddsNorm = useMemo(() => {
     const total = odds.reduce((s, p) => s + p.weight, 0);
     return odds.map((p) => ({
@@ -131,13 +131,13 @@ export function usePullEngine() {
     const spin = window.setInterval(() => setSpinIdx((i) => (i + 1) % spinPool.length), 80);
     const finish = window.setTimeout(() => {
       window.clearInterval(spin);
-      const r = rollRarity(odds);
+      const r = rollTier(odds);
       const u = universeForPull(r);
       const mintNo = String(Math.floor(Math.random() * Math.max(1, u.supply)) + 1).padStart(3, '0');
       const reveal = () => {
         setResult({ u, r, mintNo });
         setPhase('done');
-        setPulls((p) => [...p, { uid: String(u.id), ts: Date.now(), rarity: r }]);
+        setPulls((p) => [...p, { uid: String(u.id), ts: Date.now(), tier: r }]);
         if (r === 'secret') setSecretUnlocked(true);
         setFlash((f) => f + 1);
       };
@@ -190,8 +190,8 @@ export function usePullEngine() {
 
 /* ------------------------------- helpers ------------------------------- */
 
-function bestRarity(pulls: StoredPull[]): Rarity {
-  const tier = Math.max(...pulls.map((p) => RARITY[p.rarity].tier), 0);
-  const r = (Object.keys(RARITY) as Rarity[]).find((k) => RARITY[k].tier === tier);
+function bestTier(pulls: StoredPull[]): EditionTier {
+  const tier = Math.max(...pulls.map((p) => TIERS[p.tier].tier), 0);
+  const r = (Object.keys(TIERS) as EditionTier[]).find((k) => TIERS[k].tier === tier);
   return r ?? 'common';
 }

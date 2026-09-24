@@ -3,15 +3,24 @@
    Every section renders from this single source of truth. Universe content is
    placeholder canon (the real OC's identity is the client's to supply); the
    structural mechanics — numbered universes, lore blurbs, artist credits,
-   rarity, supply, drop cadence, revenue split — follow the pitch exactly.
+   edition tier, supply, drop cadence, revenue split — follow the pitch exactly.
    ========================================================================== */
 
 export const BASE = import.meta.env.BASE_URL;
 export const art = (f: string) => `${BASE}art/${f}`;
 
-/* ------------------------------- RARITY ------------------------------- */
+/* ---------------------------- EDITION TIERS ----------------------------
 
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'secret';
+   IDENTITY-SPEC §6.1: the ladder is a PRINT SHOP's ladder, not a game's.
+   What used to be "rarity" is how an edition is produced and marked: open
+   runs, limited runs, numbered runs, artist proofs, cancelled plates. The
+   data keys survive (they are the mechanic's vocabulary in the pull engine)
+   and the machinery — weight, tier order, pity rule, set bonus — is
+   untouched; what changed is that every surface now names the edition the
+   way a printer would. `short` is the rail's chip form, `label` the plate's,
+   `treatment` says what the plate does differently. */
+
+export type EditionTier = 'common' | 'rare' | 'epic' | 'legendary' | 'secret';
 
 /* IDENTITY-SPEC §6 — tiers are TREATMENTS, not hues. The weight/tier logic
    below is unchanged (it drives the draw, the pity rule and the set bonus);
@@ -19,49 +28,54 @@ export type Rarity = 'common' | 'rare' | 'epic' | 'legendary' | 'secret';
    prints in — read straight off src/lib/palette.ts, so the ramp cannot drift
    from the rest of the design system — and `treatment` states what the plate
    does differently for that tier. */
-export const RARITY: Record<
-  Rarity,
-  { label: string; color: string; weight: number; tier: number; note: string; treatment: string }
+export const TIERS: Record<
+  EditionTier,
+  { label: string; short: string; color: string; weight: number; tier: number; note: string; treatment: string }
 > = {
   common: {
-    label: 'COMMON',
+    label: 'OPEN EDITION',
+    short: 'OPEN',
     color: 'var(--ink)',
     weight: 60,
     tier: 1,
     treatment: 'BLACK INK ON STOCK',
-    note: 'Open edition of the universe',
+    note: 'Unlimited run, printed to demand',
   },
   rare: {
-    label: 'RARE',
+    label: 'LIMITED RUN',
+    short: 'LIMITED',
     color: 'var(--water-ink)',
     weight: 26,
     tier: 2,
     treatment: 'WATER INK SEAL',
-    note: 'Includes variant colorway odds',
+    note: 'Shorter run; carries the colourway odds',
   },
   epic: {
-    label: 'EPIC',
+    label: 'NUMBERED RUN',
+    short: 'NUMBERED',
     color: 'var(--pink-ink)',
     weight: 9,
     tier: 3,
     treatment: 'PINK INK SEAL',
-    note: 'Lower supply, higher chase',
+    note: 'Numbered on the plate; the chase tier',
   },
   legendary: {
-    label: 'LEGENDARY',
+    label: 'ARTIST PROOF',
+    short: 'PROOF',
     color: 'var(--stamp)',
     weight: 3.5,
     tier: 4,
     treatment: 'MANILA STOCK · FOIL LINE',
-    note: 'Single-digit odds on most pulls',
+    note: 'Proofed before the run; single-digit odds',
   },
   secret: {
-    label: 'SECRET',
+    label: 'CANCELLED PLATE',
+    short: 'CANCELLED',
     color: 'var(--deep)',
     weight: 4,
     tier: 5,
     treatment: 'SEALED BLACKOUT',
-    note: 'Unannounced universe. Never commissioned.',
+    note: 'Plate struck through. Unannounced, never commissioned.',
   },
 };
 
@@ -85,7 +99,7 @@ export interface Universe {
   style: string;
   released: string; // ISO date
   status: 'sold-out' | 'live' | 'upcoming' | 'encrypted' | 'secret';
-  rarity: Rarity;
+  tier: EditionTier;
   supply: number;
   minted: number;
   price: number; // ETH on Base
@@ -203,7 +217,7 @@ export const UNIVERSES: Universe[] = [
     style: 'Baroque oil on canvas · chiaroscuro',
     released: '2026-02-14',
     status: 'sold-out',
-    rarity: 'common',
+    tier: 'common',
     supply: 200,
     minted: 200,
     price: 0.06,
@@ -222,7 +236,7 @@ export const UNIVERSES: Universe[] = [
     style: 'Ukiyo-e woodblock × cyberpunk neon',
     released: '2026-03-03',
     status: 'sold-out',
-    rarity: 'rare',
+    tier: 'rare',
     supply: 150,
     minted: 150,
     price: 0.09,
@@ -241,7 +255,7 @@ export const UNIVERSES: Universe[] = [
     style: 'Brutalist risograph collage',
     released: '2026-03-24',
     status: 'live',
-    rarity: 'common',
+    tier: 'common',
     supply: 200,
     minted: 168,
     price: 0.06,
@@ -260,7 +274,7 @@ export const UNIVERSES: Universe[] = [
     style: 'Vaporwave chrome · art-deco',
     released: '2026-04-11',
     status: 'live',
-    rarity: 'rare',
+    tier: 'rare',
     supply: 150,
     minted: 122,
     price: 0.09,
@@ -279,7 +293,7 @@ export const UNIVERSES: Universe[] = [
     style: 'Illuminated manuscript · gold leaf',
     released: '2026-05-02',
     status: 'live',
-    rarity: 'epic',
+    tier: 'epic',
     supply: 100,
     minted: 71,
     price: 0.14,
@@ -298,7 +312,7 @@ export const UNIVERSES: Universe[] = [
     style: 'Analog glitch · datamosh',
     released: '2026-05-23',
     status: 'live',
-    rarity: 'rare',
+    tier: 'rare',
     supply: 150,
     minted: 104,
     price: 0.09,
@@ -317,7 +331,7 @@ export const UNIVERSES: Universe[] = [
     style: 'Ethereal painterly fantasy',
     released: UNIVERSE_DROP_ISO,
     status: 'upcoming',
-    rarity: 'epic',
+    tier: 'epic',
     supply: 100,
     minted: 0,
     price: 0.14,
@@ -336,7 +350,7 @@ export const UNIVERSES: Universe[] = [
     style: '████████████',
     released: '2026-09-05',
     status: 'encrypted',
-    rarity: 'epic',
+    tier: 'epic',
     supply: 100,
     minted: 0,
     price: 0,
@@ -354,7 +368,7 @@ export const UNIVERSES: Universe[] = [
     style: 'Corrupted broadcast',
     released: '0000-00-00',
     status: 'secret',
-    rarity: 'secret',
+    tier: 'secret',
     supply: 1,
     minted: 0,
     price: 0,
@@ -632,34 +646,34 @@ export const STAMP_SLOTS = 8;
 export const SET_BONUS_AT = 6; // distinct universes needed for the "Golden Gate" set bonus
 
 export function pullOdds(opts: { stamps: number; secretUnlocked: boolean; holderBonus: boolean }) {
-  const pool: { rarity: Rarity; weight: number }[] = [];
+  const pool: { tier: EditionTier; weight: number }[] = [];
   const pity = opts.stamps >= STAMP_SLOTS - 1; // 8th stamp → guaranteed rare+
-  for (const r of Object.keys(RARITY) as Rarity[]) {
+  for (const r of Object.keys(TIERS) as EditionTier[]) {
     if (r === 'secret' && !opts.secretUnlocked) continue;
-    let w = RARITY[r].weight;
+    let w = TIERS[r].weight;
     if (pity && (r === 'common')) w = 0;
     if (pity && r === 'rare') w = 60;
     if (r === 'rare' && opts.holderBonus) w *= 1.1;
     if (r === 'secret' && opts.holderBonus) w *= 1.25;
     if (r === 'legendary' && pity) w = 9;
-    pool.push({ rarity: r, weight: w });
+    pool.push({ tier: r, weight: w });
   }
   return pool;
 }
 
-export function rollRarity(pool: { rarity: Rarity; weight: number }[]): Rarity {
+export function rollTier(pool: { tier: EditionTier; weight: number }[]): EditionTier {
   const total = pool.reduce((s, p) => s + p.weight, 0);
   let r = Math.random() * total;
   for (const p of pool) {
     r -= p.weight;
-    if (r <= 0) return p.rarity;
+    if (r <= 0) return p.tier;
   }
   return 'common';
 }
 
-export function universeForPull(rarity: Rarity): Universe {
+export function universeForPull(tier: EditionTier): Universe {
   const candidates = UNIVERSES.filter(
-    (u) => u.rarity === rarity && u.status !== 'encrypted' && u.status !== 'upcoming',
+    (u) => u.tier === tier && u.status !== 'encrypted' && u.status !== 'upcoming',
   );
   if (candidates.length === 0) {
     return UNIVERSES.filter((u) => u.status === 'live' || u.status === 'sold-out')[0];

@@ -19,8 +19,8 @@
    earned — and reduced motion simply shows the impression without the landing.
 ============================================================================ */
 
-import { RARITY, SET_BONUS_AT, STAMP_SLOTS, UNIVERSES } from '../../lib/data';
-import { RARITY_ACCENT } from './usePullEngine';
+import { TIERS, SET_BONUS_AT, STAMP_SLOTS, UNIVERSES } from '../../lib/data';
+import { TIER_ACCENT } from './usePullEngine';
 import CardImage from '../../components/CardImage';
 import { serialDigits } from '../../lib/serials';
 
@@ -128,7 +128,7 @@ interface SlotProps {
   index: number;
   filled: boolean;
   next: boolean;
-  universe?: { id: number; code: string; name: string; image: string; rarity: keyof typeof RARITY };
+  universe?: { id: number; code: string; name: string; image: string; tier: keyof typeof TIERS };
   isLatest: boolean;
 }
 
@@ -136,7 +136,7 @@ interface SlotProps {
 const ROT = [-6, 4, -3, 7, -5, 3, -7, 5];
 
 function StampSlot({ index, filled, next, universe, isLatest }: SlotProps) {
-  const accent = universe ? RARITY_ACCENT[universe.rarity] : null;
+  const accent = universe ? TIER_ACCENT[universe.tier] : null;
 
   const label = filled && universe
     ? `${universe.code} — ${universe.name} stamped`

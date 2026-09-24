@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useTilt } from './motion';
 import CardImage from './CardImage';
 import type { Universe } from '../lib/data';
-import { RARITY } from '../lib/data';
+import { TIERS } from '../lib/data';
 import { plateSerial } from '../lib/serials';
 
 /* ------------------------- Universe card -------------------------
@@ -12,7 +12,7 @@ import { plateSerial } from '../lib/serials';
 
    The card is a museum field-guide plate for one timeline: an ink-ruled
    specimen window holding the artwork, a catalogue strip that leads with the
-   EDITION SERIAL (never a rarity gem — §6.1), and a printed data band. The
+   EDITION SERIAL (never a tier gem — §6.1), and a printed data band. The
    tier is expressed as a seal and a treatment, not a colour.
 
    Depth model (2.5D, deliberately NOT preserve-3d — overflow:hidden on the
@@ -39,8 +39,8 @@ export default function UniverseCard({
    *  its layoutId to the panel (P3.13 — see the media wrapper). */
   lifted?: boolean;
 }) {
-  const rarity = RARITY[u.rarity];
-  const accent = rarity.color;
+  const tier = TIERS[u.tier];
+  const accent = tier.color;
   const soldPct = u.supply ? Math.round((u.minted / u.supply) * 100) : 0;
   const reduce = useReducedMotion();
   const tilt = useTilt<HTMLElement>({ maxDeg: 2.5, lift: -8, parallax: 5 });
@@ -57,8 +57,8 @@ export default function UniverseCard({
   return (
     <motion.article
       ref={tilt.ref}
-      className={`ucard plate plate--${u.rarity}`}
-      data-tier={u.rarity}
+      className={`ucard plate plate--${u.tier}`}
+      data-tier={u.tier}
       style={{
         '--card-accent': accent,
         '--a1': u.artist.hue[0],
@@ -97,7 +97,7 @@ export default function UniverseCard({
       <header className="ucard__catalogue">
         <span className="ucard__serial">{serial}</span>
         <span className="ucard__catalogue-rule" aria-hidden="true" />
-        <span className="ucard__tier">{rarity.label}</span>
+        <span className="ucard__tier">{tier.label}</span>
       </header>
 
       {/* P3.13 (audit 2.5) — the media plate is the SHARED ELEMENT: while the
@@ -156,9 +156,9 @@ export default function UniverseCard({
 
         {/* the seal — a stamp impression, not a glowing badge */}
         <motion.div className="ucard__seal" style={{ x: badgeX, y: badgeY }}>
-          <span className="seal" data-tier={u.rarity}>
+          <span className="seal" data-tier={u.tier}>
             <span className="seal__ring" aria-hidden="true" />
-            <span className="seal__label">{rarity.label}</span>
+            <span className="seal__label">{tier.label}</span>
             {u.status === 'upcoming' && <span className="seal__sub">NEXT DROP</span>}
           </span>
         </motion.div>

@@ -18,8 +18,8 @@
 import { useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { SectionHead } from '../../components/ui';
-import { RARITY, SET_BONUS_AT, STAMP_SLOTS } from '../../lib/data';
-import { RARITY_ACCENT, usePullEngine } from './usePullEngine';
+import { TIERS, SET_BONUS_AT, STAMP_SLOTS } from '../../lib/data';
+import { TIER_ACCENT, usePullEngine } from './usePullEngine';
 import ParticleField from './ParticleField';
 import StampPress from './StampPress';
 import { FreqLine } from './FreqLine';
@@ -90,15 +90,15 @@ export default function Pulls() {
                 </div>
                 <div className="press__cell">
                   <StatRoll
-                    value={engine.pulls.length ? RARITY[engine.best].tier : 0}
+                    value={engine.pulls.length ? TIERS[engine.best].tier : 0}
                     pad={2}
-                    color={engine.pulls.length ? RARITY_ACCENT[engine.best].color : undefined}
+                    color={engine.pulls.length ? TIER_ACCENT[engine.best].color : undefined}
                     className="press__num"
                   />
                   <span>
                     Best pull ·{' '}
-                    <b style={{ color: engine.pulls.length ? RARITY_ACCENT[engine.best].color : undefined }}>
-                      {engine.pulls.length ? RARITY[engine.best].label : 'UNSEALED'}
+                    <b style={{ color: engine.pulls.length ? TIER_ACCENT[engine.best].color : undefined }}>
+                      {engine.pulls.length ? TIERS[engine.best].label : 'UNSEALED'}
                     </b>
                   </span>
                 </div>
@@ -111,15 +111,15 @@ export default function Pulls() {
               {/* live odds as inked bars (replaces five shader gauges) */}
               <div className="odds" role="group" aria-label="Live pull probability">
                 {engine.odds.map((o) => (
-                  <div className="odds__row" key={o.rarity}>
-                    <span className="odds__label">{RARITY[o.rarity].label}</span>
+                  <div className="odds__row" key={o.tier}>
+                    <span className="odds__label">{TIERS[o.tier].short}</span>
                     <span className="odds__track">
                       <i
                         className="odds__fill"
                         style={
                           {
                             '--w': `${Math.min(100, o.pct)}%`,
-                            '--ink-color': RARITY_ACCENT[o.rarity].color,
+                            '--ink-color': TIER_ACCENT[o.tier].color,
                           } as React.CSSProperties
                         }
                       />
