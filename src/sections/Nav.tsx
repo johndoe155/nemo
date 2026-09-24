@@ -6,14 +6,14 @@ import { useFocusTrap, useScrollspy } from '../lib/hooks';
 import { lockPage, unlockPage } from '../lib/scroll';
 import { LOGO_SRC } from '../lib/assets';
 
+/* IDENTITY-SPEC §2.2 — seven beats, six nav anchors (the trench finale is
+   reached by scrolling, never by link). The rotunda died with §7. */
 const LINKS = [
-  { n: '01', label: 'NEMOVERSE', href: '#nemoverse' },
-  { n: '02', label: 'THE ROTUNDA', href: '#rotunda' },
-  { n: '03', label: 'THE PERSONA', href: '#persona' },
-  { n: '04', label: 'HOLDER PERKS', href: '#perks' },
-  { n: '05', label: 'POP PULLS', href: '#pulls' },
-  { n: '06', label: 'STORE', href: '#store' },
-  { n: '07', label: 'ARTISTS', href: '#artists' },
+  { n: '01', label: 'REGISTRY', href: '#nemoverse' },
+  { n: '02', label: 'STAMP BOOK', href: '#pulls' },
+  { n: '03', label: 'PERSONA', href: '#persona' },
+  { n: '04', label: 'HOLDERS', href: '#perks' },
+  { n: '05', label: 'CANON', href: '#artists' },
 ];
 
 const SECTION_IDS = LINKS.map((l) => l.href.slice(1));

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Reveal, SectionHead, toast, useMockWallet } from '../components/ui';
+import { Reveal, toast, useMockWallet } from '../components/ui';
 import { KineticButton, useTilt } from '../components/motion';
 import CardImage from '../components/CardImage';
 import type { Product } from '../lib/data';
@@ -124,24 +124,12 @@ export default function Store() {
   const [heroProduct, ...stack] = PRODUCTS;
 
   return (
-    <section className="section store section--tall" id="store">
+    <div className="store" id="store">
       <div className="shell">
-        <SectionHead
-          num="06"
-          kicker="06 · DIRECT SHOPIFY INTEGRATION"
-          title={
-            <>
-              The <span className="txt-grad">storefront</span>, wired into the Nemoverse
-            </>
-          }
-          sub={
-            <>
-              Featured products from the Shopify store. Holder discounts are auto-applied at
-              checkout; gated SKUs unlock by trait tier; every order ships with a Proof-of-Purchase
-              pull.
-            </>
-          }
-        />
+        <header className="part-head">
+          <span className="part-head__kicker">DIRECT SHOPIFY INTEGRATION</span>
+          <h3 className="part-head__title">The storefront, wired in</h3>
+        </header>
 
         <div className="store__mag">
           <ProductCard p={heroProduct} wallet={wallet} hero />
@@ -159,6 +147,6 @@ export default function Store() {
           </p>
         </Reveal>
       </div>
-    </section>
+    </div>
   );
 }

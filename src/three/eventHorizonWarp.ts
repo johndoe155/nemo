@@ -1,4 +1,13 @@
-import { flatSimulationConfig } from './blackhole/blackhole.config.js';
+/* IDENTITY-SPEC §7 — decoupled from the retired vendored blackhole config.
+   The warp keeps its own three scalars now, re-read as vortex parameters:
+   mass = mouth pull, lensing = refraction bend, stepSize = ray march budget.
+   Values carried over verbatim so the signoff geometry suite's expectations
+   hold unchanged (SPEC §10: geometry assertions stay). */
+const flatSimulationConfig = {
+  blackHoleMass: 0.4,
+  gravitationalLensing: 2.4,
+  stepSize: 1,
+} as const;
 import {
   EFFECTIVE_HORIZON_RADIUS_PX,
   TIDAL_CAP,

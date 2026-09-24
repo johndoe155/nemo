@@ -1,10 +1,8 @@
-import { Component, useEffect, type CSSProperties, type ReactNode } from 'react';
+import { Component, type CSSProperties, type ReactNode } from 'react';
 import Nav from './sections/Nav';
 import Hero from './sections/Hero';
 import Nemoverse from './sections/Nemoverse';
-import Gallery from './sections/Gallery';
 import Persona from './sections/Persona';
-import Perks from './sections/Perks';
 // 04 · PILLAR 3 is statically imported like every other section. It was
 // previously lazy-loaded, but a failed or stalled dynamic import on reload
 // (notably on mobile after leaving and reopening the browser) left the
@@ -13,13 +11,12 @@ import Perks from './sections/Perks';
 // bundle so it always mounts; the boundary below is a second safety net for
 // any runtime render error.
 import Pulls from './sections/pulls/Pulls';
-import Store from './sections/Store';
-import Artists from './sections/Artists';
-import Lore from './sections/Lore';
+import Holder from './sections/Holder';
+import Canon from './sections/Canon';
 import Singularity from './sections/Singularity';
 import Footer from './sections/Footer';
 import CrawlRise from './components/CrawlRise';
-import { Marquee, Starfield, ToastHost } from './components/ui';
+import { Marquee, ToastHost } from './components/ui';
 import Ambience from './components/Ambience';
 import FloorState from './components/FloorState';
 // The boot sequence — the typographic morph. Renders above everything for one
@@ -28,11 +25,9 @@ import Loader from './components/Loader';
 import ScrollProgress from './components/ScrollProgress';
 import SideRail from './components/SideRail';
 import SoundToggle from './components/SoundToggle';
-import VelocityFX from './components/VelocityFX';
 import { CustomCursor } from './components/Cursor';
 import { KineticButton, useCursorGlow } from './components/motion';
-import { SingularityProvider, useMediaQuery } from './lib/singularityGate';
-import { preloadPersonaPoints } from './lib/personaPoints';
+import { SingularityProvider } from './lib/singularityGate';
 import { UNIVERSES, ARTISTS } from './lib/data';
 
 /* ---------------------------------------------------------------------------
@@ -81,18 +76,6 @@ class SectionBoundary extends Component<{ children: ReactNode }, { failed: boole
 }
 
 export default function App() {
-  const hasDesktopPersona = useMediaQuery('(min-width: 981px)');
-
-  // Start the lightweight silhouette request at app mount, well before Section
-  // 02 approaches the viewport. The singleton guarantees the lazy stage reads
-  // this same request; the desktop query guarantees mobile pays nothing.
-  useEffect(() => {
-    if (!hasDesktopPersona) return;
-    void preloadPersonaPoints().catch((error: unknown) => {
-      console.error('[persona-model] point preview failed to preload:', error);
-    });
-  }, [hasDesktopPersona]);
-
   /* Delegated cursor→bloom tracking: writes --mx/--my onto whichever
      interactive control is hovered (buttons, chips, cards, sheen surfaces)
      so every glow layer is cursor-anchored. One passive listener, rAF-batched,
@@ -108,10 +91,8 @@ export default function App() {
       <ScrollProgress />
       <CustomCursor />
       <SideRail />
-      <VelocityFX />
       <SoundToggle />
       <div className="grain" aria-hidden="true" />
-      <Starfield className="starfield" />
       <Ambience />
       <FloorState />
 
@@ -132,15 +113,12 @@ export default function App() {
         {/* 3D rotunda — the same canon as the roster above, hung on a sphere
             you can spin. Placed here so the registry (specs) is read first
             and the art (plates) lands immediately after. */}
-        <Gallery />
         <Persona />
-        <Perks />
         <SectionBoundary>
           <Pulls />
         </SectionBoundary>
-        <Store />
-        <Artists />
-        <Lore />
+        <Holder />
+        <Canon />
         {/* The closing credit crawl — moved above the Singularity so it is
             completely unaffected by the black hole warping effect. P3.12
             (audit 2.4): wrapped in the scrubbed clip-rise — the credits
