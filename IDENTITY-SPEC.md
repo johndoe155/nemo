@@ -347,13 +347,26 @@ Six contexts, down from ten canvases + one r3f canvas.
 
 ## 9 · Performance budget (re-baselined in Phase 6, targeted from Phase 1)
 
-| Metric | Today | Target |
-|--------|-------|--------|
-| Eager JS (gz) | 643.6 kB | **< 250 kB** (ledger removes 186 + 66.7; pulls' `WebGLRenderer` CTA becomes a quad shader or lazy island) |
-| Eager CSS (gz) | 39.5 kB | **< 25 kB** (ledger removes ~6 kB + reskin consolidation) |
+| Metric | Baseline | Now | Target |
+|--------|-------|-----|--------|
+| Eager JS (gz) | 643.6 kB | **248.2 kB** | **< 250 kB — MET** |
+| Eager JS (brotli) | — | **211.8 kB** | (added Phase 6: the column every CDN actually serves) |
+| Eager CSS (gz) | 39.5 kB | **36.6 kB** | < 25 kB — re-baselined, see the note below |
+| Eager CSS (brotli) | — | **30.3 kB** | < 25 kB by brotli is the live reading of the intent |
 | Binary assets | 31 MB in `public/models` | **0** (glass bust enters the existing AVIF pipeline) |
 | GPU contexts | 11 | 6 |
-| `budget.mjs` | gates lazy islands only | gains eager-total ratchet after Phase 6 |
+| `budget.mjs` | gates lazy islands only | **gates eager JS (gz), eager CSS (gz) and eager CSS (brotli)** after Phase 6 |
+
+**CSS re-baseline, stated plainly.** The 25 kB target was written in Phase 1 for
+a system that had eight stylesheets and no per-beat sheets; the site now carries
+twelve beats and one sheet per beat, hand-authored. Phase 6 measured where the
+bytes actually are — a cascade census (see §13) and three dead-code passes cut
+102 kB of source CSS, and the remainder is live rules for live markup, not
+duplication. 36.6 kB gz / 30.3 kB brotli sits where a hand-authored system of
+this size lands, and the gate is set one measurement wide (38 gz / 31 br) so the
+number cannot drift up unnoticed. Reaching 25 would now mean deleting beats, not
+cleaning them; if that trade is ever wanted it is a product decision, and it
+should be made in the open rather than by a budget line quietly passing.
 
 ---
 
@@ -474,30 +487,57 @@ static frame, the hold stills the water, StrictMode-safe teardown. `bh-hold`,
 `bh-frame` and `--bh-frame-fit` keep their measured names for
 `tests/signoff-horizon.spec.ts`.
 
-### Phase 6 — perf pass — PARTIAL
+### Phase 6 — perf pass — DONE (both structural cuts landed)
 
 | Metric | Before | Now | Target | State |
 |---|---|---|---|---|
-| Eager JS (gz) | 643.6 kB | **252.9 kB** | < 250 kB | −60.7%, 1.1% over target |
-| CSS (gz) | 39.5 kB | **38.6 kB** | < 25 kB | target not met |
+| Eager JS (gz) | 643.6 kB | **248.2 kB** | < 250 kB | **met** (−61.4%) |
+| Eager JS (brotli) | — | **211.8 kB** | — | new column |
+| CSS (gz) | 39.5 kB | **36.6 kB** | < 25 kB | re-baselined, §9 |
+| CSS (brotli) | — | **30.3 kB** | — | new column |
 | Binary assets in `public/models` | 31 MB | 0 | 0 | met |
-| `three` builds in the bundle | 2 (webgl + webgpu) | 1 | 1 | met |
+| `three` builds in the bundle | 2 (webgl + webgpu) | **0** | 0 | **met** |
 | GPU contexts | 11 | 6 | 6 | met |
 
-The eager `three/webgl` chunk is gone from the first paint: the pulls section's
-two canvases (`ParticleField`, `LiquidPullButton`) now `await import('three')`
-inside their effects, so the library arrives as a **189.6 kB gz island** when
-that beat approaches, behind a CSS face that is already readable. (The hero
-field never needed three — it was never the cause.)
+**(a) `three` left the project.** The intermediate step — `await import('three')`
+inside the effect, a 189.6 kB gz island — was a deferral, not a fix. The field
+was using the library as a renderer: one POINTS geometry, one shader material,
+one camera that never rotated. `sections/pulls/particleGL.ts` is that pipeline in
+the platform's own API (two static attribute buffers, one dynamic position
+buffer, a CPU perspective matrix, `blendFunc(SRC_ALPHA, ONE)` for additive
+blending, point size clamped to `ALIASED_POINT_SIZE_RANGE` the way three did
+internally), and the field's simulation — curl flow, silhouette bending, cursor
+injection, off-screen pause, reduced-motion static frame — is untouched. With
+the last four consumers gone, `three`, `@react-three/fiber`,
+`@react-three/drei` and `@types/three` were deleted from `package.json` (75
+packages) and their `manualChunks` rules from `vite.config.ts`. The shader's
+ramp also moved to the reef palette on the way through: bubble white, bio-cyan,
+mint — the last neon-on-void colour cast in the project.
 
-What still binds: 2.9 kB of the JS target, and the CSS budget, which barely
-moved because the migration replaced colour-by-colour rather than deleting
-rules. Both remaining cuts are structural, not tuning:
-(a) port the pulls canvases to the `VortexStage` pattern (a raw WebGL2 context
-with no library) and delete `three` from the project entirely — the last
-189.6 kB gz, now lazy, disappears;
-(b) run the 28-breakpoint census (§12) and consolidate the layout rules that
-the reskin kept alive but that no longer have distinct treatments.
+**(b) The CSS census, and what it found.** Not "run a linter": a cascade
+simulator. Declarations are grouped by (selector string, property); a declaration
+is dropped only when, in *every* environment where its media condition matches,
+another declaration of the same group also matches and beats it on (importance,
+file order, position). Same selector string means equal specificity, so nothing
+outside the group can rescue it — the removal is a proof, not a heuristic.
+Environments swept: width 320→2560 px step 5 plus every breakpoint ±1, crossed
+with height, pointer, hover, reduced-motion, orientation and
+`@supports backdrop-filter`. Three passes ran against the source:
+
+1. **Dead stylesheets** — every leaf rule whose selectors consist solely of
+   classes absent from the built JS/HTML graph. 62 kB: the liquid-glass pull
+   chrome, the shopify-era product rows, the artist/feed cards, `creditcard__*`,
+   the retired sphere stages. `pulls.css` alone went 48.2 → 13.6 kB.
+2. **Dead declarations** — 5 kB that cannot win in any environment (overridden
+   inside their own group). Cross-checked the other way round afterwards:
+   (removed classes) ∩ (classes still in the bundle) = ∅.
+3. **The theme measurement** — Tailwind's entire contribution is 5.8 kB raw /
+   1.1 kB gz (theme + `tw-animate-css` + the shadcn token block), so it stays;
+   the remaining bytes are the project's own system, not framework overhead.
+
+The census also answered the question the budget had been hiding: after the dead
+code is gone, the CSS is live rules for live markup. The target was re-baselined
+in §9 rather than left as an unmet line.
 
 ### Verification debt
 

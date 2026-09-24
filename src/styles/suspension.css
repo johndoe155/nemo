@@ -84,7 +84,6 @@
 .mrail__track {
   display: flex;
   align-items: flex-start;
-  gap: 1.3rem;
   /* padding-top puts the hangers' pivots exactly on the rod line; the bottom
      pad is swing clearance so a rotating card is never clipped. */
   padding: var(--rod-y) var(--gutter) 2.6rem;
@@ -114,7 +113,6 @@
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  margin-top: 0.4rem;
   font-family: var(--font-mono);
   font-size: var(--fs-meta-mobile);
   letter-spacing: 0.3em;
@@ -140,7 +138,6 @@
 }
 
 .hangrod__bar {
-  position: absolute;
   inset: 0;
   border-radius: var(--r-pill);
   /* Machined-metal read: specular top, core body, contact shadow underneath —
@@ -173,13 +170,7 @@
 .hangrod__mount {
   position: absolute;
   top: 50%;
-  width: 14px;
-  height: 26px;
   translate: 0 -50%;
-  border-radius: var(--r-xs);
-  background: linear-gradient(180deg, rgba(12, 11, 14, 0.158), rgba(12, 11, 14, 0.036));
-  border: 1px solid var(--line-strong);
-  box-shadow: var(--elev-rest);
 }
 .hangrod__mount--l {
   left: calc(var(--gutter) * 0.35);
@@ -189,8 +180,6 @@
 }
 @media (max-width: 860px) {
   .hangrod__mount {
-    width: 10px;
-    height: 20px;
   }
 }
 

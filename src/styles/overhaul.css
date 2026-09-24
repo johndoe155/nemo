@@ -77,7 +77,6 @@
 }
 .sechead--center .sechead__num { right: auto; left: 50%; transform: translateX(-50%); }
 .sechead__num.gold-num {
-  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--gold) 40%, transparent);
   text-shadow: 0 8px 36px color-mix(in srgb, var(--gold) 29%, transparent);
 }
 
@@ -250,8 +249,6 @@ html[data-scene='trench'] {
 }
 .cursor-glow {
   width: 110px; height: 110px;
-  background: radial-gradient(circle, color-mix(in srgb, var(--iris) 46%, transparent), color-mix(in srgb, var(--cyan) 9%, transparent) 65%);
-  mix-blend-mode: screen;
   opacity: 0.7;
 }
 .cursor-dot[data-hover='true'] {
@@ -269,10 +266,7 @@ html[data-scene='trench'] {
   font-weight: 700;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--void);
-  background: var(--cyan);
   padding: 0.35rem 0.7rem;
-  border-radius: 999px;
   white-space: nowrap;
 }
 
@@ -301,7 +295,6 @@ html[data-scene='trench'] {
 
 .nav__link { position: relative; }
 .nav__link.active {
-  color: var(--ink);
   background: color-mix(in srgb, var(--cyan) 9%, transparent);
 }
 .nav__link.active .num { color: var(--cyan); }
@@ -310,7 +303,6 @@ html[data-scene='trench'] {
   position: absolute;
   left: 0.85rem; right: 0.85rem; bottom: 0.28rem;
   height: 1px;
-  background: linear-gradient(90deg, var(--cyan), var(--magenta));
   background-size: 260% 100%;
   animation: gdrift 9s ease-in-out infinite;
   transform: scaleX(0);
@@ -353,11 +345,6 @@ html[data-scene='trench'] {
 }
 .roster__arrow {
   position: relative;
-  width: 46px; height: 46px;
-  border-radius: 12px;
-  border: 1px solid var(--line-strong);
-  background: rgba(5, 5, 10, 0.6);
-  color: var(--ink);
   overflow: hidden; /* masks the arrow travel track */
   display: grid;
   place-items: center;
@@ -391,9 +378,9 @@ html[data-scene='trench'] {
 .roster__arrow:hover:not(:disabled) {
   border-color: var(--cyan);
   color: var(--cyan);
-  background: color-mix(in srgb, var(--cyan) 9%, transparent);
 }
-.roster__arrow:disabled { opacity: 0.3; cursor: default; }
+.roster__arrow:disabled {
+  cursor: default; }
 
 .roster__minimap {
   position: absolute;
@@ -417,16 +404,8 @@ html[data-scene='trench'] {
   border-radius: 4px;
 }
 .roster__minimap button::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 2px;
-  width: 13px;
-  height: 25px;
   border-radius: 3px;
   border: 1px solid var(--line-strong);
-  background: rgba(12, 11, 14, 0.03);
-  transform: translateX(-50%) scaleY(1);
   transform-origin: bottom;
   transition: transform 0.35s var(--ease-expo), border-color 0.3s var(--ease-expo),
     background-color 0.3s var(--ease-expo);
@@ -438,23 +417,20 @@ html[data-scene='trench'] {
 .roster__minimap button.active::before {
   transform: translateX(-50%) scaleY(1.32); /* ≈ the old 26 → 34px grow */
   border-color: var(--cyan);
-  background: color-mix(in srgb, var(--cyan) 14%, transparent);
 }
 .roster__minimap button span {
   position: absolute;
   left: 50%;
   bottom: 7px;
   font-family: var(--font-mono);
-  font-size: 0.46rem;
   letter-spacing: 0.1em;
-  color: var(--ink-faint);
   transform: translateX(-50%) rotate(-90deg);
   transform-origin: center;
   white-space: nowrap;
   pointer-events: none;
   transition: color 0.3s var(--ease-expo);
 }
-.roster__minimap button.active span { color: var(--cyan); }
+.roster__minimap button.active span
 
 /* Giant index numeral watermark on each card */
 .ucard { position: relative; }
@@ -927,7 +903,8 @@ html[data-scene='trench'] {
   border-left: 1px solid var(--line-strong);
   padding-left: 1rem;
 }
-.hero__telemetry b { color: var(--cyan); font-weight: 700; }
+.hero__telemetry b {
+  font-weight: 700; }
 @media (max-width: 900px) {
   .hero__telemetry { display: none; }
 }
@@ -1235,12 +1212,6 @@ html[data-scene='trench'] {
 }
 
 .hero__badge:hover, .hero__badge:focus-visible, .hero__marquee:hover, .hero__marquee:focus-visible, .hero__marquee.is-paused {
-  background: rgba(12, 11, 14, 0.054);
-  color: rgba(12, 11, 14, 0.675);
-  box-shadow:
-    inset 0 1px 0 rgba(12, 11, 14, 0.101),
-    inset 0 0 0 1px rgba(12, 11, 14, 0.043),
-    0 22px 54px -26px rgba(0, 0, 0, 0.9);
   outline: none;
 }
 
@@ -1481,7 +1452,6 @@ html[data-scene='trench'] {
   100% { transform: scale(1.28); opacity: 0; }
 }
 
-
 /* ============================================================================
    CURTAIN REVEAL FOOTER — bright threshold / silent luxury layer
    ============================================================================ */
@@ -1623,7 +1593,6 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
    at which point FloorState measures it, finds it taller than the viewport and
    leaves the reveal disarmed. Old browser, plain footer, nothing broken. */
 .curtain-footer__topline {
-  padding-block: 1.3rem;
   padding-block: clamp(0.4rem, 1.6dvh, 1.3rem);
   border-bottom: 1px solid var(--curtain-line);
 }
@@ -1633,7 +1602,6 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
   grid-template-columns: minmax(0, 1.35fr) minmax(15rem, 0.65fr);
   gap: clamp(2rem, 8vw, 10rem);
   align-items: end;
-  padding-block: clamp(5rem, 11vw, 11rem) clamp(4rem, 8vw, 8rem);
   padding-block: clamp(1.2rem, 4.5dvh, 11rem) clamp(1rem, 3.2dvh, 8rem);
 }
 
@@ -1647,7 +1615,6 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
 }
 
 .curtain-footer__eyebrow {
-  margin-bottom: 1.5rem;
   margin-bottom: clamp(0.45rem, 1.6dvh, 1.5rem);
   color: var(--curtain-accent);
 }
@@ -1655,7 +1622,6 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
 .curtain-footer__heading {
   max-width: 9ch;
   font-family: var(--font-display);
-  font-size: clamp(3.8rem, 11.5vw, 12rem);
   font-size: min(clamp(2.2rem, 11.5vw, 12rem), 10dvh);
   font-weight: 800;
   letter-spacing: -0.075em;
@@ -1679,7 +1645,6 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
 .curtain-footer__statement p, .curtain-footer__prose {
   color: var(--curtain-muted);
   font-family: var(--font-body-text);
-  font-size: 0.98rem;
   font-size: clamp(0.82rem, 2.6dvh, 0.98rem);
   line-height: 1.55;
 }
@@ -1688,9 +1653,7 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
   display: inline-flex;
   align-items: center;
   gap: 1.1rem;
-  margin-top: 2.2rem;
   margin-top: clamp(0.7rem, 2.8dvh, 2.2rem);
-  padding-block: 0.8rem;
   padding-block: clamp(0.35rem, 1.1dvh, 0.8rem);
   border-bottom: 1px solid var(--curtain-ink);
   font-family: var(--font-accent);
@@ -1707,9 +1670,7 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
 .curtain-footer__grid {
   display: grid;
   grid-template-columns: minmax(13rem, 1.5fr) repeat(3, minmax(0, 1fr));
-  gap: clamp(2rem, 5vw, 5rem);
   gap: clamp(1rem, 3.4dvh, 2.6rem) clamp(1.5rem, 5vw, 5rem);
-  padding-block: 2.5rem clamp(4rem, 8vw, 8rem);
   padding-block: clamp(0.6rem, 2dvh, 2.5rem) clamp(0.8rem, 3dvh, 8rem);
   border-top: 1px solid var(--curtain-line);
 }
@@ -1720,7 +1681,6 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
 
 .curtain-footer__identity .footer__brand {
   color: var(--curtain-ink);
-  margin-bottom: 1.8rem;
   margin-bottom: clamp(0.5rem, 2dvh, 1.8rem);
 }
 
@@ -1729,7 +1689,6 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
 }
 
 .curtain-footer__meta {
-  margin-top: 1.4rem;
   margin-top: clamp(0.45rem, 1.6dvh, 1.4rem);
   color: var(--curtain-muted);
   font-size: 0.58rem;
@@ -1739,7 +1698,6 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
 .curtain-footer__label {
   display: flex;
   gap: 0.75rem;
-  margin-bottom: 1.35rem;
   margin-bottom: clamp(0.45rem, 1.7dvh, 1.35rem);
 }
 
@@ -1752,13 +1710,11 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
   width: fit-content;
   color: var(--curtain-ink);
   font-family: var(--font-heading);
-  font-size: clamp(1rem, 1rem + 0.25vw, 1.25rem);
   font-size: min(clamp(0.86rem, 1rem + 0.25vw, 1.25rem), 3dvh);
   line-height: 1.45;
 }
 
 .footer-mask-link + .footer-mask-link {
-  margin-top: 0.35rem;
   margin-top: clamp(0.08rem, 0.5dvh, 0.35rem);
 }
 
@@ -1794,13 +1750,11 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
 }
 
 .footer-social + .footer-social {
-  margin-top: 0.8rem;
   margin-top: clamp(0.25rem, 1.1dvh, 0.8rem);
 }
 
 .footer-social__label {
   font-family: var(--font-heading);
-  font-size: clamp(1rem, 1rem + 0.25vw, 1.25rem);
   font-size: min(clamp(0.86rem, 1rem + 0.25vw, 1.25rem), 3dvh);
   white-space: nowrap;
 }
@@ -1822,7 +1776,6 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
   padding-inline: 0.02em;
   color: var(--curtain-ink);
   font-family: var(--font-display);
-  font-size: clamp(7.4rem, 29vw, 34rem);
   font-size: min(clamp(3.4rem, 29vw, 34rem), 22dvh);
   font-weight: 800;
   letter-spacing: -0.1em;
@@ -1833,7 +1786,6 @@ html.at-floor .ambience, html.at-floor .starfield, html.at-floor .nav, html.at-f
 }
 
 .curtain-footer__ribbon {
-  padding-block: 1.4rem;
   padding-block: clamp(0.4rem, 1.6dvh, 1.4rem);
   border-top: 1px solid var(--curtain-line);
   color: var(--curtain-muted);

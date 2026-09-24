@@ -249,14 +249,6 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(
-      180deg,
-      rgba(5, 5, 10, 0.75) 0%,
-      rgba(5, 5, 10, 0.42) 38%,
-      rgba(5, 5, 10, 0.55) 68%,
-      var(--void) 100%
-    ),
-    linear-gradient(90deg, rgba(5, 5, 10, 0.55), transparent 60%);
 }
 .hero__scanlines {
   position: absolute;
@@ -310,12 +302,8 @@
   }
 }
 .hero__line {
-  display: block;
-  overflow: hidden;
 }
-.hero__title .line {
-  overflow: visible;
-}
+.hero__title .line
 .hero__title {
   font-size: var(--fs-h1);
   margin-bottom: 0.4rem;
@@ -340,20 +328,9 @@
   color: var(--cyan);
 }
 .hero__lede {
-  max-width: 44rem;
-  color: var(--ink-dim);
-  font-size: var(--fs-lead);
   margin-bottom: 2.6rem;
 }
 .hero__lede em {
-  color: var(--ink);
-  font-style: normal;
-  font-weight: 600;
-  background: none;
-  background-color: transparent;
-  padding: 0;
-  border: none;
-  border-radius: 0;
 }
 .hero__ctas {
   display: flex;
@@ -367,7 +344,6 @@
   font-size: 0.7rem;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--ink-faint);
   display: flex;
   align-items: center;
   gap: 0.7rem;
@@ -396,11 +372,6 @@
   z-index: 3;
 }
 .hero__progress i {
-  display: block;
-  height: 100%;
-  background: var(--grad-primary);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--cyan) 92%, transparent);
-  transform-origin: left;
 }
 
 /* ============================== TICKER ============================== */
@@ -432,23 +403,14 @@
   margin-bottom: 2.6rem;
 }
 .mv__stats {
-  display: flex;
-  gap: 2.2rem;
   flex-wrap: wrap;
 }
 .mv__stat b {
-  font-family: var(--font-display);
-  font-weight: 800;
   font-size: clamp(1.4rem, 1rem + 1.8vw, 2.3rem);
   display: block;
   line-height: 1;
 }
 .mv__stat span {
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
 }
 .mv__filters {
   display: flex;
@@ -473,7 +435,6 @@
 .roster__rail {
   display: flex;
   gap: clamp(1.2rem, 3vw, 2.4rem);
-  align-items: center;
   padding-inline: var(--gutter);
   width: max-content;
   will-change: transform;
@@ -676,12 +637,6 @@
   padding: 14px 2px 8px;
 }
 .ucard__name {
-  font-family: var(--font-display);
-  font-weight: 800;
-  text-transform: uppercase;
-  font-size: 1.06rem;
-  line-height: 1.2;
-  letter-spacing: 0.01em;
   margin-bottom: 0.25rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -690,32 +645,18 @@
   min-height: 2.55em;
 }
 .ucard__world {
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--card-accent, var(--cyan));
   margin-bottom: 0.7rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 .ucard__world::before {
-  content: '';
   width: 14px;
   height: 1px;
   background: var(--card-accent, var(--cyan));
-  opacity: 0.7;
 }
 .ucard__lore {
-  font-size: 0.88rem;
-  color: var(--ink-dim);
-  line-height: 1.6;
   margin-bottom: 0.85rem;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   min-height: 4.2em;
 }
 .ucard__artist .ava {
@@ -796,7 +737,6 @@
   max-height: 92vh;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border-radius: var(--r-xl);
   background:
     var(--noise) padding-box,
     linear-gradient(170deg, rgba(20, 20, 34, 0.96), rgba(8, 8, 16, 0.98)) padding-box,
@@ -807,10 +747,6 @@
         color-mix(in srgb, var(--card-accent, var(--iris)) 60%, transparent)
       )
       border-box;
-  background-size: 180px 180px, 100% 100%, 100% 100%;
-  background-blend-mode: overlay, normal, normal;
-  border: 1px solid transparent;
-  box-shadow: 0 60px 140px -40px rgba(0, 0, 0, 0.9), 0 0 120px -50px var(--card-accent, var(--iris));
 }
 .dialog__close {
   position: absolute;
@@ -819,10 +755,6 @@
   z-index: 5;
   width: 48px; /* was 42 — AAA target floor */
   height: 48px;
-  border-radius: 12px;
-  border: 1px solid var(--line-strong);
-  background: rgba(5, 5, 10, 0.6);
-  color: var(--ink);
   font-size: 1.05rem;
   display: grid;
   place-items: center;
@@ -844,8 +776,6 @@
 }
 .dialog__close:hover {
   border-color: var(--magenta);
-  color: var(--magenta);
-  transform: rotate(90deg);
 }
 .dialog__close:hover::before {
   opacity: 1;
@@ -859,7 +789,6 @@
 .dialog__media {
   position: relative;
   min-height: 100%;
-  overflow: hidden;
 }
 .dialog__media-parallax {
   position: absolute;
@@ -890,10 +819,7 @@
   gap: 1.1rem;
 }
 .dialog__code {
-  font-family: var(--font-mono);
   font-size: 0.72rem;
-  letter-spacing: 0.3em;
-  color: var(--card-accent, var(--cyan));
   display: flex;
   gap: 0.8rem;
   align-items: center;
@@ -905,22 +831,13 @@
   background: currentColor;
 }
 .dialog__name {
-  font-family: var(--font-display);
-  font-weight: 800;
-  text-transform: uppercase;
   font-size: clamp(1.5rem, 1rem + 2vw, 2.4rem);
   line-height: 1.08;
 }
 .dialog__world {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
   margin-top: -0.6rem;
 }
 .dialog__lore {
-  color: var(--ink-dim);
   font-size: 1rem;
   line-height: 1.75;
 }
@@ -940,11 +857,7 @@
   gap: 0.15rem;
 }
 .dialog__spec span {
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--ink-faint);
 }
 .dialog__spec b {
   font-family: var(--font-mono);
@@ -958,10 +871,6 @@
   display: flex;
   align-items: center;
   gap: 0.9rem;
-  background: rgba(12, 11, 14, 0.03);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 0.9rem 1rem;
 }
 .dialog__artist .ava {
   width: 44px;
@@ -972,8 +881,6 @@
   place-items: center;
   font-family: var(--font-mono);
   font-weight: 700;
-  color: var(--paper-3);
-  background: linear-gradient(135deg, var(--a1, #fff), var(--a2, #888));
   background-size: 240% 240%;
   animation: gdrift 11s ease-in-out infinite;
 }
@@ -982,17 +889,13 @@
   font-size: 0.95rem;
 }
 .dialog__artist .who span {
-  font-family: var(--font-mono);
   font-size: 0.64rem;
   letter-spacing: 0.16em;
-  color: var(--ink-faint);
   text-transform: uppercase;
 }
 .dialog__artist .quote {
   margin-left: auto;
-  font-style: italic;
   font-size: 0.85rem;
-  color: var(--ink-dim);
   max-width: 46%;
   text-align: right;
 }
@@ -1001,7 +904,6 @@
   font-size: 0.66rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--ink-faint);
   display: flex;
   gap: 0.6rem;
   align-items: center;
