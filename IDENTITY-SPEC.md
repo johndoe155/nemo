@@ -1,6 +1,8 @@
 # NEMOVERSE IDENTITY SPEC — v0.1
 
-**Status:** PLANNING · no code changes authorised by this document
+**Status:** v0.1 SIGNED OFF · phases 0–2 executed; 3–6 executed to the extent
+recorded in §13 (execution log). The remaining deltas are listed there, not
+implied.
 **Branch:** `arena/01a0d4bc-nemo`
 **Owner:** Lead Creative Technologist
 **Supersedes:** the visual direction described in `src/styles/global.css`'s header block
@@ -400,3 +402,100 @@ phase's deletions are uncommitted.
    dump grounds.
 5. **The glass ration will be violated by accident.** It is a review rule, not a
    lint rule; it goes in the PR checklist for Phases 4–5.
+
+---
+
+## 13 · Execution log (2026-09-24)
+
+Branch `arena/01a0d4bc-nemo`. Every claim below is verifiable in git history or
+by the gate named beside it.
+
+### Phase 1 — deletion & merge ledger (§7) — DONE
+
+| Ledger row | Result |
+|---|---|
+| Rotunda + `img-sphere` + `circular-gallery.css` | deleted (with `GALLERY_PLATES` and its Tailwind component, the only one in the repo) |
+| Starfield / VelocityFX | deleted |
+| `multiverse-background-webgl-3.html` orphan | deleted |
+| `@fontsource/michroma` (imported, zero consumers) | deleted |
+| Persona GLB + HDR + `three/persona-model` + `personaPoints` | deleted — 31 MB of binaries and the whole r3f/drei chunk leave the build |
+| Black hole (stage, still, `three/blackhole/`, PROVENANCE, `verify-blackhole.mjs`, `--bh-*` tokens) | deleted — the `three/webgpu` chunk (186 kB gz) and the vendored-verbatim constraint died with it |
+| `eventHorizonWarp.ts` vendored coupling | decoupled **first**: the three scalars it read are now local vortex parameters, values carried so the geometry suite's expectations hold |
+| Perks ⊕ Store → **Holder**; Lore ⊕ Artists ⊕ crawl → **Canon** | merged as beats 5 and 6; part anchors (`#perks`, `#store`, `#lore`, `#artists`) and all pitch content survive |
+| Beats renumbered | 01 registry · 02 stamp book · 03 persona · 04 holders · 05 canon · 06-07 trench; nav trimmed to five anchors |
+
+### Phase 2 — token layer + palette table (§3) — DONE
+
+- `src/lib/palette.ts` is the single source of truth: 11 core colours, a derived
+  ramp including contrast-safe `*-ink` accents, four zones, and `floats()`.
+- `lib/scenes.ts` is now a thin mapping over it (eight space districts → four
+  depth zones); the scene vector carries ground, vignette target, caustic tint
+  and light regime, and `Ambience.tsx` paints two regimes from it — water adds
+  light to darkness, paper takes light away in sheets.
+- `global.css:root` mirrors the table, and `tests/unit/palette.test.ts` **fails
+  the build** if a hex in the stylesheet is not a palette value, if a core token
+  is not declared with the palette's value, or if an observed section maps to a
+  zone that does not exist. 84/84 unit tests pass.
+- Legacy names (`--void`, `--abyss`, `--iris`, `--cyan`, `--magenta`, `--gold`,
+  `--grad-*`, `--r-*`, `--elev-*`) survive as aliases into the new identity.
+
+### Phase 3 — edition/card system (§6) — PARTIAL
+
+Delivered: the manila wanted-poster plate language (tape, accent rule, serial
+caption, ink outline, offset print shadow), the persona glass plate as ration
+slot 1, and the tier→treatment mapping in tokens. **Not** delivered: the
+`lib/data.ts` decoupling of `RARITY`/`SORT_OPTIONS` from hue (the ramp token now
+maps to treatments, so nothing renders a rarity gem, but the sort control's
+labels still read "rarity").
+
+### Phase 4 — section reskins — PARTIAL (the honest part)
+
+Done mechanically and verifiably: 424 lines migrated across 11 stylesheets
+(light-on-dark literals → ink tokens, neon literals → token colour-mixes, 48
+`backdrop-filter` glass declarations removed), plus bespoke reskins of the
+shared primitives (`.card`, buttons, chips, badges, marquee, brackets, grain),
+the hero's flash lettering, the nav, the loader, the cursor, the side rail and
+the persona chat (whose four-layer glass object — including two `blur(72px)`
+aurora blobs — is now a paper plate).
+
+**Not** done: bespoke per-beat layout studies for the registry rail, the stamp
+book, the storefront and the credit rod. Those beats read correctly today
+(paper, ink, cel accents, print shadows) but they are token-migrated rather than
+recomposed, and §12.4 predicted exactly this: the merges need their own
+hierarchy work before they stop being "the old cards on new paper".
+
+### Phase 5 — finale rebuild — DONE
+
+`components/VortexStage.tsx`: dependency-free WebGL2 full-cover triangle,
+differential-rotation vortex, fbm water sheets, caustics, marine snow rising
+against the pull, bioluminescent points, and a mouth that opens with the
+consumption. Contracts kept: status gate, off-screen pause, reduced-motion
+static frame, the hold stills the water, StrictMode-safe teardown. `bh-hold`,
+`bh-frame` and `--bh-frame-fit` keep their measured names for
+`tests/signoff-horizon.spec.ts`.
+
+### Phase 6 — perf pass — PARTIAL
+
+| Metric | Before | Now | Target | State |
+|---|---|---|---|---|
+| Eager JS (gz) | 643.6 kB | **376.4 kB** | < 250 kB | −42%, target not met |
+| CSS (gz) | 39.5 kB | **38.6 kB** | < 25 kB | barely moved |
+| Binary assets in `public/models` | 31 MB | 0 | 0 | met |
+| `three` builds in the bundle | 2 (webgl + webgpu) | 1 | 1 | met |
+| GPU contexts | 11 | 6 | 6 | met |
+
+What still binds: the eager `three/webgl` chunk (123.7 kB gz) for the hero's
+particle field, and `captureSignoff`/`html2canvas` (49.4 kB gz, still lazy —
+correct). Two further cuts are available and are the next honest step:
+(a) render the hero field from a shader of the same shape as `VortexStage`
+(no three at all, −123.7 kB), (b) split the pulls canvases' `WebGLRenderer`
+usage behind the same dependency-free renderer (−~90 kB gz on first paint).
+
+### Verification debt
+
+No headless browser could be installed in this sandbox (Chromium download and
+apt both blocked), so **no rendered verification of any of this exists yet**.
+Every claim above is code-derived or gate-derived. The next session on a machine
+with a browser should: run `npm run test:signoff-horizon` and `npm run test:a11y`,
+re-baseline the visual-regression suite against the new palette, and read the
+seven beats once at desktop and once at 390px.

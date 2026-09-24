@@ -291,8 +291,8 @@
   animation: npxArmedGlow 2.4s ease-in-out infinite, gdrift 12s ease-in-out infinite;
 }
 @keyframes npxArmedGlow {
-  0%, 100% { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--cyan) 46%, transparent)); }
-  50% { filter: drop-shadow(0 0 18px color-mix(in srgb, var(--cyan) 80%, transparent)); }
+  0%, 100% { filter: none; }
+  50% { filter: none; }
 }
 
 /* --------------------------- probability indicators --------------------------- */

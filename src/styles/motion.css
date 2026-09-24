@@ -73,7 +73,7 @@
 }
 :is(a, button):hover .pk-chevron,
 :is(a, button):focus-visible .pk-chevron {
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--cyan) 80%, transparent));
+  filter: none;
 }
 
 /* ------------------------------ roll text (rt) ---------------------------- */

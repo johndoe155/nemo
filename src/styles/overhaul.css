@@ -103,64 +103,42 @@
 @property --amb-a {
   syntax: '<color>';
   inherits: true;
-  initial-value: color-mix(in srgb, var(--iris) 37%, transparent);
+  initial-value: color-mix(in srgb, var(--manila) 34%, transparent);
 }
 @property --amb-b {
   syntax: '<color>';
   inherits: true;
-  initial-value: color-mix(in srgb, var(--cyan) 23%, transparent);
+  initial-value: color-mix(in srgb, var(--sky) 26%, transparent);
 }
 @property --amb-c {
   syntax: '<color>';
   inherits: true;
-  initial-value: color-mix(in srgb, var(--magenta) 21%, transparent);
+  initial-value: color-mix(in srgb, var(--mint) 24%, transparent);
 }
 
+/* Z0 SURFACE — dry paper: warm stock light, almost no wash. */
 :root {
-  /* arrival (hero) — the signature composition */
-  --amb-a: color-mix(in srgb, var(--iris) 37%, transparent);
-  --amb-b: color-mix(in srgb, var(--cyan) 23%, transparent);
-  --amb-c: color-mix(in srgb, var(--magenta) 21%, transparent);
+  --amb-a: color-mix(in srgb, var(--manila) 34%, transparent);
+  --amb-b: color-mix(in srgb, var(--sky) 20%, transparent);
+  --amb-c: color-mix(in srgb, var(--mint) 16%, transparent);
 }
-html[data-scene='registry'] {
-  --amb-a: color-mix(in srgb, var(--cyan) 25%, transparent);
-  --amb-b: color-mix(in srgb, var(--iris) 28%, transparent);
-  --amb-c: rgba(58, 91, 217, 0.18);
+/* Z1 REEF — caustic water light over the stock. */
+html[data-scene='reef'] {
+  --amb-a: color-mix(in srgb, var(--water) 30%, transparent);
+  --amb-b: color-mix(in srgb, var(--sky) 26%, transparent);
+  --amb-c: color-mix(in srgb, var(--mint) 24%, transparent);
 }
-html[data-scene='signal'] {
-  --amb-a: color-mix(in srgb, var(--cyan) 28%, transparent);
-  --amb-b: rgba(58, 91, 217, 0.18);
-  --amb-c: color-mix(in srgb, var(--iris) 14%, transparent);
+/* Z2 MID-WATER — the page itself is water; the wash cools and deepens. */
+html[data-scene='midwater'] {
+  --amb-a: color-mix(in srgb, var(--water) 34%, transparent);
+  --amb-b: color-mix(in srgb, var(--sky) 22%, transparent);
+  --amb-c: color-mix(in srgb, var(--deep) 60%, transparent);
 }
-html[data-scene='arsenal'] {
-  --amb-a: color-mix(in srgb, var(--iris) 34%, transparent);
-  --amb-b: color-mix(in srgb, var(--magenta) 18%, transparent);
-  --amb-c: color-mix(in srgb, var(--cyan) 18%, transparent);
-}
-html[data-scene='vault'] {
-  --amb-a: color-mix(in srgb, var(--gold) 30%, transparent);
-  --amb-b: rgba(91, 43, 214, 0.28);
-  --amb-c: color-mix(in srgb, var(--magenta) 16%, transparent);
-}
-html[data-scene='constellation'] {
-  --amb-a: color-mix(in srgb, var(--magenta) 25%, transparent);
-  --amb-b: color-mix(in srgb, var(--cyan) 21%, transparent);
-  --amb-c: color-mix(in srgb, var(--iris) 23%, transparent);
-}
-/* abyss — lore (above the black hole) and connect (below it). Retuned toward
-   the simulation's own palette so the page's sky meets the canvas's sky:
-   nebula navy #071f44 leading, the disk's ember #7f1b00 sitting low in the
-   frame (i.e. toward the seam), and one faint iris thread kept so the district
-   still reads as the Nemoverse. Mirrors SCENES.abyss in lib/scenes.ts. */
-html[data-scene='abyss'] {
-  --amb-a: rgba(19, 27, 42, 0.34);
-  --amb-b: rgba(91, 43, 214, 0.1);
-  --amb-c: rgba(74, 39, 28, 0.13);
-}
-html[data-scene='singularity'] {
-  --amb-a: rgba(19, 27, 42, 0.46);
-  --amb-b: rgba(8, 10, 15, 0.5);
-  --amb-c: rgba(126, 74, 48, 0.18);
+/* Z3 TRENCH — bioluminescence only; the finale quad paints its own ground. */
+html[data-scene='trench'] {
+  --amb-a: color-mix(in srgb, var(--bio-cyan) 22%, transparent);
+  --amb-b: color-mix(in srgb, var(--deep) 70%, transparent);
+  --amb-c: color-mix(in srgb, var(--mint) 14%, transparent);
 }
 
 .ambience {
@@ -988,15 +966,15 @@ html[data-scene='singularity'] {
   width: clamp(2.2rem, 1.6rem + 2vw, 3rem);
   height: auto;
   transition: transform 0.5s var(--ease-expo), filter 0.5s var(--ease-expo);
-  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--gold) 25%, transparent));
+  filter: none;
 }
 .footer__brand:hover img {
   transform: scale(1.08) rotate(-4deg);
-  filter: drop-shadow(0 0 20px color-mix(in srgb, var(--gold) 57%, transparent));
+  filter: none;
 }
 .footer__brand.is-holding img {
   transform: scale(1.15) rotate(-6deg);
-  filter: drop-shadow(0 0 30px color-mix(in srgb, var(--gold) 98%, transparent));
+  filter: none;
 }
 .signoff__prose {
   color: var(--ink-dim);
@@ -1336,9 +1314,7 @@ html[data-scene='singularity'] {
   box-shadow: none;
   border: none;
   padding: 0;
-  filter: drop-shadow(0px 0px 10px color-mix(in srgb, var(--cyan) 40%, transparent))
-          drop-shadow(0px 0px 20px rgba(168, 85, 247, 0.5))
-          drop-shadow(0px 6px 32px color-mix(in srgb, var(--magenta) 29%, transparent));
+  filter: none;
 }
 
 /* Animated gradient ink (CANON / VERSIONS). Background is clipped strictly
@@ -1663,7 +1639,7 @@ html[data-scene='singularity'] {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--cyan) 35%, transparent));
+  filter: none;
   animation: heroSepShimmer 4.2s linear infinite;
   user-select: none;
   pointer-events: none;

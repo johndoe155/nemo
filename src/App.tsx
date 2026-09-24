@@ -110,19 +110,16 @@ export default function App() {
           speed="38s"
         />
         <Nemoverse />
-        {/* 3D rotunda — the same canon as the roster above, hung on a sphere
-            you can spin. Placed here so the registry (specs) is read first
-            and the art (plates) lands immediately after. */}
         <Persona />
         <SectionBoundary>
           <Pulls />
         </SectionBoundary>
         <Holder />
         <Canon />
-        {/* The closing credit crawl — moved above the Singularity so it is
-            completely unaffected by the black hole warping effect. P3.12
-            (audit 2.4): wrapped in the scrubbed clip-rise — the credits
-            ascend out of the dark instead of just continuing the scroll. */}
+        {/* BEAT 6 → 7 · the credit flash-wall hands the page to the trench.
+            CrawlRise (IDENTITY-SPEC §7: kept, reskinned) is the scrubbed
+            clip-rise that carries the credits up out of the canon beat; the
+            marquee inside it is the credits' own type band. */}
         <CrawlRise>
         <div className="signoff__crawl">
           <Marquee
@@ -139,17 +136,18 @@ export default function App() {
           />
         </div>
         </CrawlRise>
-        {/* THE SINGULARITY — the live WebGPU black hole. Placed in the exact
-            gap between the canon timeline above (Lore, whose drilling rod ends
-            on the "U-007 — THE LAST AURORA" node) and the sign-off below.
-            It is the last child of <main> because <Footer /> is a sibling
-            of <main>, so this is the seam itself — nothing else sits between
-            them. Statically imported like every other section (see the Pulls
-            note above): a section this deep in the page must always mount.
-            Its own graceful degradation — WebGPU feature detection, a static
-            SVG/CSS frame, off-screen pausing — lives in
-            components/BlackHoleStage.tsx, and the simulation in
-            src/three/blackhole/ is vendored verbatim. */}
+        {/* BEAT 7 · THE TRENCH — the finale, and the only dark ground on the
+            page (IDENTITY-SPEC §2.1 Z3). Placed in the exact gap between the
+            canon beat above and the sign-off below: it is the last child of
+            <main> because <Footer /> is a sibling of <main>, so this is the
+            seam itself — nothing else sits between them. Statically imported
+            like every other section: a beat this deep must always mount.
+            The renderer is components/VortexStage.tsx (dependency-free WebGL2
+            water vortex); its graceful degradation — context feature check, a
+            painted CSS trench, off-screen pausing, a static frame under
+            reduced motion — lives there and in styles/trench.css. The scroll
+            mechanic above it (the .bh-hold reservation and the sign-off
+            consumption) is unchanged and lives in lib/spaghettification.ts. */}
         <Singularity />
       </main>
       <Footer />

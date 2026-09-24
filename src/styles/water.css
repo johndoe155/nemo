@@ -250,3 +250,100 @@
   /* no visible copy in Z3 — the vortex is the statement */
   position: absolute;
 }
+
+/* ============================================================================
+   THE PERSONA CHAT — a printed plate in Z2
+   The chat arrived as a four-layer glass object (blurred aurora blobs, gradient
+   rim, specular sweep, glass fill). In the water zone it becomes what the
+   reference flash sheets are: a paper panel with an ink rule and a printed
+   shadow. The blobs and the specular are switched off entirely — they were the
+   most expensive paint on the page (blur(72px) layers) and they are the same
+   "aurora" language retired in global.css.
+============================================================================ */
+
+.nchat {
+  --glass-radius: 12px;
+}
+.nchat__mesh,
+.nchat__mesh--far,
+.nchat__specular {
+  display: none;
+}
+.nchat__glass {
+  background-color: var(--paper);
+  background-image: var(--noise);
+  background-size: 180px 180px;
+  background-blend-mode: multiply;
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 12px;
+  box-shadow: var(--shadow-print-3);
+}
+.nchat__edge {
+  display: none;
+}
+.nchat__head {
+  border-bottom: var(--outline-w) solid var(--ink);
+  padding-bottom: 0.9rem;
+}
+.nchat__ident b,
+.nchat__raillabel {
+  color: var(--ink);
+}
+.nchat__ident em,
+.nchat__status,
+.nchat__count {
+  color: var(--ink-faint);
+}
+.nchat__live {
+  background: var(--manila);
+  border: var(--outline-w) solid var(--ink);
+  color: var(--ink);
+}
+.nchat__log {
+  scrollbar-color: color-mix(in srgb, var(--ink) 30%, transparent) transparent;
+}
+.nmsg__bubble {
+  background: var(--paper-2);
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 10px 10px 10px 3px;
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 85%, transparent);
+}
+.nmsg--user .nmsg__bubble {
+  background: var(--mint);
+  border: var(--outline-w) solid var(--ink);
+  border-radius: 10px 10px 3px 10px;
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 85%, transparent);
+  animation: none;
+}
+.nmsg__meta,
+.nmsg__sys {
+  color: var(--ink-faint);
+}
+.nmsg__meta i {
+  color: var(--stamp);
+}
+.nchat__field {
+  border-radius: var(--r-sm);
+  background: var(--paper-2);
+  border: var(--outline-w) solid var(--ink);
+  box-shadow: var(--shadow-print-1);
+}
+.nchat__field:focus-within {
+  background: var(--paper);
+  box-shadow: var(--shadow-print-2);
+  border-color: var(--ink);
+}
+.nchat__rail {
+  scrollbar-color: color-mix(in srgb, var(--ink) 30%, transparent) transparent;
+}
+.nchat__chip,
+.nchat__suggest {
+  background: var(--paper);
+  border: var(--outline-w) solid var(--ink);
+  color: var(--ink);
+  border-radius: var(--r-pill);
+}
+.nchat__chip:hover,
+.nchat__suggest:hover {
+  background: var(--manila);
+}
